@@ -29,18 +29,19 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
 
     public async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain)
     {
+        domain.SetLastCheckedDate();
+
         if (domain.VerifiedDate is not null)
         {
-            domain.SetLastCheckedDate();
             await _organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("Domain has already been verified.");
         }
 
         var claimedDomain =
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
+
         if (claimedDomain.Any())
         {
-            domain.SetLastCheckedDate();
             await _organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("The domain is not available to be claimed.");
         }
@@ -58,11 +59,13 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
                 domain.DomainName, e.Message);
         }
 
-        domain.SetLastCheckedDate();
         await _organizationDomainRepository.ReplaceAsync(domain);
 
         await _eventService.LogOrganizationDomainEventAsync(domain,
-            domain.VerifiedDate != null ? EventType.OrganizationDomain_Verified : EventType.OrganizationDomain_NotVerified);
+            domain.VerifiedDate != null
+                ? EventType.OrganizationDomain_Verified
+                : EventType.OrganizationDomain_NotVerified);
+
         return domain;
     }
 }
