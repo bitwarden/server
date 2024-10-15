@@ -39,7 +39,7 @@
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.44.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.6.1" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.7.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
