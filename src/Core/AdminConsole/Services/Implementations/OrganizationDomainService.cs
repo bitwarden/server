@@ -14,6 +14,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
     private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<OrganizationDomainService> _logger;
     private readonly IGlobalSettings _globalSettings;
 
@@ -23,6 +24,7 @@ public class OrganizationDomainService : IOrganizationDomainService
         IEventService eventService,
         IMailService mailService,
         IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
+        TimeProvider timeProvider,
         ILogger<OrganizationDomainService> logger,
         IGlobalSettings globalSettings)
     {
@@ -31,6 +33,7 @@ public class OrganizationDomainService : IOrganizationDomainService
         _eventService = eventService;
         _mailService = mailService;
         _verifyOrganizationDomainCommand = verifyOrganizationDomainCommand;
+        _timeProvider = timeProvider;
         _logger = logger;
         _globalSettings = globalSettings;
     }
@@ -38,7 +41,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     public async Task ValidateOrganizationsDomainAsync()
     {
         //Date should be set 1 hour behind to ensure it selects all domains that should be verified
-        var runDate = DateTime.UtcNow.AddHours(-1);
+        var runDate = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-1);
 
         var verifiableDomains = await _domainRepository.GetManyByNextRunDateAsync(runDate);
 
