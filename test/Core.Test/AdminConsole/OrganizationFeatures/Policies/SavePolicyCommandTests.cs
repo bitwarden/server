@@ -13,6 +13,7 @@ using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
 using EventType = Bit.Core.Enums.EventType;
@@ -31,12 +32,17 @@ public class SavePolicyCommandTests
         ArrangeOrganization(sutProvider, policyUpdate);
         sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
 
+        var creationDate = sutProvider.GetDependency<FakeTimeProvider>().Start;
+
         await sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
         await fakePolicyValidator.ValidateAsyncMock.Received(1).Invoke(policyUpdate, null);
         fakePolicyValidator.OnSaveSideEffectsAsyncMock.Received(1).Invoke(policyUpdate, null, Arg.Any<IOrganizationService>());
 
         await AssertPolicySavedAsync(sutProvider, policyUpdate);
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1).UpsertAsync(Arg.Is<Policy>(p =>
+            p.CreationDate == creationDate &&
+            p.RevisionDate == creationDate));
     }
 
     [Theory, BitAutoData]
@@ -63,7 +69,7 @@ public class SavePolicyCommandTests
         var organizationId = currentPolicy.OrganizationId;
         var type = currentPolicy.Type;
         var creationDate = currentPolicy.CreationDate;
-        var revisionDate = currentPolicy.RevisionDate;
+        var revisionDate = sutProvider.GetDependency<FakeTimeProvider>().Start;
 
         await sutProvider.Sut.SaveAsync(policyUpdate, Substitute.For<IOrganizationService>(), Guid.NewGuid());
 
@@ -77,7 +83,7 @@ public class SavePolicyCommandTests
             p.OrganizationId == organizationId &&
             p.Type == type &&
             p.CreationDate == creationDate &&
-            p.RevisionDate != revisionDate));
+            p.RevisionDate == revisionDate));
     }
 
     [Fact]
@@ -88,7 +94,8 @@ public class SavePolicyCommandTests
                 Substitute.For<IApplicationCacheService>(),
                 Substitute.For<IEventService>(),
                 Substitute.For<IPolicyRepository>(),
-                [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()]
+                [new FakeSingleOrgPolicyValidator(), new FakeSingleOrgPolicyValidator()],
+                Substitute.For<TimeProvider>()
             ));
         Assert.Contains("Duplicate PolicyValidator for SingleOrg policy", exception.Message);
     }

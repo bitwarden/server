@@ -16,16 +16,19 @@ public class SavePolicyCommand : ISavePolicyCommand
     private readonly IEventService _eventService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
+    private readonly TimeProvider _timeProvider;
 
     public SavePolicyCommand(
         IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IPolicyRepository policyRepository,
-        IEnumerable<IPolicyValidator> policyValidators)
+        IEnumerable<IPolicyValidator> policyValidators,
+        TimeProvider timeProvider)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _policyRepository = policyRepository;
+        _timeProvider = timeProvider;
 
         var policyValidatorsDict = new Dictionary<PolicyType, IPolicyValidator>();
         foreach (var policyValidator in policyValidators)
@@ -61,12 +64,13 @@ public class SavePolicyCommand : ISavePolicyCommand
                      ?? new Policy
                      {
                          OrganizationId = policyUpdate.OrganizationId,
-                         Type = policyUpdate.Type
+                         Type = policyUpdate.Type,
+                         CreationDate = _timeProvider.GetUtcNow().UtcDateTime
                      };
 
         policy.Enabled = policyUpdate.Enabled;
         policy.Data = policyUpdate.Data;
-        policy.RevisionDate = DateTime.UtcNow;
+        policy.RevisionDate = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
