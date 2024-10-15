@@ -25,7 +25,7 @@ public class PolicyService : IPolicyService
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IOrganizationDomainService _organizationDomainService;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public PolicyService(
@@ -37,7 +37,7 @@ public class PolicyService : IPolicyService
         ISsoConfigRepository ssoConfigRepository,
         IMailService mailService,
         GlobalSettings globalSettings,
-        IOrganizationDomainService organizationDomainService,
+        IOrganizationDomainRepository organizationDomainRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _applicationCacheService = applicationCacheService;
@@ -48,7 +48,7 @@ public class PolicyService : IPolicyService
         _ssoConfigRepository = ssoConfigRepository;
         _mailService = mailService;
         _globalSettings = globalSettings;
-        _organizationDomainService = organizationDomainService;
+        _organizationDomainRepository = organizationDomainRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
@@ -258,7 +258,7 @@ public class PolicyService : IPolicyService
 
     private async Task HasNoVerifiedDomainsAsync(Organization org)
     {
-        if (await _organizationDomainService.HasVerifiedDomainsAsync(org.Id))
+        if ((await _organizationDomainRepository.GetDomainsByOrganizationIdAsync(org.Id)).Count > 0)
         {
             throw new BadRequestException("Organization still has verified domains.");
         }
