@@ -1,0 +1,126 @@
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
+using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
+using Xunit;
+
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
+
+[SutProviderCustomize]
+public class SingleOrgPolicyValidatorTests
+{
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DisablingPolicy_KeyConnectorEnabled_ValidationError(
+        [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy policy,
+        SutProvider<SingleOrgPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
+        Assert.Contains("Key Connector is enabled", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DisablingPolicy_KeyConnectorNotEnabled_Success(
+        [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.ResetPassword)] Policy policy,
+        SutProvider<SingleOrgPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = policyUpdate.OrganizationId;
+
+        var ssoConfig = new SsoConfig { Enabled = false };
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns(ssoConfig);
+
+        var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
+        Assert.True(string.IsNullOrEmpty(result));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_RemovesNonCompliantUsers(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy policy,
+        Guid savingUserId,
+        Guid nonCompliantUserId,
+        Organization organization, SutProvider<SingleOrgPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+
+        var compliantUser1 = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = new Guid(),
+            Email = "user1@example.com"
+        };
+
+        var compliantUser2 = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = new Guid(),
+            Email = "user2@example.com"
+        };
+
+        var nonCompliantUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = nonCompliantUserId,
+            Email = "user3@example.com"
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
+            .Returns([compliantUser1, compliantUser2, nonCompliantUser]);
+
+        var otherOrganizationUser = new OrganizationUser
+        {
+            OrganizationId = new Guid(),
+            UserId = nonCompliantUserId,
+            Status = OrganizationUserStatusType.Confirmed
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId)))
+            .Returns([otherOrganizationUser]);
+
+        var organizationService = Substitute.For<IOrganizationService>();
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
+
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy, organizationService);
+
+        await organizationService.Received(1).RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),
+                "user3@example.com");
+    }
+}
