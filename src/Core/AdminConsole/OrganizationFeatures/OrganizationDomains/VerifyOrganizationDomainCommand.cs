@@ -90,7 +90,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         var claimedDomain =
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
 
-        if (claimedDomain.Any())
+        if (claimedDomain.Count > 0)
         {
             await _organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("The domain is not available to be claimed.");
