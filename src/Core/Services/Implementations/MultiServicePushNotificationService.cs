@@ -12,7 +12,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
 {
     private readonly IEnumerable<IPushNotificationService> _services;
     private readonly ILogger<MultiServicePushNotificationService> _logger;
-    public string PushServiceType => "MultiService";
 
     public MultiServicePushNotificationService(
         [FromKeyedServices("implementation")] IEnumerable<IPushNotificationService> services,
@@ -22,10 +21,10 @@ public class MultiServicePushNotificationService : IPushNotificationService
         _services = services;
 
         _logger = logger;
-        _logger.LogError("Hub services: {Services}", _services.Count());
+        _logger.LogInformation("Hub services: {Services}", _services.Count());
         globalSettings?.NotificationHubPool?.NotificationHubs?.ForEach(hub =>
         {
-            _logger.LogError("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
+            _logger.LogInformation("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
         });
     }
 
@@ -151,7 +150,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
         {
             foreach (var service in _services)
             {
-                _logger.LogError("Relaying push to service: {ServiceType}", service.PushServiceType);
                 pushFunc(service);
             }
         }

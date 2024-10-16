@@ -14,7 +14,6 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public string PushServiceType => "NotificationsApi";
 
     public NotificationsApiPushNotificationService(
         IHttpClientFactory httpFactory,

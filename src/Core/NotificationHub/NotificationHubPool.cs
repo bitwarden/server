@@ -20,7 +20,7 @@ public class NotificationHubPool : INotificationHubPool
     private List<NotificationHubConnection> FilterInvalidHubs(IEnumerable<GlobalSettings.NotificationHubSettings> hubs)
     {
         List<NotificationHubConnection> result = new();
-        _logger.LogError("Filtering {HubCount} notification hubs", hubs.Count());
+        _logger.LogDebug("Filtering {HubCount} notification hubs", hubs.Count());
         foreach (var hub in hubs)
         {
             var connection = NotificationHubConnection.From(hub);
@@ -29,7 +29,7 @@ public class NotificationHubPool : INotificationHubPool
                 _logger.LogWarning("Invalid notification hub settings: {HubName}", hub.HubName ?? "hub name missing");
                 continue;
             }
-            _logger.LogError("Adding notification hub: {ConnectionLogString}", connection.LogString);
+            _logger.LogDebug("Adding notification hub: {ConnectionLogString}", connection.LogString);
             result.Add(connection);
         }
 
@@ -54,7 +54,7 @@ public class NotificationHubPool : INotificationHubPool
                 string.Join("\n", _connections.Select(c => $"Hub {c.HubName} - Start: {c.RegistrationStartDate}, End: {c.RegistrationEndDate}")));
         }
         var resolvedConnection = possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)];
-        _logger.LogError("Resolved notification hub for comb {Comb} out of {HubCount} hubs.\n{ConnectionInfo}", comb, possibleConnections.Length, resolvedConnection.LogString);
+        _logger.LogTrace("Resolved notification hub for comb {Comb} out of {HubCount} hubs.\n{ConnectionInfo}", comb, possibleConnections.Length, resolvedConnection.LogString);
         return resolvedConnection.HubClient;
     }
 

@@ -21,7 +21,6 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly bool _enableTracing = false;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
-    public string PushServiceType => "NotificationHub";
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
@@ -257,7 +256,6 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 { "type",  ((byte)type).ToString() },
                 { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
-        _logger.LogError("Pushed notifications to {Tag} to all hubs", tag);
 
         if (_enableTracing)
         {

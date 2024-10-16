@@ -17,7 +17,6 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 {
     private readonly IDeviceRepository _deviceRepository;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public string PushServiceType => "Relay";
 
     public RelayPushNotificationService(
         IHttpClientFactory httpFactory,
