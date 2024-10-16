@@ -40,7 +40,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
-        sutProvider.GetDependency<IOrganizationService>()
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)),
@@ -184,7 +184,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .OrganizationOwner(organizationUser.OrganizationId)
             .Returns(true);
 
-        sutProvider.GetDependency<IOrganizationService>()
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)),
@@ -399,8 +399,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .OrganizationOwner(orgUser.OrganizationId)
             .Returns(true);
 
-        sutProvider.GetDependency<IOrganizationService>()
-            .HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>(), true)
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
             .Returns(false);
 
         // Act
