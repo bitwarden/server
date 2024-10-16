@@ -8,7 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Duende.IdentityServer.Validation;
 
-namespace Bit.Identity.IdentityServer;
+namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public interface IDeviceValidator
 {

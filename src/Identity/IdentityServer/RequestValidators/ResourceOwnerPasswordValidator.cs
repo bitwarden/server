@@ -13,7 +13,7 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Identity.IdentityServer;
+namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwnerPasswordValidationContext>,
     IResourceOwnerPasswordValidator

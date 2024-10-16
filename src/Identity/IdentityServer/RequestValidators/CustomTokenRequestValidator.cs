@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Identity;
 
 #nullable enable
 
-namespace Bit.Identity.IdentityServer;
+namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenRequestValidationContext>,
     ICustomTokenRequestValidator

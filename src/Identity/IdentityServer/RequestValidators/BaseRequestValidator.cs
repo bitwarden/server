@@ -19,7 +19,7 @@ using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Identity.IdentityServer;
+namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public abstract class BaseRequestValidator<T> where T : class
 {
@@ -326,7 +326,7 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// checks to see if a user is trying to log into a new device 
+    /// checks to see if a user is trying to log into a new device
     /// and has reached the maximum number of failed login attempts.
     /// </summary>
     /// <param name="unknownDevice">boolean</param>
