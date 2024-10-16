@@ -26,6 +26,11 @@ public class UserAsymmetricKeysRepository : BaseRepository, IUserAsymmetricKeysR
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync("[dbo].[UserAsymmetricKeys_Regenerate]",
-            userAsymmetricKeys, commandType: CommandType.StoredProcedure);
+            new
+            {
+                userAsymmetricKeys.UserId,
+                userAsymmetricKeys.PublicKey,
+                PrivateKey = userAsymmetricKeys.UserKeyEncryptedPrivateKey
+            }, commandType: CommandType.StoredProcedure);
     }
 }
