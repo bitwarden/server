@@ -23,8 +23,11 @@ public class UserAsymmetricKeysRepository : BaseEntityFrameworkRepository, IUser
         var entity = await dbContext.Users.FindAsync(userAsymmetricKeys.UserId);
         if (entity != null)
         {
+            var utcNow = DateTime.UtcNow;
             entity.PublicKey = userAsymmetricKeys.PublicKey;
             entity.PrivateKey = userAsymmetricKeys.UserKeyEncryptedPrivateKey;
+            entity.RevisionDate = utcNow;
+            entity.AccountRevisionDate = utcNow;
             await dbContext.SaveChangesAsync();
         }
     }
