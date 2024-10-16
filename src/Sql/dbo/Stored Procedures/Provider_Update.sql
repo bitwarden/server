@@ -17,7 +17,8 @@
     @RevisionDate DATETIME2(7),
     @Gateway TINYINT = 0,
     @GatewayCustomerId VARCHAR(50) = NULL,
-    @GatewaySubscriptionId VARCHAR(50) = NULL
+    @GatewaySubscriptionId VARCHAR(50) = NULL,
+    @IsMultiOrgEnterprise BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -42,7 +43,8 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [Gateway] = @Gateway,
         [GatewayCustomerId] = @GatewayCustomerId,
-        [GatewaySubscriptionId] = @GatewaySubscriptionId
+        [GatewaySubscriptionId] = @GatewaySubscriptionId,
+        [IsMultiOrgEnterprise] = @IsMultiOrgEnterprise
     WHERE
         [Id] = @Id
 END

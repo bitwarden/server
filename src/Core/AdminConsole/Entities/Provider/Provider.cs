@@ -35,6 +35,7 @@ public class Provider : ITableObject<Guid>, ISubscriber
     public GatewayType? Gateway { get; set; }
     public string? GatewayCustomerId { get; set; }
     public string? GatewaySubscriptionId { get; set; }
+    public bool? IsMultiOrgEnterprise { get; set; }
 
     public string? BillingEmailAddress() => BillingEmail?.ToLowerInvariant().Trim();
 
