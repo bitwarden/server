@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -65,6 +66,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public UserService(
         IUserRepository userRepository,
@@ -98,7 +100,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IStripeSyncService stripeSyncService,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
-        IPremiumUserBillingService premiumUserBillingService)
+        IPremiumUserBillingService premiumUserBillingService,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
         : base(
               store,
               optionsAccessor,
@@ -138,6 +141,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _premiumUserBillingService = premiumUserBillingService;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -827,8 +831,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
-        IOrganizationService organizationService)
+    public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type)
     {
         var providers = user.GetTwoFactorProviders();
         if (!providers?.ContainsKey(type) ?? true)
@@ -843,12 +846,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (!await TwoFactorIsEnabledAsync(user))
         {
-            await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
+            await CheckPoliciesOnTwoFactorRemovalAsync(user);
         }
     }
 
-    public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode,
-        IOrganizationService organizationService)
+    public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
     {
         var user = await _userRepository.GetByEmailAsync(email);
         if (user == null)
@@ -872,7 +874,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await SaveUserAsync(user);
         await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
-        await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
+        await CheckPoliciesOnTwoFactorRemovalAsync(user);
 
         return true;
     }
@@ -1327,13 +1329,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
+    private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await organizationService.RemoveUserAsync(p.OrganizationId, user.Id);
+            await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                 organization.DisplayName(), user.Email);

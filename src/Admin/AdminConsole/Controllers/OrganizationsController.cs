@@ -7,7 +7,6 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -57,7 +56,6 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
     private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
-    private readonly IPolicyService _policyService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -84,8 +82,7 @@ public class OrganizationsController : Controller
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IFeatureService featureService,
-        IProviderBillingService providerBillingService,
-        IPolicyService policyService)
+        IProviderBillingService providerBillingService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -112,7 +109,6 @@ public class OrganizationsController : Controller
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
         _featureService = featureService;
         _providerBillingService = providerBillingService;
-        _policyService = policyService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -440,13 +436,6 @@ public class OrganizationsController : Controller
             organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
         }
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
-
-        if (!organization.UsePolicies || !plan.HasPolicies)
-        {
-            await DisableOrganizationPoliciesAsync(organization.Id);
-        }
-
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
         {
             organization.LicenseKey = model.LicenseKey;
@@ -462,19 +451,5 @@ public class OrganizationsController : Controller
         }
 
         return organization;
-    }
-
-    private async Task DisableOrganizationPoliciesAsync(Guid organizationId)
-    {
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(organizationId);
-
-        if (policies.Count != 0)
-        {
-            await Task.WhenAll(policies.Select(async policy =>
-            {
-                policy.Enabled = false;
-                await _policyService.SaveAsync(policy, _organizationService, null);
-            }));
-        }
     }
 }
