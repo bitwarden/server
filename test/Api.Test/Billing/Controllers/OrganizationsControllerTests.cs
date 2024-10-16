@@ -4,8 +4,8 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -46,6 +46,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ISubscriberService _subscriberService;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -68,6 +69,7 @@ public class OrganizationsControllerTests : IDisposable
         _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _subscriberService = Substitute.For<ISubscriberService>();
+        _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -89,36 +91,6 @@ public class OrganizationsControllerTests : IDisposable
     public void Dispose()
     {
         _sut?.Dispose();
-    }
-
-    [Theory]
-    [InlineAutoData(true, false)]
-    [InlineAutoData(false, true)]
-    [InlineAutoData(false, false)]
-    public async Task OrganizationsController_UserCanLeaveOrganizationThatDoesntProvideKeyConnector(
-        bool keyConnectorEnabled, bool userUsesKeyConnector, Guid orgId, User user)
-    {
-        var ssoConfig = new SsoConfig
-        {
-            Id = default,
-            Data = new SsoConfigurationData
-            {
-                MemberDecryptionType = keyConnectorEnabled
-                    ? MemberDecryptionType.KeyConnector
-                    : MemberDecryptionType.MasterPassword
-            }.Serialize(),
-            Enabled = true,
-            OrganizationId = orgId,
-        };
-
-        user.UsesKeyConnector = userUsesKeyConnector;
-
-        _currentContext.OrganizationUser(orgId).Returns(true);
-        _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-
-        await _organizationService.RemoveUserAsync(orgId, user.Id);
-        await _organizationService.Received(1).RemoveUserAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]
