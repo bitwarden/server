@@ -1,4 +1,4 @@
-﻿using Core.Tools.Models.Data;
+﻿using Bit.Core.Tools.Models.Data;
 
 namespace Bit.Api.Tools.Models.Response;
 

@@ -1,10 +1,9 @@
-﻿using Api.Tools.Models.Response;
-using Bit.Api.Tools.Models.Response;
+﻿using Bit.Api.Tools.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
-using Core.Tools.Models.Data;
-using Core.Tools.ReportFeatures.Requests;
+using Bit.Core.Tools.ReportFeatures.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

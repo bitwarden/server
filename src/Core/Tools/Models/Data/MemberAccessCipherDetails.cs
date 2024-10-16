@@ -1,4 +1,4 @@
-﻿namespace Core.Tools.Models.Data;
+﻿namespace Bit.Core.Tools.Models.Data;
 
 public class MemberAccessDetails
 {

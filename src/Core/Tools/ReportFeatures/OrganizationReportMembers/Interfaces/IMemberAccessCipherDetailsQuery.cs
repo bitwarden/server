@@ -1,5 +1,5 @@
-﻿using Core.Tools.Models.Data;
-using Core.Tools.ReportFeatures.Requests;
+﻿using Bit.Core.Tools.Models.Data;
+using Bit.Core.Tools.ReportFeatures.Requests;
 
 namespace Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 
