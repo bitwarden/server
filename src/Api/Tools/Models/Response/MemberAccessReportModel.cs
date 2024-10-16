@@ -3,24 +3,6 @@
 namespace Bit.Api.Tools.Models.Response;
 
 /// <summary>
-/// Member access details. The individual item for the detailed member access
-/// report. A collection can be assigned directly to a user without a group or
-/// the user can be assigned to a collection through a group. Group level permissions
-/// can override collection level permissions.  
-/// </summary>
-// public class MemberAccessReportAccessDetails
-// {
-//     public Guid? CollectionId { get; set; }
-//     public Guid? GroupId { get; set; }
-//     public string GroupName { get; set; }
-//     public string CollectionName { get; set; }
-//     public int ItemCount { get; set; }
-//     public bool? ReadOnly { get; set; }
-//     public bool? HidePasswords { get; set; }
-//     public bool? Manage { get; set; }
-// }
-
-/// <summary>
 /// Contains the collections and group collections a user has access to including
 /// the permission level for the collection and group collection. 
 /// </summary>
