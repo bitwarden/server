@@ -77,7 +77,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
                 EventType.OrganizationDomain_NotVerified,
                 EventSystemUser.DomainVerification);
 
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Verification for organization {OrgId} with domain {Domain} failed",
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "Verification for organization {OrgId} with domain {Domain} failed",
                 domainVerificationResult.OrganizationId, domainVerificationResult.DomainName);
         }
 
@@ -111,12 +112,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             {
                 domain.SetVerifiedDate();
 
-                await _policyService.SaveAsync(new Policy
-                {
-                    OrganizationId = domain.OrganizationId,
-                    Type = PolicyType.SingleOrg,
-                    Enabled = true,
-                }, _organizationService, null);
+                await EnableSingleOrganizationPolicyAsync(domain.OrganizationId);
             }
         }
         catch (Exception e)
@@ -128,4 +124,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         return domain;
     }
 
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId)
+        => await _policyService.SaveAsync(
+            new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true, },
+            _organizationService, null);
 }
