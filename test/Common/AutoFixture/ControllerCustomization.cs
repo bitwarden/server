@@ -1,6 +1,5 @@
 ﻿using AutoFixture;
 using Microsoft.AspNetCore.Mvc;
-using Org.BouncyCastle.Security;
 
 namespace Bit.Test.Common.AutoFixture;
 
