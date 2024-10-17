@@ -159,12 +159,6 @@ public class OrganizationLicense : ILicense
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors
     /// </remarks>
-    /// <remarks>
-    /// ⚠ This is important! We are on this license version because of new
-    /// properties that were added for versions 14 and 15. These properties
-    /// were later removed! When you increment to version 16 please delete
-    /// this comment.
-    /// </remarks>
     public const int CurrentLicenseFileVersion = 14;
     private bool ValidLicenseVersion
     {
