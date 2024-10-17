@@ -4,13 +4,22 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# DevOps for Actions and other workflow changes
-.github/workflows @bitwarden/dept-devops
+## Docker files have shared ownership ##
+**/Dockerfile
+**/*.Dockerfile
+**/.dockerignore
+**/entrypoint.sh
 
-# DevOps for Docker changes
-**/Dockerfile @bitwarden/dept-devops
-**/*.Dockerfile @bitwarden/dept-devops
-**/.dockerignore @bitwarden/dept-devops
+## BRE team owns these workflows ##
+.github/workflows/publish.yml @bitwarden/dept-bre
+
+## These are shared workflows ##
+.github/workflows/_move_finalization_db_scripts.yml
+.github/workflows/build.yml
+.github/workflows/cleanup-after-pr.yml
+.github/workflows/cleanup-rc-branch.yml
+.github/workflows/release.yml
+.github/workflows/repository-management.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
@@ -60,6 +69,6 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
 
-# Multiple owners - DO NOT REMOVE (DevOps)
+# Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
 Directory.Build.props
