@@ -41,6 +41,12 @@ public class DeviceValidator(
     private readonly IMailService _mailService = mailService;
     private readonly ICurrentContext _currentContext = currentContext;
 
+    /// <summary>
+    /// Save a device to the database. If the device is already known, it will be returned.
+    /// </summary>
+    /// <param name="user">The user is assumed NOT null, still going to check though</param>
+    /// <param name="request">Duende Validated Request that contains the data to create the device object</param>
+    /// <returns>Returns null if user or device is malformed; The existing device if already in DB; a new device login</returns>
     public async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
     {
         var device = GetDeviceFromRequest(request);

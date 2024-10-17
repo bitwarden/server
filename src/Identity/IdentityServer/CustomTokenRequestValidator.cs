@@ -1,9 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -11,7 +9,6 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
@@ -29,28 +26,36 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
-        IDeviceValidator deviceValidator,
         IUserService userService,
         IEventService eventService,
-        IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
-        IOrganizationRepository organizationRepository,
+        IDeviceValidator deviceValidator,
+        ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IApplicationCacheService applicationCacheService,
         IMailService mailService,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
-        : base(userManager, userService, eventService, deviceValidator,
-            organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
-            applicationCacheService, mailService, logger, currentContext, globalSettings,
-            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository,
+        ISsoConfigRepository ssoConfigRepository,
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
+        )
+        : base(
+            userManager,
+            userService,
+            eventService,
+            deviceValidator,
+            twoFactorAuthenticationValidator,
+            organizationUserRepository,
+            mailService,
+            logger,
+            currentContext,
+            globalSettings,
+            userRepository,
+            policyService,
+            featureService,
+            ssoConfigRepository,
             userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
@@ -70,7 +75,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             }
         }
 
-        string[] allowedGrantTypes = { "authorization_code", "client_credentials" };
+        string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
             || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
             || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
