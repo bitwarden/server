@@ -18,7 +18,7 @@ public class NotificationFilterRequestModel : IValidatableObject
     /// <summary>
     /// A cursor for use in pagination.
     /// </summary>
-    [StringLength(10)]
+    [StringLength(9)]
     public string? ContinuationToken { get; set; }
 
     /// <summary>
