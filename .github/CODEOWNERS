@@ -14,10 +14,12 @@
 .github/workflows/publish.yml @bitwarden/dept-bre
 
 ## These are shared workflows ##
+.github/workflows/_move_finalization_db_scripts.yml
+.github/workflows/build.yml
 .github/workflows/cleanup-after-pr.yml
 .github/workflows/cleanup-rc-branch.yml
 .github/workflows/release.yml
-.github/workflows/version-bump.yml
+.github/workflows/repository-management.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
