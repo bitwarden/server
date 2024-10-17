@@ -1,8 +1,7 @@
-﻿using Bit.Core.AdminConsole.Services.Implementations;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -36,18 +35,14 @@ public class OrganizationDomainServiceTests
                 Txt = "btw+6789"
             }
         };
+
         sutProvider.GetDependency<IOrganizationDomainRepository>().GetManyByNextRunDateAsync(default)
             .ReturnsForAnyArgs(domains);
 
         await sutProvider.Sut.ValidateOrganizationsDomainAsync();
 
-        await sutProvider.GetDependency<IDnsResolverService>().ReceivedWithAnyArgs(2)
-            .ResolveAsync(default, default);
-        await sutProvider.GetDependency<IOrganizationDomainRepository>().ReceivedWithAnyArgs(2)
-            .ReplaceAsync(default);
-        await sutProvider.GetDependency<IEventService>().ReceivedWithAnyArgs(2)
-            .LogOrganizationDomainEventAsync(default, EventType.OrganizationDomain_NotVerified,
-                EventSystemUser.DomainVerification);
+        await sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().ReceivedWithAnyArgs(2)
+            .SystemVerifyOrganizationDomainAsync(default);
     }
 
     [Theory, BitAutoData]
