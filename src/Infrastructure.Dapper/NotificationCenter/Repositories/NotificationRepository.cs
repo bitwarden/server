@@ -48,10 +48,12 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
             },
             commandType: CommandType.StoredProcedure);
 
+        var data = results.ToList();
+
         return new PagedResult<NotificationStatusDetails>
         {
-            Data = results.ToList(),
-            ContinuationToken = (pageNumber + 1).ToString()
+            Data = data,
+            ContinuationToken = data.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
         };
     }
 }

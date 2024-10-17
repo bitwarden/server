@@ -71,7 +71,7 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         return new PagedResult<NotificationStatusDetails>
         {
             Data = results,
-            ContinuationToken = (pageNumber + 1).ToString()
+            ContinuationToken = results.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
         };
     }
 }
