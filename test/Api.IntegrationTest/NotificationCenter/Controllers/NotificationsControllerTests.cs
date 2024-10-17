@@ -11,6 +11,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Repositories;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.NotificationCenter.Controllers;
@@ -30,6 +31,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     private readonly LoginHelper _loginHelper;
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationStatusRepository _notificationStatusRepository;
+    private readonly IUserRepository _userRepository;
     private Organization _organization = null!;
     private OrganizationUser _organizationUserOwner = null!;
     private string _ownerEmail = null!;
@@ -42,6 +44,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
         _loginHelper = new LoginHelper(_factory, _client);
         _notificationRepository = _factory.GetService<INotificationRepository>();
         _notificationStatusRepository = _factory.GetService<INotificationStatusRepository>();
+        _userRepository = _factory.GetService<IUserRepository>();
     }
 
     public async Task InitializeAsync()
@@ -214,6 +217,234 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
         Assert.InRange(result.Data.Count(), 0, 10);
         Assert.Equal(notificationsInOrder.Count, result.Data.Count());
         AssertNotificationResponseModels(result.Data, notificationsInOrder);
+    }
+
+    [Fact]
+    private async void MarkAsDeleted_NotLoggedIn_Unathorized()
+    {
+        var url = $"/notifications/{Guid.NewGuid().ToString()}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsDeleted_NonExistentNotificationId_NotFound()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{Guid.NewGuid()}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsDeleted_UserIdNotMatching_NotFound()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var user = (await _userRepository.GetByEmailAsync(email))!;
+        var notifications = await CreateNotifications(user.Id);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{notifications[0].Id}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsDeleted_OrganizationIdNotMatchingUserNotPartOfOrganization_NotFound()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var user = (await _userRepository.GetByEmailAsync(email))!;
+        var notifications = await CreateNotifications(user.Id, _organization.Id);
+
+        await _loginHelper.LoginAsync(email);
+
+        var url = $"/notifications/{notifications[0].Id}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsDeleted_OrganizationIdNotMatchingUserPartOfDifferentOrganization_NotFound()
+    {
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            plan: PlanType.EnterpriseAnnually, ownerEmail: _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var user = (await _userRepository.GetByEmailAsync(email))!;
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, email, OrganizationUserType.User);
+        var notifications = await CreateNotifications(user.Id, _organization.Id);
+
+        await _loginHelper.LoginAsync(email);
+
+        var url = $"/notifications/{notifications[0].Id}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsDeleted_NotificationStatusNotExisting_Created()
+    {
+        var notifications = await CreateNotifications(_organizationUserOwner.UserId);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{notifications[0].Id}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(
+            notifications[0].Id, _organizationUserOwner.UserId!.Value);
+        Assert.NotNull(notificationStatus);
+        Assert.NotNull(notificationStatus.DeletedDate);
+        Assert.Equal(DateTime.UtcNow, notificationStatus.DeletedDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Null(notificationStatus.ReadDate);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    private async void MarkAsDeleted_NotificationStatusExisting_Updated(bool deletedDateNull)
+    {
+        var notifications = await CreateNotifications(_organizationUserOwner.UserId);
+        await _notificationStatusRepository.CreateAsync(new NotificationStatus
+        {
+            NotificationId = notifications[0].Id,
+            UserId = _organizationUserOwner.UserId!.Value,
+            ReadDate = null,
+            DeletedDate = deletedDateNull ? null : DateTime.UtcNow - TimeSpan.FromMinutes(_random.Next(3600))
+        });
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{notifications[0].Id}/delete";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(
+            notifications[0].Id, _organizationUserOwner.UserId!.Value);
+        Assert.NotNull(notificationStatus);
+        Assert.NotNull(notificationStatus.DeletedDate);
+        Assert.Equal(DateTime.UtcNow, notificationStatus.DeletedDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Null(notificationStatus.ReadDate);
+    }
+
+    [Fact]
+    private async void MarkAsRead_NotLoggedIn_Unathorized()
+    {
+        var url = $"/notifications/{Guid.NewGuid().ToString()}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsRead_NonExistentNotificationId_NotFound()
+    {
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{Guid.NewGuid()}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsRead_UserIdNotMatching_NotFound()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var user = (await _userRepository.GetByEmailAsync(email))!;
+        var notifications = await CreateNotifications(user.Id);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{notifications[0].Id}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsRead_OrganizationIdNotMatchingUserNotPartOfOrganization_NotFound()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var user = (await _userRepository.GetByEmailAsync(email))!;
+        var notifications = await CreateNotifications(user.Id, _organization.Id);
+
+        await _loginHelper.LoginAsync(email);
+
+        var url = $"/notifications/{notifications[0].Id}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsRead_OrganizationIdNotMatchingUserPartOfDifferentOrganization_NotFound()
+    {
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            plan: PlanType.EnterpriseAnnually, ownerEmail: _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        var user = (await _userRepository.GetByEmailAsync(email))!;
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, email, OrganizationUserType.User);
+        var notifications = await CreateNotifications(user.Id, _organization.Id);
+
+        await _loginHelper.LoginAsync(email);
+
+        var url = $"/notifications/{notifications[0].Id}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    private async void MarkAsRead_NotificationStatusNotExisting_Created()
+    {
+        var notifications = await CreateNotifications(_organizationUserOwner.UserId);
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{notifications[0].Id}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(
+            notifications[0].Id, _organizationUserOwner.UserId!.Value);
+        Assert.NotNull(notificationStatus);
+        Assert.NotNull(notificationStatus.ReadDate);
+        Assert.Equal(DateTime.UtcNow, notificationStatus.ReadDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Null(notificationStatus.DeletedDate);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    private async void MarkAsRead_NotificationStatusExisting_Updated(bool readDateNull)
+    {
+        var notifications = await CreateNotifications(_organizationUserOwner.UserId);
+        await _notificationStatusRepository.CreateAsync(new NotificationStatus
+        {
+            NotificationId = notifications[0].Id,
+            UserId = _organizationUserOwner.UserId!.Value,
+            ReadDate = readDateNull ? null : DateTime.UtcNow - TimeSpan.FromMinutes(_random.Next(3600)),
+            DeletedDate = null
+        });
+
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var url = $"/notifications/{notifications[0].Id}/read";
+        var response = await _client.PatchAsync(url, new StringContent(""));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(
+            notifications[0].Id, _organizationUserOwner.UserId!.Value);
+        Assert.NotNull(notificationStatus);
+        Assert.NotNull(notificationStatus.ReadDate);
+        Assert.Equal(DateTime.UtcNow, notificationStatus.ReadDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Null(notificationStatus.DeletedDate);
     }
 
     private void AssertNotificationResponseModels(IEnumerable<NotificationResponseModel> notificationResponseModels,
