@@ -1,9 +1,10 @@
-IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessAll') IS NOT NULL
+-- Add 'IsMultiOrgEnterprise' column to 'Provider' table.
+IF COL_LENGTH('[dbo].[Provider]', 'IsMultiOrgEnterprise') IS NULL
 BEGIN
 ALTER TABLE
     [dbo].[Provider]
-ADD
-    [IsMultiOrgEnterprise] BIT NULL
+    ADD
+    [IsMultiOrgEnterprise] TINYINT NULL;
 END
 GO
 
