@@ -1,175 +1,161 @@
--- Table
-IF OBJECT_ID('[dbo].[ClientOrganizationMigrationRecord]') IS NULL
+IF COL_LENGTH('[dbo].[OrganizationUser]', 'AccessAll') IS NOT NULL
 BEGIN
-    CREATE TABLE [dbo].[ClientOrganizationMigrationRecord] (
-        [Id] UNIQUEIDENTIFIER NOT NULL,
-        [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
-        [ProviderId] UNIQUEIDENTIFIER NOT NULL,
-        [PlanType] TINYINT NOT NULL,
-        [Seats] SMALLINT NOT NULL,
-        [MaxStorageGb] SMALLINT NULL,
-        [GatewayCustomerId] VARCHAR(50) NOT NULL,
-        [GatewaySubscriptionId] VARCHAR(50) NOT NULL,
-        [ExpirationDate] DATETIME2(7) NULL,
-        [MaxAutoscaleSeats] INT NULL,
-        [Status] TINYINT NOT NULL,
-        CONSTRAINT [PK_ClientOrganizationMigrationRecord] PRIMARY KEY CLUSTERED ([Id] ASC),
-        CONSTRAINT [PK_OrganizationIdProviderId] UNIQUE ([ProviderId], [OrganizationId])
-    );
+ALTER TABLE
+    [dbo].[Provider]
+ADD
+    [IsMultiOrgEnterprise] BIT NULL
 END
 GO
 
--- View
-CREATE OR AlTER VIEW [dbo].[ClientOrganizationMigrationRecordView]
-AS
-SELECT
-    *
-FROM
-    [dbo].[ClientOrganizationMigrationRecord]
-GO
-
--- Stored Procedures: Create
-CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_Create]
+-- Alter 'Provider_Create' SPROC to add 'Gateway', 'GatewayCustomerId' and 'GatewaySubscriptionId' columns.
+CREATE OR ALTER PROCEDURE [dbo].[Provider_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @ProviderId UNIQUEIDENTIFIER,
-    @PlanType TINYINT,
-    @Seats SMALLINT,
-    @MaxStorageGb SMALLINT,
-    @GatewayCustomerId VARCHAR(50),
-    @GatewaySubscriptionId VARCHAR(50),
-    @ExpirationDate DATETIME2(7),
-    @MaxAutoscaleSeats INT,
-    @Status TINYINT
+    @Name NVARCHAR(50),
+    @BusinessName NVARCHAR(50),
+    @BusinessAddress1 NVARCHAR(50),
+    @BusinessAddress2 NVARCHAR(50),
+    @BusinessAddress3 NVARCHAR(50),
+    @BusinessCountry VARCHAR(2),
+    @BusinessTaxNumber NVARCHAR(30),
+    @BillingEmail NVARCHAR(256),
+    @BillingPhone NVARCHAR(50) = NULL,
+    @Status TINYINT,
+    @Type TINYINT = 0,
+    @UseEvents BIT,
+    @Enabled BIT,
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @Gateway TINYINT = 0,
+    @GatewayCustomerId VARCHAR(50) = NULL,
+    @GatewaySubscriptionId VARCHAR(50) = NULL,
+    @IsMultiOrgEnterprise BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[ClientOrganizationMigrationRecord]
+    INSERT INTO [dbo].[Provider]
     (
         [Id],
-        [OrganizationId],
-        [ProviderId],
-        [PlanType],
-        [Seats],
-        [MaxStorageGb],
+        [Name],
+        [BusinessName],
+        [BusinessAddress1],
+        [BusinessAddress2],
+        [BusinessAddress3],
+        [BusinessCountry],
+        [BusinessTaxNumber],
+        [BillingEmail],
+        [BillingPhone],
+        [Status],
+        [Type],
+        [UseEvents],
+        [Enabled],
+        [CreationDate],
+        [RevisionDate],
+        [Gateway],
         [GatewayCustomerId],
         [GatewaySubscriptionId],
-        [ExpirationDate],
-        [MaxAutoscaleSeats],
-        [Status]
+        [IsMultiOrgEnterprise]
     )
     VALUES
     (
         @Id,
-        @OrganizationId,
-        @ProviderId,
-        @PlanType,
-        @Seats,
-        @MaxStorageGb,
+        @Name,
+        @BusinessName,
+        @BusinessAddress1,
+        @BusinessAddress2,
+        @BusinessAddress3,
+        @BusinessCountry,
+        @BusinessTaxNumber,
+        @BillingEmail,
+        @BillingPhone,
+        @Status,
+        @Type,
+        @UseEvents,
+        @Enabled,
+        @CreationDate,
+        @RevisionDate,
+        @Gateway,
         @GatewayCustomerId,
         @GatewaySubscriptionId,
-        @ExpirationDate,
-        @MaxAutoscaleSeats,
-        @Status
+        @IsMultiOrgEnterprise
     )
 END
 GO
 
--- Stored Procedures: DeleteById
-CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_DeleteById]
-    @Id UNIQUEIDENTIFIER
+-- Alter 'Provider_Update' SPROC to add 'IsMultiOrgEnterprise' column.
+CREATE OR ALTER PROCEDURE [dbo].[Provider_Update]
+    @Id UNIQUEIDENTIFIER,
+    @Name NVARCHAR(50),
+    @BusinessName NVARCHAR(50),
+    @BusinessAddress1 NVARCHAR(50),
+    @BusinessAddress2 NVARCHAR(50),
+    @BusinessAddress3 NVARCHAR(50),
+    @BusinessCountry VARCHAR(2),
+    @BusinessTaxNumber NVARCHAR(30),
+    @BillingEmail NVARCHAR(256),
+    @BillingPhone NVARCHAR(50) = NULL,
+    @Status TINYINT,
+    @Type TINYINT = 0,
+    @UseEvents BIT,
+    @Enabled BIT,
+    @CreationDate DATETIME2(7),
+    @RevisionDate DATETIME2(7),
+    @Gateway TINYINT = 0,
+    @GatewayCustomerId VARCHAR(50) = NULL,
+    @GatewaySubscriptionId VARCHAR(50) = NULL,
+    @IsMultiOrgEnterprise BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    DELETE
-    FROM
-        [dbo].[ClientOrganizationMigrationRecord]
-    WHERE
-        [Id] = @Id
+UPDATE
+    [dbo].[Provider]
+SET
+    [Name] = @Name,
+    [BusinessName] = @BusinessName,
+    [BusinessAddress1] = @BusinessAddress1,
+    [BusinessAddress2] = @BusinessAddress2,
+    [BusinessAddress3] = @BusinessAddress3,
+    [BusinessCountry] = @BusinessCountry,
+    [BusinessTaxNumber] = @BusinessTaxNumber,
+    [BillingEmail] = @BillingEmail,
+    [BillingPhone] = @BillingPhone,
+    [Status] = @Status,
+    [Type] = @Type,
+    [UseEvents] = @UseEvents,
+    [Enabled] = @Enabled,
+    [CreationDate] = @CreationDate,
+    [RevisionDate] = @RevisionDate,
+    [Gateway] = @Gateway,
+    [GatewayCustomerId] = @GatewayCustomerId,
+    [GatewaySubscriptionId] = @GatewaySubscriptionId,
+    [IsMultiOrgEnterprise] = @IsMultiOrgEnterprise
+WHERE
+    [Id] = @Id
 END
 GO
 
--- Stored Procedures: ReadById
-CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_ReadById]
-    @Id UNIQUEIDENTIFIER
-AS
+-- Refresh modules for SPROCs reliant on 'Provider' table/view.
+IF OBJECT_ID('[dbo].[Provider_ReadAbilities]') IS NOT NULL
 BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[ClientOrganizationMigrationRecordView]
-    WHERE
-        [Id] = @Id
+EXECUTE sp_refreshsqlmodule N'[dbo].[Provider_ReadAbilities]';
 END
 GO
 
--- Stored Procedures: ReadByOrganizationId
-CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_ReadByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
-AS
+IF OBJECT_ID('[dbo].[Provider_ReadById]') IS NOT NULL
 BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[ClientOrganizationMigrationRecordView]
-    WHERE
-        [OrganizationId] = @OrganizationId
+EXECUTE sp_refreshsqlmodule N'[dbo].[Provider_ReadById]';
 END
 GO
 
--- Stored Procedures: ReadByProviderId
-CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_ReadByProviderId]
-    @ProviderId UNIQUEIDENTIFIER
-AS
+IF OBJECT_ID('[dbo].[Provider_ReadByOrganizationId]') IS NOT NULL
 BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[ClientOrganizationMigrationRecordView]
-    WHERE
-        [ProviderId] = @ProviderId
+EXECUTE sp_refreshsqlmodule N'[dbo].[Provider_ReadByOrganizationId]';
 END
 GO
 
--- Stored Procedures: Update
-CREATE OR ALTER PROCEDURE [dbo].[ClientOrganizationMigrationRecord_Update]
-    @Id UNIQUEIDENTIFIER OUTPUT,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @ProviderId UNIQUEIDENTIFIER,
-    @PlanType TINYINT,
-    @Seats SMALLINT,
-    @MaxStorageGb SMALLINT,
-    @GatewayCustomerId VARCHAR(50),
-    @GatewaySubscriptionId VARCHAR(50),
-    @ExpirationDate DATETIME2(7),
-    @MaxAutoscaleSeats INT,
-    @Status TINYINT
-AS
+IF OBJECT_ID('[dbo].[Provider_Search]') IS NOT NULL
 BEGIN
-    SET NOCOUNT ON
-
-    UPDATE
-        [dbo].[ClientOrganizationMigrationRecord]
-    SET
-        [OrganizationId] = @OrganizationId,
-        [ProviderId] = @ProviderId,
-        [PlanType] = @PlanType,
-        [Seats] = @Seats,
-        [MaxStorageGb] = @MaxStorageGb,
-        [GatewayCustomerId] = @GatewayCustomerId,
-        [GatewaySubscriptionId] = @GatewaySubscriptionId,
-        [ExpirationDate] = @ExpirationDate,
-        [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
-        [Status] = @Status
-    WHERE
-        [Id] = @Id
+EXECUTE sp_refreshsqlmodule N'[dbo].[Provider_Search]';
 END
 GO
