@@ -296,6 +296,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("text");
 
+                    b.Property<bool?>("IsMultiOrgEnterprise")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .HasColumnType("text");
 
