@@ -166,7 +166,7 @@ public class FreshdeskController : Controller
             }
         }
         await Task.Delay(30000 * (retriedCount + 1));
-        return await CallFreshdeskApiAsync(request, retriedCount++);
+        return await CallFreshdeskApiAsync(request, retriedCount + 1);
     }
 
     private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
