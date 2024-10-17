@@ -4,5 +4,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfa
 
 public interface IVerifyOrganizationDomainCommand
 {
-    Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain organizationDomain);
+    Task<OrganizationDomain> UserVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain);
+    Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain);
 }
