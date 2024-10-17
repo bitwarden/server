@@ -288,9 +288,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool?>("IsMultiOrgEnterprise")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Name")
                         .HasColumnType("TEXT");
 

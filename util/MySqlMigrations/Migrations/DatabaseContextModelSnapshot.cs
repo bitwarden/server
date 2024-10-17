@@ -293,9 +293,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("GatewaySubscriptionId")
                         .HasColumnType("longtext");
 
-                    b.Property<bool?>("IsMultiOrgEnterprise")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("Name")
                         .HasColumnType("longtext");
 
