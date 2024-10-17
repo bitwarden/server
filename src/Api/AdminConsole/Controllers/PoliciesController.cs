@@ -16,6 +16,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -61,14 +62,18 @@ public class PoliciesController : Controller
     public async Task<PolicyResponseModel> Get(string orgId, int type)
     {
         var orgIdGuid = new Guid(orgId);
+        var policy = new AdminConsoleEntities.Policy();
+        policy.Type = (PolicyType)type;
+        policy.Enabled = false;
+
         if (!await _currentContext.ManagePolicies(orgIdGuid))
         {
-            throw new NotFoundException();
+            return new PolicyResponseModel(policy);
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+        policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
         if (policy == null)
         {
-            throw new NotFoundException();
+            return new PolicyResponseModel(policy);
         }
 
         return new PolicyResponseModel(policy);
