@@ -129,7 +129,7 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
             exception.Message);
 
-        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
+        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().UserLeaveAsync(default, default);
     }
 
     [Theory]
@@ -160,7 +160,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.Leave(orgId);
 
-        await _removeOrganizationUserCommand.Received(1).RemoveUserAsync(orgId, user.Id);
+        await _removeOrganizationUserCommand.Received(1).UserLeaveAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]

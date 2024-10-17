@@ -91,7 +91,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         }
 
         var result = new List<Tuple<OrganizationUser, string>>();
-        var deletedUserIds = new List<Guid>();
+        var usersToDelete = new List<OrganizationUser>();
+
         foreach (var orgUser in filteredUsers)
         {
             try
@@ -106,24 +107,41 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                     throw new BadRequestException("Only owners can delete other owners.");
                 }
 
+                usersToDelete.Add(orgUser);
+                result.Add(Tuple.Create(orgUser, ""));
+            }
+            catch (BadRequestException e)
+            {
+                result.Add(Tuple.Create(orgUser, e.Message));
+            }
+        }
+
+        if (usersToDelete.Any())
+        {
+            await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
+
+            foreach (var orgUser in usersToDelete)
+            {
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
 
                 if (orgUser.UserId.HasValue)
                 {
                     await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
                 }
-                result.Add(Tuple.Create(orgUser, ""));
-                deletedUserIds.Add(orgUser.Id);
             }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(orgUser, e.Message));
-            }
-
-            await _organizationUserRepository.DeleteManyAsync(deletedUserIds);
         }
 
         return result;
+    }
+
+    public async Task UserLeaveAsync(Guid organizationId, Guid userId)
+    {
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        ValidateDeleteUser(organizationId, organizationUser);
+
+        await RepositoryDeleteUserAsync(organizationUser, null);
+
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Left);
     }
 
     private void ValidateDeleteUser(Guid organizationId, OrganizationUser orgUser)

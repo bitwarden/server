@@ -23,18 +23,25 @@ public class RemoveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
         organizationUser.OrganizationId = deletingUser.OrganizationId;
+
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
         organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
-        currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(deletingUser.OrganizationId)
+            .Returns(true);
 
         await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
-        await organizationUserRepository.Received(1).DeleteAsync(organizationUser);
-        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
 
     [Theory]
@@ -43,6 +50,14 @@ public class RemoveOrganizationUserCommandTests
         Guid organizationId, Guid organizationUserId)
     {
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory]
@@ -59,6 +74,14 @@ public class RemoveOrganizationUserCommandTests
             });
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -66,25 +89,45 @@ public class RemoveOrganizationUserCommandTests
         OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUser.OrganizationId = deletingUser.OrganizationId;
 
-        organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.Id, deletingUser.UserId));
+
         Assert.Contains("User not found.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
     public async Task RemoveUser_RemoveYourself_ThrowsException(OrganizationUser deletingUser, SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(deletingUser.Id)
+            .Returns(deletingUser);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, deletingUser.Id, deletingUser.UserId));
+
         Assert.Contains("You cannot remove yourself.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -93,16 +136,26 @@ public class RemoveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
         organizationUser.OrganizationId = deletingUser.OrganizationId;
-        organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-        currentContext.OrganizationAdmin(deletingUser.OrganizationId).Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationAdmin(deletingUser.OrganizationId)
+            .Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
         Assert.Contains("Only owners can delete other owners.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -111,24 +164,35 @@ public class RemoveOrganizationUserCommandTests
         OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var hasConfirmedOwnersExceptQuery = sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>();
-
         organizationUser.OrganizationId = deletingUser.OrganizationId;
-        organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
-        hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
-            deletingUser.OrganizationId,
-            Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)), Arg.Any<bool>())
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(
+                deletingUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)), Arg.Any<bool>())
             .Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, null));
+
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
-        hasConfirmedOwnersExceptQuery
+
+        _ = sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .Received(1)
             .HasConfirmedOwnersExceptAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)), true);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -137,13 +201,19 @@ public class RemoveOrganizationUserCommandTests
         EventSystemUser eventSystemUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        organizationUserRepository.GetByIdAsync(organizationUser.Id).Returns(organizationUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
 
         await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
-        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
 
     [Theory, BitAutoData]
@@ -151,9 +221,7 @@ public class RemoveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        organizationUserRepository
+        sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
             .Returns(organizationUser);
 
@@ -166,7 +234,13 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value);
 
-        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
 
     [Theory, BitAutoData]
@@ -174,19 +248,35 @@ public class RemoveOrganizationUserCommandTests
         Guid organizationId, Guid userId)
     {
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RemoveUserAsync(organizationId, userId));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
     public async Task RemoveUser_ByUserId_InvalidUser_ThrowsException(OrganizationUser organizationUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-
-        organizationUserRepository.GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value).Returns(organizationUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
+            .Returns(organizationUser);
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.UserId.Value));
         Assert.Contains("User not found.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -194,11 +284,10 @@ public class RemoveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var hasConfirmedOwnersExceptQuery = sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>();
-
-        organizationUserRepository.GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value).Returns(organizationUser);
-        hasConfirmedOwnersExceptQuery
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
@@ -207,27 +296,47 @@ public class RemoveOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value));
+
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
-        hasConfirmedOwnersExceptQuery
+
+        _ = sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .Received(1)
             .HasConfirmedOwnersExceptAsync(
                 organizationUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
                 Arg.Any<bool>());
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
     public async Task RemoveUsers_FilterInvalid_ThrowsException(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationUsers = new[] { organizationUser };
         var organizationUserIds = organizationUsers.Select(u => u.Id);
-        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
+
         Assert.Contains("Users invalid.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -235,16 +344,26 @@ public class RemoveOrganizationUserCommandTests
         OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationUsers = new[] { deletingUser };
         var organizationUserIds = organizationUsers.Select(u => u.Id);
-        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+
         Assert.Contains("You cannot remove yourself.", result[0].Item2);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -265,7 +384,16 @@ public class RemoveOrganizationUserCommandTests
             .Returns(true);
 
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+
         Assert.Contains("Only owners can delete other owners.", result[0].Item2);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 
     [Theory, BitAutoData]
@@ -282,7 +410,50 @@ public class RemoveOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
+
         Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteManyAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUsers_OneErrorOneSuccess(
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        orgUser.OrganizationId = deletingUser.OrganizationId;
+
+        var organizationUsers = new[] { deletingUser, orgUser };
+        var organizationUserIds = organizationUsers.Select(u => u.Id);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(deletingUser.OrganizationId)
+            .Returns(true);
+
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+
+        Assert.Contains("You cannot remove yourself.", result[0].Item2);
+        Assert.Contains("", result[1].Item2);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 1 && ids.Contains(orgUser.Id)));
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
     [Theory, BitAutoData]
@@ -291,19 +462,130 @@ public class RemoveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1, OrganizationUser orgUser2,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
         orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
+
         var organizationUsers = new[] { orgUser1, orgUser2 };
         var organizationUserIds = organizationUsers.Select(u => u.Id);
-        organizationUserRepository.GetManyAsync(default).ReturnsForAnyArgs(organizationUsers);
-        organizationUserRepository.GetByIdAsync(deletingUser.Id).Returns(deletingUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
-        currentContext.OrganizationOwner(deletingUser.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(deletingUser.OrganizationId)
+            .Returns(true);
 
         await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == 2 && ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)));
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(u => u.Id == orgUser1.Id), EventType.OrganizationUser_Removed);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(u => u.Id == orgUser2.Id), EventType.OrganizationUser_Removed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserLeave_Success(
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
+            .Returns(organizationUser);
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
+                Arg.Any<bool>())
+            .Returns(true);
+
+        await sutProvider.Sut.UserLeaveAsync(organizationUser.OrganizationId, organizationUser.UserId.Value);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Left);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserLeave_NotFound_ThrowsException(SutProvider<RemoveOrganizationUserCommand> sutProvider,
+        Guid organizationId, Guid userId)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.UserLeaveAsync(organizationId, userId));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserLeave_InvalidUser_ThrowsException(OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
+            .Returns(organizationUser);
+
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UserLeaveAsync(Guid.NewGuid(), organizationUser.UserId.Value));
+
+        Assert.Contains("User not found.", exception.Message);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserLeave_RemovingLastOwner_ThrowsException(
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organizationUser.OrganizationId, organizationUser.UserId!.Value)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
+                Arg.Any<bool>())
+            .Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UserLeaveAsync(organizationUser.OrganizationId, organizationUser.UserId.Value));
+
+        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        _ = sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .Received(1)
+            .HasConfirmedOwnersExceptAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)),
+                Arg.Any<bool>());
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventAsync((OrganizationUser)default, default);
     }
 }
