@@ -4,11 +4,11 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT 
-    CC.*
-    FROM 
+    SELECT
+        CC.*
+    FROM
         [dbo].[CollectionCipher] CC
-    INNER JOIN 
+    INNER JOIN
         [dbo].[Collection] S ON S.[Id] = CC.[CollectionId]
     INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = S.[OrganizationId] AND OU.[UserId] = @UserId
@@ -21,11 +21,11 @@ BEGIN
 
     SELECT 
         CC.*
-    FROM 
+    FROM
         [dbo].[CollectionCipher] CC
-    INNER JOIN 
+    INNER JOIN
         [dbo].[Collection] S ON S.[Id] = CC.[CollectionId]
-    INNER JOIN 
+    INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[OrganizationId] = S.[OrganizationId] AND OU.[UserId] = @UserId
     INNER JOIN
         [dbo].[GroupUser] GU ON GU.[OrganizationUserId] = OU.[Id]
@@ -33,7 +33,7 @@ BEGIN
         [dbo].[CollectionGroup] CG ON CG.[CollectionId] = CC.[CollectionId] AND CG.[GroupId] = GU.[GroupId]
     LEFT JOIN
         [dbo].[CollectionUser] CU ON CU.[CollectionId] = S.[Id] AND CU.[OrganizationUserId] = OU.[Id]
-    WHERE 
+    WHERE
         OU.[Status] = 2
         AND CU.[CollectionId] IS NULL
 END
