@@ -306,21 +306,36 @@ public class ProviderMigrator(
 
         var organizationCancellationCredit = organizationCustomers.Sum(customer => customer.Balance);
 
-        var legacyOrganizations = organizations.Where(organization =>
-            organization.PlanType is
+        await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            new CustomerBalanceTransactionCreateOptions
+            {
+                Amount = organizationCancellationCredit,
+                Currency = "USD",
+                Description = "Unused, prorated time for client organization subscriptions."
+            });
+
+        var migrationRecords = await Task.WhenAll(organizations.Select(organization =>
+            clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id)));
+
+        var legacyOrganizationMigrationRecords = migrationRecords.Where(migrationRecord =>
+            migrationRecord.PlanType is
                 PlanType.EnterpriseAnnually2020 or
-                PlanType.EnterpriseMonthly2020 or
-                PlanType.TeamsAnnually2020 or
-                PlanType.TeamsMonthly2020);
+                PlanType.TeamsAnnually2020);
 
-        var legacyOrganizationCredit = legacyOrganizations.Sum(organization => organization.Seats ?? 0);
+        var legacyOrganizationCredit = legacyOrganizationMigrationRecords.Sum(migrationRecord => migrationRecord.Seats) * 12 * -100;
 
-        await stripeAdapter.CustomerUpdateAsync(provider.GatewayCustomerId, new CustomerUpdateOptions
+        if (legacyOrganizationCredit < 0)
         {
-            Balance = organizationCancellationCredit + legacyOrganizationCredit
-        });
+            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+                new CustomerBalanceTransactionCreateOptions
+                {
+                    Amount = legacyOrganizationCredit,
+                    Currency = "USD",
+                    Description = "1 year rebate for legacy client organizations."
+                });
+        }
 
-        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", organizationCancellationCredit, provider.Id);
+        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", organizationCancellationCredit + legacyOrganizationCredit, provider.Id);
 
         await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.CreditApplied);
     }
