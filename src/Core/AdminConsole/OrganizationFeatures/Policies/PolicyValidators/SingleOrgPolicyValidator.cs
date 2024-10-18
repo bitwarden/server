@@ -43,15 +43,15 @@ public class SingleOrgPolicyValidator : IPolicyValidator
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId, organizationService);
+            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId);
         }
     }
 
-    private async Task RemoveNonCompliantUsersAsync(Guid organizationId, IOrganizationService organizationService)
+    private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
     {
         // Remove non-compliant users
         var savingUserId = _currentContext.UserId;

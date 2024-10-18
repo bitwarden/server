@@ -88,4 +88,5 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     }
 
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

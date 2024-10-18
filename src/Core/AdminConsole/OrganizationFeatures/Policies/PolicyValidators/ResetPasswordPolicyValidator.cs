@@ -33,5 +33,5 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
         return "";
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

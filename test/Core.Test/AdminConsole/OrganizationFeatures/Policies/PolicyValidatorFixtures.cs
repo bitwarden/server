@@ -15,16 +15,16 @@ public class FakeSingleOrgPolicyValidator : IPolicyValidator
     public IEnumerable<PolicyType> RequiredPolicies => Array.Empty<PolicyType>();
 
     public readonly Func<PolicyUpdate, Policy?, Task<string>> ValidateAsyncMock = Substitute.For<Func<PolicyUpdate, Policy?, Task<string>>>();
-    public readonly Action<PolicyUpdate, Policy?, IOrganizationService> OnSaveSideEffectsAsyncMock = Substitute.For<Action<PolicyUpdate, Policy?, IOrganizationService>>();
+    public readonly Action<PolicyUpdate, Policy?> OnSaveSideEffectsAsyncMock = Substitute.For<Action<PolicyUpdate, Policy?>>();
 
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         return ValidateAsyncMock(policyUpdate, currentPolicy);
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        OnSaveSideEffectsAsyncMock(policyUpdate, currentPolicy, organizationService);
+        OnSaveSideEffectsAsyncMock(policyUpdate, currentPolicy);
         return Task.FromResult(0);
     }
 }
@@ -32,4 +32,6 @@ public class FakeRequireSsoPolicyValidator : IPolicyValidator
 {
     public PolicyType Type => PolicyType.RequireSso;
     public IEnumerable<PolicyType> RequiredPolicies => [PolicyType.SingleOrg];
+    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }

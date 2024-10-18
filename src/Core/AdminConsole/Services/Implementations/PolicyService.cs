@@ -74,7 +74,7 @@ public class PolicyService : IPolicyService
                 Data = policy.Data
             };
 
-            await _savePolicyCommand.SaveAsync(policyUpdate, organizationService, savingUserId);
+            await _savePolicyCommand.SaveAsync(policyUpdate);
             return;
         }
 
