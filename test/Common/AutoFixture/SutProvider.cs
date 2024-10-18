@@ -128,16 +128,6 @@ public class SutProvider<TSut> : ISutProvider
                 return _sutProvider.GetDependency(parameterInfo.ParameterType, "");
             }
 
-            // TimeProvider should use FakeTimeProvider rather than a Substitute mock
-            if (parameterInfo.ParameterType == typeof(TimeProvider))
-            {
-                var fakeTimeProvider = new FakeTimeProvider();
-                _sutProvider.SetDependency(parameterInfo.ParameterType, fakeTimeProvider, parameterInfo.Name);
-                // Also register it under FakeTimeProvider so it can be easily retrieved in GetDependency
-                _sutProvider.SetDependency(typeof(FakeTimeProvider), fakeTimeProvider);
-                return fakeTimeProvider;
-            }
-
             // This is the equivalent of _fixture.Create<parameterInfo.ParameterType>, but no overload for
             // Create(Type type) exists.
             var dependency = new SpecimenContext(_fixture).Resolve(new SeededRequest(parameterInfo.ParameterType,

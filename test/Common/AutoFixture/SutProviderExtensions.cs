@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
 
@@ -45,6 +46,20 @@ public static class SutProviderExtensions
         return sutProvider
             .SetDependency(settings)
             .SetDependency(mockHttpClientFactory)
+            .Create();
+    }
+
+    /// <summary>
+    /// Configures SutProvider to use FakeTimeProvider.
+    /// It is registered under both the TimeProvider type and the FakeTimeProvider type
+    /// so that it can be retrieved in a type-safe manner with GetDependency.
+    /// </summary>
+    public static SutProvider<T> ConfigureFakeTimeProvider<T>(this SutProvider<T> sutProvider)
+    {
+        var fakeTimeProvider = new FakeTimeProvider();
+        return sutProvider
+            .SetDependency((TimeProvider)fakeTimeProvider)
+            .SetDependency(fakeTimeProvider)
             .Create();
     }
 }

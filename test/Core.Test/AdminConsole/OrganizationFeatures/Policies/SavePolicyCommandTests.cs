@@ -264,9 +264,8 @@ public class SavePolicyCommandTests
     {
         var fixture = new Fixture();
         fixture.Customizations.Add(new PolicyValidatorSpecimenBuilder(policyValidators ?? new List<IPolicyValidator>()));
-        var sutProvider = new SutProvider<SavePolicyCommand>(fixture);
-        sutProvider.Create();
-        return sutProvider;
+        return new SutProvider<SavePolicyCommand>(fixture)
+            .ConfigureFakeTimeProvider();
     }
 
     private static void ArrangeOrganization(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
