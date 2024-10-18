@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -22,19 +23,22 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         ISsoConfigRepository ssoConfigRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
@@ -77,7 +81,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
                 //     savingUserId);
 
                 // In the meantime we use the underlying logic in OrganizationService
-                await organizationService.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
 
                 await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                     org.DisplayName(), orgUser.Email);

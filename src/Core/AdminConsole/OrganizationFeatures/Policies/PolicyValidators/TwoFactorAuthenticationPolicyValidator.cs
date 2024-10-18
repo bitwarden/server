@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
@@ -19,6 +20,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
 
@@ -27,13 +29,15 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         ICurrentContext currentContext,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _currentContext = currentContext;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
@@ -74,7 +78,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
                 //     savingUserId);
 
                 // In the meantime we use the underlying logic in OrganizationService
-                await organizationService.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
 
                 await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                     org!.DisplayName(), orgUser.Email);
