@@ -29,7 +29,7 @@ public class NotificationsControllerTests
     [BitAutoData(true, false)]
     [BitAutoData(true, true)]
     [NotificationStatusDetailsListCustomize(5)]
-    public async Task List_StatusFilter_ReturnedMatchingNotifications(bool? readStatusFilter, bool? deletedStatusFilter,
+    public async Task ListAsync_StatusFilter_ReturnedMatchingNotifications(bool? readStatusFilter, bool? deletedStatusFilter,
         SutProvider<NotificationsController> sutProvider,
         IEnumerable<NotificationStatusDetails> notificationStatusDetailsEnumerable)
     {
@@ -46,7 +46,7 @@ public class NotificationsControllerTests
             .Take(10)
             .ToDictionary(n => n.Id);
 
-        var listResponse = await sutProvider.Sut.List(new NotificationFilterRequestModel
+        var listResponse = await sutProvider.Sut.ListAsync(new NotificationFilterRequestModel
         {
             ReadStatusFilter = readStatusFilter,
             DeletedStatusFilter = deletedStatusFilter
@@ -81,7 +81,7 @@ public class NotificationsControllerTests
     [Theory]
     [BitAutoData]
     [NotificationStatusDetailsListCustomize(19)]
-    public async Task List_PagingRequestNoContinuationToken_ReturnedFirst10MatchingNotifications(
+    public async Task ListAsync_PagingRequestNoContinuationToken_ReturnedFirst10MatchingNotifications(
         SutProvider<NotificationsController> sutProvider,
         IEnumerable<NotificationStatusDetails> notificationStatusDetailsEnumerable)
     {
@@ -99,7 +99,7 @@ public class NotificationsControllerTests
             .Take(10)
             .ToDictionary(n => n.Id);
 
-        var listResponse = await sutProvider.Sut.List(new NotificationFilterRequestModel());
+        var listResponse = await sutProvider.Sut.ListAsync(new NotificationFilterRequestModel());
 
         Assert.Equal("list", listResponse.Object);
         Assert.Equal(10, listResponse.Data.Count());
@@ -129,7 +129,7 @@ public class NotificationsControllerTests
     [Theory]
     [BitAutoData]
     [NotificationStatusDetailsListCustomize(19)]
-    public async Task List_PagingRequestUsingContinuationToken_ReturnedLast9MatchingNotifications(
+    public async Task ListAsync_PagingRequestUsingContinuationToken_ReturnedLast9MatchingNotifications(
         SutProvider<NotificationsController> sutProvider,
         IEnumerable<NotificationStatusDetails> notificationStatusDetailsEnumerable)
     {
@@ -147,7 +147,7 @@ public class NotificationsControllerTests
             .Skip(10)
             .ToDictionary(n => n.Id);
 
-        var listResponse = await sutProvider.Sut.List(new NotificationFilterRequestModel { ContinuationToken = "2" });
+        var listResponse = await sutProvider.Sut.ListAsync(new NotificationFilterRequestModel { ContinuationToken = "2" });
 
         Assert.Equal("list", listResponse.Object);
         Assert.Equal(9, listResponse.Data.Count());
@@ -176,11 +176,11 @@ public class NotificationsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task MarkAsDeleted_NotificationId_MarkedAsDeleted(
+    public async Task MarkAsDeletedAsync_NotificationId_MarkedAsDeleted(
         SutProvider<NotificationsController> sutProvider,
         Guid notificationId)
     {
-        await sutProvider.Sut.MarkAsDeleted(notificationId);
+        await sutProvider.Sut.MarkAsDeletedAsync(notificationId);
 
         await sutProvider.GetDependency<IMarkNotificationDeletedCommand>()
             .Received(1)
@@ -189,11 +189,11 @@ public class NotificationsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task MarkAsRead_NotificationId_MarkedAsRead(
+    public async Task MarkAsReadAsync_NotificationId_MarkedAsRead(
         SutProvider<NotificationsController> sutProvider,
         Guid notificationId)
     {
-        await sutProvider.Sut.MarkAsRead(notificationId);
+        await sutProvider.Sut.MarkAsReadAsync(notificationId);
 
         await sutProvider.GetDependency<IMarkNotificationReadCommand>()
             .Received(1)

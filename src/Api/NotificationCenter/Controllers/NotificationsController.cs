@@ -30,7 +30,7 @@ public class NotificationsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<NotificationResponseModel>> List(
+    public async Task<ListResponseModel<NotificationResponseModel>> ListAsync(
         [FromQuery] NotificationFilterRequestModel filter)
     {
         var pageOptions = new PageOptions
@@ -58,13 +58,13 @@ public class NotificationsController : Controller
     }
 
     [HttpPatch("{id}/delete")]
-    public async Task MarkAsDeleted([FromRoute] Guid id)
+    public async Task MarkAsDeletedAsync([FromRoute] Guid id)
     {
         await _markNotificationDeletedCommand.MarkDeletedAsync(id);
     }
 
     [HttpPatch("{id}/read")]
-    public async Task MarkAsRead([FromRoute] Guid id)
+    public async Task MarkAsReadAsync([FromRoute] Guid id)
     {
         await _markNotificationReadCommand.MarkReadAsync(id);
     }
