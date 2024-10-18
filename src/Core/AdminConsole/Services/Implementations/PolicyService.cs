@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -30,6 +31,7 @@ public class PolicyService : IPolicyService
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IFeatureService _featureService;
     private readonly ISavePolicyCommand _savePolicyCommand;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -42,7 +44,8 @@ public class PolicyService : IPolicyService
         GlobalSettings globalSettings,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IFeatureService featureService,
-        ISavePolicyCommand savePolicyCommand)
+        ISavePolicyCommand savePolicyCommand,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -55,6 +58,7 @@ public class PolicyService : IPolicyService
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _featureService = featureService;
         _savePolicyCommand = savePolicyCommand;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
@@ -307,7 +311,7 @@ public class PolicyService : IPolicyService
                                     "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                             }
 
-                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                            await _removeOrganizationUserCommand.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                                 org.DisplayName(), orgUser.Email);
@@ -323,7 +327,7 @@ public class PolicyService : IPolicyService
                                     && ou.OrganizationId != org.Id
                                     && ou.Status != OrganizationUserStatusType.Invited))
                         {
-                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                            await _removeOrganizationUserCommand.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                 org.DisplayName(), orgUser.Email);
