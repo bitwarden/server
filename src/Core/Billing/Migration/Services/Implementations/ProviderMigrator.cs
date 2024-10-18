@@ -41,7 +41,18 @@ public class ProviderMigrator(
 
         await migrationTrackerCache.StartTracker(provider);
 
-        await MigrateClientsAsync(providerId);
+        var organizations = await GetEnabledClientsAsync(provider.Id);
+
+        if (organizations.Count == 0)
+        {
+            logger.LogInformation("CB: Skipping migration for provider ({ProviderID}) with no clients", providerId);
+
+            await migrationTrackerCache.UpdateTrackingStatus(providerId, ProviderMigrationProgress.NoClients);
+
+            return;
+        }
+
+        await MigrateClientsAsync(providerId, organizations);
 
         await ConfigureTeamsPlanAsync(providerId);
 
@@ -63,6 +74,16 @@ public class ProviderMigrator(
         if (providerTracker == null)
         {
             return null;
+        }
+
+        if (providerTracker.Progress == ProviderMigrationProgress.NoClients)
+        {
+            return new ProviderMigrationResult
+            {
+                ProviderId = providerTracker.ProviderId,
+                ProviderName = providerTracker.ProviderName,
+                Result = providerTracker.Progress.ToString()
+            };
         }
 
         var clientTrackers = await Task.WhenAll(providerTracker.OrganizationIds.Select(organizationId =>
@@ -99,11 +120,9 @@ public class ProviderMigrator(
 
     #region Steps
 
-    private async Task MigrateClientsAsync(Guid providerId)
+    private async Task MigrateClientsAsync(Guid providerId, List<Organization> organizations)
     {
         logger.LogInformation("CB: Migrating clients for provider ({ProviderID})", providerId);
-
-        var organizations = await GetEnabledClientsAsync(providerId);
 
         var organizationIds = organizations.Select(organization => organization.Id);
 
