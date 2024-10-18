@@ -124,7 +124,11 @@ public class OrganizationsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var organizations = await _organizationUserRepository.GetManyDetailsByUserAsync(userId,
             OrganizationUserStatusType.Confirmed);
-        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o));
+
+        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(userId);
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+
+        var responses = organizations.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responses);
     }
 
