@@ -24,7 +24,9 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     private static readonly string _mockEncryptedTitle =
         "2.06CDSJjTZaigYHUuswIq5A==|trxgZl2RCkYrrmCvGE9WNA==|w5p05eI5wsaYeSyWtsAPvBX63vj798kIMxBTfSB0BQg=";
 
-    private static readonly Random _random = new Random();
+    private static readonly Random _random = new();
+
+    private static TimeSpan OneMinuteTimeSpan => TimeSpan.FromMinutes(1);
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -301,7 +303,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
             notifications[0].Id, _organizationUserOwner.UserId!.Value);
         Assert.NotNull(notificationStatus);
         Assert.NotNull(notificationStatus.DeletedDate);
-        Assert.Equal(DateTime.UtcNow, notificationStatus.DeletedDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, notificationStatus.DeletedDate.Value, OneMinuteTimeSpan);
         Assert.Null(notificationStatus.ReadDate);
     }
 
@@ -329,7 +331,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
             notifications[0].Id, _organizationUserOwner.UserId!.Value);
         Assert.NotNull(notificationStatus);
         Assert.NotNull(notificationStatus.DeletedDate);
-        Assert.Equal(DateTime.UtcNow, notificationStatus.DeletedDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, notificationStatus.DeletedDate.Value, OneMinuteTimeSpan);
         Assert.Null(notificationStatus.ReadDate);
     }
 
@@ -415,7 +417,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
             notifications[0].Id, _organizationUserOwner.UserId!.Value);
         Assert.NotNull(notificationStatus);
         Assert.NotNull(notificationStatus.ReadDate);
-        Assert.Equal(DateTime.UtcNow, notificationStatus.ReadDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, notificationStatus.ReadDate.Value, OneMinuteTimeSpan);
         Assert.Null(notificationStatus.DeletedDate);
     }
 
@@ -443,7 +445,7 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
             notifications[0].Id, _organizationUserOwner.UserId!.Value);
         Assert.NotNull(notificationStatus);
         Assert.NotNull(notificationStatus.ReadDate);
-        Assert.Equal(DateTime.UtcNow, notificationStatus.ReadDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(DateTime.UtcNow, notificationStatus.ReadDate.Value, OneMinuteTimeSpan);
         Assert.Null(notificationStatus.DeletedDate);
     }
 
