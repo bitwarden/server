@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,18 +17,15 @@ public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IOrganizationService organizationService,
         ICurrentContext currentContext)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _organizationService = organizationService;
         _currentContext = currentContext;
     }
 
@@ -96,7 +92,7 @@ public class PoliciesController : Controller
         {
             policy = model.ToPolicy(policy);
         }
-        await _policyService.SaveAsync(policy, _organizationService, null);
+        await _policyService.SaveAsync(policy, null);
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);
     }
