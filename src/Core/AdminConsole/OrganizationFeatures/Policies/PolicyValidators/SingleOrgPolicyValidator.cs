@@ -78,12 +78,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
                         && ou.OrganizationId != org.Id
                         && ou.Status != OrganizationUserStatusType.Invited))
             {
-                // TODO: enable this once AC-607 is merged to fix this circular dependency
-                // await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
-                //     savingUserId);
-
-                // In the meantime we use the underlying logic in OrganizationService
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
+                    savingUserId);
 
                 await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                     org.DisplayName(), orgUser.Email);

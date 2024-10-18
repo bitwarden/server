@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.Auth.Entities;
@@ -111,13 +112,14 @@ public class SingleOrgPolicyValidatorTests
             .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId)))
             .Returns([otherOrganizationUser]);
 
-        var organizationService = Substitute.For<IOrganizationService>();
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
 
-        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy, organizationService);
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
-        await organizationService.Received(1).RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+            .Received(1)
+            .RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),

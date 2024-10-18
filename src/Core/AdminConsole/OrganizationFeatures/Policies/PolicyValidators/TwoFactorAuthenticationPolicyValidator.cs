@@ -41,15 +41,15 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
-    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
+    public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId, organizationService);
+            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId);
         }
     }
 
-    private async Task RemoveNonCompliantUsersAsync(Guid organizationId, IOrganizationService organizationService)
+    private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
     {
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         var savingUserId = _currentContext.UserId;
@@ -74,12 +74,8 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
                         "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                 }
 
-                // TODO: enable this once AC-607 is merged to fix this circular dependency
-                // await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
-                //     savingUserId);
-
-                // In the meantime we use the underlying logic in OrganizationService
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
+                    savingUserId);
 
                 await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                     org!.DisplayName(), orgUser.Email);
@@ -88,5 +84,4 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     }
 
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
 }
