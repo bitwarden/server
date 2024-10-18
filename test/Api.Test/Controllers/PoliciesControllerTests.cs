@@ -3,8 +3,10 @@ using System.Text.Json;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Api.Response;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -132,4 +134,59 @@ public class PoliciesControllerTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_WhenCalled_ReturnsPolicyResponseModel(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, int type)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>()
+        .ManagePolicies(orgId)
+        .Returns(true);
+
+        policy.Type = (PolicyType)type;
+        policy.Enabled = true;
+        policy.Data = null;
+
+        sutProvider.GetDependency<IPolicyRepository>()
+        .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
+        .Returns(policy);
+
+        // Act
+        var result = await sutProvider.Sut.Get(orgId, type);
+
+        // Assert
+        Assert.IsType<PolicyResponseModel>(result);
+        Assert.NotNull(result);
+        Assert.Equal(policy.Id, result.Id);
+        Assert.Equal(policy.Type, result.Type);
+        Assert.Equal(policy.Enabled, result.Enabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_PolicyNotFound_ReturnsPolicyResponseModel(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, int type)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>()
+        .ManagePolicies(orgId)
+        .Returns(true);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+        .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
+        .Returns(new Policy { });
+
+        // Act
+        var result = await sutProvider.Sut.Get(orgId, type);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.IsType<PolicyResponseModel>(result);
+        Assert.NotEqual(policy.Id, result.Id);
+        Assert.Equal(policy.Type, result.Type);
+        Assert.False(result.Enabled);
+    }
+
 }

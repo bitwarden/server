@@ -59,18 +59,17 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyResponseModel> Get(string orgId, int type)
+    public async Task<PolicyResponseModel> Get(Guid orgId, int type)
     {
-        var orgIdGuid = new Guid(orgId);
         var policy = new AdminConsoleEntities.Policy();
         policy.Type = (PolicyType)type;
         policy.Enabled = false;
 
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             return new PolicyResponseModel(policy);
         }
-        policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+        policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
             return new PolicyResponseModel(policy);
