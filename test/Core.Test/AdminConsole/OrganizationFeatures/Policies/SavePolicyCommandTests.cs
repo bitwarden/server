@@ -263,7 +263,7 @@ public class SavePolicyCommandTests
     private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyValidator>? policyValidators = null)
     {
         var fixture = new Fixture();
-        fixture.Customizations.Add(new SavePolicyCommandSpecimenBuilder(policyValidators ?? new List<IPolicyValidator>()));
+        fixture.Customizations.Add(new PolicyValidatorSpecimenBuilder(policyValidators ?? new List<IPolicyValidator>()));
         var sutProvider = new SutProvider<SavePolicyCommand>(fixture);
         sutProvider.Create();
         return sutProvider;
