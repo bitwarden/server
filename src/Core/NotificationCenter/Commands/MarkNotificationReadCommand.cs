@@ -49,11 +49,11 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
 
         if (notificationStatus == null)
         {
-            notificationStatus = new NotificationStatus()
+            notificationStatus = new NotificationStatus
             {
                 NotificationId = notificationId,
                 UserId = _currentContext.UserId.Value,
-                ReadDate = DateTime.Now
+                ReadDate = DateTime.UtcNow
             };
 
             await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notificationStatus,
