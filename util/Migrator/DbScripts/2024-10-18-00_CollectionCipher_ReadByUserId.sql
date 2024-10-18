@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[CollectionCipher_ReadByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[CollectionCipher_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
