@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Microsoft.Extensions.Time.Testing;
 
 namespace Bit.Test.Common.AutoFixture;
 
