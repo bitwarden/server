@@ -1,7 +1,6 @@
 # Runs if there are changes to the paths: list.
 # Starts a matrix job to check for modified files, then sets output based on the results.
 # The input decides if the label job is ran, adding a label to the PR.
----
 name: Protect files
 
 on:

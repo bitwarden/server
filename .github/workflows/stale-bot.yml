@@ -1,4 +1,3 @@
----
 name: Staleness
 on:
   workflow_dispatch:
