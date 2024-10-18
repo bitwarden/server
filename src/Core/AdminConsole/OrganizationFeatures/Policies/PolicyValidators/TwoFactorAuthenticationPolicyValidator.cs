@@ -23,6 +23,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
+    public IEnumerable<PolicyType> RequiredPolicies => [];
 
     public TwoFactorAuthenticationPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -85,4 +86,6 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
             }
         }
     }
+
+    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 }

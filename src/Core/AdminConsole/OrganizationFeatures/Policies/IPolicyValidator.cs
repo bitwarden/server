@@ -21,7 +21,7 @@ public interface IPolicyValidator
     /// PolicyTypes that must be enabled before this policy can be enabled, if any.
     /// These dependencies will be checked when this policy is enabled and when any required policy is disabled.
     /// </summary>
-    public IEnumerable<PolicyType> RequiredPolicies => [];
+    public IEnumerable<PolicyType> RequiredPolicies { get; }
 
     /// <summary>
     /// Validates a policy before saving it.
@@ -31,7 +31,7 @@ public interface IPolicyValidator
     /// <param name="policyUpdate">The policy update request</param>
     /// <param name="currentPolicy">The current policy, if any</param>
     /// <returns>A validation error if validation was unsuccessful, otherwise an empty string</returns>
-    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
+    public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy);
 
     /// <summary>
     /// Performs side effects after a policy is validated but before it is saved.
@@ -40,5 +40,5 @@ public interface IPolicyValidator
     /// </summary>
     /// <param name="policyUpdate">The policy update request</param>
     /// <param name="currentPolicy">The current policy, if any</param>
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService);
 }

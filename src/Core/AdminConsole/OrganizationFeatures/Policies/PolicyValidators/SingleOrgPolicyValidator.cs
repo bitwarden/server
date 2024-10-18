@@ -41,6 +41,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
+    public IEnumerable<PolicyType> RequiredPolicies => [];
+
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy, IOrganizationService organizationService)
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
