@@ -237,6 +237,11 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
             MasterPasswordHash = DefaultPassword
         });
         var userManager = factory.GetService<UserManager<User>>();
+        await factory.RegisterAsync(new RegisterRequestModel
+        {
+            Email = DefaultUsername,
+            MasterPasswordHash = DefaultPassword
+        });
         var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
 

@@ -1,8 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -10,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
@@ -31,11 +28,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IUserService userService,
         IEventService eventService,
         IDeviceValidator deviceValidator,
-        IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
-        IOrganizationRepository organizationRepository,
+        ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IApplicationCacheService applicationCacheService,
         IMailService mailService,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
@@ -44,14 +38,25 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
-        : base(userManager, userService, eventService, deviceValidator,
-              organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
-              tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
+        : base(
+            userManager,
+            userService,
+            eventService,
+            deviceValidator,
+            twoFactorAuthenticationValidator,
+            organizationUserRepository,
+            mailService,
+            logger,
+            currentContext,
+            globalSettings,
+            userRepository,
+            policyService,
+            featureService,
+            ssoConfigRepository,
+            userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _currentContext = currentContext;

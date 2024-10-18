@@ -1,8 +1,7 @@
 ﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -11,7 +10,6 @@ using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -32,18 +30,14 @@ public class BaseRequestValidatorTests
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IDeviceValidator _deviceValidator;
-    private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
-    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly ITwoFactorAuthenticationValidator _twoFactorAuthenticationValidator;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IMailService _mailService;
     private readonly ILogger<BaseRequestValidatorTests> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IPolicyService _policyService;
-    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
@@ -52,43 +46,35 @@ public class BaseRequestValidatorTests
 
     public BaseRequestValidatorTests()
     {
+        _userManager = SubstituteUserManager();
         _userService = Substitute.For<IUserService>();
         _eventService = Substitute.For<IEventService>();
         _deviceValidator = Substitute.For<IDeviceValidator>();
-        _organizationDuoWebTokenProvider = Substitute.For<IOrganizationDuoWebTokenProvider>();
-        _duoWebV4SDKService = Substitute.For<ITemporaryDuoWebV4SDKService>();
-        _organizationRepository = Substitute.For<IOrganizationRepository>();
+        _twoFactorAuthenticationValidator = Substitute.For<ITwoFactorAuthenticationValidator>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _applicationCacheService = Substitute.For<IApplicationCacheService>();
         _mailService = Substitute.For<IMailService>();
         _logger = Substitute.For<ILogger<BaseRequestValidatorTests>>();
         _currentContext = Substitute.For<ICurrentContext>();
         _globalSettings = Substitute.For<GlobalSettings>();
         _userRepository = Substitute.For<IUserRepository>();
         _policyService = Substitute.For<IPolicyService>();
-        _tokenDataFactory = Substitute.For<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>();
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
-        _userManager = SubstituteUserManager();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
             _userService,
             _eventService,
             _deviceValidator,
-            _organizationDuoWebTokenProvider,
-            _duoWebV4SDKService,
-            _organizationRepository,
+            _twoFactorAuthenticationValidator,
             _organizationUserRepository,
-            _applicationCacheService,
             _mailService,
             _logger,
             _currentContext,
             _globalSettings,
             _userRepository,
             _policyService,
-            _tokenDataFactory,
             _featureService,
             _ssoConfigRepository,
             _userDecryptionOptionsBuilder);
@@ -202,6 +188,9 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, default)));
 
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
@@ -230,6 +219,9 @@ public class BaseRequestValidatorTests
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
@@ -271,6 +263,9 @@ public class BaseRequestValidatorTests
 
         _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                          .Returns(device);
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         // Act
         await _sut.ValidateAsync(context);
 
@@ -306,6 +301,9 @@ public class BaseRequestValidatorTests
         _policyService.AnyPoliciesApplicableToUserAsync(
                         Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
                       .Returns(Task.FromResult(true));
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
         // Act
         await _sut.ValidateAsync(context);
 
@@ -330,6 +328,9 @@ public class BaseRequestValidatorTests
         context.ValidatedTokenRequest.ClientId = "Not Web";
         _sut.isValid = true;
         _featureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers).Returns(true);
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -339,28 +340,6 @@ public class BaseRequestValidatorTests
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal($"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}"
                     , errorResponse.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task RequiresTwoFactorAsync_ClientCredentialsGrantType_ShouldReturnFalse(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-        context.ValidatedTokenRequest.GrantType = "client_credentials";
-
-        // Act
-        var result = await _sut.TestRequiresTwoFactorAsync(
-                                    context.CustomValidatorRequestContext.User,
-                                    context.ValidatedTokenRequest);
-
-        // Assert
-        Assert.False(result.Item1);
-        Assert.Null(result.Item2);
     }
 
     private BaseRequestValidationContextFake CreateContext(
