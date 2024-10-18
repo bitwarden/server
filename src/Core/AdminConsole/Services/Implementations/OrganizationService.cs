@@ -1838,12 +1838,12 @@ public class OrganizationService : IOrganizationService
     }
 
 
-    private async Task<IEnumerable<KeyValuePair<string, DeviceType>>> GetUserDeviceIdsAsync(Guid userId)
+    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => new KeyValuePair<string, DeviceType>(d.Id.ToString(), d.Type));
+            .Select(d => d.Id.ToString());
     }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)

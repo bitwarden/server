@@ -1,50 +1,34 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly INotificationHubPool _notificationHubPool;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
-    private Dictionary<NotificationHubType, NotificationHubClient> _clients = [];
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         GlobalSettings globalSettings,
+        INotificationHubPool notificationHubPool,
         IServiceProvider serviceProvider,
         ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
+        _notificationHubPool = notificationHubPool;
         _serviceProvider = serviceProvider;
         _logger = logger;
-
-        // Is this dirty to do in the ctor?
-        void addHub(NotificationHubType type)
-        {
-            var hubRegistration = globalSettings.NotificationHubs.FirstOrDefault(
-                h => h.HubType == type && h.EnableRegistration);
-            if (hubRegistration != null)
-            {
-                var client = NotificationHubClient.CreateClientFromConnectionString(
-                    hubRegistration.ConnectionString,
-                    hubRegistration.HubName,
-                    hubRegistration.EnableSendTracing);
-                _clients.Add(type, client);
-            }
-        }
-
-        addHub(NotificationHubType.General);
-        addHub(NotificationHubType.iOS);
-        addHub(NotificationHubType.Android);
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -117,7 +101,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
             userId, identifier);
 
-        await GetClient(type).CreateOrUpdateInstallationAsync(installation);
+        await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
             await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
@@ -152,11 +136,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         installation.Templates.Add(fullTemplateId, template);
     }
 
-    public async Task DeleteRegistrationAsync(string deviceId, DeviceType deviceType)
+    public async Task DeleteRegistrationAsync(string deviceId)
     {
         try
         {
-            await GetClient(deviceType).DeleteInstallationAsync(deviceId);
+            await ClientFor(GetComb(deviceId)).DeleteInstallationAsync(deviceId);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
                 await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
@@ -168,31 +152,31 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId)
+    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
     {
-        await PatchTagsForUserDevicesAsync(devices, UpdateOperationType.Add, $"organizationId:{organizationId}");
-        if (devices.Any() && InstallationDeviceEntity.IsInstallationDeviceId(devices.First().Key))
+        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
+        if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
         {
-            var entities = devices.Select(e => new InstallationDeviceEntity(e.Key));
+            var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
             await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
         }
     }
 
-    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, string organizationId)
+    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
     {
-        await PatchTagsForUserDevicesAsync(devices, UpdateOperationType.Remove,
+        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
             $"organizationId:{organizationId}");
-        if (devices.Any() && InstallationDeviceEntity.IsInstallationDeviceId(devices.First().Key))
+        if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
         {
-            var entities = devices.Select(e => new InstallationDeviceEntity(e.Key));
+            var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
             await _installationDeviceRepository.UpsertManyAsync(entities.ToList());
         }
     }
 
-    private async Task PatchTagsForUserDevicesAsync(IEnumerable<KeyValuePair<string, DeviceType>> devices, UpdateOperationType op,
+    private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
         string tag)
     {
-        if (!devices.Any())
+        if (!deviceIds.Any())
         {
             return;
         }
@@ -212,11 +196,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             operation.Path += $"/{tag}";
         }
 
-        foreach (var device in devices)
+        foreach (var deviceId in deviceIds)
         {
             try
             {
-                await GetClient(device.Value).PatchInstallationAsync(device.Key, new List<PartialUpdateOperation> { operation });
+                await ClientFor(GetComb(deviceId)).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
@@ -225,53 +209,29 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient GetClient(DeviceType deviceType)
+    private NotificationHubClient ClientFor(Guid deviceId)
     {
-        var hubType = NotificationHubType.General;
-        switch (deviceType)
+        return _notificationHubPool.ClientFor(deviceId);
+    }
+
+    private Guid GetComb(string deviceId)
+    {
+        var deviceIdString = deviceId;
+        InstallationDeviceEntity installationDeviceEntity;
+        Guid deviceIdGuid;
+        if (InstallationDeviceEntity.TryParse(deviceIdString, out installationDeviceEntity))
         {
-            case DeviceType.Android:
-                hubType = NotificationHubType.Android;
-                break;
-            case DeviceType.iOS:
-                hubType = NotificationHubType.iOS;
-                break;
-            case DeviceType.ChromeExtension:
-            case DeviceType.FirefoxExtension:
-            case DeviceType.OperaExtension:
-            case DeviceType.EdgeExtension:
-            case DeviceType.VivaldiExtension:
-            case DeviceType.SafariExtension:
-                hubType = NotificationHubType.GeneralBrowserExtension;
-                break;
-            case DeviceType.WindowsDesktop:
-            case DeviceType.MacOsDesktop:
-            case DeviceType.LinuxDesktop:
-                hubType = NotificationHubType.GeneralDesktop;
-                break;
-            case DeviceType.ChromeBrowser:
-            case DeviceType.FirefoxBrowser:
-            case DeviceType.OperaBrowser:
-            case DeviceType.EdgeBrowser:
-            case DeviceType.IEBrowser:
-            case DeviceType.UnknownBrowser:
-            case DeviceType.SafariBrowser:
-            case DeviceType.VivaldiBrowser:
-                hubType = NotificationHubType.GeneralWeb;
-                break;
-            default:
-                break;
+            // Strip off the installation id (PartitionId). RowKey is the ID in the Installation's table.
+            deviceIdString = installationDeviceEntity.RowKey;
         }
 
-        if (!_clients.ContainsKey(hubType))
+        if (Guid.TryParse(deviceIdString, out deviceIdGuid))
         {
-            _logger.LogWarning("No hub client for '{0}'. Using general hub instead.", hubType);
-            hubType = NotificationHubType.General;
-            if (!_clients.ContainsKey(hubType))
-            {
-                throw new Exception("No general hub client found.");
-            }
         }
-        return _clients[hubType];
+        else
+        {
+            throw new Exception($"Invalid device id {deviceId}.");
+        }
+        return deviceIdGuid;
     }
 }
