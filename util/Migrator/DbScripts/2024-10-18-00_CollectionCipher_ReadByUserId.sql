@@ -1,10 +1,10 @@
-﻿CREATE PROCEDURE [dbo].[CollectionCipher_ReadByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[CollectionCipher_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
 
-    SELECT 
+    SELECT
         CC.*
     FROM
         [dbo].[CollectionCipher] CC
@@ -19,7 +19,7 @@ BEGIN
 
     UNION ALL
 
-    SELECT
+    SELECT 
         CC.*
     FROM
         [dbo].[CollectionCipher] CC
