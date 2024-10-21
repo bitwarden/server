@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityServer.Validation;
 using NSubstitute;
