@@ -137,7 +137,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_WhenCalled_ReturnsPolicyResponseModel(
+    public async Task Get_WhenUserCanManagePolicies_WithExistingType_ReturnsExistingPolicy(
         SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, int type)
     {
         // Arrange
@@ -158,16 +158,16 @@ public class PoliciesControllerTests
 
         // Assert
         Assert.IsType<PolicyResponseModel>(result);
-        Assert.NotNull(result);
         Assert.Equal(policy.Id, result.Id);
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
+        Assert.Equal(policy.OrganizationId, result.OrganizationId);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task Get_PolicyNotFound_ReturnsPolicyResponseModel(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, int type)
+    public async Task Get_WhenUserCanManagePolicies_WithNonExistingType_ReturnsDefaultPolicy(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, int type)
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
@@ -176,17 +176,29 @@ public class PoliciesControllerTests
 
         sutProvider.GetDependency<IPolicyRepository>()
         .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
-        .Returns(new Policy { });
+        .Returns((Policy)null);
 
         // Act
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.NotNull(result);
         Assert.IsType<PolicyResponseModel>(result);
-        Assert.NotEqual(policy.Id, result.Id);
-        Assert.Equal(policy.Type, result.Type);
+        Assert.Equal(result.Type, (PolicyType)type);
         Assert.False(result.Enabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_WhenUserCannotManagePolicies_ThrowsNotFoundException(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, int type)
+    {
+        // Arrange
+        sutProvider.GetDependency<ICurrentContext>()
+        .ManagePolicies(orgId)
+        .Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(orgId, type));
     }
 
 }
