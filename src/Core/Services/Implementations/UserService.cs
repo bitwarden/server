@@ -420,19 +420,28 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         // account uses the same 2FA key.
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 
-        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+        Fido2.CredentialMakeResult credentialResponse = null;
+        try
+        {
+            credentialResponse = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+        }
+        catch (Fido2VerificationException e)
+        {
+            base.Logger.LogError(e, "Unable to verify WebAuthn credential.");
+            return false;
+        }
 
         provider.MetaData.Remove("pending");
         provider.MetaData[keyId] = new TwoFactorProvider.WebAuthnData
         {
             Name = name,
-            Descriptor = new PublicKeyCredentialDescriptor(success.Result.CredentialId),
-            PublicKey = success.Result.PublicKey,
-            UserHandle = success.Result.User.Id,
-            SignatureCounter = success.Result.Counter,
-            CredType = success.Result.CredType,
+            Descriptor = new PublicKeyCredentialDescriptor(credentialResponse.Result.CredentialId),
+            PublicKey = credentialResponse.Result.PublicKey,
+            UserHandle = credentialResponse.Result.User.Id,
+            SignatureCounter = credentialResponse.Result.Counter,
+            CredType = credentialResponse.Result.CredType,
             RegDate = DateTime.Now,
-            AaGuid = success.Result.Aaguid
+            AaGuid = credentialResponse.Result.Aaguid
         };
 
         var providers = user.GetTwoFactorProviders();
