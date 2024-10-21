@@ -121,7 +121,7 @@ public class TwoFactorAuthenticationValidator(
 
         var twoFactorResultDict = new Dictionary<string, object>
         {
-            { "TwoFactorProviders", providers },
+            { "TwoFactorProviders", null },
             { "TwoFactorProviders2", providers }, // backwards compatibility
         };
 
