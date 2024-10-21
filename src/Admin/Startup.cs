@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Bit.Admin.AdminConsole;
 using Bit.Admin.IdentityServer;
 using Bit.Core.Context;
 using Bit.Core.Settings;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Services;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Migration;
+using Microsoft.AspNetCore.Components.Authorization;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -129,6 +131,9 @@ public class Startup
                 services.AddHostedService<HostedServices.AzureQueueMailHostedService>();
             }
         }
+
+        services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+        services.AddRazorComponents();
     }
 
     public void Configure(
@@ -161,6 +166,11 @@ public class Startup
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseAntiforgery();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+            endpoints.MapRazorComponents<AdminConsoleRootApp>();
+        });
     }
 }

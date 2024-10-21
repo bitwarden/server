@@ -18,6 +18,14 @@
     <Folder Include="Billing\Controllers\" />
     <Folder Include="Billing\Models\" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Update="AdminConsole\Components\Admins.cs">
+      <DependentUpon>Admins.razor</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.10" />
+  </ItemGroup>
 
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">

@@ -1,0 +1,35 @@
+@using Microsoft.AspNetCore.Components.Web
+@inject IHttpContextAccessor HttpContextAccessor
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <base href="/"/>
+    <HeadOutlet/>
+</head>
+
+<body class="h-full bg-gray-50">
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <!-- The 'Resource' property will be used in 'HasAppHandler' to obtain the 'app' route parameter -->
+        <!-- If we implement new policies to protect resources, we should protect them with resource based uri and compare them with the user's claims. -->
+        <AuthorizeRouteView RouteData="@routeData" Resource="@HttpContextAccessor.HttpContext">
+            <!-- When visiting a page that requires authorization, but the user isn't authorized, redirect to the login page -->
+            <NotAuthorized>
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
+    </Found>
+</Router>
+<script src="_framework/blazor.web.js" autostart="false"></script>
+<script>
+    Blazor.start({
+    ssr: { disableDomPreservation: true }
+    });
+</script>
+</body>
+</html>
