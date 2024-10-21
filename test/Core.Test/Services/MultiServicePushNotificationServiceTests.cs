@@ -4,6 +4,7 @@ using Bit.Test.Common.AutoFixture;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
+using GlobalSettingsCustomization = Bit.Test.Common.AutoFixture.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -15,17 +16,22 @@ public class MultiServicePushNotificationServiceTests
     private readonly ILogger<RelayPushNotificationService> _relayLogger;
     private readonly ILogger<NotificationsApiPushNotificationService> _hubLogger;
     private readonly IEnumerable<IPushNotificationService> _services;
+    private readonly Settings.GlobalSettings _globalSettings;
 
     public MultiServicePushNotificationServiceTests()
     {
         _logger = Substitute.For<ILogger<MultiServicePushNotificationService>>();
         _relayLogger = Substitute.For<ILogger<RelayPushNotificationService>>();
         _hubLogger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
-        _services = new Fixture().WithAutoNSubstitutions().CreateMany<IPushNotificationService>();
+
+        var fixture = new Fixture().WithAutoNSubstitutions().Customize(new GlobalSettingsCustomization());
+        _services = fixture.CreateMany<IPushNotificationService>();
+        _globalSettings = fixture.Create<Settings.GlobalSettings>();
 
         _sut = new MultiServicePushNotificationService(
             _services,
-            _logger
+            _logger,
+            _globalSettings
         );
     }
 
