@@ -41,7 +41,7 @@ public class ProviderMigrator(
 
         await migrationTrackerCache.StartTracker(provider);
 
-        var organizations = await GetEnabledClientsAsync(provider.Id);
+        var organizations = await GetClientsAsync(provider.Id);
 
         if (organizations.Count == 0)
         {
@@ -148,7 +148,7 @@ public class ProviderMigrator(
     {
         logger.LogInformation("CB: Configuring Teams plan for provider ({ProviderID})", providerId);
 
-        var organizations = await GetEnabledClientsAsync(providerId);
+        var organizations = await GetClientsAsync(providerId);
 
         var teamsSeats = organizations
             .Where(IsTeams)
@@ -191,7 +191,7 @@ public class ProviderMigrator(
     {
         logger.LogInformation("CB: Configuring Enterprise plan for provider ({ProviderID})", providerId);
 
-        var organizations = await GetEnabledClientsAsync(providerId);
+        var organizations = await GetClientsAsync(providerId);
 
         var enterpriseSeats = organizations
             .Where(IsEnterprise)
@@ -234,7 +234,7 @@ public class ProviderMigrator(
     {
         if (string.IsNullOrEmpty(provider.GatewayCustomerId))
         {
-            var organizations = await GetEnabledClientsAsync(provider.Id);
+            var organizations = await GetClientsAsync(provider.Id);
 
             var sampleOrganization = organizations.FirstOrDefault(organization => !string.IsNullOrEmpty(organization.GatewayCustomerId));
 
@@ -318,7 +318,7 @@ public class ProviderMigrator(
 
     private async Task ApplyCreditAsync(Provider provider)
     {
-        var organizations = await GetEnabledClientsAsync(provider.Id);
+        var organizations = await GetClientsAsync(provider.Id);
 
         var organizationCustomers =
             await Task.WhenAll(organizations.Select(organization => stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)));
@@ -359,13 +359,12 @@ public class ProviderMigrator(
 
     #region Utilities
 
-    private async Task<List<Organization>> GetEnabledClientsAsync(Guid providerId)
+    private async Task<List<Organization>> GetClientsAsync(Guid providerId)
     {
         var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
 
         return (await Task.WhenAll(providerOrganizations.Select(providerOrganization =>
                 organizationRepository.GetByIdAsync(providerOrganization.OrganizationId))))
-            .Where(organization => organization.Enabled)
             .ToList();
     }
 
