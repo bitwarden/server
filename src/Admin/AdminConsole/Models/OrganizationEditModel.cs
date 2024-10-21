@@ -181,7 +181,6 @@ public class OrganizationEditModel : OrganizationViewModel
      */
     public object GetPlansHelper() =>
         StaticStore.Plans
-            .Where(p => p.SupportsSecretsManager)
             .Select(p =>
             {
                 var plan = new
