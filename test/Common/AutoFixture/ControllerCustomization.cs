@@ -14,7 +14,7 @@ public class ControllerCustomization : ICustomization
     {
         if (!controllerType.IsAssignableTo(typeof(Controller)))
         {
-            throw new InvalidParameterException($"{nameof(controllerType)} must derive from {typeof(Controller).Name}");
+            throw new Exception($"{nameof(controllerType)} must derive from {typeof(Controller).Name}");
         }
 
         _controllerType = controllerType;
