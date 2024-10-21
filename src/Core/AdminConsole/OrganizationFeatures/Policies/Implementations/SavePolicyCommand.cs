@@ -93,7 +93,7 @@ public class SavePolicyCommand : ISavePolicyCommand
 
             if (missingRequiredPolicyTypes.Count != 0)
             {
-                throw new BadRequestException($"Policy requires the {missingRequiredPolicyTypes.First().GetName()} policy to be enabled first.");
+                throw new BadRequestException($"Turn on the {missingRequiredPolicyTypes.First().GetName()} policy because it is required for the {validator.Type.GetName()} policy.");
             }
         }
 
@@ -107,9 +107,12 @@ public class SavePolicyCommand : ISavePolicyCommand
                     savedPoliciesDict[otherPolicyType].Enabled)
                 .ToList();
 
-            if (dependentPolicyTypes is { Count: > 0 })
+            switch (dependentPolicyTypes)
             {
-                throw new BadRequestException($"This policy is required by the {dependentPolicyTypes.First().GetName()} policy. Try disabling that policy first.");
+                case { Count: 1 }:
+                    throw new BadRequestException($"Turn off the {dependentPolicyTypes.First().GetName()} policy because it requires the {validator.Type.GetName()} policy.");
+                case { Count: > 1 }:
+                    throw new BadRequestException($"Turn off all of the policies that require the {validator.Type.GetName()} policy.");
             }
         }
 

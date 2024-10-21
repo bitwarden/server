@@ -150,7 +150,7 @@ public class SavePolicyCommandTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate));
 
-        Assert.Contains("Policy requires the Single organization policy to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Turn on the Single organization policy because it is required for the Require single sign-on authentication policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
@@ -172,7 +172,7 @@ public class SavePolicyCommandTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate));
 
-        Assert.Contains("Policy requires the Single organization policy to be enabled", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Turn on the Single organization policy because it is required for the Require single sign-on authentication policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
@@ -214,7 +214,32 @@ public class SavePolicyCommandTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policyUpdate));
 
-        Assert.Contains("This policy is required by the Require single sign-on authentication policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Turn off the Require single sign-on authentication policy because it requires the Single organization policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        await AssertPolicyNotSavedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_MultipleDependentPoliciesAreEnabled_Throws(
+        [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg)] Policy currentPolicy,
+        [Policy(PolicyType.RequireSso)] Policy requireSsoPolicy, // depends on Single Org
+        [Policy(PolicyType.MaximumVaultTimeout)] Policy vaultTimeoutPolicy) // depends on Single Org
+    {
+        var sutProvider = SutProviderFactory([
+            new FakeRequireSsoPolicyValidator(),
+            new FakeSingleOrgPolicyValidator(),
+            new FakeVaultTimeoutPolicyValidator()
+        ]);
+
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId)
+            .Returns([currentPolicy, requireSsoPolicy, vaultTimeoutPolicy]);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policyUpdate));
+
+        Assert.Contains("Turn off all of the policies that require the Single organization policy", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
     }
 
