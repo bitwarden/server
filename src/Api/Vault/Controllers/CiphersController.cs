@@ -99,7 +99,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+        var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+
+        return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
     [HttpGet("{id}/full-details")]
