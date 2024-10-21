@@ -32,6 +32,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
     private readonly IDataProtector _organizationServiceDataProtector;
+    private readonly IDataProtector _providerServiceDataProtector;
 
     private readonly ICurrentContext _currentContext;
 
@@ -75,6 +76,8 @@ public class RegisterUserCommand : IRegisterUserCommand
 
         _validateRedemptionTokenCommand = validateRedemptionTokenCommand;
         _emergencyAccessInviteTokenDataFactory = emergencyAccessInviteTokenDataFactory;
+
+        _providerServiceDataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
     }
 
 
@@ -303,6 +306,25 @@ public class RegisterUserCommand : IRegisterUserCommand
         return result;
     }
 
+    public async Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, string masterPasswordHash,
+        string providerInviteToken, Guid providerUserId)
+    {
+        ValidateOpenRegistrationAllowed();
+        ValidateProviderInviteToken(providerInviteToken, providerUserId, user.Email);
+
+        user.EmailVerified = true;
+        user.ApiKey = CoreHelpers.SecureRandomString(30); // API key can't be null.
+
+        var result = await _userService.CreateUserAsync(user, masterPasswordHash);
+        if (result == IdentityResult.Success)
+        {
+            await _mailService.SendWelcomeEmailAsync(user);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
+        }
+
+        return result;
+    }
+
     private void ValidateOpenRegistrationAllowed()
     {
         // We validate open registration on send of initial email and here b/c a user could technically start the
@@ -330,6 +352,15 @@ public class RegisterUserCommand : IRegisterUserCommand
         if (tokenable == null || !tokenable.Valid || !tokenable.IsValid(acceptEmergencyAccessId, userEmail))
         {
             throw new BadRequestException("Invalid accept emergency access invite token.");
+        }
+    }
+
+    private void ValidateProviderInviteToken(string providerInviteToken, Guid providerUserId, string userEmail)
+    {
+        if (!CoreHelpers.TokenIsValid("ProviderUserInvite", _providerServiceDataProtector, providerInviteToken, userEmail, providerUserId,
+                _globalSettings.OrganizationInviteExpirationHours))
+        {
+            throw new BadRequestException("Invalid provider invite token.");
         }
     }
 

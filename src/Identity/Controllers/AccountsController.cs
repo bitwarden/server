@@ -172,6 +172,14 @@ public class AccountsController : Controller
             return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
         }
 
+        if (!string.IsNullOrEmpty(model.ProviderInviteToken) && model.ProviderUserId.HasValue)
+        {
+            identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
+                model.ProviderInviteToken, model.ProviderUserId.Value);
+
+            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+        }
+
         if (string.IsNullOrEmpty(model.EmailVerificationToken))
         {
             throw new BadRequestException("Invalid registration finish request");

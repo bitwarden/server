@@ -36,6 +36,10 @@ public class RegisterFinishRequestModel : IValidatableObject
     public string? AcceptEmergencyAccessInviteToken { get; set; }
     public Guid? AcceptEmergencyAccessId { get; set; }
 
+    public string? ProviderInviteToken { get; set; }
+
+    public Guid? ProviderUserId { get; set; }
+
     public User ToUser()
     {
         var user = new User
