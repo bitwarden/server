@@ -1,0 +1,45 @@
+@using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core.Billing.Enums
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+
+@model CreateMultiOrganizationEnterpriseProviderModel
+
+@{
+    ViewData["Title"] = "Create MSP Provider";
+}
+
+<h1>Create Provider</h1>
+
+<div id="@($"info-{(int)ProviderType.MultiOrganizationEnterprise}")">
+    <h2>Multi-organization Info</h2>
+    <form class="form-group">
+        <div class="form-group">
+            <label asp-for="OwnerEmail"></label>
+            <input type="text" class="form-control" asp-for="OwnerEmail">
+        </div>
+
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    @{
+                    var multiOrgPlans = new List<PlanType>
+                    {
+                    PlanType.EnterpriseAnnually,
+                    PlanType.EnterpriseMonthly
+                    };
+                    }
+                    <label asp-for="Plan"></label>
+                    <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                        <option value="">--</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="EnterpriseSeatMinimum"></label>
+                    <input type="number" class="form-control" asp-for="EnterpriseSeatMinimum">
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

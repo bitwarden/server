@@ -8,4 +8,6 @@ public enum ProviderType : byte
     Msp = 0,
     [Display(ShortName = "Reseller", Name = "Reseller", Description = "Access to clients billing")]
     Reseller = 1,
+    [Display(ShortName = "MOE", Name = "Multi-organization Enterprise", Description = "Access to multiple organizations")]
+    MultiOrganizationEnterprise = 2,
 }

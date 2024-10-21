@@ -1,0 +1,28 @@
+@using Bit.Core.AdminConsole.Enums.Provider
+
+@model CreateResellerProviderModel
+
+@{
+    ViewData["Title"] = "Create MSP Provider";
+}
+
+<h1>Create Provider</h1>
+
+<div id="@($"info-{(int)ProviderType.Reseller}")">
+    <h2>Reseller Info</h2>
+    <form class="form-group">
+        <div class="form-group">
+            <label asp-for="Name"></label>
+            <input type="text" class="form-control" asp-for="Name">
+        </div>
+        <div class="form-group">
+            <label asp-for="BusinessName"></label>
+            <input type="text" class="form-control" asp-for="BusinessName">
+        </div>
+        <div class="form-group">
+            <label asp-for="BillingEmail"></label>
+            <input type="text" class="form-control" asp-for="BillingEmail">
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
+    </form>
+</div>
