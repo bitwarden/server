@@ -110,7 +110,7 @@ public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, string obj = "organizationUserUserDetails")
+        bool twoFactorEnabled, bool managedByOrganization, string obj = "organizationUserUserDetails")
         : base(organizationUser, obj)
     {
         if (organizationUser == null)
@@ -127,6 +127,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
+        ManagedByOrganization = managedByOrganization;
     }
 
     public string Name { get; set; }
@@ -134,6 +135,17 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    /// <summary>
+    /// Indicates if the organization manages the user.
+    /// </summary>
+    /// <remarks>
+    /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// The organization must be enabled and able to have verified domains.
+    /// </remarks>
+    /// <returns>
+    /// False if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    public bool ManagedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }
