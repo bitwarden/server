@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -22,9 +23,16 @@ public interface IPushNotificationService
     Task PushSyncSendCreateAsync(Send send);
     Task PushSyncSendUpdateAsync(Send send);
     Task PushSyncSendDeleteAsync(Send send);
+    Task PushSyncNotificationAsync(Notification notification);
     Task PushAuthRequestAsync(AuthRequest authRequest);
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
-    Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier, string deviceId = null);
+
+    Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null);
+
     Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null);
+        string deviceId = null, ClientType? clientType = null);
+
+    Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
+        ClientType? clientType = null);
 }

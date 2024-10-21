@@ -4,6 +4,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
@@ -128,11 +129,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification
-        {
-            UserId = userId,
-            Date = DateTime.UtcNow
-        };
+        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
 
         await SendMessageAsync(type, message, excludeCurrentContext);
     }
@@ -149,11 +146,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 
     private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
     {
-        var message = new AuthRequestPushNotification
-        {
-            Id = authRequest.Id,
-            UserId = authRequest.UserId
-        };
+        var message = new AuthRequestPushNotification { Id = authRequest.Id, UserId = authRequest.UserId };
 
         await SendMessageAsync(type, message, true);
     }
@@ -171,6 +164,20 @@ public class AzureQueuePushNotificationService : IPushNotificationService
     public async Task PushSyncSendDeleteAsync(Send send)
     {
         await PushSendAsync(send, PushType.SyncSendDelete);
+    }
+
+    public async Task PushSyncNotificationAsync(Notification notification)
+    {
+        var message = new SyncNotificationPushNotification
+        {
+            Id = notification.Id,
+            Global = notification.Global,
+            UserId = notification.Id,
+            OrganizationId = notification.Id,
+            RevisionDate = notification.RevisionDate
+        };
+
+        await SendMessageAsync(PushType.SyncNotification, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)
@@ -203,22 +210,25 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             return null;
         }
 
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        var currentContext =
+            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
+
+    public Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
+        ClientType? clientType = null) => Task.CompletedTask;
 }

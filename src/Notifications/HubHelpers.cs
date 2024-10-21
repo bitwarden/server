@@ -18,7 +18,8 @@ public static class HubHelpers
         CancellationToken cancellationToken = default(CancellationToken)
     )
     {
-        var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson, _deserializerOptions);
+        var notification =
+            JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson, _deserializerOptions);
         logger.LogInformation("Sending notification: {NotificationType}", notification.Type);
         switch (notification.Type)
         {
@@ -37,9 +38,10 @@ public static class HubHelpers
                 else if (cipherNotification.Payload.OrganizationId.HasValue)
                 {
                     await hubContext.Clients.Group(
-                        $"Organization_{cipherNotification.Payload.OrganizationId}")
+                            $"Organization_{cipherNotification.Payload.OrganizationId}")
                         .SendAsync("ReceiveMessage", cipherNotification, cancellationToken);
                 }
+
                 break;
             case PushType.SyncFolderUpdate:
             case PushType.SyncFolderCreate:
@@ -48,7 +50,7 @@ public static class HubHelpers
                     JsonSerializer.Deserialize<PushNotificationData<SyncFolderPushNotification>>(
                         notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(folderNotification.Payload.UserId.ToString())
-                        .SendAsync("ReceiveMessage", folderNotification, cancellationToken);
+                    .SendAsync("ReceiveMessage", folderNotification, cancellationToken);
                 break;
             case PushType.SyncCiphers:
             case PushType.SyncVault:
@@ -60,30 +62,50 @@ public static class HubHelpers
                     JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(
                         notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(userNotification.Payload.UserId.ToString())
-                        .SendAsync("ReceiveMessage", userNotification, cancellationToken);
+                    .SendAsync("ReceiveMessage", userNotification, cancellationToken);
                 break;
             case PushType.SyncSendCreate:
             case PushType.SyncSendUpdate:
             case PushType.SyncSendDelete:
                 var sendNotification =
                     JsonSerializer.Deserialize<PushNotificationData<SyncSendPushNotification>>(
-                            notificationJson, _deserializerOptions);
+                        notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(sendNotification.Payload.UserId.ToString())
                     .SendAsync("ReceiveMessage", sendNotification, cancellationToken);
                 break;
             case PushType.AuthRequestResponse:
                 var authRequestResponseNotification =
                     JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
-                            notificationJson, _deserializerOptions);
+                        notificationJson, _deserializerOptions);
                 await anonymousHubContext.Clients.Group(authRequestResponseNotification.Payload.Id.ToString())
                     .SendAsync("AuthRequestResponseRecieved", authRequestResponseNotification, cancellationToken);
                 break;
             case PushType.AuthRequest:
                 var authRequestNotification =
                     JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
-                            notificationJson, _deserializerOptions);
+                        notificationJson, _deserializerOptions);
                 await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
                     .SendAsync("ReceiveMessage", authRequestNotification, cancellationToken);
+                break;
+            case PushType.SyncNotification:
+                var syncNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<SyncNotificationPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                if (syncNotification.Payload.Global)
+                {
+                    await hubContext.Clients.All.SendAsync("ReceiveMessage", syncNotification, cancellationToken);
+                }
+                else if (syncNotification.Payload.UserId.HasValue)
+                {
+                    await hubContext.Clients.User(syncNotification.Payload.UserId.ToString())
+                        .SendAsync("ReceiveMessage", syncNotification, cancellationToken);
+                }
+                else if (syncNotification.Payload.OrganizationId.HasValue)
+                {
+                    await hubContext.Clients.Group(
+                            $"Organization_{syncNotification.Payload.OrganizationId}")
+                        .SendAsync("ReceiveMessage", syncNotification, cancellationToken);
+                }
                 break;
             default:
                 break;
