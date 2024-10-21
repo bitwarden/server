@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -28,6 +29,8 @@ public class PolicyService : IPolicyService
     private readonly GlobalSettings _globalSettings;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -39,7 +42,9 @@ public class PolicyService : IPolicyService
         IMailService mailService,
         GlobalSettings globalSettings,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IFeatureService featureService,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -51,6 +56,8 @@ public class PolicyService : IPolicyService
         _globalSettings = globalSettings;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _featureService = featureService;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
     public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
@@ -216,6 +223,7 @@ public class PolicyService : IPolicyService
             case PolicyType.SingleOrg:
                 if (!policy.Enabled)
                 {
+                    await HasVerifiedDomainsAsync(org);
                     await RequiredBySsoAsync(org);
                     await RequiredByVaultTimeoutAsync(org);
                     await RequiredByKeyConnectorAsync(org);
@@ -253,6 +261,15 @@ public class PolicyService : IPolicyService
                     await DependsOnSingleOrgAsync(org);
                 }
                 break;
+        }
+    }
+
+    private async Task HasVerifiedDomainsAsync(Organization org)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(org.Id))
+        {
+            throw new BadRequestException("Organization has verified domains.");
         }
     }
 
