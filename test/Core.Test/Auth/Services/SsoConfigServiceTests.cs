@@ -11,7 +11,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -342,14 +341,12 @@ public class SsoConfigServiceTests
         await sutProvider.GetDependency<IPolicyService>().Received(1)
             .SaveAsync(
                 Arg.Is<Policy>(t => t.Type == PolicyType.SingleOrg),
-                Arg.Any<IOrganizationService>(),
                 null
             );
 
         await sutProvider.GetDependency<IPolicyService>().Received(1)
             .SaveAsync(
                 Arg.Is<Policy>(t => t.Type == PolicyType.ResetPassword && t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled),
-                Arg.Any<IOrganizationService>(),
                 null
             );
 
