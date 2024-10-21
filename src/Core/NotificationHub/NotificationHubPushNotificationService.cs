@@ -12,6 +12,7 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Notification = Bit.Core.NotificationCenter.Entities.Notification;
 
 namespace Bit.Core.NotificationHub;
 
@@ -135,11 +136,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification
-        {
-            UserId = userId,
-            Date = DateTime.UtcNow
-        };
+        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
 
         await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
     }
@@ -184,31 +181,65 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
     }
 
+    public async Task PushSyncNotificationAsync(Notification notification)
+    {
+        var message = new SyncNotificationPushNotification
+        {
+            Id = notification.Id,
+            Global = notification.Global,
+            UserId = notification.Id,
+            OrganizationId = notification.Id,
+            RevisionDate = notification.RevisionDate
+        };
+
+        if (notification.Global)
+        {
+            await SendPayloadToEveryoneAsync(PushType.SyncNotification, message, true, notification.ClientType);
+        }
+        else if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+                notification.ClientType);
+        }
+        else if (notification.OrganizationId.HasValue)
+        {
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+                true, notification.ClientType);
+        }
+    }
+
     private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
     {
-        var message = new AuthRequestPushNotification
-        {
-            Id = authRequest.Id,
-            UserId = authRequest.UserId
-        };
+        var message = new AuthRequestPushNotification { Id = authRequest.Id, UserId = authRequest.UserId };
 
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
     }
 
-    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
+    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
     {
-        await SendPayloadToUserAsync(userId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
+        await SendPayloadToUserAsync(userId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext),
+            clientType: clientType);
     }
 
-    private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
+    private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload,
+        bool excludeCurrentContext, ClientType? clientType = null)
     {
-        await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
+        await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext),
+            clientType: clientType);
+    }
+
+    private async Task SendPayloadToEveryoneAsync(PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
+    {
+        await SendPayloadToEveryoneAsync(type, payload, GetContextIdentifier(excludeCurrentContext),
+            clientType: clientType);
     }
 
     public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string deviceId = null, ClientType? clientType = null)
     {
-        var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier);
+        var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier, clientType);
         await SendPayloadAsync(tag, type, payload);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
@@ -217,9 +248,20 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     }
 
     public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string deviceId = null, ClientType? clientType = null)
     {
-        var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier);
+        var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier, clientType);
+        await SendPayloadAsync(tag, type, payload);
+        if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+        {
+            await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
+        }
+    }
+
+    public async Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null)
+    {
+        var tag = BuildTag($"template:payload", identifier, clientType);
         await SendPayloadAsync(tag, type, payload);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
@@ -258,16 +300,21 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             return null;
         }
 
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        var currentContext =
+            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
-    private string BuildTag(string tag, string identifier)
+    private string BuildTag(string tag, string identifier, ClientType? clientType)
     {
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             tag += $" && !deviceIdentifier:{SanitizeTagInput(identifier)}";
+        }
+
+        if (clientType.HasValue && clientType.Value != ClientType.All)
+        {
+            tag += $" && clientType:{clientType}";
         }
 
         return $"({tag})";

@@ -45,6 +45,15 @@ public class SyncSendPushNotification
     public DateTime RevisionDate { get; set; }
 }
 
+public class SyncNotificationPushNotification
+{
+    public Guid Id { get; set; }
+    public bool Global { get; set; }
+    public Guid? UserId { get; set; }
+    public Guid? OrganizationId { get; set; }
+    public DateTime RevisionDate { get; set; }
+}
+
 public class AuthRequestPushNotification
 {
     public Guid UserId { get; set; }

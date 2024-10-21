@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Services;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -183,6 +184,40 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
+    public async Task PushSyncNotificationAsync(Notification notification)
+    {
+        var message = new SyncNotificationPushNotification
+        {
+            Id = notification.Id,
+            Global = notification.Global,
+            UserId = notification.Id,
+            OrganizationId = notification.Id,
+            RevisionDate = notification.RevisionDate
+        };
+
+        await SendMessageAsync(PushType.SyncNotification, message, true);
+    }
+
+    public async Task PushSyncOrganizationStatusAsync(Organization organization)
+    {
+        var message = new OrganizationStatusPushNotification
+        {
+            OrganizationId = organization.Id,
+            Enabled = organization.Enabled
+        };
+
+        await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
+    }
+
+    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
+        await SendMessageAsync(PushType.SyncOrganizationCollectionSettingChanged,
+            new OrganizationCollectionManagementPushNotification
+            {
+                OrganizationId = organization.Id,
+                LimitCollectionCreation = organization.LimitCollectionCreation,
+                LimitCollectionDeletion = organization.LimitCollectionDeletion
+            }, false);
+
     private async Task PushSendAsync(Send send, PushType type)
     {
         if (send.UserId.HasValue)
@@ -212,42 +247,25 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             return null;
         }
 
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        var currentContext =
+            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
-    public async Task PushSyncOrganizationStatusAsync(Organization organization)
-    {
-        var message = new OrganizationStatusPushNotification
-        {
-            OrganizationId = organization.Id,
-            Enabled = organization.Enabled
-        };
-
-        await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
-    }
-
-    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
-        await SendMessageAsync(PushType.SyncOrganizationCollectionSettingChanged,
-            new OrganizationCollectionManagementPushNotification
-            {
-                OrganizationId = organization.Id,
-                LimitCollectionCreation = organization.LimitCollectionCreation,
-                LimitCollectionDeletion = organization.LimitCollectionDeletion
-            }, false);
+    public Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
+        ClientType? clientType = null) => Task.CompletedTask;
 }

@@ -3,6 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
@@ -45,10 +46,9 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Templates = new Dictionary<string, InstallationTemplate>()
         };
 
-        installation.Tags = new List<string>
-        {
-            $"userId:{userId}"
-        };
+        var clientType = DeviceTypes.ToClientType(type);
+
+        installation.Tags = new List<string> { $"userId:{userId}", $"clientType:{clientType}" };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
@@ -84,10 +84,10 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
         }
 
-        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
-        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
+        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType);
+        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType);
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier);
+            userId, identifier, clientType);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -97,7 +97,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier)
+        string userId, string identifier, ClientType clientType)
     {
         if (templateBody == null)
         {
@@ -111,8 +111,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Body = templateBody,
             Tags = new List<string>
             {
-                fullTemplateId,
-                $"{fullTemplateId}_userId:{userId}"
+                fullTemplateId, $"{fullTemplateId}_userId:{userId}", $"clientType:{clientType}"
             }
         };
 
