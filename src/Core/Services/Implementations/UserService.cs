@@ -1267,18 +1267,24 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
     {
-        var managingOrganization = await GetOrganizationManagingUserAsync(userId);
-        return managingOrganization != null;
+        var managingOrganizations = await GetOrganizationsManagingUserAsync(userId);
+        return managingOrganizations.Any();
     }
 
-    public async Task<Organization> GetOrganizationManagingUserAsync(Guid userId)
+    public async Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId)
     {
-        // Users can only be managed by an Organization that is enabled and can have organization domains
-        var organization = await _organizationRepository.GetByClaimedUserDomainAsync(userId);
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            return Enumerable.Empty<Organization>();
+        }
 
+        // Get all organizations that have verified the user's email domain.
+        var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(userId);
+
+        // Organizations must be enabled and able to have verified domains.
         // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
         // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
-        return (organization is { Enabled: true, UseSso: true }) ? organization : null;
+        return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseSso: true });
     }
 
     /// <inheritdoc cref="IsLegacyUser(string)"/>
