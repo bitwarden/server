@@ -41,7 +41,18 @@ public class ProviderMigrator(
 
         await migrationTrackerCache.StartTracker(provider);
 
-        await MigrateClientsAsync(providerId);
+        var organizations = await GetClientsAsync(provider.Id);
+
+        if (organizations.Count == 0)
+        {
+            logger.LogInformation("CB: Skipping migration for provider ({ProviderID}) with no clients", providerId);
+
+            await migrationTrackerCache.UpdateTrackingStatus(providerId, ProviderMigrationProgress.NoClients);
+
+            return;
+        }
+
+        await MigrateClientsAsync(providerId, organizations);
 
         await ConfigureTeamsPlanAsync(providerId);
 
@@ -63,6 +74,16 @@ public class ProviderMigrator(
         if (providerTracker == null)
         {
             return null;
+        }
+
+        if (providerTracker.Progress == ProviderMigrationProgress.NoClients)
+        {
+            return new ProviderMigrationResult
+            {
+                ProviderId = providerTracker.ProviderId,
+                ProviderName = providerTracker.ProviderName,
+                Result = providerTracker.Progress.ToString()
+            };
         }
 
         var clientTrackers = await Task.WhenAll(providerTracker.OrganizationIds.Select(organizationId =>
@@ -99,11 +120,9 @@ public class ProviderMigrator(
 
     #region Steps
 
-    private async Task MigrateClientsAsync(Guid providerId)
+    private async Task MigrateClientsAsync(Guid providerId, List<Organization> organizations)
     {
         logger.LogInformation("CB: Migrating clients for provider ({ProviderID})", providerId);
-
-        var organizations = await GetEnabledClientsAsync(providerId);
 
         var organizationIds = organizations.Select(organization => organization.Id);
 
@@ -129,7 +148,7 @@ public class ProviderMigrator(
     {
         logger.LogInformation("CB: Configuring Teams plan for provider ({ProviderID})", providerId);
 
-        var organizations = await GetEnabledClientsAsync(providerId);
+        var organizations = await GetClientsAsync(providerId);
 
         var teamsSeats = organizations
             .Where(IsTeams)
@@ -172,7 +191,7 @@ public class ProviderMigrator(
     {
         logger.LogInformation("CB: Configuring Enterprise plan for provider ({ProviderID})", providerId);
 
-        var organizations = await GetEnabledClientsAsync(providerId);
+        var organizations = await GetClientsAsync(providerId);
 
         var enterpriseSeats = organizations
             .Where(IsEnterprise)
@@ -215,7 +234,7 @@ public class ProviderMigrator(
     {
         if (string.IsNullOrEmpty(provider.GatewayCustomerId))
         {
-            var organizations = await GetEnabledClientsAsync(provider.Id);
+            var organizations = await GetClientsAsync(provider.Id);
 
             var sampleOrganization = organizations.FirstOrDefault(organization => !string.IsNullOrEmpty(organization.GatewayCustomerId));
 
@@ -299,7 +318,7 @@ public class ProviderMigrator(
 
     private async Task ApplyCreditAsync(Provider provider)
     {
-        var organizations = await GetEnabledClientsAsync(provider.Id);
+        var organizations = await GetClientsAsync(provider.Id);
 
         var organizationCustomers =
             await Task.WhenAll(organizations.Select(organization => stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)));
@@ -355,13 +374,12 @@ public class ProviderMigrator(
 
     #region Utilities
 
-    private async Task<List<Organization>> GetEnabledClientsAsync(Guid providerId)
+    private async Task<List<Organization>> GetClientsAsync(Guid providerId)
     {
         var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
 
         return (await Task.WhenAll(providerOrganizations.Select(providerOrganization =>
                 organizationRepository.GetByIdAsync(providerOrganization.OrganizationId))))
-            .Where(organization => organization.Enabled)
             .ToList();
     }
 
