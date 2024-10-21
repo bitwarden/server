@@ -10,6 +10,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -70,7 +71,7 @@ public class SingleOrgPolicyValidatorTests
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
 
-        var compliantUser1 = new OrganizationUser
+        var compliantUser1 = new OrganizationUserUserDetails
         {
             OrganizationId = organization.Id,
             Type = OrganizationUserType.User,
@@ -79,7 +80,7 @@ public class SingleOrgPolicyValidatorTests
             Email = "user1@example.com"
         };
 
-        var compliantUser2 = new OrganizationUser
+        var compliantUser2 = new OrganizationUserUserDetails
         {
             OrganizationId = organization.Id,
             Type = OrganizationUserType.User,
@@ -88,7 +89,7 @@ public class SingleOrgPolicyValidatorTests
             Email = "user2@example.com"
         };
 
-        var nonCompliantUser = new OrganizationUser
+        var nonCompliantUser = new OrganizationUserUserDetails
         {
             OrganizationId = organization.Id,
             Type = OrganizationUserType.User,
@@ -98,7 +99,7 @@ public class SingleOrgPolicyValidatorTests
         };
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(policyUpdate.OrganizationId, null)
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([compliantUser1, compliantUser2, nonCompliantUser]);
 
         var otherOrganizationUser = new OrganizationUser
