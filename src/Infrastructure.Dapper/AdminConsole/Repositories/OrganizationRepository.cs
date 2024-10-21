@@ -168,7 +168,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             commandType: CommandType.StoredProcedure);
     }
 
-    public async Task<Organization> GetByClaimedUserDomainAsync(Guid userId)
+    public async Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -177,7 +177,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            return result.SingleOrDefault();
+            return result.ToList();
         }
     }
 }
