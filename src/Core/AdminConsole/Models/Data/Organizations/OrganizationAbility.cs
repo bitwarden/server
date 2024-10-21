@@ -21,6 +21,9 @@ public class OrganizationAbility
         UseResetPassword = organization.UseResetPassword;
         UseCustomPermissions = organization.UseCustomPermissions;
         UsePolicies = organization.UsePolicies;
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
     }
@@ -37,6 +40,9 @@ public class OrganizationAbility
     public bool UseResetPassword { get; set; }
     public bool UseCustomPermissions { get; set; }
     public bool UsePolicies { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }

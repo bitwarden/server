@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
@@ -16,11 +17,12 @@ public class PaymentHistoryService(
     public async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetInvoiceHistoryAsync(
         ISubscriber subscriber,
         int pageSize = 5,
-        string startAfter = null)
+        string? status = null,
+        string? startAfter = null)
     {
         if (subscriber is not { GatewayCustomerId: not null, GatewaySubscriptionId: not null })
         {
-            return null;
+            return Array.Empty<BillingHistoryInfo.BillingInvoice>();
         }
 
         var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
@@ -28,6 +30,7 @@ public class PaymentHistoryService(
             Customer = subscriber.GatewayCustomerId,
             Subscription = subscriber.GatewaySubscriptionId,
             Limit = pageSize,
+            Status = status,
             StartingAfter = startAfter
         });
 
@@ -48,6 +51,7 @@ public class PaymentHistoryService(
         };
 
         return transactions?.OrderByDescending(i => i.CreationDate)
-            .Select(t => new BillingHistoryInfo.BillingTransaction(t));
+            .Select(t => new BillingHistoryInfo.BillingTransaction(t))
+            ?? Array.Empty<BillingHistoryInfo.BillingTransaction>();
     }
 }
