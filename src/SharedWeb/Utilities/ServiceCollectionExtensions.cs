@@ -24,6 +24,7 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
@@ -263,16 +264,30 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-        if (globalSettings.SelfHosted &&
-            CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-            globalSettings.Installation?.Id != null &&
-            CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+        if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
+                globalSettings.Installation?.Id != null &&
+                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
+                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            }
+            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
+            }
         }
         else if (!globalSettings.SelfHosted)
         {
+            services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
+            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
+            }
         }
         else
         {
