@@ -10,7 +10,4 @@ public static class FixtureExtensions
 
     public static IFixture WithAutoNSubstitutionsAutoPopulatedProperties(this IFixture fixture)
         => fixture.Customize(new AutoNSubstituteCustomization { ConfigureMembers = true });
-
-    public static IFixture WithFakeTimeProvider(this IFixture fixture)
-        => fixture.Customize(new FakeTimeProviderCustomization());
 }

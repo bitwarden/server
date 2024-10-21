@@ -53,13 +53,14 @@ public static class SutProviderExtensions
     /// Configures SutProvider to use FakeTimeProvider.
     /// It is registered under both the TimeProvider type and the FakeTimeProvider type
     /// so that it can be retrieved in a type-safe manner with GetDependency.
+    /// This can be chained with other builder methods; make sure to call
+    /// <see cref="ISutProvider.Create"/> before use.
     /// </summary>
-    public static SutProvider<T> ConfigureFakeTimeProvider<T>(this SutProvider<T> sutProvider)
+    public static SutProvider<T> WithFakeTimeProvider<T>(this SutProvider<T> sutProvider)
     {
         var fakeTimeProvider = new FakeTimeProvider();
         return sutProvider
             .SetDependency((TimeProvider)fakeTimeProvider)
-            .SetDependency(fakeTimeProvider)
-            .Create();
+            .SetDependency(fakeTimeProvider);
     }
 }

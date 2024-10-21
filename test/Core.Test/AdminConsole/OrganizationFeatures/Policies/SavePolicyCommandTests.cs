@@ -262,10 +262,10 @@ public class SavePolicyCommandTests
     /// </summary>
     private static SutProvider<SavePolicyCommand> SutProviderFactory(IEnumerable<IPolicyValidator>? policyValidators = null)
     {
-        var fixture = new Fixture();
-        fixture.Customizations.Add(new PolicyValidatorSpecimenBuilder(policyValidators ?? new List<IPolicyValidator>()));
-        return new SutProvider<SavePolicyCommand>(fixture)
-            .ConfigureFakeTimeProvider();
+        return new SutProvider<SavePolicyCommand>()
+            .WithFakeTimeProvider()
+            .SetDependency(typeof(IEnumerable<IPolicyValidator>), policyValidators ?? [])
+            .Create();
     }
 
     private static void ArrangeOrganization(SutProvider<SavePolicyCommand> sutProvider, PolicyUpdate policyUpdate)
