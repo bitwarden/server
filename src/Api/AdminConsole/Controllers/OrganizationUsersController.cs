@@ -463,7 +463,7 @@ public class OrganizationUsersController : Controller
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
         if (orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            await _acceptOrgUserCommand.AcceptOrgUserByOrgIdAsync(orgId, user, _userService);
+            await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
         }
     }
 
