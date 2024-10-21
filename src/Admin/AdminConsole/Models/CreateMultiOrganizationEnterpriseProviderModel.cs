@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.SharedWeb.Utilities;
 
@@ -8,21 +7,8 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
 {
-    [Display(Name = "Provider Type")]
-    public ProviderType Type { get; set; }
-
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
-
-    [Display(Name = "Name")]
-    public string Name { get; set; }
-
-    [Display(Name = "Business Name")]
-    public string BusinessName { get; set; }
-
-    [Display(Name = "Primary Billing Email")]
-    public string BillingEmail { get; set; }
-
 
     [Display(Name = "Enterprise Seat Minimum")]
     public int EnterpriseSeatMinimum { get; set; }
@@ -32,13 +18,7 @@ public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
 
     public virtual Provider ToProvider()
     {
-        return new Provider
-        {
-            Type = Type,
-            Name = Name,
-            BusinessName = BusinessName,
-            BillingEmail = BillingEmail?.ToLowerInvariant().Trim()
-        };
+        return new Provider();
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

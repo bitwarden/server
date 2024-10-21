@@ -1,15 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
 public class CreateResellerProviderModel : IValidatableObject
 {
-    [Display(Name = "Provider Type")]
-    public ProviderType Type { get; set; }
-
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
 
@@ -30,9 +26,8 @@ public class CreateResellerProviderModel : IValidatableObject
 
     public virtual Provider ToProvider()
     {
-        return new Provider()
+        return new Provider
         {
-            Type = Type,
             Name = Name,
             BusinessName = BusinessName,
             BillingEmail = BillingEmail?.ToLowerInvariant().Trim()
