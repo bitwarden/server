@@ -7,6 +7,7 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -144,6 +145,21 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task PostEmailToken_WithAccountDeprovisioningEnabled_WhenUserIsNotManagedByAnOrganization_ShouldInitiateEmailChange()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        var newEmail = "example@user.com";
+
+        await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
+
+        await _userService.Received(1).InitiateEmailChangeAsync(user, newEmail);
+    }
+
+    [Fact]
     public async Task PostEmailToken_WhenNotAuthorized_ShouldThrowUnauthorizedAccessException()
     {
         ConfigureUserServiceToReturnNullPrincipal();
@@ -166,12 +182,43 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task PostEmailToken_WithAccountDeprovisioningEnabled_WhenUserIsManagedByAnOrganization_ShouldThrowBadRequestException()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
+
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmailToken(new EmailTokenRequestModel())
+        );
+
+        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
+    }
+
+    [Fact]
     public async Task PostEmail_ShouldChangeUserEmail()
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         _userService.ChangeEmailAsync(user, default, default, default, default, default)
                     .Returns(Task.FromResult(IdentityResult.Success));
+
+        await _sut.PostEmail(new EmailRequestModel());
+
+        await _userService.Received(1).ChangeEmailAsync(user, default, default, default, default, default);
+    }
+
+    [Fact]
+    public async Task PostEmail_WithAccountDeprovisioningEnabled_WhenUserIsNotManagedByAnOrganization_ShouldChangeUserEmail()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _userService.ChangeEmailAsync(user, default, default, default, default, default)
+                    .Returns(Task.FromResult(IdentityResult.Success));
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
 
         await _sut.PostEmail(new EmailRequestModel());
 
@@ -199,6 +246,21 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostEmail(new EmailRequestModel())
         );
+    }
+
+    [Fact]
+    public async Task PostEmail_WithAccountDeprovisioningEnabled_WhenUserIsManagedByAnOrganization_ShouldThrowBadRequestException()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
+
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmail(new EmailRequestModel())
+        );
+
+        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
     }
 
     [Fact]
