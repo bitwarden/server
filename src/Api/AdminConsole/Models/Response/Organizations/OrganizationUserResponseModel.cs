@@ -64,19 +64,26 @@ public class OrganizationUserResponseModel : ResponseModel
 
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
-    public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
+    public OrganizationUserDetailsResponseModel(
+        OrganizationUser organizationUser,
+        bool managedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
+        ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
+        bool managedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
+        ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
+
+    public bool ManagedByOrganization { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
 
