@@ -74,13 +74,13 @@ public partial class GrantIdWithIndexes : Migration
 
         migrationBuilder.Sql(@"
             DROP PROCEDURE IF EXISTS GrantSchemaChange;
-            
+
             CREATE PROCEDURE GrantSchemaChange()
             BEGIN
-                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Grant' AND COLUMN_NAME = 'Id') THEN
+                IF EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Grant' AND COLUMN_NAME = 'Id' AND TABLE_SCHEMA=database()) THEN
                     ALTER TABLE `Grant` DROP COLUMN `Id`;
                 END IF;
- 
+
                 ALTER TABLE `Grant` ADD COLUMN `Id` INT AUTO_INCREMENT UNIQUE;
             END;
 
