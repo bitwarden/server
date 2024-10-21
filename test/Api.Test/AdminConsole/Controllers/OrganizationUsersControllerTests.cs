@@ -192,7 +192,7 @@ public class OrganizationUsersControllerTests
         SutProvider<OrganizationUsersController> sutProvider)
     {
         Get_Setup(organizationAbility, organizationUsers, sutProvider);
-        var response = await sutProvider.Sut.Get(organizationAbility.Id);
+        var response = await sutProvider.Sut.Get(organizationAbility.Id, false, false);
 
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
     }
