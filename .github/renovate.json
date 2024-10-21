@@ -63,6 +63,16 @@
       "reviewers": ["team:team-auth-dev"]
     },
     {
+      "matchPackagePatterns": ["^AspNetCoreRateLimit"],
+      "groupName": "AspNetCoreRateLimit",
+      "description": "Group AspNetCoreRateLimit to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Azure.Cosmos"],
+      "groupName": "Microsoft.Azure.Cosmos",
+      "description": "Group Microsoft.Azure.Cosmos to exclude them from the dotnet monorepo preset"
+    },
+    {
       "matchPackageNames": [
         "AutoFixture.AutoNSubstitute",
         "AutoFixture.Xunit2",
