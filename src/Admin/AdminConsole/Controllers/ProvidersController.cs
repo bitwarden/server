@@ -122,6 +122,25 @@ public class ProvidersController : Controller
         });
     }
 
+    public IActionResult CreateReseller(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
+    {
+        return View(new CreateResellerProviderModel
+        {
+            OwnerEmail = ownerEmail,
+            TeamsMonthlySeatMinimum = teamsMinimumSeats,
+            EnterpriseMonthlySeatMinimum = enterpriseMinimumSeats
+        });
+    }
+
+    public IActionResult CreateMultiOrganizationEnterprise(string ownerEmail = null)
+    {
+        return View(new CreateMultiOrganizationEnterpriseProviderModel
+        {
+            OwnerEmail = ownerEmail,
+            EnterpriseSeatMinimum = 0
+        });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
