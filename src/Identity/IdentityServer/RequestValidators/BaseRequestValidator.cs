@@ -113,6 +113,11 @@ public abstract class BaseRequestValidator<T> where T : class
             {
                 var resultDict = await _twoFactorAuthenticationValidator
                                         .BuildTwoFactorResultAsync(user, twoFactorOrganization);
+                if (resultDict == null)
+                {
+                    await BuildErrorResultAsync("No two-step providers enabled.", false, context, user);
+                    return;
+                }
 
                 // Include Master Password Policy in 2FA response
                 resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicy(user));

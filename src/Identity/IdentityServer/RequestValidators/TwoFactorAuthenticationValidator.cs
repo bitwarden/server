@@ -20,9 +20,33 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public interface ITwoFactorAuthenticationValidator
 {
+    /// <summary>
+    /// Check if the user is required to use two-factor authentication to login. This is based on the user's
+    /// enabled two-factor providers, the user's organizations enabled two-factor providers, and the grant type.
+    /// Client credentials and webauthn grant types do not require two-factor authentication.
+    /// </summary>
+    /// <param name="user">the active user for the request</param>
+    /// <param name="request">the request that contains the grant types</param>
+    /// <returns>boolean</returns>
     Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request);
+    /// <summary>
+    /// Builds the two-factor authentication result for the user based on the available two-factor providers
+    /// from either their user account or Organization.
+    /// </summary>
+    /// <param name="user">user trying to login</param>
+    /// <param name="organization">organization associated with the user; Can be null</param>
+    /// <returns>Dictionary with the TwoFactorProviderType as the Key and the Provider Metadata as the Value</returns>
     Task<Dictionary<string, object>> BuildTwoFactorResultAsync(User user, Organization organization);
-    Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType type, string token);
+    /// <summary>
+    /// Uses the built in userManager methods to verify the two-factor token for the user. If the organization uses
+    /// organization duo, it will use the organization duo token provider to verify the token.
+    /// </summary>
+    /// <param name="user">the active User</param>
+    /// <param name="organization">organization of user; can be null</param>
+    /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
+    /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
+    /// <returns>boolean</returns>
+    Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
 }
 
 public class TwoFactorAuthenticationValidator(
@@ -82,44 +106,23 @@ public class TwoFactorAuthenticationValidator(
 
     public async Task<Dictionary<string, object>> BuildTwoFactorResultAsync(User user, Organization organization)
     {
-        var providerKeys = new List<byte>();
-        var providers = new Dictionary<string, Dictionary<string, object>>();
-
-        var enabledProviders = new List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>();
-        if (organization?.GetTwoFactorProviders() != null)
-        {
-            enabledProviders.AddRange(organization.GetTwoFactorProviders().Where(
-                p => organization.TwoFactorProviderIsEnabled(p.Key)));
-        }
-
-        if (user.GetTwoFactorProviders() != null)
-        {
-            foreach (var p in user.GetTwoFactorProviders())
-            {
-                if (await _userService.TwoFactorProviderIsEnabledAsync(p.Key, user))
-                {
-                    enabledProviders.Add(p);
-                }
-            }
-        }
-
-        if (!enabledProviders.Any())
+        var enabledProviders = await GetEnabledTwoFactorProvidersAsync(user, organization);
+        if (enabledProviders.Count == 0)
         {
             return null;
-            // await BuildErrorResultAsync("No two-step providers enabled.", false, context, user);
         }
 
+        var providers = new Dictionary<string, Dictionary<string, object>>();
         foreach (var provider in enabledProviders)
         {
-            providerKeys.Add((byte)provider.Key);
             var twoFactorParams = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
             providers.Add(((byte)provider.Key).ToString(), twoFactorParams);
         }
 
         var twoFactorResultDict = new Dictionary<string, object>
         {
-            { "TwoFactorProviders", providers.Keys },
-            { "TwoFactorProviders2", providers },
+            { "TwoFactorProviders", providers },
+            { "TwoFactorProviders2", providers }, // backwards compatibility
         };
 
         // If we have email as a 2FA provider, we might need an SsoEmail2fa Session Token
@@ -146,6 +149,25 @@ public class TwoFactorAuthenticationValidator(
         TwoFactorProviderType type,
         string token)
     {
+        if (organization != null && type == TwoFactorProviderType.OrganizationDuo)
+        {
+            if (organization.TwoFactorProviderIsEnabled(type))
+            {
+                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
+                if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
+                {
+                    if (!token.Contains(':'))
+                    {
+                        // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
+                        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+                        return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
+                    }
+                }
+                return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
+            }
+            return false;
+        }
+
         switch (type)
         {
             case TwoFactorProviderType.Authenticator:
@@ -172,102 +194,129 @@ public class TwoFactorAuthenticationValidator(
                         }
                     }
                 }
-
                 return await _userManager.VerifyTwoFactorTokenAsync(user,
                     CoreHelpers.CustomProviderName(type), token);
-            case TwoFactorProviderType.OrganizationDuo:
-                if (!organization?.TwoFactorProviderIsEnabled(type) ?? true)
-                {
-                    return false;
-                }
-
-                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                {
-                    if (type == TwoFactorProviderType.OrganizationDuo)
-                    {
-                        if (!token.Contains(':'))
-                        {
-                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
-                            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
-                        }
-                    }
-                }
-
-                return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
             default:
                 return false;
         }
     }
 
+    private async Task<List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>> GetEnabledTwoFactorProvidersAsync(
+        User user, Organization organization)
+    {
+        var enabledProviders = new List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>();
+        var organizationTwoFactorProviders = organization?.GetTwoFactorProviders();
+        if (organizationTwoFactorProviders != null)
+        {
+            enabledProviders.AddRange(
+                organizationTwoFactorProviders.Where(
+                    p => (p.Value?.Enabled ?? false) && organization.Use2fa));
+        }
+
+        var userTwoFactorProviders = user.GetTwoFactorProviders();
+        var userCanAccessPremium = await _userService.CanAccessPremium(user);
+        if (userTwoFactorProviders != null)
+        {
+            enabledProviders.AddRange(
+                userTwoFactorProviders.Where(p =>
+                        // Providers that do not require premium
+                        (p.Value.Enabled && !TwoFactorProvider.RequiresPremium(p.Key)) ||
+                        // Providers that require premium and the User has Premium
+                        (p.Value.Enabled && TwoFactorProvider.RequiresPremium(p.Key) && userCanAccessPremium)));
+        }
+
+        return enabledProviders;
+    }
+
+    /// <summary>
+    /// Builds the parameters for the two-factor authentication
+    /// </summary>
+    /// <param name="organization">We need the organization for Organization Duo Provider type</param>
+    /// <param name="user">The user for which the token is being generated</param>
+    /// <param name="type">Provider Type</param>
+    /// <param name="provider">Raw data that is used to create the response</param>
+    /// <returns>a dictionary with the correct provider configuration or null if the provider is not configured properly</returns>
     private async Task<Dictionary<string, object>> BuildTwoFactorParams(Organization organization, User user,
         TwoFactorProviderType type, TwoFactorProvider provider)
     {
+        // We will always return this dictionary. If none of the criteria is met then it will return null.
+        var twoFactorParams = new Dictionary<string, object>();
+
+        // OrganizationDuo is odd since it doesn't use the UserManager built-in TwoFactor flows
+        /*
+            Note: Duo is in the midst of being updated to use the UserManager built-in TwoFactor class
+            in the future the `AuthUrl` will be the generated "token" - PM-8107
+        */
+        if (type == TwoFactorProviderType.OrganizationDuo &&
+            await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
+        {
+            twoFactorParams.Add("Host", provider.MetaData["Host"]);
+            twoFactorParams.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+
+            return twoFactorParams;
+        }
+
+        // Individual 2FA providers use the UserManager built-in TwoFactor flow so we can generate the token before building the params
+        var token = await _userManager.GenerateTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(type));
         switch (type)
         {
+            /*
+                Note: Duo is in the midst of being updated to use the UserManager built-in TwoFactor class
+                in the future the `AuthUrl` will be the generated "token" - PM-8107
+            */
             case TwoFactorProviderType.Duo:
+                twoFactorParams.Add("Host", provider.MetaData["Host"]);
+                twoFactorParams.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+                break;
             case TwoFactorProviderType.WebAuthn:
+                if (token != null)
+                {
+                    twoFactorParams = JsonSerializer.Deserialize<Dictionary<string, object>>(token);
+                }
+                break;
             case TwoFactorProviderType.Email:
+                var twoFactorEmail = (string)provider.MetaData["Email"];
+                var redactedEmail = CoreHelpers.RedactEmailAddress(twoFactorEmail);
+                twoFactorParams.Add("Email", redactedEmail);
+                break;
             case TwoFactorProviderType.YubiKey:
-                if (!await _userService.TwoFactorProviderIsEnabledAsync(type, user))
-                {
-                    return null;
-                }
-
-                var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-                    CoreHelpers.CustomProviderName(type));
-                if (type == TwoFactorProviderType.Duo)
-                {
-                    var duoResponse = new Dictionary<string, object>
-                    {
-                        ["Host"] = provider.MetaData["Host"],
-                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
-                    };
-
-                    return duoResponse;
-                }
-                else if (type == TwoFactorProviderType.WebAuthn)
-                {
-                    if (token == null)
-                    {
-                        return null;
-                    }
-
-                    return JsonSerializer.Deserialize<Dictionary<string, object>>(token);
-                }
-                else if (type == TwoFactorProviderType.Email)
-                {
-                    var twoFactorEmail = (string)provider.MetaData["Email"];
-                    var redactedEmail = CoreHelpers.RedactEmailAddress(twoFactorEmail);
-                    return new Dictionary<string, object> { ["Email"] = redactedEmail };
-                }
-                else if (type == TwoFactorProviderType.YubiKey)
-                {
-                    return new Dictionary<string, object> { ["Nfc"] = (bool)provider.MetaData["Nfc"] };
-                }
-
-                return null;
-            case TwoFactorProviderType.OrganizationDuo:
-                if (await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
-                {
-                    var duoResponse = new Dictionary<string, object>
-                    {
-                        ["Host"] = provider.MetaData["Host"],
-                        ["AuthUrl"] = await _duoWebV4SDKService.GenerateAsync(provider, user),
-                    };
-
-                    return duoResponse;
-                }
-                return null;
-            default:
-                return null;
+                twoFactorParams.Add("Nfc", (bool)provider.MetaData["Nfc"]);
+                break;
         }
+
+        // return null if the dictionary is empty
+        return twoFactorParams.Count > 0 ? twoFactorParams : null;
     }
 
     private bool OrgUsing2fa(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
     {
         return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
                orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
+    }
+}
+
+public class TwoFactorResponseBuilder()
+{
+    private User _user;
+    private Organization _organization;
+    private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
+    public Dictionary<string, Dictionary<string, object>> TwoFactorResponse;
+    public TwoFactorResponseBuilder ForUser(User User)
+    {
+        _user = User;
+        return this;
+    }
+
+    public TwoFactorResponseBuilder WithOrganization(Organization organization)
+    {
+        _organization = organization;
+        return this;
+    }
+
+    public TwoFactorResponseBuilder WithTwoFactorProviders(TwoFactorProviderType type)
+    {
+
+        return this;
     }
 }
