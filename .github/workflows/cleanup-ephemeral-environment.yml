@@ -14,12 +14,11 @@ jobs:
       - name: Checkout PR
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         
-      - name: Validate config existed on branch
+      - name: Validate config exists in path
         id: validate-config
         run: |
-          # Search the git history for config files, exit if not found.
-          if [[ -n $(git rev-list --all -- "ephemeral-environments/$GITHUB_HEAD_REF.yaml") ]]; then
-            echo "Ephemeral environment config found on branch, continuing."
+          if [[ -f "ephemeral-environments/$GITHUB_HEAD_REF.yaml" ]]; then
+            echo "Ephemeral environment config found in path, continuing."
             echo "config-exists=true" >> $GITHUB_OUTPUT
           fi
 
