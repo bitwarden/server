@@ -61,7 +61,7 @@ public class PolicyService : IPolicyService
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
-    public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
+    public async Task SaveAsync(Policy policy, Guid? savingUserId)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
         {
@@ -111,7 +111,7 @@ public class PolicyService : IPolicyService
             return;
         }
 
-        await EnablePolicyAsync(policy, org, organizationService, savingUserId);
+        await EnablePolicyAsync(policy, org, savingUserId);
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
@@ -285,7 +285,7 @@ public class PolicyService : IPolicyService
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
     }
 
-    private async Task EnablePolicyAsync(Policy policy, Organization org, IOrganizationService organizationService, Guid? savingUserId)
+    private async Task EnablePolicyAsync(Policy policy, Organization org, Guid? savingUserId)
     {
         var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
         if (!currentPolicy?.Enabled ?? true)
