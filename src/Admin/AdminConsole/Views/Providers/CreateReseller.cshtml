@@ -1,5 +1,3 @@
-@using Bit.Core.AdminConsole.Enums.Provider
-
 @model CreateResellerProviderModel
 
 @{
@@ -7,9 +5,9 @@
 }
 
 <h1>Create Reseller Provider</h1>
-
 <div>
     <form class="form-group">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
         <div class="form-group">
             <label asp-for="Name"></label>
             <input type="text" class="form-control" asp-for="Name">

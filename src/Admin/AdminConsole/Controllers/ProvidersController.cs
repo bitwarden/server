@@ -202,7 +202,7 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises, true))
         {
             ModelState.AddModelError(
                 nameof(provider.Type),

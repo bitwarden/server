@@ -17,8 +17,8 @@
 }
 
 <h1>Create Provider</h1>
-
 <form method="post" asp-action="Create">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
     <div class="form-group">
         <label asp-for="Type" class="h2"></label>
         @foreach (var providerType in providerTypes)
