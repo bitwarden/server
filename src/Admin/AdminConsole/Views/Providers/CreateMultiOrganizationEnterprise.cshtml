@@ -5,13 +5,12 @@
 @model CreateMultiOrganizationEnterpriseProviderModel
 
 @{
-    ViewData["Title"] = "Create MSP Provider";
+    ViewData["Title"] = "Create Multi-organization Enterprise Provider";
 }
 
-<h1>Create Provider</h1>
+<h1>Create Multi-organization Enterprise Provider</h1>
 
-<div id="@($"info-{(int)ProviderType.MultiOrganizationEnterprise}")">
-    <h2>Multi-organization Info</h2>
+<div>
     <form class="form-group">
         <div class="form-group">
             <label asp-for="OwnerEmail"></label>

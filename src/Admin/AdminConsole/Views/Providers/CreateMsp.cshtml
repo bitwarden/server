@@ -9,10 +9,9 @@
     ViewData["Title"] = "Create MSP Provider";
 }
 
-<h1>Create Provider</h1>
+<h1>Create Managed Service Provider</h1>
 
-<div id="@($"info-{(int)ProviderType.Msp}")">
-    <h2>MSP Info</h2>
+<div>
     <form class="form-group" method="post" asp-action="CreateMsp">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
         <div class="form-group">

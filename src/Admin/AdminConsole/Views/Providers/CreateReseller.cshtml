@@ -3,13 +3,12 @@
 @model CreateResellerProviderModel
 
 @{
-    ViewData["Title"] = "Create MSP Provider";
+    ViewData["Title"] = "Create Reseller Provider";
 }
 
-<h1>Create Provider</h1>
+<h1>Create Reseller Provider</h1>
 
-<div id="@($"info-{(int)ProviderType.Reseller}")">
-    <h2>Reseller Info</h2>
+<div>
     <form class="form-group">
         <div class="form-group">
             <label asp-for="Name"></label>
