@@ -220,8 +220,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload,
         bool excludeCurrentContext, ClientType? clientType = null)
     {
-        await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext),
-            clientType: clientType);
+        await SendPayloadToOrganizationAsync(orgId.ToString(), type, payload,
+            GetContextIdentifier(excludeCurrentContext), clientType: clientType);
     }
 
     public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
@@ -278,8 +278,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         var results = await _notificationHubPool.AllClients.SendTemplateNotificationAsync(
             new Dictionary<string, string>
             {
-                { "type",  ((byte)type).ToString() },
-                { "payload", JsonSerializer.Serialize(payload) }
+                { "type", ((byte)type).ToString() }, { "payload", JsonSerializer.Serialize(payload) }
             }, tag);
 
         if (_enableTracing)
@@ -290,7 +289,9 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 {
                     continue;
                 }
-                _logger.LogInformation("Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
+
+                _logger.LogInformation(
+                    "Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
                     outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
             }
         }
