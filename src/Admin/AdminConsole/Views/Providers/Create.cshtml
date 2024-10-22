@@ -10,7 +10,7 @@
     ViewData["Title"] = "Create Provider";
 
     var providerTypes = Enum.GetValues<ProviderType>().ToList();
-    if (!FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises, true))
+    if (!FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
     {
         providerTypes.Remove(ProviderType.MultiOrganizationEnterprise);
     }

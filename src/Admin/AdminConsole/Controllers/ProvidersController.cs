@@ -129,6 +129,11 @@ public class ProvidersController : Controller
 
     public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
+        {
+            return RedirectToAction("Create");
+        }
+
         return View(new CreateMultiOrganizationEnterpriseProviderModel
         {
             OwnerEmail = ownerEmail,
@@ -202,7 +207,7 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises, true))
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
         {
             ModelState.AddModelError(
                 nameof(provider.Type),
