@@ -127,12 +127,12 @@ public class ProvidersController : Controller
         return View(new CreateResellerProviderModel());
     }
 
-    public IActionResult CreateMultiOrganizationEnterprise(string ownerEmail = null)
+    public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
     {
         return View(new CreateMultiOrganizationEnterpriseProviderModel
         {
             OwnerEmail = ownerEmail,
-            EnterpriseSeatMinimum = 0
+            EnterpriseSeatMinimum = enterpriseMinimumSeats
         });
     }
 
