@@ -50,7 +50,7 @@ jobs:
               owner: 'bitwarden',
               repo: 'devops',
               workflow_id: '_ephemeral_environment_pr_manager.yml',
-              ref: 'BRE-291-ephemeral-pr-manager',
+              ref: 'main',
               inputs: {
                 ephemeral_env_branch: '$GITHUB_HEAD_REF',
                 cleanup_config: true,
