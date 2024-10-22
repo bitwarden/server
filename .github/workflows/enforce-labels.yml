@@ -6,13 +6,13 @@ on:
     types: [labeled, unlabeled, opened, reopened, synchronize]
 jobs:
   enforce-label:
-    if: ${{ contains(github.event.*.labels.*.name, 'hold') || contains(github.event.*.labels.*.name, 'needs-qa') || contains(github.event.*.labels.*.name, 'DB-migrations-changed') }}
+    if: ${{ contains(github.event.*.labels.*.name, 'hold') || contains(github.event.*.labels.*.name, 'needs-qa') || contains(github.event.*.labels.*.name, 'DB-migrations-changed') || contains(github.event.*.labels.*.name, 'ephemeral-environment') }}
     name: Enforce label
     runs-on: ubuntu-22.04
 
     steps:
       - name: Check for label
         run: |
-          echo "PRs with the hold or needs-qa labels cannot be merged"
-          echo "### :x: PRs with the hold or needs-qa labels cannot be merged" >> $GITHUB_STEP_SUMMARY
+          echo "PRs with the hold, needs-qa or ephemeral-environment labels cannot be merged"
+          echo "### :x: PRs with the hold, needs-qa or ephemeral-environment labels cannot be merged" >> $GITHUB_STEP_SUMMARY
           exit 1
