@@ -1,4 +1,6 @@
-﻿using Bit.Core.Services;
+﻿using Bit.Api.Billing.Models.Requests;
+using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -45,5 +47,50 @@ public class StripeController(
         var setupIntent = await stripeAdapter.SetupIntentCreate(options);
 
         return TypedResults.Ok(setupIntent.ClientSecret);
+    }
+
+    [HttpPost]
+    [Route("~/tax/calculate")]
+    public async Task<IResult> CalculateAsync([FromBody] CalculateTaxRequestModel requestBody)
+    {
+        var options = new Stripe.Tax.CalculationCreateOptions
+        {
+            Currency = "usd",
+            CustomerDetails = new()
+            {
+                Address = new()
+                {
+                    PostalCode = requestBody.PostalCode,
+                    Country = requestBody.Country
+                },
+                AddressSource = "billing"
+            },
+            LineItems = new()
+            {
+                new()
+                {
+                    Amount = Convert.ToInt64(requestBody.Amount * 100),
+                    Reference = "Subscription",
+                },
+            }
+        };
+        try
+        {
+            var taxCalculation = await stripeAdapter.CalculateTaxAsync(options);
+            var response = new CalculateTaxResponseModel
+            {
+                SalesTaxRate = taxCalculation.TaxBreakdown.Any()
+                    ? decimal.Parse(taxCalculation.TaxBreakdown.Single().TaxRateDetails.PercentageDecimal) / 100
+                    : 0,
+                SalesTaxAmount = Convert.ToDecimal(taxCalculation.TaxAmountExclusive) / 100,
+                TaxableAmount = Convert.ToDecimal(requestBody.Amount),
+                TotalAmount = Convert.ToDecimal(taxCalculation.AmountTotal) / 100,
+            };
+            return TypedResults.Ok(response);
+        }
+        catch (StripeException e)
+        {
+            return TypedResults.BadRequest(e.Message);
+        }
     }
 }
