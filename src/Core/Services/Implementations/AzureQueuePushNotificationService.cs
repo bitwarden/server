@@ -171,7 +171,6 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         var message = new SyncNotificationPushNotification
         {
             Id = notification.Id,
-            Global = notification.Global,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
@@ -229,7 +228,4 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         // Noop
         return Task.FromResult(0);
     }
-
-    public Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
-        ClientType? clientType = null) => Task.CompletedTask;
 }

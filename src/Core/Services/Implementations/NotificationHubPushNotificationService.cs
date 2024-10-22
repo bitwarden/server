@@ -199,18 +199,13 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         var message = new SyncNotificationPushNotification
         {
             Id = notification.Id,
-            Global = notification.Global,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
 
-        if (notification.Global)
-        {
-            await SendPayloadToEveryoneAsync(PushType.SyncNotification, message, true, notification.ClientType);
-        }
-        else if (notification.UserId.HasValue)
+        if (notification.UserId.HasValue)
         {
             await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
                 notification.ClientType);
@@ -243,13 +238,6 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             clientType: clientType);
     }
 
-    private async Task SendPayloadToEveryoneAsync(PushType type, object payload, bool excludeCurrentContext,
-        ClientType? clientType = null)
-    {
-        await SendPayloadToEveryoneAsync(type, payload, GetContextIdentifier(excludeCurrentContext),
-            clientType: clientType);
-    }
-
     public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
         string deviceId = null, ClientType? clientType = null)
     {
@@ -265,17 +253,6 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         string deviceId = null, ClientType? clientType = null)
     {
         var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier, clientType);
-        await SendPayloadAsync(tag, type, payload);
-        if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
-        {
-            await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
-        }
-    }
-
-    public async Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
-    {
-        var tag = BuildTag($"template:payload", identifier, clientType);
         await SendPayloadAsync(tag, type, payload);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {

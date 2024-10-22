@@ -93,21 +93,7 @@ public static class HubHelpers
                 var syncNotification =
                     JsonSerializer.Deserialize<PushNotificationData<SyncNotificationPushNotification>>(
                         notificationJson, _deserializerOptions);
-                if (syncNotification.Payload.Global)
-                {
-                    if (syncNotification.Payload.ClientType == ClientType.All)
-                    {
-                        await hubContext.Clients.All.SendAsync(_receiveMessageMethod, syncNotification,
-                            cancellationToken);
-                    }
-                    else
-                    {
-                        await hubContext.Clients
-                            .Group(NotificationsHub.GetGlobalGroup(syncNotification.Payload.ClientType))
-                            .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
-                    }
-                }
-                else if (syncNotification.Payload.UserId.HasValue)
+                if (syncNotification.Payload.UserId.HasValue)
                 {
                     if (syncNotification.Payload.ClientType == ClientType.All)
                     {

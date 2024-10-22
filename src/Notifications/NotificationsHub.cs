@@ -24,14 +24,9 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
         await currentContext.BuildAsync(Context.User, _globalSettings);
 
         var clientType = DeviceTypes.ToClientType(currentContext.DeviceType);
-        if (clientType != ClientType.All)
+        if (clientType != ClientType.All && currentContext.UserId.HasValue)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, GetGlobalGroup(clientType));
-            if (currentContext.UserId.HasValue)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId,
-                    GetUserGroup(currentContext.UserId.Value, clientType));
-            }
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetUserGroup(currentContext.UserId.Value, clientType));
         }
 
         if (currentContext.Organizations != null)
@@ -56,14 +51,10 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
         await currentContext.BuildAsync(Context.User, _globalSettings);
 
         var clientType = DeviceTypes.ToClientType(currentContext.DeviceType);
-        if (clientType != ClientType.All)
+        if (clientType != ClientType.All && currentContext.UserId.HasValue)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetGlobalGroup(clientType));
-            if (currentContext.UserId.HasValue)
-            {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId,
-                    GetUserGroup(currentContext.UserId.Value, clientType));
-            }
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId,
+                GetUserGroup(currentContext.UserId.Value, clientType));
         }
 
         if (currentContext.Organizations != null)
@@ -80,11 +71,6 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
 
         _connectionCounter.Decrement();
         await base.OnDisconnectedAsync(exception);
-    }
-
-    public static string GetGlobalGroup(ClientType clientType)
-    {
-        return $"ClientType_{clientType}";
     }
 
     public static string GetUserGroup(Guid userId, ClientType clientType)

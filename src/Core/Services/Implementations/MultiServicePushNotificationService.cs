@@ -184,13 +184,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.CompletedTask;
     }
 
-    public Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
-        ClientType? clientType = null)
-    {
-        PushToServices((s) => s.SendPayloadToEveryoneAsync(type, payload, identifier, deviceId, clientType));
-        return Task.CompletedTask;
-    }
-
     private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
     {
         if (_services != null)

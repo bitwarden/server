@@ -106,7 +106,4 @@ public class NoopPushNotificationService : IPushNotificationService
     }
 
     public Task PushSyncNotificationAsync(Notification notification) => Task.CompletedTask;
-
-    public Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
-        ClientType? clientType = null) => Task.CompletedTask;
 }
