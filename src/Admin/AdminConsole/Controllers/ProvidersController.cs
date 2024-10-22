@@ -112,6 +112,7 @@ public class ProvidersController : Controller
         return View(new CreateProviderModel());
     }
 
+    [HttpGet("providers/create/msp")]
     public IActionResult CreateMsp(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
     {
         return View(new CreateMspProviderModel
@@ -122,11 +123,13 @@ public class ProvidersController : Controller
         });
     }
 
+    [HttpGet("providers/create/reseller")]
     public IActionResult CreateReseller()
     {
         return View(new CreateResellerProviderModel());
     }
 
+    [HttpGet("providers/create/multi-organization-enterprise")]
     public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
@@ -160,7 +163,7 @@ public class ProvidersController : Controller
         };
     }
 
-    [HttpPost]
+    [HttpPost("providers/create/msp")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
     public async Task<IActionResult> CreateMsp(CreateMspProviderModel model)
@@ -181,7 +184,7 @@ public class ProvidersController : Controller
         return RedirectToAction("Edit", new { id = provider.Id });
     }
 
-    [HttpPost]
+    [HttpPost("providers/create/reseller")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
     public async Task<IActionResult> CreateReseller(CreateResellerProviderModel model)
@@ -196,7 +199,7 @@ public class ProvidersController : Controller
         return RedirectToAction("Edit", new { id = provider.Id });
     }
 
-    [HttpPost]
+    [HttpPost("providers/create/multi-organization-enterprise")]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
     public async Task<IActionResult> CreateMultiOrganizationEnterprise(CreateMultiOrganizationEnterpriseProviderModel model)
