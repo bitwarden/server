@@ -122,14 +122,9 @@ public class ProvidersController : Controller
         });
     }
 
-    public IActionResult CreateReseller(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
+    public IActionResult CreateReseller()
     {
-        return View(new CreateResellerProviderModel
-        {
-            OwnerEmail = ownerEmail,
-            TeamsMonthlySeatMinimum = teamsMinimumSeats,
-            EnterpriseMonthlySeatMinimum = enterpriseMinimumSeats
-        });
+        return View(new CreateResellerProviderModel());
     }
 
     public IActionResult CreateMultiOrganizationEnterprise(string ownerEmail = null)

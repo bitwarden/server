@@ -6,9 +6,6 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class CreateResellerProviderModel : IValidatableObject
 {
-    [Display(Name = "Owner Email")]
-    public string OwnerEmail { get; set; }
-
     [Display(Name = "Name")]
     public string Name { get; set; }
 
@@ -17,12 +14,6 @@ public class CreateResellerProviderModel : IValidatableObject
 
     [Display(Name = "Primary Billing Email")]
     public string BillingEmail { get; set; }
-
-    [Display(Name = "Teams (Monthly) Seat Minimum")]
-    public int TeamsMonthlySeatMinimum { get; set; }
-
-    [Display(Name = "Enterprise (Monthly) Seat Minimum")]
-    public int EnterpriseMonthlySeatMinimum { get; set; }
 
     public virtual Provider ToProvider()
     {
