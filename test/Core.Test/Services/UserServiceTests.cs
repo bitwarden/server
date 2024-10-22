@@ -27,7 +27,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -282,45 +281,69 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task IsManagedByAnyOrganizationAsync_WithManagingEnabledOrganization_ReturnsTrue(
-        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningDisabled_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId)
     {
-        organization.Enabled = true;
-        organization.UseSso = true;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByClaimedUserDomainAsync(userId)
-            .Returns(organization);
-
-        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
-        Assert.True(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task IsManagedByAnyOrganizationAsync_WithManagingDisabledOrganization_ReturnsFalse(
-        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
-    {
-        organization.Enabled = false;
-        organization.UseSso = true;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByClaimedUserDomainAsync(userId)
-            .Returns(organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(false);
 
         var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
         Assert.False(result);
     }
 
     [Theory, BitAutoData]
-    public async Task IsManagedByAnyOrganizationAsync_WithOrganizationUseSsoFalse_ReturnsFalse(
+    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithManagingEnabledOrganization_ReturnsTrue(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = true;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(userId)
+            .Returns(new[] { organization });
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithManagingDisabledOrganization_ReturnsFalse(
+        SutProvider<UserService> sutProvider, Guid userId, Organization organization)
+    {
+        organization.Enabled = false;
+        organization.UseSso = true;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByVerifiedUserEmailDomainAsync(userId)
+            .Returns(new[] { organization });
+
+        var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task IsManagedByAnyOrganizationAsync_WithAccountDeprovisioningEnabled_WithOrganizationUseSsoFalse_ReturnsFalse(
         SutProvider<UserService> sutProvider, Guid userId, Organization organization)
     {
         organization.Enabled = true;
         organization.UseSso = false;
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByClaimedUserDomainAsync(userId)
-            .Returns(organization);
+            .GetByVerifiedUserEmailDomainAsync(userId)
+            .Returns(new[] { organization });
 
         var result = await sutProvider.Sut.IsManagedByAnyOrganizationAsync(userId);
         Assert.False(result);

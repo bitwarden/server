@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Vault.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -7,7 +6,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -95,23 +93,12 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user, organizationUserDetails);
+        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
-            managedByOrganizationId, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
-    }
-
-    private async Task<Guid?> GetManagedByOrganizationIdAsync(User user, IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails)
-    {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) ||
-            !organizationUserDetails.Any(o => o.Enabled && o.UseSso))
-        {
-            return null;
-        }
-
-        var organizationManagingUser = await _userService.GetOrganizationManagingUserAsync(user.Id);
-        return organizationManagingUser?.Id;
     }
 }
