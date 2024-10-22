@@ -196,18 +196,13 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         var message = new SyncNotificationPushNotification
         {
             Id = notification.Id,
-            Global = notification.Global,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
 
-        if (notification.Global)
-        {
-            await SendPayloadToEveryoneAsync(PushType.SyncNotification, message, true, notification.ClientType);
-        }
-        else if (notification.UserId.HasValue)
+        if (notification.UserId.HasValue)
         {
             await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
                 notification.ClientType);
@@ -218,6 +213,30 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
                 true, notification.ClientType);
         }
     }
+
+    public async Task PushSyncOrganizationStatusAsync(Organization organization)
+    {
+        var message = new OrganizationStatusPushNotification
+        {
+            OrganizationId = organization.Id,
+            Enabled = organization.Enabled
+        };
+
+        await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, false);
+    }
+
+    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
+        await SendPayloadToOrganizationAsync(
+            organization.Id,
+            PushType.SyncOrganizationCollectionSettingChanged,
+            new OrganizationCollectionManagementPushNotification
+            {
+                OrganizationId = organization.Id,
+                LimitCollectionCreation = organization.LimitCollectionCreation,
+                LimitCollectionDeletion = organization.LimitCollectionDeletion
+            },
+            false
+        );
 
     private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
         ClientType? clientType = null)
@@ -240,21 +259,6 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         var request = new PushSendRequestModel
         {
             OrganizationId = orgId.ToString(),
-            Type = type,
-            Payload = payload,
-            ClientType = clientType
-        };
-
-        await AddCurrentContextAsync(request, excludeCurrentContext);
-        await SendAsync(HttpMethod.Post, "push/send", request);
-    }
-
-    private async Task SendPayloadToEveryoneAsync(PushType type, object payload, bool excludeCurrentContext,
-        ClientType? clientType = null)
-    {
-        var request = new PushSendRequestModel
-        {
-            Global = true,
             Type = type,
             Payload = payload,
             ClientType = clientType
@@ -294,34 +298,4 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     {
         throw new NotImplementedException();
     }
-
-    public Task SendPayloadToEveryoneAsync(PushType type, object payload, string identifier, string deviceId = null,
-        ClientType? clientType = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task PushSyncOrganizationStatusAsync(Organization organization)
-    {
-        var message = new OrganizationStatusPushNotification
-        {
-            OrganizationId = organization.Id,
-            Enabled = organization.Enabled
-        };
-
-        await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, false);
-    }
-
-    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
-        await SendPayloadToOrganizationAsync(
-            organization.Id,
-            PushType.SyncOrganizationCollectionSettingChanged,
-            new OrganizationCollectionManagementPushNotification
-            {
-                OrganizationId = organization.Id,
-                LimitCollectionCreation = organization.LimitCollectionCreation,
-                LimitCollectionDeletion = organization.LimitCollectionDeletion
-            },
-            false
-        );
 }
