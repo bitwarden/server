@@ -51,7 +51,7 @@ public class EnvironmentFileBuilder
             _globalOverrideValues.Remove("globalSettings__pushRelayBaseUri");
         }
 
-        if (_globalOverrideValues.TryGetValue("globalSettings__baseServiceUri__vault", out var vaulturi) && vaulturi != _context.Config.Url)
+        if (_globalOverrideValues.TryGetValue("globalSettings__baseServiceUri__vault", out var vaultUri) && vaultUri != _context.Config.Url)
         {
             _globalOverrideValues["globalSettings__baseServiceUri__vault"] = _context.Config.Url;
             Helpers.WriteLine(_context, "Updated globalSettings__baseServiceUri__vault to match value in config.yml");
