@@ -1,4 +1,3 @@
----
 name: Build
 
 on:
@@ -408,7 +407,7 @@ jobs:
           name: swagger.json
           path: swagger.json
           if-no-files-found: error
-      
+
       - name: Build Internal API Swagger
         run: |
           cd ./src/Api
@@ -416,17 +415,17 @@ jobs:
           dotnet tool restore
           echo "Publish API"
           dotnet publish -c "Release" -o obj/build-output/publish
-          
+
           dotnet swagger tofile --output ../../internal.json --host https://api.bitwarden.com \
             ./obj/build-output/publish/Api.dll internal
-          
+
           cd ../Identity
-          
+
           echo "Restore Identity tools"
           dotnet tool restore
           echo "Publish Identity"
           dotnet publish -c "Release" -o obj/build-output/publish
-          
+
           dotnet swagger tofile --output ../../identity.json --host https://identity.bitwarden.com \
             ./obj/build-output/publish/Identity.dll v1
           cd ../..
@@ -448,7 +447,7 @@ jobs:
         with:
           name: identity.json
           path: identity.json
-          if-no-files-found: error  
+          if-no-files-found: error
 
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
@@ -565,7 +564,7 @@ jobs:
                 tag: 'main'
               }
             })
-  
+
   trigger-ee-updates:
     name: Trigger Ephemeral Environment updates
     if: github.ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')

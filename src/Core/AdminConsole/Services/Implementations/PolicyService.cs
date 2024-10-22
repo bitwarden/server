@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -27,6 +29,8 @@ public class PolicyService : IPolicyService
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IFeatureService _featureService;
+    private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public PolicyService(
@@ -39,6 +43,8 @@ public class PolicyService : IPolicyService
         IMailService mailService,
         GlobalSettings globalSettings,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IFeatureService featureService,
+        ISavePolicyCommand savePolicyCommand,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _applicationCacheService = applicationCacheService;
@@ -50,11 +56,28 @@ public class PolicyService : IPolicyService
         _mailService = mailService;
         _globalSettings = globalSettings;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _featureService = featureService;
+        _savePolicyCommand = savePolicyCommand;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public async Task SaveAsync(Policy policy, Guid? savingUserId)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
+        {
+            // Transitional mapping - this will be moved to callers once the feature flag is removed
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = policy.OrganizationId,
+                Type = policy.Type,
+                Enabled = policy.Enabled,
+                Data = policy.Data
+            };
+
+            await _savePolicyCommand.SaveAsync(policyUpdate);
+            return;
+        }
+
         var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
         if (org == null)
         {

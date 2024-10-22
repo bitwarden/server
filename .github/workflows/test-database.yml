@@ -1,4 +1,3 @@
----
 name: Database testing
 
 on:
@@ -55,7 +54,7 @@ jobs:
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
         run: sleep 15s
-      
+
       - name: Checking pending model changes (MySQL)
         working-directory: "util/MySqlMigrations"
         run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
@@ -114,7 +113,7 @@ jobs:
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
         shell: pwsh
-      
+
       - name: Print MySQL Logs
         if: failure()
         run: 'docker logs $(docker ps --quiet --filter "name=mysql")'
