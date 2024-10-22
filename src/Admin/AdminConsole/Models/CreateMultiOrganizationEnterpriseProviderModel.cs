@@ -14,7 +14,8 @@ public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
     public int EnterpriseSeatMinimum { get; set; }
 
     [Display(Name = "Plan")]
-    public PlanType Plan { get; set; }
+    [Required]
+    public PlanType? Plan { get; set; }
 
     public virtual Provider ToProvider()
     {
