@@ -25,7 +25,6 @@ public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -36,7 +35,6 @@ public class PoliciesController : Controller
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
         ICurrentContext currentContext,
@@ -46,7 +44,6 @@ public class PoliciesController : Controller
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _userService = userService;
         _currentContext = currentContext;
@@ -185,7 +182,7 @@ public class PoliciesController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _policyService.SaveAsync(policy, _organizationService, userId);
+        await _policyService.SaveAsync(policy, userId);
         return new PolicyResponseModel(policy);
     }
 }
