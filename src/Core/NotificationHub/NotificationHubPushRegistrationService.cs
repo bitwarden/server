@@ -2,34 +2,25 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
+    private readonly IFeatureService _featureService;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
         INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
-        ILogger<NotificationHubPushRegistrationService> logger)
+        IFeatureService featureService)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _notificationHubPool = notificationHubPool;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
+        _featureService = featureService;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -60,8 +51,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
-                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                if (_featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
                 {
                     payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
@@ -196,7 +186,8 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         {
             try
             {
-                await ClientFor(GetComb(deviceId)).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
+                await ClientFor(GetComb(deviceId))
+                    .PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
@@ -205,29 +196,24 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private INotificationHubClient ClientFor(Guid deviceId)
     {
         return _notificationHubPool.ClientFor(deviceId);
     }
 
     private Guid GetComb(string deviceId)
     {
-        var deviceIdString = deviceId;
-        InstallationDeviceEntity installationDeviceEntity;
-        Guid deviceIdGuid;
-        if (InstallationDeviceEntity.TryParse(deviceIdString, out installationDeviceEntity))
+        if (InstallationDeviceEntity.TryParse(deviceId, out var installationDeviceEntity))
         {
             // Strip off the installation id (PartitionId). RowKey is the ID in the Installation's table.
-            deviceIdString = installationDeviceEntity.RowKey;
+            deviceId = installationDeviceEntity.RowKey;
         }
 
-        if (Guid.TryParse(deviceIdString, out deviceIdGuid))
-        {
-        }
-        else
+        if (!Guid.TryParse(deviceId, out var deviceIdGuid))
         {
             throw new Exception($"Invalid device id {deviceId}.");
         }
+
         return deviceIdGuid;
     }
 }
