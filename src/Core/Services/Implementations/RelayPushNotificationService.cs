@@ -202,40 +202,60 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
         if (notification.Global)
         {
-            await SendPayloadToEveryoneAsync(PushType.SyncNotification, message, true);
+            await SendPayloadToEveryoneAsync(PushType.SyncNotification, message, true, notification.ClientType);
         }
         else if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true);
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+                notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
             await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
-                true);
+                true, notification.ClientType);
         }
     }
 
-    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
+    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
     {
-        var request = new PushSendRequestModel { UserId = userId.ToString(), Type = type, Payload = payload };
+        var request = new PushSendRequestModel
+        {
+            UserId = userId.ToString(),
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
 
         await AddCurrentContextAsync(request, excludeCurrentContext);
         await SendAsync(HttpMethod.Post, "push/send", request);
     }
 
     private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload,
-        bool excludeCurrentContext)
+        bool excludeCurrentContext, ClientType? clientType = null)
     {
-        var request = new PushSendRequestModel { OrganizationId = orgId.ToString(), Type = type, Payload = payload };
+        var request = new PushSendRequestModel
+        {
+            OrganizationId = orgId.ToString(),
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
 
         await AddCurrentContextAsync(request, excludeCurrentContext);
         await SendAsync(HttpMethod.Post, "push/send", request);
     }
 
-    private async Task SendPayloadToEveryoneAsync(PushType type, object payload, bool excludeCurrentContext)
+    private async Task SendPayloadToEveryoneAsync(PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
     {
-        // TODO global flag prop to be explicit ?
-        var request = new PushSendRequestModel { Type = type, Payload = payload };
+        var request = new PushSendRequestModel
+        {
+            Global = true,
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
 
         await AddCurrentContextAsync(request, excludeCurrentContext);
         await SendAsync(HttpMethod.Post, "push/send", request);

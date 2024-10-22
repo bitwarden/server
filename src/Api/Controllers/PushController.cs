@@ -72,15 +72,20 @@ public class PushController : Controller
     {
         CheckUsage();
 
-        if (!string.IsNullOrWhiteSpace(model.UserId))
+        if (model.Global)
+        {
+            await _pushNotificationService.SendPayloadToEveryoneAsync(model.Type, model.Payload,
+                Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.UserId))
         {
             await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
-                   model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
+                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
         }
         else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
         {
             await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
-                model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
+                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
         }
     }
 
