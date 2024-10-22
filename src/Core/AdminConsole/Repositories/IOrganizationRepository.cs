@@ -19,7 +19,7 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId);
 
     /// <summary>
-    /// Gets the organization that has a claimed domain matching the user's email domain.
+    /// Gets the organizations that have a verified domain matching the user's email domain.
     /// </summary>
-    Task<Organization> GetByClaimedUserDomainAsync(Guid userId);
+    Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId);
 }
