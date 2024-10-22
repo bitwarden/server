@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.SharedWeb.Utilities;
 
@@ -19,7 +20,10 @@ public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
 
     public virtual Provider ToProvider()
     {
-        return new Provider();
+        return new Provider
+        {
+            Type = ProviderType.MultiOrganizationEnterprise
+        };
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

@@ -9,7 +9,10 @@
 @{
     ViewData["Title"] = "Create Provider";
 
-    var providerTypes = Enum.GetValues<ProviderType>().ToList();
+    var providerTypes = Enum.GetValues<ProviderType>()
+        .OrderBy(x => x.GetDisplayAttribute().Order)
+        .ToList();
+
     if (!FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
     {
         providerTypes.Remove(ProviderType.MultiOrganizationEnterprise);
@@ -24,13 +27,22 @@
         @foreach (var providerType in providerTypes)
         {
             var providerTypeValue = (int)providerType;
-            <div class="form-check">
-                @Html.RadioButtonFor(m => m.Type, providerType, new { id = $"providerType-{providerTypeValue}", @class = "form-check-input", onclick = $"toggleProviderTypeInfo({providerTypeValue})" })
-                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetName(), new { @class = "form-check-label align-middle", @for = $"providerType-{providerTypeValue}" })
-                <br/>
-                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-muted ml-3 align-top", @for = $"providerType-{providerTypeValue}" })
+            <div class="form-group">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-check">
+                            @Html.RadioButtonFor(m => m.Type, providerType, new { id = $"providerType-{providerTypeValue}", @class = "form-check-input" })
+                            @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetName(), new { @class = "form-check-label align-middle", @for = $"providerType-{providerTypeValue}" })
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-muted align-top", @for = $"providerType-{providerTypeValue}" })
+                    </div>
+                </div>
             </div>
         }
     </div>
-    <button type="submit" class="btn btn-primary mb-2">Next Step</button>
+    <button type="submit" class="btn btn-primary mb-2">Next</button>
 </form>

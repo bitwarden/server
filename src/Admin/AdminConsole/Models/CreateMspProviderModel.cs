@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
@@ -17,7 +18,10 @@ public class CreateMspProviderModel : IValidatableObject
 
     public virtual Provider ToProvider()
     {
-        return new Provider();
+        return new Provider
+        {
+            Type = ProviderType.Msp
+        };
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
