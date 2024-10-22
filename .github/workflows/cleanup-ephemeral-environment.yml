@@ -52,7 +52,7 @@ jobs:
               workflow_id: '_ephemeral_environment_pr_manager.yml',
               ref: 'main',
               inputs: {
-                ephemeral_env_branch: '$GITHUB_HEAD_REF',
+                ephemeral_env_branch: process.env.GITHUB_HEAD_REF,
                 cleanup_config: true,
                 project: 'server'
               }
