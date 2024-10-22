@@ -2,33 +2,22 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
-        INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
-        ILogger<NotificationHubPushRegistrationService> logger)
+        INotificationHubPool notificationHubPool)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _notificationHubPool = notificationHubPool;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -196,7 +185,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private INotificationHubClient ClientFor(Guid deviceId)
     {
         return _notificationHubPool.ClientFor(deviceId);
     }
