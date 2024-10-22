@@ -295,28 +295,3 @@ public class TwoFactorAuthenticationValidator(
                orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
     }
 }
-
-public class TwoFactorResponseBuilder()
-{
-    private User _user;
-    private Organization _organization;
-    private Dictionary<TwoFactorProviderType, TwoFactorProvider> _twoFactorProviders;
-    public Dictionary<string, Dictionary<string, object>> TwoFactorResponse;
-    public TwoFactorResponseBuilder ForUser(User User)
-    {
-        _user = User;
-        return this;
-    }
-
-    public TwoFactorResponseBuilder WithOrganization(Organization organization)
-    {
-        _organization = organization;
-        return this;
-    }
-
-    public TwoFactorResponseBuilder WithTwoFactorProviders(TwoFactorProviderType type)
-    {
-
-        return this;
-    }
-}
