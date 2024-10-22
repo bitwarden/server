@@ -181,6 +181,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             Global = notification.Global,
             UserId = notification.Id,
             OrganizationId = notification.Id,
+            ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
 
