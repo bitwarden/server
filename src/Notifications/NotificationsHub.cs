@@ -89,13 +89,13 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
 
     public static string GetUserGroup(Guid userId, ClientType clientType)
     {
-        return $"{userId}_{clientType}";
+        return $"UserClientType_{userId}_{clientType}";
     }
 
     public static string GetOrganizationGroup(Guid organizationId, ClientType? clientType = null)
     {
         return clientType is not ClientType.All
             ? $"Organization_{organizationId}"
-            : $"Organization_{organizationId}_{clientType}";
+            : $"OrganizationClientType_{organizationId}_{clientType}";
     }
 }
