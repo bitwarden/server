@@ -6,6 +6,7 @@ public static class Claims
     public const string SecurityStamp = "sstamp";
     public const string Premium = "premium";
     public const string Device = "device";
+    public const string DeviceType = "devicetype";
 
     public const string OrganizationOwner = "orgowner";
     public const string OrganizationAdmin = "orgadmin";
