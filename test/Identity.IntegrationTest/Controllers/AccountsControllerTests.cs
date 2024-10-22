@@ -470,6 +470,63 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(kdfParallelism, user.KdfParallelism);
     }
 
+    [Theory, BitAutoData]
+    public async Task RegistrationWithEmailVerification_WithProviderInviteToken_Succeeds(
+     [StringLength(1000)] string masterPasswordHash, [StringLength(50)] string masterPasswordHint, string userSymmetricKey,
+    KeysRequestModel userAsymmetricKeys, int kdfMemory, int kdfParallelism)
+    {
+
+        // Localize factory to just this test.
+        var localFactory = new IdentityApplicationFactory();
+
+        // Hardcoded, valid data
+        var email = "jsnider+local253@bitwarden.com";
+        var providerInviteToken = "CfDJ8PoqFnmGISlNtfRM2ZSgmWYSADdzTfEQi37J6wd8YlIaCDUTMoVl4N9x3O3hAiV8fLmJGz8hcBH7ygrbQC1lTgtS-Vlj9qaEYIBWdIfQ62lqcPTtmN_BzToVjBjkqtY-JBkN_rhGRP4eVVszBvP1Joj46Gw1BiXihK30I5rSXJxvVQa7PLa1H2fxG7zlmXKx_uDU6m2N2vJ2uWFHF9ELWLMmTgqWzI9x1us9XVPmKmmN7vLq2m1Jj63MRWxTmnF0VQ";
+        var providerUserId = new Guid("c6fdba35-2e52-43b4-8fb7-b211011d154a");
+
+        // As token contains now milliseconds for when it was created, create 1k year timespan for expiration
+        // to ensure token is valid for a good long while.
+        localFactory.UpdateConfiguration("globalSettings:OrganizationInviteExpirationHours", "8760000");
+
+        var registerFinishReqModel = new RegisterFinishRequestModel
+        {
+            Email = email,
+            MasterPasswordHash = masterPasswordHash,
+            MasterPasswordHint = masterPasswordHint,
+            ProviderInviteToken = providerInviteToken,
+            ProviderUserId = providerUserId,
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+            UserSymmetricKey = userSymmetricKey,
+            UserAsymmetricKeys = userAsymmetricKeys,
+            KdfMemory = kdfMemory,
+            KdfParallelism = kdfParallelism
+        };
+
+        var postRegisterFinishHttpContext = await localFactory.PostRegisterFinishAsync(registerFinishReqModel);
+
+        Assert.Equal(StatusCodes.Status200OK, postRegisterFinishHttpContext.Response.StatusCode);
+
+        var database = localFactory.GetDatabaseContext();
+        var user = await database.Users
+            .SingleAsync(u => u.Email == email);
+
+        Assert.NotNull(user);
+
+        // Assert user properties match the request model
+        Assert.Equal(email, user.Email);
+        Assert.NotEqual(masterPasswordHash, user.MasterPassword);  // We execute server side hashing
+        Assert.NotNull(user.MasterPassword);
+        Assert.Equal(masterPasswordHint, user.MasterPasswordHint);
+        Assert.Equal(userSymmetricKey, user.Key);
+        Assert.Equal(userAsymmetricKeys.EncryptedPrivateKey, user.PrivateKey);
+        Assert.Equal(userAsymmetricKeys.PublicKey, user.PublicKey);
+        Assert.Equal(KdfType.PBKDF2_SHA256, user.Kdf);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, user.KdfIterations);
+        Assert.Equal(kdfMemory, user.KdfMemory);
+        Assert.Equal(kdfParallelism, user.KdfParallelism);
+    }
+
 
     [Theory, BitAutoData]
     public async Task PostRegisterVerificationEmailClicked_Success(
