@@ -195,8 +195,8 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         {
             Id = notification.Id,
             Global = notification.Global,
-            UserId = notification.Id,
-            OrganizationId = notification.Id,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
