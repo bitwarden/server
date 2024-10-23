@@ -1,7 +1,9 @@
 ﻿#nullable enable
 
+using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
@@ -23,7 +25,9 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -31,14 +35,18 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IOrganizationRepository organizationRepository,
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IFeatureService featureService,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
+        _featureService = featureService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
@@ -92,10 +100,20 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         if (policyUpdate is not { Enabled: true })
         {
+            var resultString = new StringBuilder();
+
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            return ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+            resultString.Append(ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]));
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
+            {
+                resultString.Append("Organization has verified domains.");
+            }
+
+            return resultString.ToString();
         }
 
-        return "";
+        return string.Empty;
     }
 }

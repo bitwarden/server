@@ -27,6 +27,11 @@ public class PolicyResponseModel : PolicyBaseModel, IResponseModel
         }
     }
 
+    public PolicyResponseModel(Policy policy, bool canToggleState) : this(policy)
+    {
+        CanToggleState = canToggleState;
+    }
+
     /// <summary>
     /// String representing the object's type. Objects of the same type share the same properties.
     /// </summary>
@@ -44,4 +49,10 @@ public class PolicyResponseModel : PolicyBaseModel, IResponseModel
     /// </summary>
     [Required]
     public PolicyType? Type { get; set; }
+
+    /// <summary>
+    /// Indicates whether the Policy can be enabled/disabled
+    /// </summary>
+    [Required]
+    public bool CanToggleState { get; set; }
 }

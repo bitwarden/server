@@ -1,11 +1,16 @@
-﻿using System.Net;
+﻿using System.Collections.Immutable;
+using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,15 +23,21 @@ public class PoliciesController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
+    private readonly IDictionary<PolicyType, IPolicyValidator> _policyValidators;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService,
+        IEnumerable<IPolicyValidator> policyValidators)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
         _currentContext = currentContext;
+        _featureService = featureService;
+        _policyValidators = policyValidators.ToImmutableDictionary(x => x.Type);
     }
 
     /// <summary>
@@ -41,14 +52,32 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(PolicyType type)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
-            _currentContext.OrganizationId.Value, type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(_currentContext.OrganizationId.Value, type);
         if (policy == null)
         {
             return new NotFoundResult();
         }
-        var response = new PolicyResponseModel(policy);
-        return new JsonResult(response);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            if (policy.Type == PolicyType.SingleOrg)
+            {
+                var canToggle = _policyValidators.ContainsKey(policy.Type) && string.IsNullOrWhiteSpace(
+                    await _policyValidators[policy.Type]
+                        .ValidateAsync(
+                            new PolicyUpdate
+                            {
+                                Data = policy.Data,
+                                Enabled = !policy.Enabled,
+                                OrganizationId = policy.OrganizationId,
+                                Type = policy.Type
+                            }, policy));
+
+                return new JsonResult(new PolicyResponseModel(policy, canToggle));
+            }
+        }
+
+        return new JsonResult(new PolicyResponseModel(policy));
     }
 
     /// <summary>
@@ -62,9 +91,36 @@ public class PoliciesController : Controller
     public async Task<IActionResult> List()
     {
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-        var policyResponses = policies.Select(p => new PolicyResponseModel(p));
-        var response = new ListResponseModel<PolicyResponseModel>(policyResponses);
-        return new JsonResult(response);
+
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            return new JsonResult(new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p))));
+        }
+
+        var responses = new List<PolicyResponseModel>();
+
+        foreach (var policy in policies)
+        {
+            if (policy.Type == PolicyType.SingleOrg)
+            {
+                var canToggle = _policyValidators.ContainsKey(policy.Type) && string.IsNullOrWhiteSpace(
+                    await _policyValidators[policy.Type]
+                        .ValidateAsync(
+                            new PolicyUpdate
+                            {
+                                Data = policy.Data,
+                                Enabled = !policy.Enabled,
+                                OrganizationId = policy.OrganizationId,
+                                Type = policy.Type
+                            }, policy));
+
+                responses.Add(new PolicyResponseModel(policy, canToggle));
+            }
+
+            responses.Add(new PolicyResponseModel(policy));
+        }
+
+        return new JsonResult(new ListResponseModel<PolicyResponseModel>(responses));
     }
 
     /// <summary>
