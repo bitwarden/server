@@ -212,15 +212,12 @@ public class ProvidersController : Controller
 
         if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
         {
-            ModelState.AddModelError(
-                nameof(provider.Type),
-                $"Feature '{FeatureFlagKeys.PM12275_MultiOrganizationEnterprises}' is not enabled.");
-            return View(model);
+            return RedirectToAction("Create");
         }
         await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
             provider,
             model.OwnerEmail,
-            PlanType.EnterpriseMonthly,
+            model.Plan.Value,
             model.EnterpriseSeatMinimum);
 
         return RedirectToAction("Edit", new { id = provider.Id });
