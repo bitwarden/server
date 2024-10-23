@@ -132,8 +132,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
             await _policyService.SaveAsync(
-                new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true },
-                _organizationService, null);
+                new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true }, null);
         }
     }
 }

@@ -840,9 +840,7 @@ public class PolicyServiceTests
             .Returns(true);
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IOrganizationService>(),
-                null));
+            () => sutProvider.Sut.SaveAsync(policy, null));
 
         Assert.Equal("Organization has verified domains.", badRequestException.Message);
     }

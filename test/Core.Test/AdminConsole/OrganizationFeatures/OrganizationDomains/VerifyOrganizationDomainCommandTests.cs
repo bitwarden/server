@@ -161,7 +161,7 @@ public class VerifyOrganizationDomainCommandTests
 
         await sutProvider.GetDependency<IPolicyService>()
             .Received(1)
-            .SaveAsync(Arg.Is<Policy>(x => x.Type == PolicyType.SingleOrg && x.OrganizationId == domain.OrganizationId && x.Enabled), Arg.Any<IOrganizationService>(), null);
+            .SaveAsync(Arg.Is<Policy>(x => x.Type == PolicyType.SingleOrg && x.OrganizationId == domain.OrganizationId && x.Enabled), null);
     }
 
     [Theory, BitAutoData]
@@ -184,7 +184,7 @@ public class VerifyOrganizationDomainCommandTests
 
         await sutProvider.GetDependency<IPolicyService>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<Policy>(), Arg.Any<IOrganizationService>(), null);
+            .SaveAsync(Arg.Any<Policy>(), null);
     }
 
     [Theory, BitAutoData]
@@ -207,7 +207,7 @@ public class VerifyOrganizationDomainCommandTests
 
         await sutProvider.GetDependency<IPolicyService>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<Policy>(), Arg.Any<IOrganizationService>(), null);
+            .SaveAsync(Arg.Any<Policy>(), null);
 
     }
 
@@ -231,6 +231,6 @@ public class VerifyOrganizationDomainCommandTests
 
         await sutProvider.GetDependency<IPolicyService>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<Policy>(), Arg.Any<IOrganizationService>(), null);
+            .SaveAsync(Arg.Any<Policy>(), null);
     }
 }

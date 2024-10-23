@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using RichardSzalay.MockHttp;
 
