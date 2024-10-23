@@ -7,6 +7,7 @@ using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -479,6 +480,7 @@ public class AccountsControllerTests : IDisposable
         SecretVerificationRequestModel model)
     {
         // Arrange
+        EnableFeatureFlag();
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
 
@@ -493,6 +495,7 @@ public class AccountsControllerTests : IDisposable
         SecretVerificationRequestModel model)
     {
         // Arrange
+        EnableFeatureFlag();
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
         _userService.VerifySecretAsync(user, model.Secret).Returns(false);
@@ -504,6 +507,55 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task Delete_WhenDeleteAsyncFails_ShouldThrowBadRequestException(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        EnableFeatureFlag();
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.VerifySecretAsync(user, model.Secret).Returns(true);
+        var result = IdentityResult.Failed();
+        _userService.DeleteAsync(user).Returns(result);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(model));
+    }
+
+    // TESTS WITHOUT FEATURE FLAG ENABLED
+
+    [Theory]
+    [BitAutoData]
+    public async Task FlagDisabled_Delete_WhenManagedByOrganization_ShoudThrowBadRequestException(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task FlagDisabled_Delete_WhenPasswordCheckFails_ShoudThrowBadRequestException(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.VerifySecretAsync(user, model.Secret).Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task FlagDisabled_Delete_WhenDeleteAsyncFails_ShouldThrowBadRequestException(
         User user,
         SecretVerificationRequestModel model)
     {
@@ -567,6 +619,12 @@ public class AccountsControllerTests : IDisposable
     {
         _userService.GetUserByIdAsync(Arg.Any<Guid>())
                     .Returns(Task.FromResult((User)null));
+    }
+
+    private void EnableFeatureFlag()
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
     }
 }
 
