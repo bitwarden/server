@@ -143,15 +143,9 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
     /// <summary>
-    /// Indicates if the organization manages the user.
+    /// Indicates if the organization manages the user. If a user is "managed" by an organization,
+    /// the organization has greater control over their account, and some user actions are restricted.
     /// </summary>
-    /// <remarks>
-    /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
-    /// The organization must be enabled and able to have verified domains.
-    /// </remarks>
-    /// <returns>
-    /// False if the Account Deprovisioning feature flag is disabled.
-    /// </returns>
     public bool ManagedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
