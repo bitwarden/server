@@ -559,6 +559,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        var isManagedUser = await _userService.IsManagedByAnyOrganizationAsync(user.Id);
+        if (isManagedUser)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             ModelState.AddModelError(string.Empty, "User verification failed.");

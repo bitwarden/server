@@ -472,6 +472,51 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(model));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task Delete_WhenManagedByOrganization_ShoudThrowUnauthorizedAccessException(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.Delete(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Delete_WhenPasswordCheckFails_ShoudThrowBadRequestException(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.VerifySecretAsync(user, model.Secret).Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Delete_WhenDeleteAsyncFails_ShouldThrowBadRequestException(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.VerifySecretAsync(user, model.Secret).Returns(true);
+        var result = IdentityResult.Failed();
+        _userService.DeleteAsync(user).Returns(result);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(model));
+    }
 
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
