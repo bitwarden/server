@@ -103,6 +103,26 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         existingOrg.SetTwoFactorProviders(providers);
         return existingOrg;
     }
+
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        var results = new List<ValidationResult>();
+        if (string.IsNullOrWhiteSpace(ClientId))
+        {
+            results.Add(new ValidationResult("ClientId is required.", [nameof(ClientId)]));
+        }
+
+        if (string.IsNullOrWhiteSpace(ClientSecret))
+        {
+            results.Add(new ValidationResult("ClientSecret is required.", [nameof(ClientSecret)]));
+        }
+
+        if (string.IsNullOrWhiteSpace(Host) || !DuoUtilities.ValidDuoHost(Host))
+        {
+            results.Add(new ValidationResult("Host is invalid.", [nameof(Host)]));
+        }
+        return results;
+    }
 }
 
 public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestModel, IValidatableObject

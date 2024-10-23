@@ -14,7 +14,6 @@ public interface IDuoUniversalConfigService
     /// <param name="clientSecret">Duo client Secret</param>
     /// <param name="clientId">Duo client Id</param>
     /// <param name="host">Duo host</param>
-    /// <param name="handleException">Boolean to determine if the method should throw an exception</param>
     /// <returns>Boolean</returns>
-    Task<bool> ValidateDuoConfiguration(string clientSecret, string clientId, string host, bool handleException = true);
+    Task<bool> ValidateDuoConfiguration(string clientSecret, string clientId, string host);
 }

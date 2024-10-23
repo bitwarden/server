@@ -180,16 +180,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
     {
         var user = await CheckAsync(model, true);
-        try
-        {
-            // This will throw an exception if the configuration is invalid
-            await _duoUniversalConfigService.ValidateDuoConfiguration(
-                                        model.ClientId,
-                                        model.ClientSecret,
-                                        model.Host,
-                                        false);
-        }
-        catch
+        if (!await _duoUniversalConfigService.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -232,16 +223,7 @@ public class TwoFactorController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
-        try
-        {
-            // This will throw an exception if the configuration is invalid
-            await _duoUniversalConfigService.ValidateDuoConfiguration(
-                                        model.ClientId,
-                                        model.ClientSecret,
-                                        model.Host,
-                                        false);
-        }
-        catch
+        if (!await _duoUniversalConfigService.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
