@@ -6,45 +6,31 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushNotificationService : IPushNotificationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly List<NotificationHubClient> _clients = [];
     private readonly bool _enableTracing = false;
+    private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
+        INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
         ILogger<NotificationsApiPushNotificationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
-
-        foreach (var hub in globalSettings.NotificationHubs)
-        {
-            var client = NotificationHubClient.CreateClientFromConnectionString(
-                hub.ConnectionString,
-                hub.HubName,
-                hub.EnableSendTracing);
-            _clients.Add(client);
-
-            _enableTracing = _enableTracing || hub.EnableSendTracing;
-        }
-
+        _notificationHubPool = notificationHubPool;
         _logger = logger;
     }
 
@@ -264,30 +250,23 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task SendPayloadAsync(string tag, PushType type, object payload)
     {
-        var tasks = new List<Task<NotificationOutcome>>();
-        foreach (var client in _clients)
-        {
-            var task = client.SendTemplateNotificationAsync(
-                new Dictionary<string, string>
-                {
-                    { "type",  ((byte)type).ToString() },
-                    { "payload", JsonSerializer.Serialize(payload) }
-                }, tag);
-            tasks.Add(task);
-        }
-
-        await Task.WhenAll(tasks);
+        var results = await _notificationHubPool.AllClients.SendTemplateNotificationAsync(
+            new Dictionary<string, string>
+            {
+                { "type",  ((byte)type).ToString() },
+                { "payload", JsonSerializer.Serialize(payload) }
+            }, tag);
 
         if (_enableTracing)
         {
-            for (var i = 0; i < tasks.Count; i++)
+            foreach (var (client, outcome) in results)
             {
-                if (_clients[i].EnableTestSend)
+                if (!client.EnableTestSend)
                 {
-                    var outcome = await tasks[i];
-                    _logger.LogInformation("Azure Notification Hub Tracking ID: {id} | {type} push notification with {success} successes and {failure} failures with a payload of {@payload} and result of {@results}",
-                        outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+                    continue;
                 }
+                _logger.LogInformation("Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
+                    outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
             }
         }
     }
