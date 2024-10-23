@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -15,6 +16,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -186,12 +188,44 @@ public class OrganizationUsersControllerTests
     }
 
     [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task Get_ReturnsUser(
+        bool accountDeprovisioningEnabled,
+        OrganizationUserUserDetails organizationUser, ICollection<CollectionAccessSelection> collections,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        organizationUser.Permissions = null;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(accountDeprovisioningEnabled);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManageUsers(organizationUser.OrganizationId)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
+            .Returns((organizationUser, collections));
+
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
+            .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
+
+        var response = await sutProvider.Sut.Get(organizationUser.Id, false);
+
+        Assert.Equal(organizationUser.Id, response.Id);
+        Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
+    }
+
+    [Theory]
     [BitAutoData]
-    public async Task Get_ReturnsUsers(
+    public async Task GetMany_ReturnsUsers(
         ICollection<OrganizationUserUserDetails> organizationUsers, OrganizationAbility organizationAbility,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        Get_Setup(organizationAbility, organizationUsers, sutProvider);
+        GetMany_Setup(organizationAbility, organizationUsers, sutProvider);
         var response = await sutProvider.Sut.Get(organizationAbility.Id, false, false);
 
         Assert.True(response.Data.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
@@ -368,7 +402,7 @@ public class OrganizationUsersControllerTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.BulkDeleteAccount(orgId, model));
     }
 
-    private void Get_Setup(OrganizationAbility organizationAbility,
+    private void GetMany_Setup(OrganizationAbility organizationAbility,
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUsersController> sutProvider)
     {
