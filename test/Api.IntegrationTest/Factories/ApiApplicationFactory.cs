@@ -1,4 +1,6 @@
-﻿using Bit.Identity.Models.Request.Accounts;
+﻿using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.Services;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
@@ -12,6 +14,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     private readonly IdentityApplicationFactory _identityApplicationFactory;
     private const string _connectionString = "DataSource=:memory:";
+    private readonly Dictionary<string, object> _features = new Dictionary<string, object>();
 
     public ApiApplicationFactory()
     {
@@ -36,7 +39,17 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             {
                 options.BackchannelHttpHandler = _identityApplicationFactory.Server.CreateHandler();
             });
+
+            // Remove the default IFeatureService implementation
+            services.Remove(services.First(sd => sd.ServiceType == typeof(IFeatureService)));
+            services.AddSingleton<IFeatureService>(sp => new TestFeatureService(_features));
         });
+    }
+
+    public ApiApplicationFactory WithFeature(string feature, object value)
+    {
+        _features[feature] = value;
+        return this;
     }
 
     /// <summary>
