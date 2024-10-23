@@ -142,7 +142,6 @@ public static class FeatureFlagKeys
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string Pm3478RefactorOrganizationUserApi = "pm-3478-refactor-organizationuser-api";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
