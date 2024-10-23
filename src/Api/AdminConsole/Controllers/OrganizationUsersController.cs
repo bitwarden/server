@@ -702,7 +702,7 @@ public class OrganizationUsersController : Controller
             return userIds.ToDictionary(kvp => kvp, kvp => false);
         }
 
-        var organizationsManagingUsers = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
-        return organizationsManagingUsers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        var usersOrganizationManagementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
+        return usersOrganizationManagementStatus;
     }
 }
