@@ -148,6 +148,7 @@ public static class FeatureFlagKeys
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string Pm13322AddPolicyDefinitions = "pm-13322-add-policy-definitions";
     public const string LimitCollectionCreationDeletionSplit = "pm-10863-limit-collection-creation-deletion-split";
+    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
 
     public static List<string> GetAllKeys()
     {

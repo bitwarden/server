@@ -27,6 +27,8 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     public AccountsKeyManagementControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        _factory.UpdateConfiguration("globalSettings:launchDarkly:flagValues:pm-12241-private-key-regeneration",
+            "true");
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
@@ -43,6 +45,27 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RegenerateKeysAsync_FeatureFlagTurnedOff_NotFound(KeyRegenerationRequestModel request)
+    {
+        // Localize factory to inject a false value for the feature flag.
+        var localFactory = new ApiApplicationFactory();
+        localFactory.UpdateConfiguration("globalSettings:launchDarkly:flagValues:pm-12241-private-key-regeneration",
+            "false");
+        var localClient = localFactory.CreateClient();
+        var localEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        var localLoginHelper = new LoginHelper(localFactory, localClient);
+        await localFactory.LoginWithNewAccount(localEmail);
+        await localLoginHelper.LoginAsync(localEmail);
+
+        request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
+
+        var response = await localClient.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
