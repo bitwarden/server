@@ -551,13 +551,18 @@ public static class CoreHelpers
         try
         {
             var unprotectedData = protector.Unprotect(token);
+            Console.WriteLine($"Unprotected data: {unprotectedData}");
             var dataParts = unprotectedData.Split(' ');
             if (dataParts.Length == 4 && dataParts[0] == firstTokenPart &&
                 new Guid(dataParts[1]) == id &&
                 dataParts[2].Equals(userEmail, StringComparison.InvariantCultureIgnoreCase))
             {
+                Console.WriteLine($"Time check");
+
                 var creationTime = FromEpocMilliseconds(Convert.ToInt64(dataParts[3]));
                 var expTime = creationTime.AddHours(expirationInHours);
+
+                Console.WriteLine($" expTime < DateTime.UtcNow: {expTime < DateTime.UtcNow}");
                 invalid = expTime < DateTime.UtcNow;
             }
         }
