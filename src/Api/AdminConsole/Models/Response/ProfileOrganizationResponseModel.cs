@@ -65,6 +65,9 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
         AccessSecretsManager = organization.AccessSecretsManager;
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
@@ -124,6 +127,9 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>

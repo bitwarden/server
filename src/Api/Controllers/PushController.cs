@@ -46,7 +46,7 @@ public class PushController : Controller
     public async Task PostDelete([FromBody] PushDeviceRequestModel model)
     {
         CheckUsage();
-        await _pushRegistrationService.DeleteRegistrationAsync(Prefix(model.Id), model.Type);
+        await _pushRegistrationService.DeleteRegistrationAsync(Prefix(model.Id));
     }
 
     [HttpPut("add-organization")]
@@ -54,7 +54,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.AddUserRegistrationOrganizationAsync(
-            model.Devices.Select(d => new KeyValuePair<string, Core.Enums.DeviceType>(Prefix(d.Id), d.Type)),
+            model.Devices.Select(d => Prefix(d.Id)),
             Prefix(model.OrganizationId));
     }
 
@@ -63,7 +63,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(
-            model.Devices.Select(d => new KeyValuePair<string, Core.Enums.DeviceType>(Prefix(d.Id), d.Type)),
+            model.Devices.Select(d => Prefix(d.Id)),
             Prefix(model.OrganizationId));
     }
 
