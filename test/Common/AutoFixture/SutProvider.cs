@@ -127,7 +127,6 @@ public class SutProvider<TSut> : ISutProvider
                 return _sutProvider.GetDependency(parameterInfo.ParameterType, "");
             }
 
-
             // This is the equivalent of _fixture.Create<parameterInfo.ParameterType>, but no overload for
             // Create(Type type) exists.
             var dependency = new SpecimenContext(_fixture).Resolve(new SeededRequest(parameterInfo.ParameterType,
