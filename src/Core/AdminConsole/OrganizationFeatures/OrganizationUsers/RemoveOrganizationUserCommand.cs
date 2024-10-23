@@ -118,12 +118,12 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (usersToDelete.Any())
         {
+            var eventDate = DateTime.UtcNow;
             await _organizationUserRepository.DeleteManyAsync(usersToDelete.Select(u => u.Id));
+            await _eventService.LogOrganizationUserEventsAsync(usersToDelete.Select(u => (u, EventType.OrganizationUser_Removed, (DateTime?)eventDate)));
 
             foreach (var orgUser in usersToDelete)
             {
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-
                 if (orgUser.UserId.HasValue)
                 {
                     await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);

@@ -453,7 +453,10 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+            .LogOrganizationUserEventsAsync(
+                Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                    events.Count() == 1
+                    && events.Any(e => e.Item1.Id == orgUser.Id && e.Item2 == EventType.OrganizationUser_Removed)));
     }
 
     [Theory, BitAutoData]
@@ -484,10 +487,11 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
-            .LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(u => u.Id == orgUser1.Id), EventType.OrganizationUser_Removed);
-        await sutProvider.GetDependency<IEventService>()
-            .Received(1)
-            .LogOrganizationUserEventAsync(Arg.Is<OrganizationUser>(u => u.Id == orgUser2.Id), EventType.OrganizationUser_Removed);
+            .LogOrganizationUserEventsAsync(
+                Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                    events.Count() == 2
+                    && events.Any(e => e.Item1.Id == orgUser1.Id && e.Item2 == EventType.OrganizationUser_Removed)
+                    && events.Any(e => e.Item1.Id == orgUser2.Id && e.Item2 == EventType.OrganizationUser_Removed)));
     }
 
     [Theory, BitAutoData]
