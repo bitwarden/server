@@ -506,6 +506,28 @@ public class AccountsControllerTests : IDisposable
 
     [Theory]
     [BitAutoData]
+    public async Task Delete_WhenDeleteAsyncSucceeds_UserIsNull(
+        User user,
+        SecretVerificationRequestModel model)
+    {
+        // Arrange
+        EnableFeatureFlag();
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.VerifySecretAsync(user, model.Secret).Returns(true);
+        var result = IdentityResult.Success;
+        _userService.DeleteAsync(user).Returns(result);
+
+        // Act
+        await _sut.Delete(model);
+        var nullUser = await _userService.GetUserByIdAsync(user.Id);
+
+        // Assert
+        Assert.Null(nullUser);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Delete_WhenDeleteAsyncFails_ShouldThrowBadRequestException(
         User user,
         SecretVerificationRequestModel model)
@@ -568,6 +590,27 @@ public class AccountsControllerTests : IDisposable
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task FlagDisabled_Delete_WhenDeleteAsyncSucceeds_UserIsNull(
+    User user,
+    SecretVerificationRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.VerifySecretAsync(user, model.Secret).Returns(true);
+        var result = IdentityResult.Success;
+        _userService.DeleteAsync(user).Returns(result);
+
+        // Act
+        await _sut.Delete(model);
+        var nullUser = await _userService.GetUserByIdAsync(user.Id);
+
+        // Assert
+        Assert.Null(nullUser);
     }
 
     // Below are helper functions that currently belong to this
