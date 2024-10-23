@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -9,10 +10,12 @@ using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
-
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -481,8 +484,25 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
         // Hardcoded, valid data
         var email = "jsnider+local253@bitwarden.com";
-        var providerInviteToken = "CfDJ8PoqFnmGISlNtfRM2ZSgmWYSADdzTfEQi37J6wd8YlIaCDUTMoVl4N9x3O3hAiV8fLmJGz8hcBH7ygrbQC1lTgtS-Vlj9qaEYIBWdIfQ62lqcPTtmN_BzToVjBjkqtY-JBkN_rhGRP4eVVszBvP1Joj46Gw1BiXihK30I5rSXJxvVQa7PLa1H2fxG7zlmXKx_uDU6m2N2vJ2uWFHF9ELWLMmTgqWzI9x1us9XVPmKmmN7vLq2m1Jj63MRWxTmnF0VQ";
         var providerUserId = new Guid("c6fdba35-2e52-43b4-8fb7-b211011d154a");
+        var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
+        var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {email} {nowMillis}";
+        // var providerInviteToken = await GetValidProviderInviteToken(localFactory, email, providerUserId);
+
+        // Get the byte array of the plaintext
+        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(decryptedProviderInviteToken);
+
+        // Base64 encode the byte array (this is passed to protector.protect(bytes))
+        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(decryptedProviderInviteTokenByteArray);
+
+        var mockDataProtector = Substitute.For<IDataProtector>();
+        mockDataProtector.Unprotect(Arg.Any<byte[]>()).Returns(decryptedProviderInviteTokenByteArray);
+
+        localFactory.SubstituteService<IDataProtectionProvider>(dataProtectionProvider =>
+        {
+            dataProtectionProvider.CreateProtector(Arg.Any<string>())
+                .Returns(mockDataProtector);
+        });
 
         // As token contains now milliseconds for when it was created, create 1k year timespan for expiration
         // to ensure token is valid for a good long while.
@@ -493,7 +513,7 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
             Email = email,
             MasterPasswordHash = masterPasswordHash,
             MasterPasswordHint = masterPasswordHint,
-            ProviderInviteToken = providerInviteToken,
+            ProviderInviteToken = base64EncodedProviderInvToken,
             ProviderUserId = providerUserId,
             Kdf = KdfType.PBKDF2_SHA256,
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
@@ -584,4 +604,5 @@ public class AccountsControllerTests : IClassFixture<IdentityApplicationFactory>
 
         return user;
     }
+
 }
