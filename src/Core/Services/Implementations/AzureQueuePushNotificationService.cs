@@ -5,26 +5,24 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Services;
 
 public class AzureQueuePushNotificationService : IPushNotificationService
 {
     private readonly QueueClient _queueClient;
-    private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AzureQueuePushNotificationService(
-        GlobalSettings globalSettings,
+        [FromKeyedServices("notifications")] QueueClient queueClient,
         IHttpContextAccessor httpContextAccessor)
     {
-        _queueClient = new QueueClient(globalSettings.Notifications.ConnectionString, "notifications");
-        _globalSettings = globalSettings;
+        _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;
     }
 
