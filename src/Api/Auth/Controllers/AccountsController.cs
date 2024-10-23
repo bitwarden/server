@@ -559,8 +559,9 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        var accountDeprovisioningEnabled = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning);
         var isManagedUser = await _userService.IsManagedByAnyOrganizationAsync(user.Id);
-        if (isManagedUser)
+        if (accountDeprovisioningEnabled && isManagedUser)
         {
             throw new UnauthorizedAccessException();
         }
