@@ -35,7 +35,9 @@ public class NotificationHubPushRegistrationServiceTests
     public async void CreateOrUpdateRegistrationAsync_DeviceTypeAndroid_InstallationCreated(bool identifierNull,
         SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId, Guid userId, Guid? identifier)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AnhFcmv1Migration).Returns(true);
+        var featureService = Substitute.For<IFeatureService>();
+        featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration).Returns(true);
+        sutProvider.GetDependency<IServiceProvider>().GetService(typeof(IFeatureService)).Returns(featureService);
         var notificationHubClient = Substitute.For<INotificationHubClient>();
         sutProvider.GetDependency<INotificationHubPool>().ClientFor(Arg.Any<Guid>()).Returns(notificationHubClient);
 

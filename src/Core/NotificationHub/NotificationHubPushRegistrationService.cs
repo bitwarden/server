@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.NotificationHub;
 
@@ -11,16 +12,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IFeatureService _featureService;
+    private readonly IServiceProvider _serviceProvider;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
-        IFeatureService featureService)
+        IServiceProvider serviceProvider)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _notificationHubPool = notificationHubPool;
-        _featureService = featureService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -51,7 +52,8 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                if (_featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
+                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
                 {
                     payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
