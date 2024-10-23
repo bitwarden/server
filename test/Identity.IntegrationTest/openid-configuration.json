@@ -24,6 +24,7 @@
     "sstamp",
     "premium",
     "device",
+    "devicetype",
     "orgowner",
     "orgadmin",
     "orguser",
