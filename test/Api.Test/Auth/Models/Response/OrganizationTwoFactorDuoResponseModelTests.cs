@@ -53,7 +53,7 @@ public class OrganizationTwoFactorDuoResponseModelTests
         }
         catch (Exception ex)
         {
-        // Assert
+            // Assert
             Assert.IsType<ArgumentNullException>(ex);
         }
     }

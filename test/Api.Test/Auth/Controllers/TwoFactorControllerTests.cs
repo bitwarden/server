@@ -1,4 +1,4 @@
-using Bit.Api.Auth.Controllers;
+﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
@@ -12,7 +12,6 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.Auth.Controllers;
@@ -119,7 +118,7 @@ public class TwoFactorControllerTests
         }
         catch (BadRequestException e)
         {
-        // Assert
+            // Assert
             Assert.Equal("Duo configuration settings are not valid. Please re-check the Duo Admin panel.", e.Message);
         }
     }

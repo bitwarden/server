@@ -42,14 +42,17 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
 
 public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IValidatableObject
 {
+    /*
+        String lengths based on Duo's documentation
+        https://github.com/duosecurity/duo_universal_csharp/blob/main/DuoUniversal/Client.cs
+    */
     [Required]
-    [StringLength(50)]
+    [StringLength(20, MinimumLength = 20, ErrorMessage = "Client Id must be exactly 20 characters.")]
     public string ClientId { get; set; }
     [Required]
-    [StringLength(50)]
+    [StringLength(40, MinimumLength = 40, ErrorMessage = "Client Secret must be exactly 40 characters.")]
     public string ClientSecret { get; set; }
     [Required]
-    [StringLength(50)]
     public string Host { get; set; }
 
     public User ToUser(User existingUser)

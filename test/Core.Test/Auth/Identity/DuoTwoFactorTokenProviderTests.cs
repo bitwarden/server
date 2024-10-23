@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;

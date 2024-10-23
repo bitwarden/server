@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Models;
+﻿using Bit.Core.Auth.Models;
 
 namespace Bit.Core.Auth.Utilities;
 

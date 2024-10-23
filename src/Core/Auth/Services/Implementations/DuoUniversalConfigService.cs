@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Utilities;
+﻿using Bit.Core.Auth.Utilities;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Services;

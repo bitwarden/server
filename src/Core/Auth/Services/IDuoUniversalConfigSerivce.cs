@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.Services;
+﻿namespace Bit.Core.Auth.Services;
 
 /// <summary>
 /// In the TwoFactorController before we write a configuration to the database we check if the Duo configuration
