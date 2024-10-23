@@ -41,6 +41,32 @@ public class CreateProviderCommand : ICreateProviderCommand
 
     public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
     {
+        var providerPlans = new List<ProviderPlan>
+        {
+            CreateProviderPlan(provider.Id, PlanType.TeamsMonthly, teamsMinimumSeats),
+            CreateProviderPlan(provider.Id, PlanType.EnterpriseMonthly, enterpriseMinimumSeats)
+        };
+
+        await CreateProviderAsync(provider, ownerEmail, providerPlans);
+    }
+
+    public async Task CreateResellerAsync(Provider provider)
+    {
+        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
+    }
+
+    public async Task CreateMultiOrganizationEnterpriseAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
+    {
+        var providerPlans = new List<ProviderPlan>
+        {
+            CreateProviderPlan(provider.Id, plan, minimumSeats)
+        };
+
+        await CreateProviderAsync(provider, ownerEmail, providerPlans);
+    }
+
+    private async Task CreateProviderAsync(Provider provider, string ownerEmail, List<ProviderPlan> providerPlans)
+    {
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
@@ -66,12 +92,6 @@ public class CreateProviderCommand : ICreateProviderCommand
 
         if (isConsolidatedBillingEnabled)
         {
-            var providerPlans = new List<ProviderPlan>
-            {
-                CreateProviderPlan(provider.Id, PlanType.TeamsMonthly, teamsMinimumSeats),
-                CreateProviderPlan(provider.Id, PlanType.EnterpriseMonthly, enterpriseMinimumSeats)
-            };
-
             foreach (var providerPlan in providerPlans)
             {
                 await _providerPlanRepository.CreateAsync(providerPlan);
@@ -80,11 +100,6 @@ public class CreateProviderCommand : ICreateProviderCommand
 
         await _providerUserRepository.CreateAsync(providerUser);
         await _providerService.SendProviderSetupInviteEmailAsync(provider, owner.Email);
-    }
-
-    public async Task CreateResellerAsync(Provider provider)
-    {
-        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
     }
 
     private async Task ProviderRepositoryCreateAsync(Provider provider, ProviderStatusType status)
