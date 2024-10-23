@@ -61,7 +61,6 @@ public interface IRegisterUserCommand
     public Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
         string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId);
 
-    // add summary
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
     /// If a valid token is provided, the user will be created with their email verified.
