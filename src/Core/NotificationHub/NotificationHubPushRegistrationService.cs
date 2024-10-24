@@ -2,33 +2,26 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
         INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
-        ILogger<NotificationHubPushRegistrationService> logger)
+        IServiceProvider serviceProvider)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _notificationHubPool = notificationHubPool;
         _serviceProvider = serviceProvider;
-        _logger = logger;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -46,10 +39,9 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Templates = new Dictionary<string, InstallationTemplate>()
         };
 
-        installation.Tags = new List<string>
-        {
-            $"userId:{userId}"
-        };
+        var clientType = DeviceTypes.ToClientType(type);
+
+        installation.Tags = new List<string> { $"userId:{userId}", $"clientType:{clientType}" };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
@@ -65,24 +57,25 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 {
                     payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                                      "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
                     installation.Platform = NotificationPlatform.FcmV1;
                 }
                 else
                 {
                     payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
                     messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                                      "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
                     installation.Platform = NotificationPlatform.Fcm;
                 }
+
                 break;
             case DeviceType.iOS:
                 payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
-                    "\"aps\":{\"content-available\":1}}";
+                                  "\"aps\":{\"content-available\":1}}";
                 messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
+                                  "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
                 badgeMessageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}";
+                                       "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}";
 
                 installation.Platform = NotificationPlatform.Apns;
                 break;
@@ -96,10 +89,10 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
         }
 
-        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
-        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
+        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType);
+        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType);
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier);
+            userId, identifier, clientType);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -109,7 +102,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier)
+        string userId, string identifier, ClientType clientType)
     {
         if (templateBody == null)
         {
@@ -123,8 +116,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Body = templateBody,
             Tags = new List<string>
             {
-                fullTemplateId,
-                $"{fullTemplateId}_userId:{userId}"
+                fullTemplateId, $"{fullTemplateId}_userId:{userId}", $"clientType:{clientType}"
             }
         };
 
@@ -181,11 +173,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             return;
         }
 
-        var operation = new PartialUpdateOperation
-        {
-            Operation = op,
-            Path = "/tags"
-        };
+        var operation = new PartialUpdateOperation { Operation = op, Path = "/tags" };
 
         if (op == UpdateOperationType.Add)
         {
@@ -200,7 +188,8 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         {
             try
             {
-                await ClientFor(GetComb(deviceId)).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
+                await ClientFor(GetComb(deviceId))
+                    .PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
@@ -209,29 +198,24 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private INotificationHubClient ClientFor(Guid deviceId)
     {
         return _notificationHubPool.ClientFor(deviceId);
     }
 
     private Guid GetComb(string deviceId)
     {
-        var deviceIdString = deviceId;
-        InstallationDeviceEntity installationDeviceEntity;
-        Guid deviceIdGuid;
-        if (InstallationDeviceEntity.TryParse(deviceIdString, out installationDeviceEntity))
+        if (InstallationDeviceEntity.TryParse(deviceId, out var installationDeviceEntity))
         {
             // Strip off the installation id (PartitionId). RowKey is the ID in the Installation's table.
-            deviceIdString = installationDeviceEntity.RowKey;
+            deviceId = installationDeviceEntity.RowKey;
         }
 
-        if (Guid.TryParse(deviceIdString, out deviceIdGuid))
-        {
-        }
-        else
+        if (!Guid.TryParse(deviceId, out var deviceIdGuid))
         {
             throw new Exception($"Invalid device id {deviceId}.");
         }
+
         return deviceIdGuid;
     }
 }

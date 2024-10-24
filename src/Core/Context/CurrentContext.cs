@@ -162,6 +162,11 @@ public class CurrentContext : ICurrentContext
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
+        if (Enum.TryParse(GetClaimValue(claimsDict, Claims.DeviceType), out DeviceType deviceType))
+        {
+            DeviceType = deviceType;
+        }
+
         Organizations = GetOrganizations(claimsDict, orgApi);
 
         Providers = GetProviders(claimsDict);

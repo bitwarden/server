@@ -205,6 +205,7 @@ public abstract class BaseRequestValidator<T> where T : class
         if (device != null)
         {
             claims.Add(new Claim(Claims.Device, device.Identifier));
+            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
         }
 
         var customResponse = new Dictionary<string, object>();
@@ -546,7 +547,7 @@ public abstract class BaseRequestValidator<T> where T : class
     }
 
     /// <summary>
-    /// checks to see if a user is trying to log into a new device 
+    /// checks to see if a user is trying to log into a new device
     /// and has reached the maximum number of failed login attempts.
     /// </summary>
     /// <param name="unknownDevice">boolean</param>
