@@ -8,6 +8,8 @@ using Bit.Core;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Services;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
@@ -49,7 +51,7 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
         var email = await SetupOrganizationManagedAccount();
 
         var tokens = await _factory.LoginAsync(email);
-        var client = _factory.WithFeature(FeatureFlagKeys.AccountDeprovisioning, true).CreateClient();
+        var client = _factory.CreateClient();
 
         var model = new EmailTokenRequestModel
         {
@@ -100,6 +102,9 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
 
     private async Task<string> SetupOrganizationManagedAccount()
     {
+        _factory.SubstituteService<IFeatureService>(featureService =>
+            featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true));
+
         // Create the owner account
         var ownerEmail = $"{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);
