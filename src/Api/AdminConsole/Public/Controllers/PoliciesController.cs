@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Net;
+﻿using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
@@ -24,7 +23,7 @@ public class PoliciesController : Controller
     private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
-    private readonly IDictionary<PolicyType, IPolicyValidator> _policyValidators;
+    private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
@@ -37,7 +36,13 @@ public class PoliciesController : Controller
         _policyService = policyService;
         _currentContext = currentContext;
         _featureService = featureService;
-        _policyValidators = policyValidators.ToImmutableDictionary(x => x.Type);
+
+        var dictionary = new Dictionary<PolicyType, IPolicyValidator>();
+        foreach (var validator in policyValidators)
+        {
+            dictionary.TryAdd(validator.Type, validator);
+        }
+        _policyValidators = dictionary;
     }
 
     /// <summary>

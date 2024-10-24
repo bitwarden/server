@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using Bit.Api.AdminConsole.Models.Request;
+﻿using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -62,7 +61,12 @@ public class PoliciesController : Controller
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
 
-        _policyValidators = validators.ToImmutableDictionary(x => x.Type);
+        var dictionary = new Dictionary<PolicyType, IPolicyValidator>();
+        foreach (var validator in validators)
+        {
+            dictionary.TryAdd(validator.Type, validator);
+        }
+        _policyValidators = dictionary;
     }
 
     [HttpGet("{type}")]
