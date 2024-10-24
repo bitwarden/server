@@ -24,6 +24,7 @@ public class UsersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public UsersController(
         IUserRepository userRepository,
@@ -31,7 +32,8 @@ public class UsersController : Controller
         IPaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IOrganizationRepository organizationRepository)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -39,6 +41,7 @@ public class UsersController : Controller
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _organizationRepository = organizationRepository;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -82,8 +85,9 @@ public class UsersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-
-        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers));
+        var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(id);
+        var verifiedDomain = organizationsWithVerifiedUserEmailDomain.Count > 0;
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -99,7 +103,9 @@ public class UsersController : Controller
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
+        var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(id);
+        var verifiedDomain = organizationsWithVerifiedUserEmailDomain.Count > 0;
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
     }
 
     [HttpPost]
