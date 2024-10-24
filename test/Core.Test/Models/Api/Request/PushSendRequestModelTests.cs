@@ -1,7 +1,10 @@
 ﻿#nullable enable
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Core.Test.Models.Api.Request;
@@ -32,20 +35,35 @@ public class PushSendRequestModelTests
         Assert.Contains(results, result => result.ErrorMessage == "UserId or OrganizationId is required.");
     }
 
-    [Fact]
-    public void Validate_RequiredPayloadFieldNotProvided_Invalid()
+    [Theory]
+    [BitAutoData("Payload")]
+    [BitAutoData("Type")]
+    public void Validate_RequiredFieldNotProvided_Invalid(string requiredField)
     {
         var model = new PushSendRequestModel
         {
             UserId = Guid.NewGuid().ToString(),
             OrganizationId = Guid.NewGuid().ToString(),
-            Type = PushType.SyncCiphers
+            Type = PushType.SyncCiphers,
+            Payload = "test"
         };
 
-        var results = Validate(model);
+        var dictionary = new Dictionary<string, object?>();
+        foreach (var property in model.GetType().GetProperties())
+        {
+            if (property.Name == requiredField)
+            {
+                continue;
+            }
 
-        Assert.Single(results);
-        Assert.Contains(results, result => result.ErrorMessage == "The Payload field is required.");
+            dictionary[property.Name] = property.GetValue(model);
+        }
+
+        var serialized = JsonSerializer.Serialize(dictionary, JsonHelpers.IgnoreWritingNull);
+        var jsonException =
+            Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<PushSendRequestModel>(serialized));
+        Assert.Contains($"missing required properties, including the following: {requiredField}",
+            jsonException.Message);
     }
 
     [Fact]
@@ -70,7 +88,7 @@ public class PushSendRequestModelTests
     private static List<ValidationResult> Validate(PushSendRequestModel model)
     {
         var results = new List<ValidationResult>();
-        Validator.TryValidateObject(model, new ValidationContext(model), results);
+        Validator.TryValidateObject(model, new ValidationContext(model), results, true);
         return results;
     }
 }

@@ -23,10 +23,10 @@ public class QueueClientBuilder : ISpecimenBuilder
 
 public class QueueClientCustomizeAttribute : BitCustomizeAttribute
 {
-    public override ICustomization GetCustomization() => new QueueClientFixture();
+    public override ICustomization GetCustomization() => new QueueClientFixtures();
 }
 
-public class QueueClientFixture : ICustomization
+public class QueueClientFixtures : ICustomization
 {
     public void Customize(IFixture fixture)
     {
