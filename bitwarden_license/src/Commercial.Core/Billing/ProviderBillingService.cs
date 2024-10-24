@@ -381,13 +381,13 @@ public class ProviderBillingService(
 
         foreach (var providerPlan in providerPlans)
         {
+            var plan = StaticStore.GetPlan(providerPlan.PlanType);
+
             if (!providerPlan.IsConfigured())
             {
-                logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured {ProviderName} plan", provider.Id, providerPlan.PlanType.ToString());
+                logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured {ProviderName} plan", provider.Id, plan.Name);
                 throw new BillingException();
             }
-
-            var plan = StaticStore.GetPlan(providerPlan.PlanType);
 
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
