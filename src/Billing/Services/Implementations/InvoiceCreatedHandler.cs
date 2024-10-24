@@ -49,7 +49,11 @@ public class InvoiceCreatedHandler(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Failed to attempt paying for invoice while handling 'invoice.created' event ({EventID})", parsedEvent.Id);
+            logger.LogError(exception, "Failed to attempt paying for invoice while handling 'invoice.created' event ({EventID}) | Message: {Message}",
+                parsedEvent.Id,
+                exception.Message);
+
+            throw;
         }
 
         try
@@ -58,7 +62,11 @@ public class InvoiceCreatedHandler(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Failed to record provider invoice line items while handling 'invoice.created' event ({EventID})", parsedEvent.Id);
+            logger.LogError(exception, "Failed to record provider invoice line items while handling 'invoice.created' event ({EventID}) | Message: {Message}",
+                parsedEvent.Id,
+                exception.Message);
+
+            throw;
         }
     }
 }
