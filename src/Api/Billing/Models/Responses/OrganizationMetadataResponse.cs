@@ -3,8 +3,11 @@
 namespace Bit.Api.Billing.Models.Responses;
 
 public record OrganizationMetadataResponse(
+    bool IsEligibleForSelfHost,
     bool IsOnSecretsManagerStandalone)
 {
     public static OrganizationMetadataResponse From(OrganizationMetadata metadata)
-        => new(metadata.IsOnSecretsManagerStandalone);
+        => new(
+            metadata.IsEligibleForSelfHost,
+            metadata.IsOnSecretsManagerStandalone);
 }

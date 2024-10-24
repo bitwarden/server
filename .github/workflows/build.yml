@@ -594,7 +594,7 @@ jobs:
               workflow_id: '_update_ephemeral_tags.yml',
               ref: 'main',
               inputs: {
-                ephemeral_env_branch: '${{ github.head_ref }}'
+                ephemeral_env_branch: process.env.GITHUB_HEAD_REF
               }
             })
 
