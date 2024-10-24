@@ -534,6 +534,34 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(model));
     }
 
+    [Fact]
+    public async Task Delete_WhenAccountDeprovisioningIsEnabled_WithUserManagedByAnOrganization_ThrowsBadRequestException()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
+
+        var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
+
+        Assert.Equal("Accounts managed by an organization cannot be deleted.", result.Message);
+    }
+
+    [Fact]
+    public async Task Delete_WhenAccountDeprovisioningIsEnabled_WithUserNotManagedByAnOrganization_ShouldSucceed()
+    {
+        var user = GenerateExampleUser();
+        ConfigureUserServiceToReturnValidPrincipalFor(user);
+        ConfigureUserServiceToAcceptPasswordFor(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
+        _userService.DeleteAsync(user).Returns(IdentityResult.Success);
+
+        await _sut.Delete(new SecretVerificationRequestModel());
+
+        await _userService.Received(1).DeleteAsync(user);
+    }
 
     // Below are helper functions that currently belong to this
     // test class, but ultimately may need to be split out into
