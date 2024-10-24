@@ -34,6 +34,7 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault;
@@ -116,6 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
+        services.AddReportingServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
