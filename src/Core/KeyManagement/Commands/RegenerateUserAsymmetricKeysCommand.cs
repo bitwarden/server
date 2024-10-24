@@ -47,6 +47,10 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
             x.Status is EmergencyAccessStatusType.Confirmed or EmergencyAccessStatusType.RecoveryApproved
                 or EmergencyAccessStatusType.RecoveryInitiated);
 
+        _logger.LogInformation(
+            "User asymmetric keys regeneration requested. UserId: {userId} OrganizationMembership: {inOrganizations} DesignatedEmergencyAccess: {hasDesignatedEmergencyAccess} DeviceType: {deviceType}",
+            userAsymmetricKeys.UserId, inOrganizations, hasDesignatedEmergencyAccess, _currentContext.DeviceType);
+
         // For now, don't regenerate asymmetric keys for user's with organization membership and designated emergency access.
         if (inOrganizations || hasDesignatedEmergencyAccess)
         {
