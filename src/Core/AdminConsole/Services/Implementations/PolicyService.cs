@@ -1,6 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -26,6 +30,10 @@ public class PolicyService : IPolicyService
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IFeatureService _featureService;
+    private readonly ISavePolicyCommand _savePolicyCommand;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -36,7 +44,11 @@ public class PolicyService : IPolicyService
         ISsoConfigRepository ssoConfigRepository,
         IMailService mailService,
         GlobalSettings globalSettings,
-        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IFeatureService featureService,
+        ISavePolicyCommand savePolicyCommand,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -47,10 +59,29 @@ public class PolicyService : IPolicyService
         _mailService = mailService;
         _globalSettings = globalSettings;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _featureService = featureService;
+        _savePolicyCommand = savePolicyCommand;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
-    public async Task SaveAsync(Policy policy, IOrganizationService organizationService, Guid? savingUserId)
+    public async Task SaveAsync(Policy policy, Guid? savingUserId)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
+        {
+            // Transitional mapping - this will be moved to callers once the feature flag is removed
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = policy.OrganizationId,
+                Type = policy.Type,
+                Enabled = policy.Enabled,
+                Data = policy.Data
+            };
+
+            await _savePolicyCommand.SaveAsync(policyUpdate);
+            return;
+        }
+
         var org = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
         if (org == null)
         {
@@ -84,7 +115,7 @@ public class PolicyService : IPolicyService
             return;
         }
 
-        await EnablePolicyAsync(policy, org, organizationService, savingUserId);
+        await EnablePolicyAsync(policy, org, savingUserId);
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
@@ -212,6 +243,7 @@ public class PolicyService : IPolicyService
             case PolicyType.SingleOrg:
                 if (!policy.Enabled)
                 {
+                    await HasVerifiedDomainsAsync(org);
                     await RequiredBySsoAsync(org);
                     await RequiredByVaultTimeoutAsync(org);
                     await RequiredByKeyConnectorAsync(org);
@@ -252,13 +284,22 @@ public class PolicyService : IPolicyService
         }
     }
 
+    private async Task HasVerifiedDomainsAsync(Organization org)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(org.Id))
+        {
+            throw new BadRequestException("Organization has verified domains.");
+        }
+    }
+
     private async Task SetPolicyConfiguration(Policy policy)
     {
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
     }
 
-    private async Task EnablePolicyAsync(Policy policy, Organization org, IOrganizationService organizationService, Guid? savingUserId)
+    private async Task EnablePolicyAsync(Policy policy, Organization org, Guid? savingUserId)
     {
         var currentPolicy = await _policyRepository.GetByIdAsync(policy.Id);
         if (!currentPolicy?.Enabled ?? true)
@@ -284,7 +325,7 @@ public class PolicyService : IPolicyService
                                     "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
                             }
 
-                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                            await _removeOrganizationUserCommand.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
                                 org.DisplayName(), orgUser.Email);
@@ -300,7 +341,7 @@ public class PolicyService : IPolicyService
                                     && ou.OrganizationId != org.Id
                                     && ou.Status != OrganizationUserStatusType.Invited))
                         {
-                            await organizationService.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
+                            await _removeOrganizationUserCommand.RemoveUserAsync(policy.OrganizationId, orgUser.Id,
                                 savingUserId);
                             await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                 org.DisplayName(), orgUser.Email);

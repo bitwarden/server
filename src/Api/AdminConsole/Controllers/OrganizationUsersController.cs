@@ -51,7 +51,10 @@ public class OrganizationUsersController : Controller
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationUserUserDetailsQuery _organizationUserUserDetailsQuery;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
+    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IFeatureService _featureService;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -71,7 +74,10 @@ public class OrganizationUsersController : Controller
         ISsoConfigRepository ssoConfigRepository,
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand,
+        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -90,23 +96,30 @@ public class OrganizationUsersController : Controller
         _ssoConfigRepository = ssoConfigRepository;
         _organizationUserUserDetailsQuery = organizationUserUserDetailsQuery;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
+        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
+    public async Task<OrganizationUserDetailsResponseModel> Get(Guid id, bool includeGroups = false)
     {
-        var organizationUser = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(new Guid(id));
-        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
+        var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
+        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.OrganizationId))
         {
             throw new NotFoundException();
         }
 
-        var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+        var managedByOrganization = await GetManagedByOrganizationStatusAsync(
+            organizationUser.OrganizationId,
+            [organizationUser.Id]);
+
+        var response = new OrganizationUserDetailsResponseModel(organizationUser, managedByOrganization[organizationUser.Id], collections);
 
         if (includeGroups)
         {
-            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Item1.Id);
+            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
         }
 
         return response;
@@ -147,11 +160,13 @@ public class OrganizationUsersController : Controller
             }
         );
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var organizationUsersManagementStatus = await GetManagedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
             .Select(o =>
             {
                 var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
+                var managedByOrganization = organizationUsersManagementStatus[o.Id];
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled, managedByOrganization);
 
                 return orgUser;
             });
@@ -502,30 +517,28 @@ public class OrganizationUsersController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/remove")]
-    public async Task Remove(string orgId, string id)
+    public async Task Remove(Guid orgId, Guid id)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.RemoveUserAsync(orgGuidId, new Guid(id), userId.Value);
+        await _removeOrganizationUserCommand.RemoveUserAsync(orgId, id, userId.Value);
     }
 
     [HttpDelete("")]
     [HttpPost("remove")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(string orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRemove(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.RemoveUsersAsync(orgGuidId, model.Ids, userId.Value);
+        var result = await _removeOrganizationUserCommand.RemoveUsersAsync(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
@@ -680,5 +693,16 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private async Task<IDictionary<Guid, bool>> GetManagedByOrganizationStatusAsync(Guid orgId, IEnumerable<Guid> userIds)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            return userIds.ToDictionary(kvp => kvp, kvp => false);
+        }
+
+        var usersOrganizationManagementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
+        return usersOrganizationManagementStatus;
     }
 }
