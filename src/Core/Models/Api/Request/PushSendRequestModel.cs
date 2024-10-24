@@ -10,8 +10,8 @@ public class PushSendRequestModel : IValidatableObject
     public string? OrganizationId { get; set; }
     public string? DeviceId { get; set; }
     public string? Identifier { get; set; }
-    [Required] public PushType Type { get; set; }
-    [Required] public object Payload { get; set; } = null!;
+    public required PushType Type { get; set; }
+    public required object Payload { get; set; }
     public ClientType? ClientType { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
