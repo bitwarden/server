@@ -73,7 +73,7 @@ public class UserTwoFactorDuoResponseModelTests
         catch (Exception ex)
         {
             // Assert
-            Assert.IsType<NullArgumentException>(ex);
+            Assert.IsType<ArgumentNullException>(ex);
 
         }
 
