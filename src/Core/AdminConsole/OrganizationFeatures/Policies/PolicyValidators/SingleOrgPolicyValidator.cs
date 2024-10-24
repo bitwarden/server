@@ -108,7 +108,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
                 && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
             {
-                resultString.Append("Organization has verified domains.");
+                resultString.Append("The Single organization policy is required for organizations that have enabled domain verification.");
             }
 
             return resultString.ToString();
