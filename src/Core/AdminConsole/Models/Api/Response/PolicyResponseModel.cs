@@ -25,9 +25,19 @@ public class PolicyResponseModel : ResponseModel
         }
     }
 
+    public PolicyResponseModel(Policy policy, bool canToggleState) : this(policy)
+    {
+        CanToggleState = canToggleState;
+    }
+
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public PolicyType Type { get; set; }
     public Dictionary<string, object> Data { get; set; }
     public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Indicates whether the Policy can be enabled/disabled
+    /// </summary>
+    public bool CanToggleState { get; set; } = true;
 }

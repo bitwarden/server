@@ -87,8 +87,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         if (currentPolicy is not { Enabled: true } && policyUpdate.Enabled)
         {
             var missingRequiredPolicyTypes = validator.RequiredPolicies
-                .Where(requiredPolicyType =>
-                    savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
+                .Where(requiredPolicyType => savedPoliciesDict.GetValueOrDefault(requiredPolicyType) is not { Enabled: true })
                 .ToList();
 
             if (missingRequiredPolicyTypes.Count != 0)

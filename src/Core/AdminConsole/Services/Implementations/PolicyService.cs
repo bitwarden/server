@@ -289,7 +289,7 @@ public class PolicyService : IPolicyService
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(org.Id))
         {
-            throw new BadRequestException("Organization has verified domains.");
+            throw new BadRequestException("The Single organization policy is required for organizations that have enabled domain verification.");
         }
     }
 
