@@ -42,6 +42,7 @@ public class DockerComposeBuilder
     {
         public TemplateModel(Context context)
         {
+            DisableBuiltInMsSql = context.Config.DisableBuiltInMsSql;
             MssqlDataDockerVolume = context.Config.DatabaseDockerVolume;
             EnableKeyConnector = context.Config.EnableKeyConnector;
             EnableScim = context.Config.EnableScim;
@@ -61,6 +62,7 @@ public class DockerComposeBuilder
             }
         }
 
+        public bool DisableBuiltInMsSql { get; set; }
         public bool MssqlDataDockerVolume { get; set; }
         public bool EnableKeyConnector { get; set; }
         public bool EnableScim { get; set; }

@@ -14,6 +14,7 @@
 #########################################################################
 
 services:
+{{#if DisableBuiltInMsSql}}
   mssql:
     image: bitwarden/mssql:{{{CoreVersion}}}
     container_name: bitwarden-mssql
@@ -31,6 +32,7 @@ services:
       - mssql.env
       - ../env/uid.env
       - ../env/mssql.override.env
+{{/if}}
 
   web:
     image: bitwarden/web:{{{WebVersion}}}
