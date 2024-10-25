@@ -1,5 +1,5 @@
-﻿using Bit.Api.Vault.Models.Request;
-using Bit.Api.Vault.Validators;
+﻿using Bit.Api.KeyManagement.Validators;
+using Bit.Api.Vault.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Models.Data;
