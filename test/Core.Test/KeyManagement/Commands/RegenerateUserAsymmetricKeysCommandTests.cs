@@ -56,6 +56,7 @@ public class RegenerateUserAsymmetricKeysCommandTests
     [BitAutoData(false, true, false)]
     [BitAutoData(false, true, true)]
     [BitAutoData(true, false, false)]
+    [BitAutoData(true, false, true)]
     [BitAutoData(true, true, false)]
     [BitAutoData(true, true, true)]
     public async Task RegenerateKeysAsync_UserIdMisMatch_NotFoundException(

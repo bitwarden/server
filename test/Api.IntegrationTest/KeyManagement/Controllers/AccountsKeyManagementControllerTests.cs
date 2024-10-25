@@ -19,6 +19,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
     private readonly HttpClient _client;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
@@ -33,6 +34,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
         _emergencyAccessRepository = _factory.GetService<IEmergencyAccessRepository>();
+        _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
     }
 
     public async Task InitializeAsync()
@@ -80,24 +82,30 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
     }
 
     [Theory]
-    [BitAutoData(true, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(false, true)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed, EmergencyAccessStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed, EmergencyAccessStatusType.RecoveryApproved)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed, EmergencyAccessStatusType.RecoveryInitiated)]
+    [BitAutoData(OrganizationUserStatusType.Revoked, EmergencyAccessStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Revoked, EmergencyAccessStatusType.RecoveryApproved)]
+    [BitAutoData(OrganizationUserStatusType.Revoked, EmergencyAccessStatusType.RecoveryInitiated)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed, null)]
+    [BitAutoData(OrganizationUserStatusType.Revoked, null)]
+    [BitAutoData(OrganizationUserStatusType.Invited, EmergencyAccessStatusType.Confirmed)]
+    [BitAutoData(OrganizationUserStatusType.Invited, EmergencyAccessStatusType.RecoveryApproved)]
+    [BitAutoData(OrganizationUserStatusType.Invited, EmergencyAccessStatusType.RecoveryInitiated)]
     public async Task RegenerateKeysAsync_UserInOrgOrHasDesignatedEmergencyAccess_ThrowsBadRequest(
-        bool inOrganization,
-        bool hasDesignatedEmergencyAccess,
+        OrganizationUserStatusType organizationUserStatus,
+        EmergencyAccessStatusType? emergencyAccessStatus,
         KeyRegenerationRequestModel request)
     {
-        if (inOrganization)
+        if (organizationUserStatus is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked)
         {
-            await OrganizationTestHelpers.SignUpAsync(_factory,
-                PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
-                paymentMethod: PaymentMethodType.Card);
+            await CreateOrganizationUserAsync(organizationUserStatus);
         }
 
-        if (hasDesignatedEmergencyAccess)
+        if (emergencyAccessStatus != null)
         {
-            await CreateDesignatedEmergencyAccessAsync();
+            await CreateDesignatedEmergencyAccessAsync(emergencyAccessStatus.Value);
         }
 
         await _loginHelper.LoginAsync(_ownerEmail);
@@ -124,7 +132,16 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         Assert.Equal(request.UserKeyEncryptedUserPrivateKey, user.PrivateKey);
     }
 
-    private async Task CreateDesignatedEmergencyAccessAsync()
+    private async Task CreateOrganizationUserAsync(OrganizationUserStatusType organizationUserStatus)
+    {
+        var (_, organizationUser) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            PlanType.EnterpriseAnnually, _ownerEmail, passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        organizationUser.Status = organizationUserStatus;
+        await _organizationUserRepository.ReplaceAsync(organizationUser);
+    }
+
+    private async Task CreateDesignatedEmergencyAccessAsync(EmergencyAccessStatusType emergencyAccessStatus)
     {
         var tempEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(tempEmail);
@@ -136,7 +153,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             GrantorId = tempUser!.Id,
             GranteeId = user!.Id,
             KeyEncrypted = _mockEncryptedString,
-            Status = EmergencyAccessStatusType.Confirmed,
+            Status = emergencyAccessStatus,
             Type = EmergencyAccessType.View,
             WaitTimeDays = 10,
             CreationDate = DateTime.UtcNow,

@@ -69,11 +69,15 @@ public class AccountsKeyManagementControllerTests
     [Theory]
     [BitAutoData]
     public async Task RegenerateKeysAsync_Success(SutProvider<AccountsKeyManagementController> sutProvider,
-        KeyRegenerationRequestModel data, User user)
+        KeyRegenerationRequestModel data, User user, ICollection<OrganizationUser> orgUsers,
+        ICollection<EmergencyAccessDetails> accessDetails)
     {
         sutProvider.GetDependency<IFeatureService>().IsEnabled(Arg.Is(FeatureFlagKeys.PrivateKeyRegeneration))
             .Returns(true);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(Arg.Is(user.Id)).Returns(orgUsers);
+        sutProvider.GetDependency<IEmergencyAccessRepository>().GetManyDetailsByGranteeIdAsync(Arg.Is(user.Id))
+            .Returns(accessDetails);
 
         await sutProvider.Sut.RegenerateKeysAsync(data);
 
@@ -81,9 +85,12 @@ public class AccountsKeyManagementControllerTests
             .GetManyByUserAsync(Arg.Is(user.Id));
         await sutProvider.GetDependency<IEmergencyAccessRepository>().Received(1)
             .GetManyDetailsByGranteeIdAsync(Arg.Is(user.Id));
-        await sutProvider.GetDependency<IRegenerateUserAsymmetricKeysCommand>().ReceivedWithAnyArgs(1)
-            .RegenerateKeysAsync(Arg.Any<UserAsymmetricKeys>(),
-                Arg.Any<ICollection<OrganizationUser>>(),
-                Arg.Any<ICollection<EmergencyAccessDetails>>());
+        await sutProvider.GetDependency<IRegenerateUserAsymmetricKeysCommand>().Received(1)
+            .RegenerateKeysAsync(
+                Arg.Is<UserAsymmetricKeys>(u =>
+                    u.UserId == user.Id && u.PublicKey == data.UserPublicKey &&
+                    u.UserKeyEncryptedPrivateKey == data.UserKeyEncryptedUserPrivateKey),
+                Arg.Is(orgUsers),
+                Arg.Is(accessDetails));
     }
 }
