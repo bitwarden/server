@@ -21,10 +21,11 @@ public class UserEditModel
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
         GlobalSettings globalSettings,
-        bool domainVerified
+        bool domainVerified,
+        bool accountDeprovisioningEnabled
         )
     {
-        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, domainVerified);
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, domainVerified, accountDeprovisioningEnabled);
 
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;

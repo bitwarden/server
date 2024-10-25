@@ -4,6 +4,7 @@ using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,6 +26,7 @@ public class UsersController : Controller
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IFeatureService _featureService;
 
     public UsersController(
         IUserRepository userRepository,
@@ -33,7 +35,8 @@ public class UsersController : Controller
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -42,6 +45,7 @@ public class UsersController : Controller
         _accessControlService = accessControlService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationRepository = organizationRepository;
+        _featureService = featureService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -87,7 +91,7 @@ public class UsersController : Controller
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(id);
         var verifiedDomain = organizationsWithVerifiedUserEmailDomain.Count > 0;
-        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain, accountDeprovisioningEnabled()));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -105,7 +109,7 @@ public class UsersController : Controller
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(id);
         var verifiedDomain = organizationsWithVerifiedUserEmailDomain.Count > 0;
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, accountDeprovisioningEnabled()));
     }
 
     [HttpPost]
@@ -158,5 +162,11 @@ public class UsersController : Controller
         }
 
         return RedirectToAction("Index");
+    }
+
+    /* FEATURE FLAG CHECK, TO BE REMOVED IN THE FUTURE*/
+    public bool accountDeprovisioningEnabled()
+    {
+        return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning);
     }
 }

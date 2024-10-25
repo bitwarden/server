@@ -2,6 +2,7 @@
 
 using Bit.Admin.Models;
 using Bit.Core.Entities;
+using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Admin.Test.Models;
@@ -79,7 +80,7 @@ public class UserViewModelTests
     {
         var lookup = new List<(Guid, bool)> { (user.Id, true) };
 
-        var actual = UserViewModel.MapViewModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup, false);
 
         Assert.True(actual.TwoFactorEnabled);
     }
@@ -90,19 +91,65 @@ public class UserViewModelTests
     {
         var lookup = new List<(Guid, bool)> { (user.Id, false) };
 
-        var actual = UserViewModel.MapViewModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup, false);
 
         Assert.False(actual.TwoFactorEnabled);
     }
 
     [Theory]
     [BitAutoData]
-    public void MapUserViewModel_GivenUser_WhenNotInLookUpList_ThenTwoFactorIsDisabled(User user)
+    public void MapUserViewModel_WithVerifiedDomain_WhenAccountDeprovisioningDisabled_ReturnsUserViewModel(User user)
     {
-        var lookup = new List<(Guid, bool)> { (Guid.NewGuid(), true) };
 
-        var actual = UserViewModel.MapViewModel(user, lookup);
+        var verifiedDomain = true;
+        var accountDeprovisioning = false;
 
-        Assert.False(actual.TwoFactorEnabled);
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
+
+        Assert.True(actual.DomainVerified);
+        Assert.False(actual.AccountDeprovisioningEnabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_WithoutVerifiedDomain_WhenAccountDeprovisioningDisabled_ReturnsUserViewModel(User user)
+    {
+
+        var verifiedDomain = false;
+        var accountDeprovisioning = false;
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
+
+        Assert.False(actual.DomainVerified);
+        Assert.False(actual.AccountDeprovisioningEnabled);
+    }
+
+    // Test with feature flag ON
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_WithVerifiedDomain_WhenAccountDeprovisioningEnabled_ReturnsUserViewModel(User user)
+    {
+
+        var verifiedDomain = true;
+        var accountDeprovisioning = true;
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
+
+        Assert.True(actual.DomainVerified);
+        Assert.True(actual.AccountDeprovisioningEnabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_WithoutVerifiedDomain_WhenAccountDeprovisioningEnabled_ReturnsUserViewModel(User user)
+    {
+
+        var verifiedDomain = false;
+        var accountDeprovisioning = true;
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
+
+        Assert.False(actual.DomainVerified);
+        Assert.True(actual.AccountDeprovisioningEnabled);
     }
 }

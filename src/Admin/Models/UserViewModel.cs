@@ -15,6 +15,7 @@ public class UserViewModel
     public short? MaxStorageGb { get; }
     public bool EmailVerified { get; }
     public bool DomainVerified { get; }
+    public bool AccountDeprovisioningEnabled { get; }
     public bool TwoFactorEnabled { get; }
     public DateTime AccountRevisionDate { get; }
     public DateTime RevisionDate { get; }
@@ -37,6 +38,7 @@ public class UserViewModel
         short? maxStorageGb,
         bool emailVerified,
         bool domainVerified,
+        bool accountDeprovisioningEnabled,
         bool twoFactorEnabled,
         DateTime accountRevisionDate,
         DateTime revisionDate,
@@ -59,6 +61,7 @@ public class UserViewModel
         MaxStorageGb = maxStorageGb;
         EmailVerified = emailVerified;
         DomainVerified = domainVerified;
+        AccountDeprovisioningEnabled = accountDeprovisioningEnabled;
         TwoFactorEnabled = twoFactorEnabled;
         AccountRevisionDate = accountRevisionDate;
         RevisionDate = revisionDate;
@@ -76,10 +79,10 @@ public class UserViewModel
     public static IEnumerable<UserViewModel> MapViewModels(
         IEnumerable<User> users,
         IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup) =>
-        users.Select(user => MapViewModel(user, lookup, true));
+        users.Select(user => MapViewModel(user, lookup, false, false));
 
     public static UserViewModel MapViewModel(User user,
-        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup, bool domainVerified) =>
+        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup, bool domainVerified, bool accountDeprovisioningEnabled = false) =>
         new(
             user.Id,
             user.Name,
@@ -89,6 +92,7 @@ public class UserViewModel
             user.Premium,
             user.MaxStorageGb,
             user.EmailVerified,
+            accountDeprovisioningEnabled,
             domainVerified,
             IsTwoFactorEnabled(user, lookup),
             user.AccountRevisionDate,
@@ -104,9 +108,9 @@ public class UserViewModel
             Array.Empty<Cipher>());
 
     public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled) =>
-        MapViewModel(user, isTwoFactorEnabled, Array.Empty<Cipher>(), true);
+        MapViewModel(user, isTwoFactorEnabled, Array.Empty<Cipher>(), false, false);
 
-    public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled, IEnumerable<Cipher> ciphers, bool domainVerified) =>
+    public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled, IEnumerable<Cipher> ciphers, bool domainVerified, bool accountDeprovisioningEnabled = false) =>
         new(
             user.Id,
             user.Name,
@@ -117,6 +121,7 @@ public class UserViewModel
             user.MaxStorageGb,
             user.EmailVerified,
             domainVerified,
+            accountDeprovisioningEnabled,
             isTwoFactorEnabled,
             user.AccountRevisionDate,
             user.RevisionDate,
