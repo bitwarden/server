@@ -98,6 +98,17 @@ public class UserViewModelTests
 
     [Theory]
     [BitAutoData]
+    public void MapUserViewModel_GivenUser_WhenNotInLookUpList_ThenTwoFactorIsDisabled(User user)
+    {
+        var lookup = new List<(Guid, bool)> { (Guid.NewGuid(), true) };
+
+        var actual = UserViewModel.MapViewModel(user, lookup, false);
+
+        Assert.False(actual.TwoFactorEnabled);
+    }
+
+    [Theory]
+    [BitAutoData]
     public void MapUserViewModel_WithVerifiedDomain_WhenAccountDeprovisioningDisabled_ReturnsUserViewModel(User user)
     {
 
