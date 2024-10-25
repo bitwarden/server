@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using YubicoDotNetClient;
 
-namespace Bit.Core.Auth.Identity;
+namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
 {
@@ -24,7 +24,7 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)))
+        if (!await userService.CanAccessPremium(user))
         {
             return false;
         }
@@ -46,7 +46,7 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)))
+        if (!await userService.CanAccessPremium(user))
         {
             return false;
         }

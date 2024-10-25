@@ -19,7 +19,6 @@ public abstract class BaseTokenProviderTests<T>
 {
     public abstract TwoFactorProviderType TwoFactorProviderType { get; }
 
-    #region Helpers
     protected static IEnumerable<object[]> SetupCanGenerateData(params (Dictionary<string, object> MetaData, bool ExpectedResponse)[] data)
     {
         return data.Select(d =>
@@ -47,6 +46,9 @@ public abstract class BaseTokenProviderTests<T>
     {
         userService
             .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
+            .Returns(true);
+        userService
+            .CanAccessPremium(user)
             .Returns(true);
     }
 
@@ -76,7 +78,6 @@ public abstract class BaseTokenProviderTests<T>
 
         user.TwoFactorProviders = JsonHelpers.LegacySerialize(providers);
     }
-    #endregion
 
     public virtual async Task RunCanGenerateTwoFactorTokenAsync(Dictionary<string, object> metaData, bool expectedResponse,
         User user, SutProvider<T> sutProvider)

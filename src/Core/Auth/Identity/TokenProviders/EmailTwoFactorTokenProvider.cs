@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Auth.Identity;
+namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public class EmailTwoFactorTokenProvider : EmailTokenProvider
 {

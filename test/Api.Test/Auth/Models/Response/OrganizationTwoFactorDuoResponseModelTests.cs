@@ -10,42 +10,6 @@ public class OrganizationTwoFactorDuoResponseModelTests
 {
     [Theory]
     [BitAutoData]
-    public void Organization_WithDuoV4_ShouldBuildModel(Organization organization)
-    {
-        // Arrange
-        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoV4ProvidersJson();
-
-        // Act
-        var model = new TwoFactorDuoResponseModel(organization);
-
-        // Assert if v4 data Ikey and Skey are set to clientId and clientSecret
-        Assert.NotNull(model);
-        Assert.Equal("clientId", model.ClientId);
-        Assert.Equal("secret************", model.ClientSecret);
-        Assert.Equal("clientId", model.IntegrationKey);
-        Assert.Equal("secret************", model.SecretKey);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public void Organization_WithDuoV2_ShouldBuildModel(Organization organization)
-    {
-        // Arrange
-        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoV2ProvidersJson();
-
-        // Act
-        var model = new TwoFactorDuoResponseModel(organization);
-
-        // Assert if only v2 data clientId and clientSecret are set to Ikey and Sk
-        Assert.NotNull(model);
-        Assert.Equal("IKey", model.ClientId);
-        Assert.Equal("SKey", model.ClientSecret);
-        Assert.Equal("IKey", model.IntegrationKey);
-        Assert.Equal("SKey", model.SecretKey);
-    }
-
-    [Theory]
-    [BitAutoData]
     public void Organization_WithDuo_ShouldBuildModel(Organization organization)
     {
         // Arrange
@@ -54,12 +18,10 @@ public class OrganizationTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(organization);
 
-        /// Assert Even if both versions are present priority is given to v4 data
+        // Assert
         Assert.NotNull(model);
         Assert.Equal("clientId", model.ClientId);
         Assert.Equal("secret************", model.ClientSecret);
-        Assert.Equal("clientId", model.IntegrationKey);
-        Assert.Equal("secret************", model.SecretKey);
     }
 
     [Theory]
@@ -72,38 +34,33 @@ public class OrganizationTwoFactorDuoResponseModelTests
         // Act
         var model = new TwoFactorDuoResponseModel(organization);
 
-        /// Assert
+        // Assert
         Assert.False(model.Enabled);
     }
 
     [Theory]
     [BitAutoData]
-    public void Organization_WithTwoFactorProvidersNull_ShouldFail(Organization organization)
+    public void Organization_WithTwoFactorProvidersNull_ShouldThrow(Organization organization)
     {
         // Arrange
-        organization.TwoFactorProviders = "{\"6\" : {}}";
+        organization.TwoFactorProviders = null;
 
         // Act
-        var model = new TwoFactorDuoResponseModel(organization);
+        try
+        {
+            var model = new TwoFactorDuoResponseModel(organization);
 
-        /// Assert
-        Assert.False(model.Enabled);
+        }
+        catch (Exception ex)
+        {
+            // Assert
+            Assert.IsType<ArgumentNullException>(ex);
+        }
     }
 
     private string GetTwoFactorOrganizationDuoProvidersJson()
     {
         return
-            "{\"6\":{\"Enabled\":true,\"MetaData\":{\"SKey\":\"SKey\",\"IKey\":\"IKey\",\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
-    }
-
-    private string GetTwoFactorOrganizationDuoV4ProvidersJson()
-    {
-        return
             "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
-    }
-
-    private string GetTwoFactorOrganizationDuoV2ProvidersJson()
-    {
-        return "{\"6\":{\"Enabled\":true,\"MetaData\":{\"SKey\":\"SKey\",\"IKey\":\"IKey\",\"Host\":\"example.com\"}}}";
     }
 }

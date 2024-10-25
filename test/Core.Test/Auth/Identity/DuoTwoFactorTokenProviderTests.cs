@@ -7,30 +7,44 @@ using Xunit;
 
 namespace Bit.Core.Test.Auth.Identity;
 
-public class EmailTwoFactorTokenProviderTests : BaseTokenProviderTests<EmailTwoFactorTokenProvider>
+public class DuoTwoFactorTokenProviderTests : BaseTokenProviderTests<DuoUniversalTokenProvider>
 {
-    public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Email;
+    public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Duo;
 
     public static IEnumerable<object[]> CanGenerateTwoFactorTokenAsyncData
         => SetupCanGenerateData(
             (
                 new Dictionary<string, object>
                 {
-                    ["Email"] = "test@email.com",
+                    ["ClientId"] = "ClientId",
+                    ["ClientSecret"] = "ClientSecret",
+                    ["Host"] = "api-abcd1234.duosecurity.com",
                 },
                 true
             ),
             (
                 new Dictionary<string, object>
                 {
-                    ["NotEmail"] = "value",
+                    ["ClientId"] = "ClientId",
+                    ["ClientSecret"] = "ClientSecret",
+                    ["Host"] = "api-abcd1234.duofederal.com",
+                },
+                true
+            ),
+            (
+                new Dictionary<string, object>
+                {
+                    ["ClientId"] = "ClientId",
+                    ["ClientSecret"] = "ClientSecret",
+                    ["Host"] = "",
                 },
                 false
             ),
             (
                 new Dictionary<string, object>
                 {
-                    ["Email"] = "",
+                    ["ClientSecret"] = "ClientSecret",
+                    ["Host"] = "api-abcd1234.duofederal.com",
                 },
                 false
             )
@@ -38,8 +52,10 @@ public class EmailTwoFactorTokenProviderTests : BaseTokenProviderTests<EmailTwoF
 
     [Theory, BitMemberAutoData(nameof(CanGenerateTwoFactorTokenAsyncData))]
     public override async Task RunCanGenerateTwoFactorTokenAsync(Dictionary<string, object> metaData, bool expectedResponse,
-        User user, SutProvider<EmailTwoFactorTokenProvider> sutProvider)
+        User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
+        user.Premium = true;
+        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(1);
         await base.RunCanGenerateTwoFactorTokenAsync(metaData, expectedResponse, user, sutProvider);
     }
 }
