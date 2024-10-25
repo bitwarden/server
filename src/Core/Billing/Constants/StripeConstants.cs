@@ -28,6 +28,11 @@ public static class StripeConstants
         public const string TaxIdInvalid = "tax_id_invalid";
     }
 
+    public static class PaymentBehavior
+    {
+        public const string DefaultIncomplete = "default_incomplete";
+    }
+
     public static class PaymentMethodTypes
     {
         public const string Card = "card";

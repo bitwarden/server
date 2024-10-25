@@ -30,6 +30,7 @@ public class SyncController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly IFeatureService _featureService;
 
     public SyncController(
         IUserService userService,
@@ -41,7 +42,8 @@ public class SyncController : Controller
         IProviderUserRepository providerUserRepository,
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -53,6 +55,7 @@ public class SyncController : Controller
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -90,9 +93,12 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
-            providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
-            collectionCiphersGroupDict, excludeDomains, policies, sends);
+        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+
+        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
+            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }
 }

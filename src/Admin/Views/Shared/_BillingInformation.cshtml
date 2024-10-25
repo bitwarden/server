@@ -11,8 +11,8 @@
 }
 
 <dl class="row">
-    <dt class="col-sm-4 col-lg-3">Account @(Model.BillingInfo.Balance <= 0 ? "Credit" : "Balance")</dt>
-    <dd class="col-sm-8 col-lg-9">@Math.Abs(Model.BillingInfo.Balance).ToString("C")</dd>
+    <dt id="billing-account-credit-balance" class="col-sm-4 col-lg-3">Account @(Model.BillingInfo.Balance <= 0 ? "Credit" : "Balance")</dt>
+    <dd id="billing-account-credit-balance-value" class="col-sm-8 col-lg-9">@Math.Abs(Model.BillingInfo.Balance).ToString("C")</dd>
 
     <dt class="col-sm-4 col-lg-3">Invoices</dt>
     <dd class="col-sm-8 col-lg-9">
@@ -20,24 +20,26 @@
         {
             <table class="table">
                 <tbody>
-                    @foreach(var invoice in Model.BillingHistoryInfo.Invoices)
-                    {
-                        <tr>
-                            <td>@invoice.Date</td>
-                            <td><a target="_blank" rel="noreferrer" href="@invoice.Url" title="View Invoice">@invoice.Number</a>
+                @{ var invoiceIndex = 0; }
+                @foreach (var invoice in Model.BillingHistoryInfo.Invoices)
+                {
+                    <tr>
+                        <td id="invoice-@(invoiceIndex)-date">@invoice.Date</td>
+                        <td><a id="invoice-@(invoiceIndex)-url" target="_blank" rel="noreferrer" href="@invoice.Url" title="View Invoice">@invoice.Number</a>
+                        </td>
+                        <td id="invoice-@(invoiceIndex)-amount">@invoice.Amount.ToString("C")</td>
+                        <td id="invoice-@(invoiceIndex)-paid">@(invoice.Paid ? "Paid" : "Unpaid")</td>
+                        @if (canDownloadInvoice)
+                        {
+                            <td>
+                                <a id="invoice-@(invoiceIndex)-pdf-url" target="_blank" rel="noreferrer" href="@invoice.PdfUrl" title="Download Invoice">
+                                    <i class="fa fa-file-pdf-o"></i>
+                                </a>
                             </td>
-                            <td>@invoice.Amount.ToString("C")</td>
-                            <td>@(invoice.Paid ? "Paid" : "Unpaid")</td>
-                            @if (canDownloadInvoice)
-                            {
-                                <td>
-                                    <a target="_blank" rel="noreferrer" href="@invoice.PdfUrl" title="Download Invoice">
-                                        <i class="fa fa-file-pdf-o"></i>
-                                    </a>
-                                </td>
-                            }
-                        </tr>
-                    }
+                        }
+                    </tr>
+                    invoiceIndex++;
+                }
                 </tbody>
             </table>
         }
@@ -53,23 +55,25 @@
         {
             <table class="table">
                 <tbody>
-                    @foreach(var transaction in Model.BillingHistoryInfo.Transactions)
-                    {
-                        <tr>
-                            <td>@transaction.CreatedDate</td>
-                            <td>@transaction.Type.ToString()</td>
-                            <td>@transaction.PaymentMethodType.ToString()</td>
-                            <td>@transaction.Details</td>
-                            <td>@transaction.Amount.ToString("C")</td>
-                            @if (canManageTransactions)
-                            {
-                                <td>
-                                    <a title="Edit Transaction" asp-controller="Tools" asp-action="EditTransaction"
-                                    asp-route-id="@transaction.Id"><i class="fa fa-edit"></i></a>
-                                </td>
-                            }
-                        </tr>
-                    }
+                @{ var transactionIndex = 0; }
+                @foreach (var transaction in Model.BillingHistoryInfo.Transactions)
+                {
+                    <tr>
+                        <td id="transaction-@(transactionIndex)-created-date">@transaction.CreatedDate</td>
+                        <td id="transaction-@(transactionIndex)-type">@transaction.Type.ToString()</td>
+                        <td id="transaction-@(transactionIndex)-payment-method">@transaction.PaymentMethodType.ToString()</td>
+                        <td id="transaction-@(transactionIndex)-details">@transaction.Details</td>
+                        <td id="transaction-@(transactionIndex)-amount">@transaction.Amount.ToString("C")</td>
+                        @if (canManageTransactions)
+                        {
+                            <td>
+                                <a id="transaction-@(transactionIndex)-edit-link" title="Edit Transaction" asp-controller="Tools" asp-action="EditTransaction"
+                                   asp-route-id="@transaction.Id"><i class="fa fa-edit"></i></a>
+                            </td>
+                        }
+                    </tr>
+                    transactionIndex++;
+                }
                 </tbody>
             </table>
         }
@@ -79,7 +83,7 @@
         }
         @if (canManageTransactions)
         {
-            <a asp-action="CreateTransaction" asp-controller="Tools" asp-route-organizationId="@Model.OrganizationId"
+            <a id="transaction-create-transaction-link" asp-action="CreateTransaction" asp-controller="Tools" asp-route-organizationId="@Model.OrganizationId"
             asp-route-userId="@Model.UserId" class="btn btn-sm btn-outline-primary">
                 <i class="fa fa-plus"></i> New Transaction
             </a>

@@ -65,7 +65,7 @@ public class HandlebarsMailService : IMailService
         {
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);

@@ -1,11 +1,10 @@
-﻿using Bit.Admin.Enums;
+﻿#nullable enable
+
+using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
-using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -24,8 +23,6 @@ public class UsersController : Controller
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
-    private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
 
     public UsersController(
@@ -34,8 +31,6 @@ public class UsersController : Controller
         IPaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext,
-        IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery)
     {
         _userRepository = userRepository;
@@ -43,8 +38,6 @@ public class UsersController : Controller
         _paymentService = paymentService;
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
-        _currentContext = currentContext;
-        _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
     }
 
@@ -64,14 +57,12 @@ public class UsersController : Controller
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
-        {
-            TempData["UsersTwoFactorIsEnabled"] = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id));
-        }
+        var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
+        var userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
 
         return View(new UsersModel
         {
-            Items = users as List<User>,
+            Items = userModels,
             Email = string.IsNullOrWhiteSpace(email) ? null : email,
             Page = page,
             Count = count,
@@ -82,13 +73,17 @@ public class UsersController : Controller
     public async Task<IActionResult> View(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
+
         if (user == null)
         {
             return RedirectToAction("Index");
         }
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
-        return View(new UserViewModel(user, ciphers));
+
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -103,7 +98,8 @@ public class UsersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
     }
 
     [HttpPost]

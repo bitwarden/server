@@ -41,6 +41,36 @@ public class CreateProviderCommand : ICreateProviderCommand
 
     public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
     {
+        var providerId = await CreateProviderAsync(provider, ownerEmail);
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (isConsolidatedBillingEnabled)
+        {
+            await CreateProviderPlanAsync(providerId, PlanType.TeamsMonthly, teamsMinimumSeats);
+            await CreateProviderPlanAsync(providerId, PlanType.EnterpriseMonthly, enterpriseMinimumSeats);
+        }
+    }
+
+    public async Task CreateResellerAsync(Provider provider)
+    {
+        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
+    }
+
+    public async Task CreateMultiOrganizationEnterpriseAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
+    {
+        var providerId = await CreateProviderAsync(provider, ownerEmail);
+
+        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        if (isConsolidatedBillingEnabled)
+        {
+            await CreateProviderPlanAsync(providerId, plan, minimumSeats);
+        }
+    }
+
+    private async Task<Guid> CreateProviderAsync(Provider provider, string ownerEmail)
+    {
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
@@ -64,27 +94,10 @@ public class CreateProviderCommand : ICreateProviderCommand
             Status = ProviderUserStatusType.Confirmed,
         };
 
-        if (isConsolidatedBillingEnabled)
-        {
-            var providerPlans = new List<ProviderPlan>
-            {
-                CreateProviderPlan(provider.Id, PlanType.TeamsMonthly, teamsMinimumSeats),
-                CreateProviderPlan(provider.Id, PlanType.EnterpriseMonthly, enterpriseMinimumSeats)
-            };
-
-            foreach (var providerPlan in providerPlans)
-            {
-                await _providerPlanRepository.CreateAsync(providerPlan);
-            }
-        }
-
         await _providerUserRepository.CreateAsync(providerUser);
         await _providerService.SendProviderSetupInviteEmailAsync(provider, owner.Email);
-    }
 
-    public async Task CreateResellerAsync(Provider provider)
-    {
-        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
+        return provider.Id;
     }
 
     private async Task ProviderRepositoryCreateAsync(Provider provider, ProviderStatusType status)
@@ -95,9 +108,9 @@ public class CreateProviderCommand : ICreateProviderCommand
         await _providerRepository.CreateAsync(provider);
     }
 
-    private ProviderPlan CreateProviderPlan(Guid providerId, PlanType planType, int seatMinimum)
+    private async Task CreateProviderPlanAsync(Guid providerId, PlanType planType, int seatMinimum)
     {
-        return new ProviderPlan
+        var plan = new ProviderPlan
         {
             ProviderId = providerId,
             PlanType = planType,
@@ -105,5 +118,6 @@ public class CreateProviderCommand : ICreateProviderCommand
             PurchasedSeats = 0,
             AllocatedSeats = 0
         };
+        await _providerPlanRepository.CreateAsync(plan);
     }
 }

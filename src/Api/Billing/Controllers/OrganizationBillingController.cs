@@ -1,4 +1,5 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿#nullable enable
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Services;
@@ -19,7 +20,8 @@ public class OrganizationBillingController(
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
-    ISubscriberService subscriberService) : BaseBillingController
+    ISubscriberService subscriberService,
+    IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
@@ -59,6 +61,53 @@ public class OrganizationBillingController(
         var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
 
         return TypedResults.Ok(billingInfo);
+    }
+
+    [HttpGet("invoices")]
+    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string? status = null, [FromQuery] string? startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
+            organization,
+            5,
+            status,
+            startAfter);
+
+        return TypedResults.Ok(invoices);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IResult> GetTransactionsAsync([FromRoute] Guid organizationId, [FromQuery] DateTime? startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var transactions = await paymentHistoryService.GetTransactionHistoryAsync(
+            organization,
+            5,
+            startAfter);
+
+        return TypedResults.Ok(transactions);
     }
 
     [HttpGet]
@@ -135,11 +184,9 @@ public class OrganizationBillingController(
 
         var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
 
-        await subscriberService.UpdatePaymentSource(organization, tokenizedPaymentSource);
-
         var taxInformation = requestBody.TaxInformation.ToDomain();
 
-        await subscriberService.UpdateTaxInformation(organization, taxInformation);
+        await organizationBillingService.UpdatePaymentMethod(organization, tokenizedPaymentSource, taxInformation);
 
         return TypedResults.Ok();
     }
