@@ -4,7 +4,7 @@ using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.AdminConsole.Repositories;

@@ -4,7 +4,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 
-namespace Bit.Api.Auth.Validators;
+namespace Bit.Api.KeyManagement.Validators;
 
 public class WebAuthnLoginKeyRotationValidator : IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
 {

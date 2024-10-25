@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;

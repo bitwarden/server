@@ -1,10 +1,9 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.Auth.Validators;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
-namespace Bit.Api.AdminConsole.Validators;
+namespace Bit.Api.KeyManagement.Validators;
 
 /// <summary>
 /// Organization user implementation for <see cref="IRotationValidator{T,R}"/>

@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 
-namespace Bit.Api.Auth.Validators;
+namespace Bit.Api.KeyManagement.Validators;
 
 /// <summary>
 /// A consistent interface for domains to validate re-encrypted data before saved to database. Some examples are:<br/>

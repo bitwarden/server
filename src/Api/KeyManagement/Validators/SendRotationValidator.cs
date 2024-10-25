@@ -1,12 +1,11 @@
-﻿using Bit.Api.Auth.Validators;
-using Bit.Api.Tools.Models.Request;
+﻿using Bit.Api.Tools.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
 
-namespace Bit.Api.Tools.Validators;
+namespace Bit.Api.KeyManagement.Validators;
 
 /// <summary>
 /// Send implementation for <see cref="IRotationValidator{T,R}"/>
