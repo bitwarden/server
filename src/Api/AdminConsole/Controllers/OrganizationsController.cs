@@ -252,7 +252,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-        await _removeOrganizationUserCommand.RemoveUserAsync(id, user.Id);
+        await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
     }
 
     [HttpDelete("{id}")]
