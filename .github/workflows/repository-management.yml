@@ -135,13 +135,61 @@ jobs:
           git config --local user.email "actions@github.com"
           git config --local user.name "Github Actions"
 
+      - name: Create version branch
+        id: create-branch
+        run: |
+          NAME=version_bump_${{ github.ref_name }}_$(date +"%Y-%m-%d")
+          git switch -c $NAME
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
       - name: Commit files
         run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
 
       - name: Push changes
+        run: git push
+
+      - name: Generate GH App token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.BW_GHAPP_ID }}
+          private-key: ${{ secrets.BW_GHAPP_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Create version PR
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
+          TITLE: "Bump version to ${{ steps.set-final-version-output.outputs.version }}"
         run: |
-          git pull -pt
-          git push
+          PR_URL=$(gh pr create --title "$TITLE" \
+            --base "main" \
+            --head "$PR_BRANCH" \
+            --label "version update" \
+            --label "automated pr" \
+            --body "
+              ## Type of change
+              - [ ] Bug fix
+              - [ ] New feature development
+              - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
+              - [ ] Build/deploy pipeline (DevOps)
+              - [X] Other
+              ## Objective
+              Automated version bump to ${{ steps.set-final-version-output.outputs.version }}")
+          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
+
+      - name: Approve PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr review $PR_NUMBER --approve
+
+      - name: Merge PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
+        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
 
 
   cherry_pick:
@@ -153,7 +201,7 @@ jobs:
         uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
         with:
           ref: main
-      
+
       - name: Install xmllint
         run: |
           sudo apt-get update
@@ -189,7 +237,7 @@ jobs:
             RC_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
             echo "rc_version=$RC_VERSION" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Configure Git
         run: |
           git config --local user.email "actions@github.com"
