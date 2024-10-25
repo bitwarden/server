@@ -107,9 +107,15 @@ public class ProvidersController : Controller
         });
     }
 
-    public IActionResult Create(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
+    public IActionResult Create()
     {
-        return View(new CreateProviderModel
+        return View(new CreateProviderModel());
+    }
+
+    [HttpGet("providers/create/msp")]
+    public IActionResult CreateMsp(int teamsMinimumSeats, int enterpriseMinimumSeats, string ownerEmail = null)
+    {
+        return View(new CreateMspProviderModel
         {
             OwnerEmail = ownerEmail,
             TeamsMonthlySeatMinimum = teamsMinimumSeats,
@@ -117,10 +123,50 @@ public class ProvidersController : Controller
         });
     }
 
+    [HttpGet("providers/create/reseller")]
+    public IActionResult CreateReseller()
+    {
+        return View(new CreateResellerProviderModel());
+    }
+
+    [HttpGet("providers/create/multi-organization-enterprise")]
+    public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
+        {
+            return RedirectToAction("Create");
+        }
+
+        return View(new CreateMultiOrganizationEnterpriseProviderModel
+        {
+            OwnerEmail = ownerEmail,
+            EnterpriseSeatMinimum = enterpriseMinimumSeats
+        });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequirePermission(Permission.Provider_Create)]
-    public async Task<IActionResult> Create(CreateProviderModel model)
+    public IActionResult Create(CreateProviderModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        return model.Type switch
+        {
+            ProviderType.Msp => RedirectToAction("CreateMsp"),
+            ProviderType.Reseller => RedirectToAction("CreateReseller"),
+            ProviderType.MultiOrganizationEnterprise => RedirectToAction("CreateMultiOrganizationEnterprise"),
+            _ => View(model)
+        };
+    }
+
+    [HttpPost("providers/create/msp")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
+    public async Task<IActionResult> CreateMsp(CreateMspProviderModel model)
     {
         if (!ModelState.IsValid)
         {
@@ -128,19 +174,51 @@ public class ProvidersController : Controller
         }
 
         var provider = model.ToProvider();
-        switch (provider.Type)
+
+        await _createProviderCommand.CreateMspAsync(
+            provider,
+            model.OwnerEmail,
+            model.TeamsMonthlySeatMinimum,
+            model.EnterpriseMonthlySeatMinimum);
+
+        return RedirectToAction("Edit", new { id = provider.Id });
+    }
+
+    [HttpPost("providers/create/reseller")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
+    public async Task<IActionResult> CreateReseller(CreateResellerProviderModel model)
+    {
+        if (!ModelState.IsValid)
         {
-            case ProviderType.Msp:
-                await _createProviderCommand.CreateMspAsync(
-                    provider,
-                    model.OwnerEmail,
-                    model.TeamsMonthlySeatMinimum,
-                    model.EnterpriseMonthlySeatMinimum);
-                break;
-            case ProviderType.Reseller:
-                await _createProviderCommand.CreateResellerAsync(provider);
-                break;
+            return View(model);
         }
+        var provider = model.ToProvider();
+        await _createProviderCommand.CreateResellerAsync(provider);
+
+        return RedirectToAction("Edit", new { id = provider.Id });
+    }
+
+    [HttpPost("providers/create/multi-organization-enterprise")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
+    public async Task<IActionResult> CreateMultiOrganizationEnterprise(CreateMultiOrganizationEnterpriseProviderModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+        var provider = model.ToProvider();
+
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
+        {
+            return RedirectToAction("Create");
+        }
+        await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
+            provider,
+            model.OwnerEmail,
+            model.Plan.Value,
+            model.EnterpriseSeatMinimum);
 
         return RedirectToAction("Edit", new { id = provider.Id });
     }
