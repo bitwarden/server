@@ -379,41 +379,22 @@ public class ProviderBillingService(
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
-        var teamsProviderPlan =
-            providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
-
-        if (teamsProviderPlan == null || !teamsProviderPlan.IsConfigured())
+        foreach (var providerPlan in providerPlans)
         {
-            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Teams plan", provider.Id);
+            var plan = StaticStore.GetPlan(providerPlan.PlanType);
 
-            throw new BillingException();
+            if (!providerPlan.IsConfigured())
+            {
+                logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured {ProviderName} plan", provider.Id, plan.Name);
+                throw new BillingException();
+            }
+
+            subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+            {
+                Price = plan.PasswordManager.StripeProviderPortalSeatPlanId,
+                Quantity = providerPlan.SeatMinimum
+            });
         }
-
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-
-        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-        {
-            Price = teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId,
-            Quantity = teamsProviderPlan.SeatMinimum
-        });
-
-        var enterpriseProviderPlan =
-            providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
-
-        if (enterpriseProviderPlan == null || !enterpriseProviderPlan.IsConfigured())
-        {
-            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Enterprise plan", provider.Id);
-
-            throw new BillingException();
-        }
-
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-
-        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-        {
-            Price = enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId,
-            Quantity = enterpriseProviderPlan.SeatMinimum
-        });
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
