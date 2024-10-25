@@ -105,4 +105,22 @@ public static class OrganizationTestHelpers
 
         return (email, organizationUser);
     }
+
+    /// <summary>
+    /// Creates a VerifiedDomain for the specified organization.
+    /// </summary>
+    public static async Task CreateVerifiedDomainAsync(ApiApplicationFactory factory, Guid organizationId, string domain)
+    {
+        var organizationDomainRepository = factory.GetService<IOrganizationDomainRepository>();
+
+        var verifiedDomain = new OrganizationDomain
+        {
+            OrganizationId = organizationId,
+            DomainName = domain,
+            Txt = "btw+test18383838383"
+        };
+        verifiedDomain.SetVerifiedDate();
+
+        await organizationDomainRepository.CreateAsync(verifiedDomain);
+    }
 }
