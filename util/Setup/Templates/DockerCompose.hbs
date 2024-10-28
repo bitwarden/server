@@ -14,7 +14,7 @@
 #########################################################################
 
 services:
-{{#if DisableBuiltInMsSql}}
+{{#if EnableBuiltInMsSql}}
   mssql:
     image: bitwarden/mssql:{{{CoreVersion}}}
     container_name: bitwarden-mssql
@@ -32,8 +32,8 @@ services:
       - mssql.env
       - ../env/uid.env
       - ../env/mssql.override.env
-{{/if}}
 
+{{/if}}
   web:
     image: bitwarden/web:{{{WebVersion}}}
     container_name: bitwarden-web
@@ -108,8 +108,10 @@ services:
     image: bitwarden/admin:{{{CoreVersion}}}
     container_name: bitwarden-admin
     restart: always
+{{#if EnableBuiltInMsSql}}
     depends_on:
       - mssql
+{{/if}}
     volumes:
       - ../core:/etc/bitwarden/core
       - ../ca-certificates:/etc/bitwarden/ca-certificates

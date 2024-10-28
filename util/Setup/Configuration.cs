@@ -97,8 +97,8 @@ public class Configuration
     [Description("Enable SCIM")]
     public bool EnableScim { get; set; } = false;
 
-    [Description("Disable Built-In MSSQL Container Generation")]
-    public bool DisableBuiltInMsSql { get; set; }
+    [Description("Enable Built-In MSSQL Container Generation")]
+    public bool? EnableBuiltInMsSql { get; set; } = true;
 
     [YamlIgnore]
     public string Domain
