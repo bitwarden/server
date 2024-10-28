@@ -109,58 +109,37 @@ public class UserViewModelTests
 
     [Theory]
     [BitAutoData]
-    public void MapUserViewModel_WithVerifiedDomain_WhenAccountDeprovisioningDisabled_ReturnsUserViewModel(User user)
+    public void MapUserViewModel_WithVerifiedDomain_ReturnsUserViewModel(User user)
     {
 
         var verifiedDomain = true;
-        var accountDeprovisioning = false;
 
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
 
         Assert.True(actual.DomainVerified);
-        Assert.False(actual.AccountDeprovisioningEnabled);
     }
 
     [Theory]
     [BitAutoData]
-    public void MapUserViewModel_WithoutVerifiedDomain_WhenAccountDeprovisioningDisabled_ReturnsUserViewModel(User user)
+    public void MapUserViewModel_WithoutVerifiedDomain_ReturnsUserViewModel(User user)
     {
 
         var verifiedDomain = false;
-        var accountDeprovisioning = false;
 
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
 
         Assert.False(actual.DomainVerified);
-        Assert.False(actual.AccountDeprovisioningEnabled);
-    }
-
-    // Test with feature flag ON
-    [Theory]
-    [BitAutoData]
-    public void MapUserViewModel_WithVerifiedDomain_WhenAccountDeprovisioningEnabled_ReturnsUserViewModel(User user)
-    {
-
-        var verifiedDomain = true;
-        var accountDeprovisioning = true;
-
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
-
-        Assert.True(actual.DomainVerified);
-        Assert.True(actual.AccountDeprovisioningEnabled);
     }
 
     [Theory]
     [BitAutoData]
-    public void MapUserViewModel_WithoutVerifiedDomain_WhenAccountDeprovisioningEnabled_ReturnsUserViewModel(User user)
+    public void MapUserViewModel_WithNullVerifiedDomain_ReturnsUserViewModel(User user)
     {
 
-        var verifiedDomain = false;
-        var accountDeprovisioning = true;
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null);
 
-        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain, accountDeprovisioning);
-
-        Assert.False(actual.DomainVerified);
-        Assert.True(actual.AccountDeprovisioningEnabled);
+        Assert.Null(actual.DomainVerified);
     }
+
+
 }

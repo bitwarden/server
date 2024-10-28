@@ -25,7 +25,7 @@ public class UsersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
 
     public UsersController(
@@ -35,7 +35,7 @@ public class UsersController : Controller
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationRepository organizationRepository,
+        IUserService userService,
         IFeatureService featureService)
     {
         _userRepository = userRepository;
@@ -44,7 +44,7 @@ public class UsersController : Controller
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _organizationRepository = organizationRepository;
+        _userService = userService;
         _featureService = featureService;
     }
 
@@ -89,9 +89,8 @@ public class UsersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(id);
-        var verifiedDomain = organizationsWithVerifiedUserEmailDomain.Count > 0;
-        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain, accountDeprovisioningEnabled()));
+        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -107,9 +106,8 @@ public class UsersController : Controller
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(id);
-        var verifiedDomain = organizationsWithVerifiedUserEmailDomain.Count > 0;
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, accountDeprovisioningEnabled()));
+        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
     }
 
     [HttpPost]
@@ -165,8 +163,10 @@ public class UsersController : Controller
     }
 
     /* FEATURE FLAG CHECK, TO BE REMOVED IN THE FUTURE*/
-    public bool accountDeprovisioningEnabled()
+    private async Task<bool?> AccountDeprovisioningEnabled(Guid userId)
     {
-        return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning);
+        return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            ? await _userService.IsManagedByAnyOrganizationAsync(userId)
+            : null;
     }
 }
