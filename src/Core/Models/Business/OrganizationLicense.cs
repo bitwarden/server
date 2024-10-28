@@ -151,6 +151,7 @@ public class OrganizationLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
+    public string Token { get; set; }
     [JsonIgnore] public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
     /// <summary>
@@ -176,6 +177,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(Signature)) &&
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
+                    !p.Name.Equals(nameof(Token)) &&
                     // UsersGetPremium was added in Version 2
                     (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                     // UseEvents was added in Version 3

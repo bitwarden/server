@@ -1,15 +1,22 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Licenses.Extensions;
+using Bit.Core.Billing.Licenses.Models;
+using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using IdentityModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Services;
 
@@ -22,6 +29,8 @@ public class LicensingService : ILicensingService
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
+    private readonly ILicenseClaimsFactory<Organization> _organizationLicenseClaimsFactory;
+    private readonly IFeatureService _featureService;
 
     private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
 
@@ -32,7 +41,9 @@ public class LicensingService : ILicensingService
         IMailService mailService,
         IWebHostEnvironment environment,
         ILogger<LicensingService> logger,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ILicenseClaimsFactory<Organization> organizationLicenseClaimsFactory,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -40,6 +51,8 @@ public class LicensingService : ILicensingService
         _mailService = mailService;
         _logger = logger;
         _globalSettings = globalSettings;
+        _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
+        _featureService = featureService;
 
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
@@ -271,5 +284,47 @@ public class LicensingService : ILicensingService
 
         using var fs = File.OpenRead(filePath);
         return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+    }
+
+    public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            return null;
+        }
+
+        var licenseContext = new LicenseContext
+        {
+            InstallationId = installationId,
+            SubscriptionInfo = subscriptionInfo,
+        };
+
+        var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);
+        var audience = organization.Id.ToString();
+        var expires = organization.CalculateFreshExpirationDate(subscriptionInfo);
+        return GenerateToken(claims, audience, expires);
+    }
+
+    private string GenerateToken(List<Claim> claims, string audience, DateTime expires)
+    {
+        if (claims.All(claim => claim.Type != JwtClaimTypes.JwtId))
+        {
+            claims.Add(new Claim(JwtClaimTypes.JwtId, Guid.NewGuid().ToString()));
+        }
+
+        var securityKey = new RsaSecurityKey(_certificate.GetRSAPrivateKey());
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Issuer = "bitwarden",
+            Audience = audience,
+            NotBefore = DateTime.UtcNow,
+            Expires = expires,
+            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256Signature)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 }

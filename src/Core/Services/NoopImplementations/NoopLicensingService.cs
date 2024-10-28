@@ -53,4 +53,9 @@ public class NoopLicensingService : ILicensingService
     {
         return Task.FromResult<OrganizationLicense>(null);
     }
+
+    public Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    {
+        return Task.FromResult<string>(null);
+    }
 }

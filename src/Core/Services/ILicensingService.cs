@@ -14,4 +14,8 @@ public interface ILicensingService
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId);
 
+    Task<string> CreateOrganizationTokenAsync(
+        Organization organization,
+        Guid installationId,
+        SubscriptionInfo subscriptionInfo);
 }
