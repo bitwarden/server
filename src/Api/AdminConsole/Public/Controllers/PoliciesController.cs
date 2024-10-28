@@ -67,7 +67,7 @@ public class PoliciesController : Controller
         {
             if (policy.Type == PolicyType.SingleOrg)
             {
-                var canToggle = _policyValidators.ContainsKey(policy.Type) && string.IsNullOrWhiteSpace(
+                var canToggle = !_policyValidators.ContainsKey(policy.Type) || string.IsNullOrWhiteSpace(
                     await _policyValidators[policy.Type]
                         .ValidateAsync(
                             new PolicyUpdate
@@ -78,11 +78,11 @@ public class PoliciesController : Controller
                                 Type = policy.Type
                             }, policy));
 
-                return new JsonResult(new PolicyResponseModel(policy, canToggle));
+                return new JsonResult(new PolicyDetailResponseModel(policy, canToggle));
             }
         }
 
-        return new JsonResult(new PolicyResponseModel(policy));
+        return new JsonResult(new PolicyDetailResponseModel(policy));
     }
 
     /// <summary>
@@ -97,35 +97,7 @@ public class PoliciesController : Controller
     {
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return new JsonResult(new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p))));
-        }
-
-        var responses = new List<PolicyResponseModel>();
-
-        foreach (var policy in policies)
-        {
-            if (policy.Type == PolicyType.SingleOrg)
-            {
-                var canToggle = _policyValidators.ContainsKey(policy.Type) && string.IsNullOrWhiteSpace(
-                    await _policyValidators[policy.Type]
-                        .ValidateAsync(
-                            new PolicyUpdate
-                            {
-                                Data = policy.Data,
-                                Enabled = !policy.Enabled,
-                                OrganizationId = policy.OrganizationId,
-                                Type = policy.Type
-                            }, policy));
-
-                responses.Add(new PolicyResponseModel(policy, canToggle));
-            }
-
-            responses.Add(new PolicyResponseModel(policy));
-        }
-
-        return new JsonResult(new ListResponseModel<PolicyResponseModel>(responses));
+        return new JsonResult(new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p))));
     }
 
     /// <summary>

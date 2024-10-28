@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Text;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -100,18 +99,20 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         if (policyUpdate is not { Enabled: true })
         {
-            var resultString = new StringBuilder();
-
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            resultString.Append(ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]));
+
+            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+
+            if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
+            {
+                return validateDecryptionErrorMessage;
+            }
 
             if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
                 && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
             {
-                resultString.Append("The Single organization policy is required for organizations that have enabled domain verification.");
+                return "The Single organization policy is required for organizations that have enabled domain verification.";
             }
-
-            return resultString.ToString();
         }
 
         return string.Empty;

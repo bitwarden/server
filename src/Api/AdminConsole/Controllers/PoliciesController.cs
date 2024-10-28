@@ -70,7 +70,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyResponseModel> Get(string orgId, int type)
+    public async Task<PolicyDetailResponseModel> Get(string orgId, int type)
     {
         var orgIdGuid = new Guid(orgId);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -83,9 +83,10 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && policy.Type is PolicyType.SingleOrg)
         {
-            var canToggle = _policyValidators.ContainsKey(policy.Type) && string.IsNullOrWhiteSpace(
+            var canToggle = !_policyValidators.ContainsKey(policy.Type) || string.IsNullOrWhiteSpace(
                 await _policyValidators[policy.Type]
                     .ValidateAsync(
                         new PolicyUpdate
@@ -96,10 +97,10 @@ public class PoliciesController : Controller
                             Type = policy.Type
                         }, policy));
 
-            return new PolicyResponseModel(policy, canToggle);
+            return new PolicyDetailResponseModel(policy, canToggle);
         }
 
-        return new PolicyResponseModel(policy);
+        return new PolicyDetailResponseModel(policy);
     }
 
     [HttpGet("")]
@@ -113,30 +114,7 @@ public class PoliciesController : Controller
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
-        }
-
-        var responses = new List<PolicyResponseModel>();
-
-        foreach (var policy in policies)
-        {
-            var canToggle = _policyValidators.ContainsKey(policy.Type) && string.IsNullOrWhiteSpace(
-                await _policyValidators[policy.Type]
-                    .ValidateAsync(
-                        new PolicyUpdate
-                        {
-                            Data = policy.Data,
-                            Enabled = !policy.Enabled,
-                            OrganizationId = policy.OrganizationId,
-                            Type = policy.Type
-                        }, policy));
-
-            responses.Add(new PolicyResponseModel(policy, canToggle));
-        }
-
-        return new ListResponseModel<PolicyResponseModel>(responses);
+        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
     }
 
     [AllowAnonymous]
