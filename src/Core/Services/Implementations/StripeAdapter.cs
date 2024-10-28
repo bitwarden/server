@@ -17,6 +17,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.BankAccountService _bankAccountService;
     private readonly Stripe.PriceService _priceService;
     private readonly Stripe.SetupIntentService _setupIntentService;
+    private readonly Stripe.CustomerPaymentMethodService _customerPaymentMethodService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
 
     public StripeAdapter()
@@ -34,6 +35,7 @@ public class StripeAdapter : IStripeAdapter
         _priceService = new Stripe.PriceService();
         _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
+        _customerPaymentMethodService = new CustomerPaymentMethodService();
     }
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
@@ -57,9 +59,9 @@ public class StripeAdapter : IStripeAdapter
     }
 
     public async Task<List<PaymentMethod>> CustomerListPaymentMethods(string id,
-        CustomerListPaymentMethodsOptions options = null)
+        CustomerPaymentMethodListOptions options = null)
     {
-        var paymentMethods = await _customerService.ListPaymentMethodsAsync(id, options);
+        var paymentMethods = await _customerPaymentMethodService.ListAsync(id, options);
         return paymentMethods.Data;
     }
 

@@ -9,7 +9,7 @@ public interface IStripeAdapter
     Task<Stripe.Customer> CustomerGetAsync(string id, Stripe.CustomerGetOptions options = null);
     Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
     Task<Stripe.Customer> CustomerDeleteAsync(string id);
-    Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerListPaymentMethodsOptions options = null);
+    Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerPaymentMethodListOptions options = null);
     Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null);
     Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
