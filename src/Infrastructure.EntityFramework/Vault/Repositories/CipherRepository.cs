@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserFeatures.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;

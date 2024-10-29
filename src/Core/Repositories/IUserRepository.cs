@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserFeatures.UserKey;
 using Bit.Core.Models.Data;
 
 #nullable enable

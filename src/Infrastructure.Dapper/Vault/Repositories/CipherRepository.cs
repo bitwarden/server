@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Text.Json;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserFeatures.UserKey;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;

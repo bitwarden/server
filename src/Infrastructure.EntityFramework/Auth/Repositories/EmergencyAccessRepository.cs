@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserFeatures.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;

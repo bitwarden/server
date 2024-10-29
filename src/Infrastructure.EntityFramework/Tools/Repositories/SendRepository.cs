@@ -1,7 +1,7 @@
 ﻿#nullable enable
 
 using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserFeatures.UserKey;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
