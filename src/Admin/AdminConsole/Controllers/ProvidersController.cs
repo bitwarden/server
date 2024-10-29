@@ -290,25 +290,52 @@ public class ProvidersController : Controller
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
-        if (providerPlans.Count == 0)
+        switch (provider.Type)
         {
-            var newProviderPlans = new List<ProviderPlan>
-            {
-                new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
-                new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
-            };
+            case ProviderType.Msp:
+                if (providerPlans.Count == 0)
+                {
+                    var newProviderPlans = new List<ProviderPlan>
+                    {
+                        new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
+                        new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
+                    };
 
-            foreach (var newProviderPlan in newProviderPlans)
-            {
-                await _providerPlanRepository.CreateAsync(newProviderPlan);
-            }
-        }
-        else
-        {
-            await _providerBillingService.UpdateSeatMinimums(
-                provider,
-                model.EnterpriseMonthlySeatMinimum,
-                model.TeamsMonthlySeatMinimum);
+                    foreach (var newProviderPlan in newProviderPlans)
+                    {
+                        await _providerPlanRepository.CreateAsync(newProviderPlan);
+                    }
+                }
+                else
+                {
+                    await _providerBillingService.UpdateSeatMinimums(
+                        provider,
+                        model.EnterpriseMonthlySeatMinimum,
+                        model.TeamsMonthlySeatMinimum);
+                }
+                break;
+            case ProviderType.MultiOrganizationEnterprise:
+                {
+                    var existingPlan = providerPlans.SingleOrDefault();
+                    if (existingPlan != null)
+                    {
+                        existingPlan.PlanType = model.Plan!.Value;
+                        existingPlan.SeatMinimum = model.EnterpriseMinimumSeats!.Value;
+                        await _providerPlanRepository.ReplaceAsync(existingPlan);
+                    }
+                    else
+                    {
+                        var newProviderPlan = new ProviderPlan
+                        {
+                            ProviderId = provider.Id,
+                            PlanType = model.Plan!.Value,
+                            SeatMinimum = model.EnterpriseMinimumSeats!.Value
+                        };
+                        await _providerPlanRepository.CreateAsync(newProviderPlan);
+                    }
+                    await _providerBillingService.UpdateSubscriptionAsync(provider.Id);
+                    break;
+                }
         }
 
         return RedirectToAction("Edit", new { id });

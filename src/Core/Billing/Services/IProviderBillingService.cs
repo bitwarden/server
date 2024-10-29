@@ -89,6 +89,16 @@ public interface IProviderBillingService
     Task<Subscription> SetupSubscription(
         Provider provider);
 
+    /// <summary>
+    /// For use during modification of the provider, this method modifies an existing Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="providerId"/>.
+    /// <see cref="Provider"/> subscriptions will always require at least one plan, and the quantity for each item will be equal the provider's seat minimum for each respective plan.
+    /// </summary>
+    /// <param name="providerId">The provider to modify the <see cref="Stripe.Subscription"/> for.</param>
+    /// <returns>The modified <see cref="Stripe.Subscription"/> for the <paramref name="providerId"/>.</returns>
+    /// <remarks>This method requires the <paramref name="providerId"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
+    Task<Subscription> UpdateSubscriptionAsync(
+        Guid providerId);
+
     Task UpdateSeatMinimums(
         Provider provider,
         int enterpriseSeatMinimum,

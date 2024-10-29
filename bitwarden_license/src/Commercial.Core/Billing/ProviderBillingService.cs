@@ -437,6 +437,79 @@ public class ProviderBillingService(
         }
     }
 
+    public async Task<Subscription> UpdateSubscriptionAsync(
+        Guid providerId)
+    {
+        ArgumentNullException.ThrowIfNull(providerId);
+
+        var provider = await providerRepository.GetByIdAsync(providerId);
+
+        if (provider == null)
+        {
+            logger.LogError("Cannot update subscription for provider ({ProviderID}) that does not exist", providerId);
+
+            throw new BillingException();
+        }
+
+        var existingProviderPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        if (existingProviderPlans == null || existingProviderPlans.Count == 0)
+        {
+            logger.LogError("Cannot update a subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
+
+            throw new BillingException();
+        }
+
+        var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
+
+        foreach (var providerPlan in existingProviderPlans)
+        {
+            var configuredPlan = StaticStore.GetPlan(providerPlan.PlanType);
+
+            if (configuredPlan == null || !providerPlan.IsConfigured())
+            {
+                logger.LogError("Cannot update a subscription for provider ({ProviderID}) that has no configured {ProviderName} plan", provider.Id, configuredPlan.Name);
+
+                throw new BillingException();
+            }
+
+            subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+            {
+                Price = configuredPlan.PasswordManager.StripeProviderPortalSeatPlanId,
+                Quantity = providerPlan.SeatMinimum
+            });
+        }
+
+        var subscriptionOptions = new SubscriptionUpdateOptions
+        {
+            Items = subscriptionItemOptionsList
+        };
+
+        try
+        {
+            var subscription = await stripeAdapter.SubscriptionUpdateAsync(
+                provider.GatewaySubscriptionId,
+                subscriptionOptions);
+
+            if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
+            {
+                return subscription;
+            }
+
+            logger.LogError(
+                "Updated provider ({ProviderID}) subscription ({SubscriptionID}) has inactive status: {Status}",
+                provider.Id,
+                subscription.Id,
+                subscription.Status);
+
+            throw new BillingException();
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
+        {
+            throw new BadRequestException("Your location wasn't recognized. Please ensure your country and postal code are valid.");
+        }
+    }
+
     public async Task UpdateSeatMinimums(
         Provider provider,
         int enterpriseSeatMinimum,
