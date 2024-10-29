@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.UserFeatures.UserKey.Implementations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
