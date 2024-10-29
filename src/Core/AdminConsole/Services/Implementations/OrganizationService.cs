@@ -1497,13 +1497,10 @@ public class OrganizationService : IOrganizationService
 
         await AdjustSeatsAsync(organization, seatsToAdd, ownerEmails);
 
-        //if (!organization.OwnersNotifiedOfAutoscaling.HasValue)
-        // {
         await _mailService.SendOrganizationAutoscaledEmailAsync(organization, initialSeatCount,
             ownerEmails);
         organization.OwnersNotifiedOfAutoscaling = DateTime.UtcNow;
         await _organizationRepository.UpsertAsync(organization);
-        //}
     }
 
     private async Task CheckPoliciesAsync(Guid organizationId, User user,
