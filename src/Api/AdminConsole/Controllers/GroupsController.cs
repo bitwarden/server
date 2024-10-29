@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[Route("organizations/{orgId}/groups")]
+[Route("organizations/{orgId}")]
 [Authorize("Application")]
 public class GroupsController : Controller
 {
@@ -64,7 +64,7 @@ public class GroupsController : Controller
         _collectionRepository = collectionRepository;
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("groups/{id}")]
     public async Task<GroupResponseModel> Get(string orgId, string id)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -76,7 +76,7 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpGet("{id}/details")]
+    [HttpGet("groups/{id}/details")]
     public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
@@ -88,8 +88,8 @@ public class GroupsController : Controller
         return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
     }
 
-    [HttpGet("")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
+    [HttpGet("groups")]
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroups(Guid orgId)
     {
         var authorized =
             (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
@@ -103,7 +103,22 @@ public class GroupsController : Controller
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 
-    [HttpGet("{id}/users")]
+    [HttpGet("group-details")]
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
+    {
+        var authorized =
+            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
+        }
+
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
+        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        return new ListResponseModel<GroupDetailsResponseModel>(responses);
+    }
+
+    [HttpGet("groups/{id}/users")]
     public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
     {
         var idGuid = new Guid(id);
@@ -117,7 +132,7 @@ public class GroupsController : Controller
         return groupIds;
     }
 
-    [HttpPost("")]
+    [HttpPost("groups")]
     public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
         if (!await _currentContext.ManageGroups(orgId))
@@ -145,8 +160,8 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpPut("{id}")]
-    [HttpPost("{id}")]
+    [HttpPut("groups/{id}")]
+    [HttpPost("groups/{id}")]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         if (!await _currentContext.ManageGroups(orgId))
@@ -220,8 +235,8 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
+    [HttpDelete("groups/{id}")]
+    [HttpPost("groups/{id}/delete")]
     public async Task Delete(string orgId, string id)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -233,8 +248,8 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteAsync(group);
     }
 
-    [HttpDelete("")]
-    [HttpPost("delete")]
+    [HttpDelete("groups/")]
+    [HttpPost("groups/delete")]
     public async Task BulkDelete([FromBody] GroupBulkRequestModel model)
     {
         var groups = await _groupRepository.GetManyByManyIds(model.Ids);
@@ -250,8 +265,8 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteManyAsync(groups);
     }
 
-    [HttpDelete("{id}/user/{orgUserId}")]
-    [HttpPost("{id}/delete-user/{orgUserId}")]
+    [HttpDelete("groups/{id}/user/{orgUserId}")]
+    [HttpPost("groups/{id}/delete-user/{orgUserId}")]
     public async Task Delete(string orgId, string id, string orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
