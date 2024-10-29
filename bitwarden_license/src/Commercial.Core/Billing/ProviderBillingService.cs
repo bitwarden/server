@@ -437,7 +437,7 @@ public class ProviderBillingService(
         }
     }
 
-    public async Task<Subscription> UpdateSubscriptionAsync(
+    public async Task<Subscription> UpdateSubscription(
         Guid providerId)
     {
         ArgumentNullException.ThrowIfNull(providerId);
