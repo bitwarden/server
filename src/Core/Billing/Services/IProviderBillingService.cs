@@ -96,7 +96,7 @@ public interface IProviderBillingService
     /// <param name="providerId">The provider to modify the <see cref="Stripe.Subscription"/> for.</param>
     /// <returns>The modified <see cref="Stripe.Subscription"/> for the <paramref name="providerId"/>.</returns>
     /// <remarks>This method requires the <paramref name="providerId"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
-    Task<Subscription> UpdateSubscriptionAsync(
+    Task<Subscription> UpdateSubscription(
         Guid providerId);
 
     Task UpdateSeatMinimums(

@@ -333,7 +333,7 @@ public class ProvidersController : Controller
                         };
                         await _providerPlanRepository.CreateAsync(newProviderPlan);
                     }
-                    await _providerBillingService.UpdateSubscriptionAsync(provider.Id);
+                    await _providerBillingService.UpdateSubscription(provider.Id);
                     break;
                 }
         }
