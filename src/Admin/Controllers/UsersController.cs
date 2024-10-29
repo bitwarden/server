@@ -162,7 +162,7 @@ public class UsersController : Controller
         return RedirectToAction("Index");
     }
 
-    /* FEATURE FLAG CHECK, TO BE REMOVED IN THE FUTURE*/
+    // TODO: Feature flag to be removed in PM-14207
     private async Task<bool?> AccountDeprovisioningEnabled(Guid userId)
     {
         return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
