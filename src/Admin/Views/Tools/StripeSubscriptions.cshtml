@@ -78,7 +78,7 @@
 <div class="row">
     <div class="col-6">
         <label asp-for="Filter.Status">Status</label>
-        <select asp-for="Filter.Status" name="filter.Status" class="form-control mr-2">
+        <select asp-for="Filter.Status" name="filter.Status" class="form-control me-2">
             <option asp-selected="Model.Filter.Status == null" value="all">All</option>
             <option asp-selected='Model.Filter.Status == "active"' value="active">Active</option>
             <option asp-selected='Model.Filter.Status == "unpaid"' value="unpaid">Unpaid</option>
@@ -89,8 +89,8 @@
         <div class="input-group">
             <div class="input-group-append">
                 <div class="input-group-text">
-                    <span class="mr-1">
-                        <input type="radio" class="mr-1" asp-for="Filter.CurrentPeriodEndRange" name="filter.CurrentPeriodEndRange" value="lt">Before
+                    <span class="me-1">
+                        <input type="radio" class="me-1" asp-for="Filter.CurrentPeriodEndRange" name="filter.CurrentPeriodEndRange" value="lt">Before
                     </span>
                     <input type="radio" asp-for="Filter.CurrentPeriodEndRange" name="filter.CurrentPeriodEndRange" value="gt">After
                 </div>
@@ -105,7 +105,7 @@
 <div class="row mt-2">
     <div class="col-6">
         <label asp-for="Filter.Price">Price ID</label>
-        <select asp-for="Filter.Price" name="filter.Price" class="form-control mr-2">
+        <select asp-for="Filter.Price" name="filter.Price" class="form-control me-2">
             <option asp-selected="Model.Filter.Price == null" value="@null">All</option>
             @foreach (var price in Model.Prices)
             {
@@ -115,7 +115,7 @@
     </div>
     <div class="col-6">
         <label asp-for="Filter.TestClock">Test Clock</label>
-        <select asp-for="Filter.TestClock" name="filter.TestClock" class="form-control mr-2">
+        <select asp-for="Filter.TestClock" name="filter.TestClock" class="form-control me-2">
             <option asp-selected="Model.Filter.TestClock == null" value="@null">All</option>
             @foreach (var clock in Model.TestClocks)
             {
@@ -191,7 +191,7 @@
                             @{
                                 var i2 = i;
                             }
-                            <input class="form-check-input row-check" onchange="onRowSelect()" asp-for="@Model.Items[i2].Selected">
+                            <input class="form-check-input row-check mt-0" onchange="onRowSelect()" asp-for="@Model.Items[i2].Selected">
                         </div>
                     </td>
                     <td>
@@ -257,11 +257,11 @@
             </li>
         }
     </ul>
-    <span id="bulkActions" class="d-none ml-2">
+    <span id="bulkActions" class="d-none ms-2">
         <span class="d-inline-flex">
             <button
                 type="submit"
-                class="btn btn-primary mr-1"
+                class="btn btn-primary me-1"
                 name="action"
                 asp-for="Action"
                 value="@StripeSubscriptionsAction.Export">
