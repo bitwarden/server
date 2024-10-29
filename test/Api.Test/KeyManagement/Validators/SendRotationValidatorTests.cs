@@ -14,7 +14,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Tools.Validators;
+namespace Bit.Api.Test.KeyManagement.Validators;
 
 [SutProviderCustomize]
 public class SendRotationValidatorTests
