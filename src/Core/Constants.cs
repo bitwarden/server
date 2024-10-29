@@ -141,7 +141,6 @@ public static class FeatureFlagKeys
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string Pm3478RefactorOrganizationUserApi = "pm-3478-refactor-organizationuser-api";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
@@ -149,6 +148,7 @@ public static class FeatureFlagKeys
     public const string Pm13322AddPolicyDefinitions = "pm-13322-add-policy-definitions";
     public const string LimitCollectionCreationDeletionSplit = "pm-10863-limit-collection-creation-deletion-split";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
+    public const string NewDeviceVerification = "new-device-verification";
 
     public static List<string> GetAllKeys()
     {

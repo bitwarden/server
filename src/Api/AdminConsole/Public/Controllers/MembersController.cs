@@ -71,14 +71,13 @@ public class MembersController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var userDetails = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        var orgUser = userDetails?.Item1;
+        var (orgUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
         if (orgUser == null || orgUser.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
         var response = new MemberResponseModel(orgUser, await _userService.TwoFactorIsEnabledAsync(orgUser),
-            userDetails.Item2);
+            collections);
         return new JsonResult(response);
     }
 
