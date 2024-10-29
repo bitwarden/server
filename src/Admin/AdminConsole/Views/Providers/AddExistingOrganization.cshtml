@@ -9,16 +9,16 @@
 <h1>Add Existing Organization</h1>
 <div class="row mb-2">
     <div class="col">
-        <form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get" asp-route-id="@providerId">
-            <div class="col-12">
+        <form class="row g-3 align-items-center mb-2" method="get" asp-route-id="@providerId">
+            <div class="col">
                 <label class="visually-hidden" asp-for="OrganizationName"></label>
                 <input type="text" class="form-control" placeholder="@Html.DisplayNameFor(m => m.OrganizationName)" asp-for="OrganizationName" name="name">
             </div>
-            <div class="col-12">
+            <div class="col">
                 <label class="visually-hidden" asp-for="OrganizationOwnerEmail"></label>
                 <input type="email" class="form-control" placeholder="@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)" asp-for="OrganizationOwnerEmail" name="ownerEmail">
             </div>
-            <div class="col-12">
+            <div class="col-auto">
                 <button type="submit" class="btn btn-primary" title="Search" formmethod="get"><i class="fa fa-search"></i> Search</button>
             </div>
         </form>
