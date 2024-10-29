@@ -482,6 +482,8 @@ public class ProviderBillingService(
 
         var subscriptionOptions = new SubscriptionUpdateOptions
         {
+            BillingCycleAnchor = SubscriptionBillingCycleAnchor.Now,
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
             Items = subscriptionItemOptionsList
         };
 
