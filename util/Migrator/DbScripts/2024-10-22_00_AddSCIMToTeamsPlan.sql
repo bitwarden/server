@@ -1,3 +1,4 @@
+SET DEADLOCK_PRIORITY HIGH;
 UPDATE
     [dbo].[Organization]
 SET
