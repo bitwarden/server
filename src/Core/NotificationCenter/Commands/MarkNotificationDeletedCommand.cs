@@ -49,11 +49,11 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
 
         if (notificationStatus == null)
         {
-            notificationStatus = new NotificationStatus()
+            notificationStatus = new NotificationStatus
             {
                 NotificationId = notificationId,
                 UserId = _currentContext.UserId.Value,
-                DeletedDate = DateTime.Now
+                DeletedDate = DateTime.UtcNow
             };
 
             await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notificationStatus,
