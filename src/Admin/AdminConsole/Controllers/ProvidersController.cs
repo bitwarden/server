@@ -291,61 +291,42 @@ public class ProvidersController : Controller
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
+        // Billable providers should always have plans at this point in time?
+        if (provider.IsBillable() && providerPlans.Count == 0)
+        {
+            return Conflict("Provider must have at least one plan to be billable.");
+        }
+
         switch (provider.Type)
         {
             case ProviderType.Msp:
-                if (providerPlans.Count == 0)
-                {
-                    var newProviderPlans = new List<ProviderPlan>
+                var updateMspSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                    provider.Id,
+                    new Dictionary<PlanType, int>
                     {
-                        new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
-                        new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
-                    };
-
-                    foreach (var newProviderPlan in newProviderPlans)
-                    {
-                        await _providerPlanRepository.CreateAsync(newProviderPlan);
-                    }
-                }
-                else
-                {
-                    var updateCommand = new UpdateProviderSeatMinimumsCommand(
-                        provider.Id,
-                        new Dictionary<PlanType, int>
-                        {
-                            { PlanType.TeamsMonthly, model.TeamsMonthlySeatMinimum },
-                            { PlanType.EnterpriseMonthly, model.EnterpriseMonthlySeatMinimum }
-                        });
-                    await _providerBillingService.UpdateSeatMinimums(updateCommand);
-                }
+                        { PlanType.TeamsMonthly, model.TeamsMonthlySeatMinimum },
+                        { PlanType.EnterpriseMonthly, model.EnterpriseMonthlySeatMinimum }
+                    });
+                await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
                 break;
             case ProviderType.MultiOrganizationEnterprise:
                 {
-                    var existingPlan = providerPlans.SingleOrDefault();
-                    if (existingPlan != null)
+                    if (providerPlans.Single().PlanType == model.Plan)
                     {
-                        var updateCommand = new UpdateProviderSeatMinimumsCommand(
+                        var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
                             provider.Id,
                             new Dictionary<PlanType, int>
                             {
                                 { model.Plan!.Value, model.EnterpriseMinimumSeats!.Value }
                             });
-                        await _providerBillingService.UpdateSeatMinimums(updateCommand);
+                        await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
+                    }
+                    else
+                    {
                         // TODO change plan
                         // var updatePlansCommand = ...
                         // await _providerBillingService.UpdatePlans(updatePlansCommand);
                     }
-                    else
-                    {
-                        var newProviderPlan = new ProviderPlan
-                        {
-                            ProviderId = provider.Id,
-                            PlanType = model.Plan!.Value,
-                            SeatMinimum = model.EnterpriseMinimumSeats!.Value
-                        };
-                        await _providerPlanRepository.CreateAsync(newProviderPlan);
-                    }
-                    await _providerBillingService.UpdateSubscription(provider.Id);
                     break;
                 }
         }
