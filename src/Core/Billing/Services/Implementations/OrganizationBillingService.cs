@@ -72,10 +72,10 @@ public class OrganizationBillingService(
         var subscription = await subscriberService.GetSubscription(organization);
 
         var isEligibleForSelfHost = await IsEligibleForSelfHost(organization, subscription);
-
+        var isManaged = organization.Status == OrganizationStatusType.Managed;
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        return new OrganizationMetadata(isEligibleForSelfHost, isOnSecretsManagerStandalone);
+        return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone);
     }
 
     public async Task UpdatePaymentMethod(
