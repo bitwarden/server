@@ -13,18 +13,25 @@ public class DuoUtilitiesTests
     [BitAutoData(false, "api-valid.duosecurity.com", null, "clientSecret")]
     [BitAutoData(false, "api-valid.duosecurity.com", "ClientId", null)]
     [BitAutoData(false, "api-valid.duosecurity.com", null, null)]
-    public void HasProperDuoMetadata_ReturnsMatchesExpected(
+    public void HasProperDuoMetadata_ReturnMatchesExpected(
         bool expectedResponse, string host, string clientId, string clientSecret)
     {
         // Arrange
+        var metaData = new Dictionary<string, object> { ["Host"] = host };
+
+        if (clientId != null)
+        {
+            metaData.Add("ClientId", clientId);
+        }
+
+        if (clientSecret != null)
+        {
+            metaData.Add("ClientSecret", clientSecret);
+        }
+
         var provider = new TwoFactorProvider
         {
-            MetaData = new Dictionary<string, object>
-            {
-                ["ClientId"] = clientId,
-                ["ClientSecret"] = clientSecret,
-                ["Host"] = host,
-            }
+            MetaData = metaData
         };
 
         // Act

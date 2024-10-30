@@ -4,6 +4,13 @@ namespace Bit.Core.Auth.Utilities;
 
 public class DuoUtilities
 {
+    /// <summary>
+    /// We are checking for existenace because we handle validation for Duo when we create or update
+    /// the configuration in the DuoUniversalConfigService. Users are not able to save an invalid config.
+    /// This is just a simple check to ensure the metadata is present.
+    /// </summary>
+    /// <param name="provider">The Duo TwoFactor Provider</param>
+    /// <returns></returns>
     public static bool HasProperDuoMetadata(TwoFactorProvider provider)
     {
         return provider?.MetaData != null &&
