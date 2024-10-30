@@ -40,6 +40,9 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             case not null when requirement.Name == nameof(GroupOperations.ReadAll):
                 await CanReadAllAsync(context, requirement, org);
                 break;
+            case not null when requirement.Name == nameof(GroupOperations.CanViewDetails):
+                await CanViewGroupDetails(context, requirement);
+                break;
         }
     }
 
@@ -58,5 +61,10 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
         {
             context.Succeed(requirement);
         }
+    }
+
+    private async Task CanViewGroupDetails(AuthorizationHandlerContext context, GroupOperationRequirement requirement)
+    {
+        throw new NotImplementedException();
     }
 }
