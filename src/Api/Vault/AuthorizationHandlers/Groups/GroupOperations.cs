@@ -20,8 +20,8 @@ public static class GroupOperations
         return new GroupOperationRequirement(nameof(ReadAll), organizationId);
     }
 
-    public static GroupOperationRequirement CanViewDetails(Guid organizationId)
+    public static GroupOperationRequirement ReadDetails(Guid organizationId)
     {
-        return new GroupOperationRequirement(nameof(CanViewDetails), organizationId);
+        return new GroupOperationRequirement(nameof(ReadDetails), organizationId);
     }
 }

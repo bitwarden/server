@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Vault.AuthorizationHandlers.Groups;
@@ -40,8 +41,8 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             case not null when requirement.Name == nameof(GroupOperations.ReadAll):
                 await CanReadAllAsync(context, requirement, org);
                 break;
-            case not null when requirement.Name == nameof(GroupOperations.CanViewDetails):
-                await CanViewGroupDetails(context, requirement);
+            case not null when requirement.Name == nameof(GroupOperations.ReadDetails):
+                await CanViewGroupDetailsAsync(context, requirement, org);
                 break;
         }
     }
@@ -63,8 +64,18 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
         }
     }
 
-    private async Task CanViewGroupDetails(AuthorizationHandlerContext context, GroupOperationRequirement requirement)
+    private async Task CanViewGroupDetailsAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement,
+        CurrentContextOrganization? org)
     {
-        throw new NotImplementedException();
+        if (org is not null
+            && (org.Permissions.ManageUsers
+                || org.Permissions.ManageGroups
+                || org.Type == OrganizationUserType.Admin
+                || org.Type == OrganizationUserType.Owner
+                || await _currentContext.ProviderUserForOrgAsync(org.Id)))
+        {
+
+            context.Succeed(requirement);
+        }
     }
 }

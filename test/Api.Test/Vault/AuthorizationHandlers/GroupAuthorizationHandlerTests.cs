@@ -122,4 +122,137 @@ public class GroupAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
         Assert.True(context.HasFailed);
     }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsAdminOwner_ThenShouldSucceed(OrganizationUserType userType,
+        Guid userId, CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            [GroupOperations.ReadDetails(organization.Id)],
+            new ClaimsPrincipal(),
+            null
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsNotOwnerOrAdmin_ThenShouldFail(OrganizationUserType userType,
+        Guid userId, CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+    {
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            [GroupOperations.ReadDetails(organization.Id)],
+            new ClaimsPrincipal(),
+            null
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserHasManageGroupPermission_ThenShouldSucceed(
+        Guid userId, CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            ManageGroups = true
+        };
+
+        var context = new AuthorizationHandlerContext(
+            [GroupOperations.ReadDetails(organization.Id)],
+            new ClaimsPrincipal(),
+            null
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserHasManageUserPermission_ThenShouldSucceed(
+        Guid userId, CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+    {
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            ManageUsers = true
+        };
+
+        var context = new AuthorizationHandlerContext(
+            [GroupOperations.ReadDetails(organization.Id)],
+            new ClaimsPrincipal(),
+            null
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsStandardUserTypeWithoutElevatedPermissions_ThenShouldFail(
+        Guid userId, CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            [GroupOperations.ReadDetails(organization.Id)],
+            new ClaimsPrincipal(),
+            null
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(false);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenIsProviderUser_ThenShouldSucceed(
+        Guid userId,
+        SutProvider<GroupAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
+    {
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { GroupOperations.ReadAll(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
 }

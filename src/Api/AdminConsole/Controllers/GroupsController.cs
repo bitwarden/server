@@ -113,7 +113,7 @@ public class GroupsController : Controller
     [HttpGet("group-details")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
     {
-        var authorized = (await _authorizationService.AuthorizeAsync(User, GroupOperations.CanViewDetails(orgId))).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadDetails(orgId))).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
