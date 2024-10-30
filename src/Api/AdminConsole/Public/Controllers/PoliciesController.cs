@@ -47,7 +47,7 @@ public class PoliciesController : Controller
             return new NotFoundResult();
         }
 
-        return new JsonResult(new PolicyDetailResponseModel(policy));
+        return new JsonResult(new PolicyResponseModel(policy));
     }
 
     /// <summary>
