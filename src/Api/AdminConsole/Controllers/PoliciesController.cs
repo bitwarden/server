@@ -19,6 +19,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -64,17 +65,16 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyDetailResponseModel> Get(string orgId, int type)
+    public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
-            throw new NotFoundException();
+            return new PolicyResponseModel(new AdminConsoleEntities.Policy() { Type = (PolicyType)type, Enabled = false });
         }
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)

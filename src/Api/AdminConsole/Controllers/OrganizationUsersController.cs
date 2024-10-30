@@ -126,7 +126,6 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("mini-details")]
-    [RequireFeature(FeatureFlagKeys.Pm3478RefactorOrganizationUserApi)]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
