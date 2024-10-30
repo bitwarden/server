@@ -13,7 +13,7 @@
 
 <h2>Provider Information</h2>
 <ViewInformation Model="@ViewModel" />
-<Admins Model="@ViewModel" />
+<Admins Model="@ViewModel" ProviderId="@Id" />
 <form method="post" id="edit-form">
     <div asp-validation-summary="All" class="alert alert-danger"></div>
     <input type="hidden" asp-for="Type" readonly>
