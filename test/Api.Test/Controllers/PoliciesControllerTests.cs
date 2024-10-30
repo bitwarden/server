@@ -157,7 +157,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.IsType<PolicyResponseModel>(result);
+        Assert.IsType<PolicyDetailResponseModel>(result);
         Assert.Equal(policy.Id, result.Id);
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
@@ -182,7 +182,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.IsType<PolicyResponseModel>(result);
+        Assert.IsType<PolicyDetailResponseModel>(result);
         Assert.Equal(result.Type, (PolicyType)type);
         Assert.False(result.Enabled);
     }

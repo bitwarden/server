@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Api.Response;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -19,7 +20,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
-using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -74,7 +74,7 @@ public class PoliciesController : Controller
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
-            return new PolicyResponseModel(new AdminConsoleEntities.Policy() { Type = (PolicyType)type, Enabled = false });
+            return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
         }
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
