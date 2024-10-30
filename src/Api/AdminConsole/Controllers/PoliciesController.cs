@@ -1,10 +1,10 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Api.Response;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -35,7 +35,7 @@ public class PoliciesController : Controller
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
-    private readonly IReadOnlyDictionary<PolicyType, IPolicyValidator> _policyValidators;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
@@ -47,7 +47,7 @@ public class PoliciesController : Controller
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
-        IEnumerable<IPolicyValidator> validators)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
@@ -60,13 +60,7 @@ public class PoliciesController : Controller
 
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
-
-        var dictionary = new Dictionary<PolicyType, IPolicyValidator>();
-        foreach (var validator in validators)
-        {
-            dictionary.TryAdd(validator.Type, validator);
-        }
-        _policyValidators = dictionary;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
     [HttpGet("{type}")]
@@ -83,21 +77,9 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && policy.Type is PolicyType.SingleOrg)
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
         {
-            var canToggle = !_policyValidators.ContainsKey(policy.Type) || string.IsNullOrWhiteSpace(
-                await _policyValidators[policy.Type]
-                    .ValidateAsync(
-                        new PolicyUpdate
-                        {
-                            Data = policy.Data,
-                            Enabled = !policy.Enabled,
-                            OrganizationId = policy.OrganizationId,
-                            Type = policy.Type
-                        }, policy));
-
-            return new PolicyDetailResponseModel(policy, canToggle);
+            return await PolicyDetailResponses.GetSingleOrgPolicyDetailResponseAsync(policy, _organizationHasVerifiedDomainsQuery);
         }
 
         return new PolicyDetailResponseModel(policy);
