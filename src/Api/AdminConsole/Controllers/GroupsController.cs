@@ -3,7 +3,6 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
@@ -90,7 +89,7 @@ public class GroupsController : Controller
     }
 
     [HttpGet("groups")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroups(Guid orgId)
+    public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups(Guid orgId)
     {
         var authorized = (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
         if (!authorized)
@@ -98,16 +97,9 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SecureOrgGroupDetails))
-        {
-            var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
-            var responses = groups.Select(g => new GroupDetailsResponseModel(g, []));
-            return new ListResponseModel<GroupDetailsResponseModel>(responses);
-        }
-
-        var groupDetails = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
-        var detailResponses = groupDetails.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
-        return new ListResponseModel<GroupDetailsResponseModel>(detailResponses);
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
+        var responses = groups.Select(g => new GroupResponseModel(g));
+        return new ListResponseModel<GroupResponseModel>(responses);
     }
 
     [HttpGet("group-details")]
