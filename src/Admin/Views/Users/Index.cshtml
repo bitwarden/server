@@ -5,10 +5,16 @@
 
 <h1>Users</h1>
 
-<form class="form-inline mb-2" method="get">
-    <label class="visually-hidden" asp-for="Email">Email</label>
-    <input type="text" class="form-control mb-2 me-2" placeholder="Email" asp-for="Email" name="email">
-    <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
+<form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get">
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="Email">Email</label>
+        <input type="text" class="form-control" placeholder="Email" asp-for="Email" name="email">
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary" title="Search">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </div>
 </form>
 
 <div class="table-responsive">
