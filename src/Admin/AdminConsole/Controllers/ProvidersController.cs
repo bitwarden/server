@@ -14,6 +14,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -308,10 +309,14 @@ public class ProvidersController : Controller
                 }
                 else
                 {
-                    await _providerBillingService.UpdateSeatMinimums(
-                        provider,
-                        model.EnterpriseMonthlySeatMinimum,
-                        model.TeamsMonthlySeatMinimum);
+                    var updateCommand = new UpdateProviderSeatMinimumsCommand(
+                        provider.Id,
+                        new Dictionary<PlanType, int>
+                        {
+                            { PlanType.TeamsMonthly, model.TeamsMonthlySeatMinimum },
+                            { PlanType.EnterpriseMonthly, model.EnterpriseMonthlySeatMinimum }
+                        });
+                    await _providerBillingService.UpdateSeatMinimums(updateCommand);
                 }
                 break;
             case ProviderType.MultiOrganizationEnterprise:
@@ -319,9 +324,16 @@ public class ProvidersController : Controller
                     var existingPlan = providerPlans.SingleOrDefault();
                     if (existingPlan != null)
                     {
-                        existingPlan.PlanType = model.Plan!.Value;
-                        existingPlan.SeatMinimum = model.EnterpriseMinimumSeats!.Value;
-                        await _providerPlanRepository.ReplaceAsync(existingPlan);
+                        var updateCommand = new UpdateProviderSeatMinimumsCommand(
+                            provider.Id,
+                            new Dictionary<PlanType, int>
+                            {
+                                { model.Plan!.Value, model.EnterpriseMinimumSeats!.Value }
+                            });
+                        await _providerBillingService.UpdateSeatMinimums(updateCommand);
+                        // TODO change plan
+                        // var updatePlansCommand = ...
+                        // await _providerBillingService.UpdatePlans(updatePlansCommand);
                     }
                     else
                     {

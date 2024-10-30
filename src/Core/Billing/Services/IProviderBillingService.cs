@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Models.Business;
 using Stripe;
 
@@ -99,8 +100,5 @@ public interface IProviderBillingService
     Task<Subscription> UpdateSubscription(
         Guid providerId);
 
-    Task UpdateSeatMinimums(
-        Provider provider,
-        int enterpriseSeatMinimum,
-        int teamsSeatMinimum);
+    Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }

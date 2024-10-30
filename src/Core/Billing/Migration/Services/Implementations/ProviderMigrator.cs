@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Migration.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -307,7 +308,12 @@ public class ProviderMigrator(
                 .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly)?
                 .SeatMinimum ?? 0;
 
-            await providerBillingService.UpdateSeatMinimums(provider, enterpriseSeatMinimum, teamsSeatMinimum);
+            var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(provider.Id, new Dictionary<PlanType, int>
+            {
+                { PlanType.EnterpriseMonthly, enterpriseSeatMinimum },
+                { PlanType.TeamsMonthly, teamsSeatMinimum }
+            });
+            await providerBillingService.UpdateSeatMinimums(updateSeatMinimumsCommand);
 
             logger.LogInformation(
                 "CB: Updated Stripe subscription for provider ({ProviderID}) with current seat minimums", provider.Id);
