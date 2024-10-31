@@ -90,5 +90,12 @@ public interface IProviderBillingService
     Task<Subscription> SetupSubscription(
         Provider provider);
 
+    /// <summary>
+    /// Changes the assigned provider plan for the provider.
+    /// </summary>
+    /// <param name="command">The command to change the provider plan.</param>
+    /// <returns></returns>
+    Task ChangePlan(ChangeProviderPlanCommand command);
+
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }

@@ -311,22 +311,22 @@ public class ProvidersController : Controller
                 break;
             case ProviderType.MultiOrganizationEnterprise:
                 {
-                    if (providerPlans.Single().PlanType == model.Plan)
-                    {
-                        var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
-                            provider.Id,
-                            new Dictionary<PlanType, int>
-                            {
-                                { model.Plan!.Value, model.EnterpriseMinimumSeats!.Value }
-                            });
-                        await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
-                    }
-                    else
-                    {
-                        // TODO change plan
-                        // var updatePlansCommand = ...
-                        // await _providerBillingService.UpdatePlans(updatePlansCommand);
-                    }
+                    var existingMoePlan = providerPlans.Single();
+
+                    // 1. Change the plan and take over any old values.
+                    var changeMoePlanCommand = new ChangeProviderPlanCommand(
+                        existingMoePlan.Id,
+                        model.Plan!.Value);
+                    await _providerBillingService.ChangePlan(changeMoePlanCommand);
+
+                    // 2. Update the seat minimums.
+                    var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                        provider.Id,
+                        new Dictionary<PlanType, int>
+                        {
+                            { model.Plan!.Value, model.EnterpriseMinimumSeats!.Value }
+                        });
+                    await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
                     break;
                 }
         }
