@@ -13,6 +13,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -1015,22 +1016,51 @@ public class ProviderBillingServiceTests
 
     [Theory, BitAutoData]
     public async Task UpdateSeatMinimums_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.UpdateSeatMinimums(null, 0, 0));
+        UpdateProviderSeatMinimumsCommand command,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns((Provider)null);
+
+        // Act
+        var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(command));
+
+        // Assert
+        Assert.Equal("Provider not found.", actual.Message);
+    }
 
     [Theory, BitAutoData]
     public async Task UpdateSeatMinimums_NegativeSeatMinimum_ThrowsBadRequestException(
         Provider provider,
-        SutProvider<ProviderBillingService> sutProvider) =>
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(provider, -10, 100));
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
+        var command = new UpdateProviderSeatMinimumsCommand(
+            provider.Id,
+            new Dictionary<PlanType, int>
+            {
+                { PlanType.TeamsMonthly, -10 },
+                { PlanType.EnterpriseMonthly, 50 }
+            });
+
+        // Act
+        var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(command));
+
+        // Assert
+        Assert.Equal("Provider seat minimums must be at least 0.", actual.Message);
+    }
 
     [Theory, BitAutoData]
     public async Task UpdateSeatMinimums_NoPurchasedSeats_AllocatedHigherThanIncomingMinimum_UpdatesPurchasedSeats_SyncsStripeWithNewSeatMinimum(
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1066,10 +1096,16 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 25 }
         };
 
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        await sutProvider.Sut.UpdateSeatMinimums(provider, 30, 20);
+        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
+            new Dictionary<PlanType, int> { { PlanType.EnterpriseMonthly, 30 }, { PlanType.TeamsMonthly, 20 } });
 
+        // Act
+        await sutProvider.Sut.UpdateSeatMinimums(command);
+
+        // Assert
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 30));
 
@@ -1091,8 +1127,11 @@ public class ProviderBillingServiceTests
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1130,8 +1169,17 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        await sutProvider.Sut.UpdateSeatMinimums(provider, 70, 50);
+        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
+            new Dictionary<PlanType, int>
+            {
+                { PlanType.EnterpriseMonthly, 70 },
+                { PlanType.TeamsMonthly, 50 }
+            });
 
+        // Act
+        await sutProvider.Sut.UpdateSeatMinimums(command);
+
+        // Assert
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 70));
 
@@ -1153,8 +1201,11 @@ public class ProviderBillingServiceTests
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1192,8 +1243,17 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        await sutProvider.Sut.UpdateSeatMinimums(provider, 60, 60);
+        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
+            new Dictionary<PlanType, int>
+            {
+                { PlanType.EnterpriseMonthly, 60 },
+                { PlanType.TeamsMonthly, 60 }
+            });
 
+        // Act
+        await sutProvider.Sut.UpdateSeatMinimums(command);
+
+        // Assert
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 60 && providerPlan.PurchasedSeats == 10));
 
@@ -1209,8 +1269,11 @@ public class ProviderBillingServiceTests
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1248,8 +1311,17 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        await sutProvider.Sut.UpdateSeatMinimums(provider, 80, 80);
+        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
+            new Dictionary<PlanType, int>
+            {
+                { PlanType.EnterpriseMonthly, 80 },
+                { PlanType.TeamsMonthly, 80 }
+            });
 
+        // Act
+        await sutProvider.Sut.UpdateSeatMinimums(command);
+
+        // Assert
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 80 && providerPlan.PurchasedSeats == 0));
 
@@ -1271,8 +1343,11 @@ public class ProviderBillingServiceTests
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)
     {
+        // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1310,8 +1385,17 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        await sutProvider.Sut.UpdateSeatMinimums(provider, 70, 30);
+        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
+            new Dictionary<PlanType, int>
+            {
+                { PlanType.TeamsMonthly, 30 },
+                { PlanType.EnterpriseMonthly, 70 }
+            });
 
+        // Act
+        await sutProvider.Sut.UpdateSeatMinimums(command);
+
+        // Assert
         await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(
             providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly && providerPlan.SeatMinimum == 70));
 
@@ -1325,6 +1409,5 @@ public class ProviderBillingServiceTests
                     options.Items.ElementAt(0).Id == enterpriseLineItemId &&
                     options.Items.ElementAt(0).Quantity == 70));
     }
-
     #endregion
 }
