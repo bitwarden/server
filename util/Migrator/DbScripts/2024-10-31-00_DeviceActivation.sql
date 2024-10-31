@@ -1,27 +1,30 @@
+SET DEADLOCK_PRIORITY HIGH
+GO
+
 -- add column
 IF COL_LENGTH('[dbo].[Device]', 'Active') IS NULL
     BEGIN
-        ALTER TABLE
+    ALTER TABLE
             [dbo].[Device]
         ADD
             [Active] BIT NOT NULL CONSTRAINT [DF_Device_Active] DEFAULT (1)
-    END
+END
 GO
 
 -- refresh view
 CREATE OR ALTER VIEW [dbo].[DeviceView]
 AS
-SELECT
-    *
-FROM
-    [dbo].[Device]
+    SELECT
+        *
+    FROM
+        [dbo].[Device]
 GO
 
 -- drop now-unused proc for deletion
 IF OBJECT_ID('[dbo].[Device_DeleteById]') IS NOT NULL
     BEGIN
-        DROP PROCEDURE [dbo].[Device_DeleteById]
-    END
+    DROP PROCEDURE [dbo].[Device_DeleteById]
+END
 GO
 
 -- refresh procs
@@ -43,7 +46,7 @@ BEGIN
     SET NOCOUNT ON
 
     INSERT INTO [dbo].[Device]
-    (
+        (
         [Id],
         [UserId],
         [Name],
@@ -56,7 +59,7 @@ BEGIN
         [EncryptedPublicKey],
         [EncryptedPrivateKey],
         [Active]
-    )
+        )
     VALUES
         (
             @Id,
@@ -109,4 +112,7 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+GO
+
+SET DEADLOCK_PRIORITY NORMAL
 GO
