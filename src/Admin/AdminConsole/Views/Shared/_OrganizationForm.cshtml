@@ -47,7 +47,7 @@
                         {
                             <input type="text" class="form-control" asp-for="Owners" required>
                         }
-                        <div class="form-text">This user should be independent of the Provider. If the Provider is disassociated with the organization, this user will maintain ownership of the organization.</div>
+                        <div class="form-text mt-0">This user should be independent of the Provider. If the Provider is disassociated with the organization, this user will maintain ownership of the organization.</div>
                     </div>
                 </div>
             </div>
@@ -282,11 +282,9 @@
                         <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
                         @if(canLaunchGateway)
                         {
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
                         }
                     </div>
                 </div>
@@ -298,11 +296,9 @@
                         <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
                         @if (canLaunchGateway)
                         {
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
                         }
                     </div>
                 </div>

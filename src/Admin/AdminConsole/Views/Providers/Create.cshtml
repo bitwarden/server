@@ -30,7 +30,7 @@
                 @Html.RadioButtonFor(m => m.Type, providerType, new { id = $"providerType-{providerTypeValue}", @class = "form-check-input", onclick=$"toggleProviderTypeInfo({providerTypeValue})" })
                 @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetName(), new { @class = "form-check-label align-middle", @for = $"providerType-{providerTypeValue}" })
                 <br/>
-                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-muted ms-3 align-top", @for = $"providerType-{providerTypeValue}" })
+                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-muted align-top", @for = $"providerType-{providerTypeValue}" })
             </div>
         }
     </div>
