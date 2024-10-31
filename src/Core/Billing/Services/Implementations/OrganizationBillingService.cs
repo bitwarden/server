@@ -27,7 +27,6 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
-    IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IOrganizationBillingService
