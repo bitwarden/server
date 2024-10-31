@@ -296,6 +296,7 @@ public class ProvidersController : Controller
             case ProviderType.Msp:
                 var updateMspSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
                     provider.Id,
+                    provider.GatewaySubscriptionId,
                     [
                         (Plan: PlanType.TeamsMonthly, SeatsMinimum: model.TeamsMonthlySeatMinimum),
                         (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
@@ -316,6 +317,7 @@ public class ProvidersController : Controller
                     // 2. Update the seat minimums.
                     var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
                         provider.Id,
+                        provider.GatewaySubscriptionId,
                         [
                             (Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)
                         ]);

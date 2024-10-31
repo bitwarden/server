@@ -1183,6 +1183,7 @@ public class ProviderBillingServiceTests
         providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         var command = new UpdateProviderSeatMinimumsCommand(
             provider.Id,
+            provider.GatewaySubscriptionId,
             [
                 (PlanType.TeamsMonthly, -10),
                 (PlanType.EnterpriseMonthly, 50)
@@ -1242,11 +1243,13 @@ public class ProviderBillingServiceTests
         providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-        [
-            (PlanType.EnterpriseMonthly, 30),
-            (PlanType.TeamsMonthly, 20)
-        ]);
+        var command = new UpdateProviderSeatMinimumsCommand(
+            provider.Id,
+            provider.GatewaySubscriptionId,
+            [
+                (PlanType.EnterpriseMonthly, 30),
+                (PlanType.TeamsMonthly, 20)
+            ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1315,11 +1318,13 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-        [
-            (PlanType.EnterpriseMonthly, 70),
-            (PlanType.TeamsMonthly, 50)
-        ]);
+        var command = new UpdateProviderSeatMinimumsCommand(
+            provider.Id,
+            provider.GatewaySubscriptionId,
+            [
+                (PlanType.EnterpriseMonthly, 70),
+                (PlanType.TeamsMonthly, 50)
+            ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1388,11 +1393,13 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-        [
-            (PlanType.EnterpriseMonthly, 60),
-            (PlanType.TeamsMonthly, 60)
-        ]);
+        var command = new UpdateProviderSeatMinimumsCommand(
+            provider.Id,
+            provider.GatewaySubscriptionId,
+            [
+                (PlanType.EnterpriseMonthly, 60),
+                (PlanType.TeamsMonthly, 60)
+            ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1455,11 +1462,13 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-        [
-            (PlanType.EnterpriseMonthly, 80),
-            (PlanType.TeamsMonthly, 80)
-        ]);
+        var command = new UpdateProviderSeatMinimumsCommand(
+            provider.Id,
+            provider.GatewaySubscriptionId,
+            [
+                (PlanType.EnterpriseMonthly, 80),
+                (PlanType.TeamsMonthly, 80)
+            ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1528,11 +1537,13 @@ public class ProviderBillingServiceTests
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
-        var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-        [
-            (PlanType.EnterpriseMonthly, 70),
-            (PlanType.TeamsMonthly, 30)
-        ]);
+        var command = new UpdateProviderSeatMinimumsCommand(
+            provider.Id,
+            provider.GatewaySubscriptionId,
+            [
+                (PlanType.EnterpriseMonthly, 70),
+                (PlanType.TeamsMonthly, 30)
+            ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
