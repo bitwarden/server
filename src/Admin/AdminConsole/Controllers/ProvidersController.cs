@@ -291,7 +291,6 @@ public class ProvidersController : Controller
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
-        // Billable providers should always have plans at this point in time?
         if (provider.IsBillable() && providerPlans.Count == 0)
         {
             return Conflict("Provider must have at least one plan to be billable.");
