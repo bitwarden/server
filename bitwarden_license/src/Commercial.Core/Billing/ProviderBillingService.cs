@@ -440,24 +440,29 @@ public class ProviderBillingService(
 
     public async Task ChangePlan(ChangeProviderPlanCommand command)
     {
-        var existingPlan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
+        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
 
-        if (existingPlan == null)
+        if (plan == null)
         {
             throw new BadRequestException("Provider plan not found.");
         }
 
-        if (existingPlan.PlanType == command.NewPlan)
+        if (plan.PlanType == command.NewPlan)
         {
             return;
         }
 
-        var oldPlanConfiguration = StaticStore.GetPlan(existingPlan.PlanType);
+        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
 
-        existingPlan.PlanType = command.NewPlan;
-        await providerPlanRepository.ReplaceAsync(existingPlan);
+        plan.PlanType = command.NewPlan;
+        await providerPlanRepository.ReplaceAsync(plan);
 
-        var provider = await providerRepository.GetByIdAsync(existingPlan.ProviderId);
+        var provider = await providerRepository.GetByIdAsync(plan.ProviderId);
+
+        if (provider == null)
+        {
+            throw new ConflictException("Provider not found.");
+        }
 
         var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
 
@@ -468,22 +473,22 @@ public class ProviderBillingService(
                 new SubscriptionItemOptions
                 {
                     Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
-                    Quantity = existingPlan.PurchasedSeats is > 0 && existingPlan.AllocatedSeats > existingPlan.SeatMinimum
-                        ? existingPlan.AllocatedSeats
-                        : existingPlan.SeatMinimum
+                    Quantity = plan.PurchasedSeats is > 0 && plan.AllocatedSeats > plan.SeatMinimum
+                        ? plan.AllocatedSeats
+                        : plan.SeatMinimum
                 }
             ]
         };
 
-        var existingSubscriptionItemId = subscription.Items.SingleOrDefault(x =>
+        var oldSubscriptionItemId = subscription.Items.SingleOrDefault(x =>
             x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId)?.Id;
 
-        if (existingSubscriptionItemId != null)
+        if (oldSubscriptionItemId != null)
         {
             updateOptions.Items.Add(
                 new SubscriptionItemOptions
                 {
-                    Id = existingSubscriptionItemId,
+                    Id = oldSubscriptionItemId,
                     Deleted = true
                 });
         }
