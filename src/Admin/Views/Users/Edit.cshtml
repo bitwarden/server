@@ -116,7 +116,7 @@
         <div class="row">
             <div class="col-sm">
                 <div class="mb-3">
-                    <label asp-for="MaxStorageGb"></label>
+                    <label asp-for="MaxStorageGb" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPremium)'>
                 </div>
             </div>
@@ -132,13 +132,13 @@
         <div class="row">
             <div class="col-sm">
                 <div class="mb-3">
-                    <label asp-for="LicenseKey"></label>
+                    <label asp-for="LicenseKey" class="form-label"></label>
                     <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
             <div class="col-sm">
                 <div class="mb-3">
-                    <label asp-for="PremiumExpirationDate"></label>
+                    <label asp-for="PremiumExpirationDate" class="form-label"></label>
                     <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
@@ -150,7 +150,7 @@
     <div class="row">
         <div class="col-md">
             <div class="mb-3">
-                <label asp-for="Gateway"></label>
+                <label asp-for="Gateway" class="form-label"></label>
                 <select class="form-select" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
                         asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
                     <option value="">--</option>
@@ -159,7 +159,7 @@
         </div>
         <div class="col-md">
             <div class="mb-3">
-                <label asp-for="GatewayCustomerId"></label>
+                <label asp-for="GatewayCustomerId" class="form-label"></label>
                 <div class="input-group">
                     <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
                     @if (canLaunchGateway)
@@ -173,7 +173,7 @@
         </div>
         <div class="col-md">
             <div class="mb-3">
-                <label asp-for="GatewaySubscriptionId"></label>
+                <label asp-for="GatewaySubscriptionId" class="form-label"></label>
                 <div class="input-group">
                     <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
                     @if (canLaunchGateway)
