@@ -452,19 +452,12 @@ public class ProviderBillingService(
             return;
         }
 
-        var provider = await providerRepository.GetByIdAsync(plan.ProviderId);
-
-        if (provider == null)
-        {
-            throw new ConflictException("Provider not found.");
-        }
-
         var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
 
         plan.PlanType = command.NewPlan;
         await providerPlanRepository.ReplaceAsync(plan);
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.SubscriptionGetAsync(command.GatewaySubscriptionId);
 
         var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
             x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
@@ -486,7 +479,7 @@ public class ProviderBillingService(
             ]
         };
 
-        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, updateOptions);
+        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
     }
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)

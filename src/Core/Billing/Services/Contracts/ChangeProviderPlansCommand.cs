@@ -4,4 +4,5 @@ namespace Bit.Core.Billing.Services.Contracts;
 
 public record ChangeProviderPlanCommand(
     Guid ProviderPlanId,
-    PlanType NewPlan);
+    PlanType NewPlan,
+    string GatewaySubscriptionId);

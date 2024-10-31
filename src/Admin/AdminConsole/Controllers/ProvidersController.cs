@@ -309,7 +309,8 @@ public class ProvidersController : Controller
                     // 1. Change the plan and take over any old values.
                     var changeMoePlanCommand = new ChangeProviderPlanCommand(
                         existingMoePlan.Id,
-                        model.Plan!.Value);
+                        model.Plan!.Value,
+                        provider.GatewaySubscriptionId);
                     await _providerBillingService.ChangePlan(changeMoePlanCommand);
 
                     // 2. Update the seat minimums.

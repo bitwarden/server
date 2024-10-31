@@ -1087,40 +1087,6 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ChangePlan_ProviderNotFound_ThrowsConflictException(
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange
-        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var command = new ChangeProviderPlanCommand(Guid.NewGuid(), PlanType.EnterpriseMonthly);
-        var existingPlan = new ProviderPlan
-        {
-            Id = command.ProviderPlanId,
-            ProviderId = Guid.NewGuid(),
-            PlanType = PlanType.EnterpriseAnnually,
-            PurchasedSeats = 0,
-            AllocatedSeats = 0,
-            SeatMinimum = 0
-        };
-        providerPlanRepository
-            .GetByIdAsync(Arg.Is<Guid>(p => p == command.ProviderPlanId))
-            .Returns(existingPlan);
-
-        providerRepository.GetByIdAsync(Arg.Is(existingPlan.ProviderId)).Returns((Provider)null);
-
-        // Act
-        var actual = await Assert.ThrowsAsync<ConflictException>(async () => await sutProvider.Sut.ChangePlan(command));
-
-        // Assert
-        Assert.Equal("Provider not found.", actual.Message);
-
-        await providerPlanRepository.Received(0).ReplaceAsync(Arg.Any<ProviderPlan>());
-        await stripeAdapter.Received(0).SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
-    }
-
-    [Theory, BitAutoData]
     public async Task ChangePlan_UpdatesSubscriptionCorrectly(
         Guid providerPlanId,
         Provider provider,
@@ -1163,7 +1129,7 @@ public class ProviderBillingServiceTests
                 }
             });
 
-        var command = new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly);
+        var command = new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
 
         // Act
         await sutProvider.Sut.ChangePlan(command);
