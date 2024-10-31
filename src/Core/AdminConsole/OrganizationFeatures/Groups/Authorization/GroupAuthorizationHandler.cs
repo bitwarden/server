@@ -36,9 +36,7 @@ public class GroupAuthorizationHandler(ICurrentContext currentContext)
         || await currentContext.ProviderUserForOrgAsync(organizationScope);
 
     private async Task<bool> CanViewGroupDetailsAsync(OrganizationScope organizationScope) =>
-        currentContext.GetOrganization(organizationScope) is
-    { Type: OrganizationUserType.Owner } or
-    { Type: OrganizationUserType.Admin } or
-    { Permissions: { ManageGroups: true } or { ManageUsers: true } }
-           || await currentContext.ProviderUserForOrgAsync(organizationScope);
+        currentContext.GetOrganization(organizationScope) is { Type: OrganizationUserType.Owner } or { Type: OrganizationUserType.Admin }
+            or { Permissions: { ManageGroups: true } or { ManageUsers: true } }
+        || await currentContext.ProviderUserForOrgAsync(organizationScope);
 }
