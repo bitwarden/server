@@ -342,8 +342,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var query = new CipherReadCanManageByIdUserIdQuery(userId, cipherId);
-            var canEdit = await query.Run(dbContext).AnyAsync();
-            return canEdit;
+            var canManage = await query.Run(dbContext).AnyAsync();
+            return canManage;
         }
     }
 
