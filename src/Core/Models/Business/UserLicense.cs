@@ -70,6 +70,7 @@ public class UserLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
+    public string Token { get; set; }
     [JsonIgnore]
     public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
@@ -84,6 +85,7 @@ public class UserLicense : ILicense
                     !p.Name.Equals(nameof(Signature)) &&
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
+                    !p.Name.Equals(nameof(Token)) &&
                     (
                         !forHash ||
                         (

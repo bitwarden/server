@@ -26,10 +26,10 @@ public class LicensingService : ILicensingService
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
     private readonly ILicenseClaimsFactory<Organization> _organizationLicenseClaimsFactory;
+    private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
     private readonly IFeatureService _featureService;
 
     private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
@@ -37,22 +37,22 @@ public class LicensingService : ILicensingService
     public LicensingService(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IWebHostEnvironment environment,
         ILogger<LicensingService> logger,
         IGlobalSettings globalSettings,
         ILicenseClaimsFactory<Organization> organizationLicenseClaimsFactory,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ILicenseClaimsFactory<User> userLicenseClaimsFactory)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _logger = logger;
         _globalSettings = globalSettings;
         _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
         _featureService = featureService;
+        _userLicenseClaimsFactory = userLicenseClaimsFactory;
 
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
@@ -302,6 +302,21 @@ public class LicensingService : ILicensingService
         var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);
         var audience = organization.Id.ToString();
         var expires = organization.CalculateFreshExpirationDate(subscriptionInfo);
+        return GenerateToken(claims, audience, expires);
+    }
+
+    public async Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            return null;
+        }
+
+        var licenseContext = new LicenseContext { SubscriptionInfo = subscriptionInfo };
+        var claims = await _userLicenseClaimsFactory.GenerateClaims(user, licenseContext);
+        var audience = user.Id.ToString();
+        var expires = user.PremiumExpirationDate ?? DateTime.UtcNow.AddDays(7);
+
         return GenerateToken(claims, audience, expires);
     }
 

@@ -18,4 +18,6 @@ public interface ILicensingService
         Organization organization,
         Guid installationId,
         SubscriptionInfo subscriptionInfo);
+
+    Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo);
 }

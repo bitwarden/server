@@ -58,4 +58,9 @@ public class NoopLicensingService : ILicensingService
     {
         return Task.FromResult<string>(null);
     }
+
+    public Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo)
+    {
+        return Task.FromResult<string>(null);
+    }
 }
