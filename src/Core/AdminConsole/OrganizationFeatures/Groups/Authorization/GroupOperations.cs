@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.Groups;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 
 public class GroupOperationRequirement : OperationAuthorizationRequirement
 {

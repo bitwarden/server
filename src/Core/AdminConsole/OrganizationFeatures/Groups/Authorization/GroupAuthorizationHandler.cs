@@ -3,7 +3,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Api.Vault.AuthorizationHandlers.Groups;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 
 /// <summary>
 /// Handles authorization logic for Group operations.
