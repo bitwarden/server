@@ -1,4 +1,4 @@
-CREATE OR ALTER PROC dbo.PasswordHealthReportApplications_Create
+CREATE PROCEDURE dbo.PasswordHealthReportApplications_Create
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Uri nvarchar(max),

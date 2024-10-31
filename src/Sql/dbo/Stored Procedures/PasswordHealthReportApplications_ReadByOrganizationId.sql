@@ -1,4 +1,4 @@
-CREATE OR ALTER PROC dbo.PasswordHealthReportApplications_ReadByOrganizationId
+CREATE PROCEDURE dbo.PasswordHealthReportApplications_ReadByOrganizationId
     @OrganizationId UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
