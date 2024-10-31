@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -9,73 +10,35 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 /// Handles authorization logic for Group operations.
 /// This uses new logic implemented in the Flexible Collections initiative.
 /// </summary>
-public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement>
+public class GroupAuthorizationHandler(ICurrentContext currentContext)
+    : AuthorizationHandler<GroupOperationRequirement, OrganizationScope>
 {
-    private readonly ICurrentContext _currentContext;
-
-    public GroupAuthorizationHandler(ICurrentContext currentContext)
-    {
-        _currentContext = currentContext;
-    }
-
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement)
+        GroupOperationRequirement requirement, OrganizationScope organizationScope)
     {
-        // Acting user is not authenticated, fail
-        if (!_currentContext.UserId.HasValue)
+        var authorized = requirement switch
         {
-            context.Fail();
-            return;
-        }
+            not null when requirement.Name == nameof(GroupOperations.ReadAll) =>
+                await CanReadAllAsync(organizationScope),
+            not null when requirement.Name == nameof(GroupOperations.ReadAllDetails) =>
+                await CanViewGroupDetailsAsync(organizationScope),
+            _ => false
+        };
 
-        if (requirement.OrganizationId == default)
-        {
-            context.Fail();
-            return;
-        }
-
-        var org = _currentContext.GetOrganization(requirement.OrganizationId);
-
-        switch (requirement)
-        {
-            case not null when requirement.Name == nameof(GroupOperations.ReadAll):
-                await CanReadAllAsync(context, requirement, org);
-                break;
-            case not null when requirement.Name == nameof(GroupOperations.ReadDetails):
-                await CanViewGroupDetailsAsync(context, requirement, org);
-                break;
-        }
-    }
-
-    private async Task CanReadAllAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement,
-        CurrentContextOrganization? org)
-    {
-        // All users of an organization can read all groups belonging to the organization for collection access management
-        if (org is not null)
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // Allow provider users to read all groups if they are a provider for the target organization
-        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+        if (requirement is not null && authorized)
         {
             context.Succeed(requirement);
         }
     }
 
-    private async Task CanViewGroupDetailsAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement,
-        CurrentContextOrganization? org)
-    {
-        if (org is not null
-            && (org.Permissions.ManageUsers
-                || org.Permissions.ManageGroups
-                || org.Type == OrganizationUserType.Admin
-                || org.Type == OrganizationUserType.Owner
-                || await _currentContext.ProviderUserForOrgAsync(org.Id)))
-        {
+    private async Task<bool> CanReadAllAsync(OrganizationScope organizationScope) =>
+        currentContext.GetOrganization(organizationScope) is not null
+        || await currentContext.ProviderUserForOrgAsync(organizationScope);
 
-            context.Succeed(requirement);
-        }
-    }
+    private async Task<bool> CanViewGroupDetailsAsync(OrganizationScope organizationScope) =>
+        currentContext.GetOrganization(organizationScope) is
+    { Type: OrganizationUserType.Owner } or
+    { Type: OrganizationUserType.Admin } or
+    { Permissions: { ManageGroups: true } or { ManageUsers: true } }
+           || await currentContext.ProviderUserForOrgAsync(organizationScope);
 }
