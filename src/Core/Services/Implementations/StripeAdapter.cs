@@ -79,6 +79,19 @@ public class StripeAdapter : IStripeAdapter
         return _subscriptionService.GetAsync(id, options);
     }
 
+    public async Task<Subscription> ProviderSubscriptionGetAsync(
+        string id,
+        Guid providerId,
+        SubscriptionGetOptions options = null)
+    {
+        var subscription = await _subscriptionService.GetAsync(id, options);
+        if (subscription.Metadata.TryGetValue("providerId", out var value) && value == providerId.ToString())
+        {
+            return subscription;
+        }
+        return null;
+    }
+
     public Task<Stripe.Subscription> SubscriptionUpdateAsync(string id,
         Stripe.SubscriptionUpdateOptions options = null)
     {

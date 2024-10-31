@@ -1111,7 +1111,9 @@ public class ProviderBillingServiceTests
         providerRepository.GetByIdAsync(Arg.Is(existingPlan.ProviderId)).Returns(provider);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.SubscriptionGetAsync(Arg.Is(provider.GatewaySubscriptionId))
+        stripeAdapter.ProviderSubscriptionGetAsync(
+                Arg.Is(provider.GatewaySubscriptionId),
+                Arg.Is(provider.Id))
             .Returns(new Subscription
             {
                 Id = provider.GatewaySubscriptionId,
@@ -1122,25 +1124,32 @@ public class ProviderBillingServiceTests
                         new SubscriptionItem
                         {
                             Id = "si_ent_annual",
-                            Price = new Price { Id = StaticStore.GetPlan(PlanType.EnterpriseAnnually).PasswordManager.StripeProviderPortalSeatPlanId },
+                            Price = new Price
+                            {
+                                Id = StaticStore.GetPlan(PlanType.EnterpriseAnnually).PasswordManager
+                                    .StripeProviderPortalSeatPlanId
+                            },
                             Quantity = 10
                         }
                     ]
                 }
             });
 
-        var command = new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
+        var command =
+            new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
 
         // Act
         await sutProvider.Sut.ChangePlan(command);
 
         // Assert
-        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(p => p.PlanType == PlanType.EnterpriseMonthly));
+        await providerPlanRepository.Received(1)
+            .ReplaceAsync(Arg.Is<ProviderPlan>(p => p.PlanType == PlanType.EnterpriseMonthly));
 
         await stripeAdapter.Received(1)
             .SubscriptionUpdateAsync(
                 Arg.Is(provider.GatewaySubscriptionId),
-                Arg.Is<SubscriptionUpdateOptions>(p => p.Items.Count(si => si.Id == "si_ent_annual" && si.Deleted == true) == 1));
+                Arg.Is<SubscriptionUpdateOptions>(p =>
+                    p.Items.Count(si => si.Id == "si_ent_annual" && si.Deleted == true) == 1));
 
         var newPlanCfg = StaticStore.GetPlan(command.NewPlan);
         await stripeAdapter.Received(1)
@@ -1151,7 +1160,6 @@ public class ProviderBillingServiceTests
                         si.Price == newPlanCfg.PasswordManager.StripeProviderPortalSeatPlanId &&
                         si.Deleted == default &&
                         si.Quantity == 10) == 1));
-
     }
 
     #endregion
@@ -1217,7 +1225,9 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.ProviderSubscriptionGetAsync(
+            provider.GatewaySubscriptionId,
+            provider.Id).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1293,7 +1303,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1368,7 +1378,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1437,7 +1447,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1512,7 +1522,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId).Returns(subscription);
+        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {

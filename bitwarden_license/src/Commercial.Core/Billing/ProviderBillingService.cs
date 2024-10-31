@@ -457,7 +457,12 @@ public class ProviderBillingService(
         plan.PlanType = command.NewPlan;
         await providerPlanRepository.ReplaceAsync(plan);
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(command.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+
+        if (subscription == null)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
 
         var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
             x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
@@ -484,7 +489,17 @@ public class ProviderBillingService(
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
     {
-        var subscription = await stripeAdapter.SubscriptionGetAsync(command.GatewaySubscriptionId);
+        if (command.Configuration.Any(x => x.SeatsMinimum < 0))
+        {
+            throw new BadRequestException("Provider seat minimums must be at least 0.");
+        }
+
+        var subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
+
+        if (subscription == null)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
@@ -492,11 +507,6 @@ public class ProviderBillingService(
 
         foreach (var newPlanConfiguration in command.Configuration)
         {
-            if (newPlanConfiguration.SeatsMinimum < 0)
-            {
-                throw new BadRequestException("Provider seat minimums must be at least 0.");
-            }
-
             var providerPlan =
                 providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Plan);
 
