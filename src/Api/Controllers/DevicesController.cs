@@ -205,11 +205,6 @@ public class DevicesController : Controller
             throw new NotFoundException();
         }
 
-        if (!device.Active)
-        {
-            return;
-        }
-
         await _deviceService.DeactivateAsync(device);
     }
 

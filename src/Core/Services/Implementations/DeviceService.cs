@@ -43,6 +43,12 @@ public class DeviceService : IDeviceService
 
     public async Task DeactivateAsync(Device device)
     {
+        // already deactivated
+        if (!device.Active)
+        {
+            return;
+        }
+
         device.Active = false;
         device.RevisionDate = DateTime.UtcNow;
         await _deviceRepository.UpsertAsync(device);
