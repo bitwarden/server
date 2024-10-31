@@ -1012,6 +1012,184 @@ public class ProviderBillingServiceTests
 
     #endregion
 
+    #region ChangePlan
+
+    [Theory, BitAutoData]
+    public async Task ChangePlan_NullProviderPlan_ThrowsBadRequestException(
+        ChangeProviderPlanCommand command,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        providerPlanRepository.GetByIdAsync(Arg.Any<Guid>()).Returns((ProviderPlan)null);
+
+        // Act
+        var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.ChangePlan(command));
+
+        // Assert
+        Assert.Equal("Provider plan not found.", actual.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangePlan_ProviderNotFound_DoesNothing(
+        ChangeProviderPlanCommand command,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var existingPlan = new ProviderPlan
+        {
+            Id = command.ProviderPlanId,
+            PlanType = command.NewPlan,
+            PurchasedSeats = 0,
+            AllocatedSeats = 0,
+            SeatMinimum = 0
+        };
+        providerPlanRepository
+            .GetByIdAsync(Arg.Is<Guid>(p => p == command.ProviderPlanId))
+            .Returns(existingPlan);
+
+        // Act
+        await sutProvider.Sut.ChangePlan(command);
+
+        // Assert
+        await providerPlanRepository.Received(0).ReplaceAsync(Arg.Any<ProviderPlan>());
+        await stripeAdapter.Received(0).SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangePlan_SameProviderPlan_DoesNothing(
+        ChangeProviderPlanCommand command,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var existingPlan = new ProviderPlan
+        {
+            Id = command.ProviderPlanId,
+            PlanType = command.NewPlan,
+            PurchasedSeats = 0,
+            AllocatedSeats = 0,
+            SeatMinimum = 0
+        };
+        providerPlanRepository
+            .GetByIdAsync(Arg.Is<Guid>(p => p == command.ProviderPlanId))
+            .Returns(existingPlan);
+
+        // Act
+        await sutProvider.Sut.ChangePlan(command);
+
+        // Assert
+        await providerPlanRepository.Received(0).ReplaceAsync(Arg.Any<ProviderPlan>());
+        await stripeAdapter.Received(0).SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangePlan_ProviderNotFound_ThrowsConflictException(
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        var command = new ChangeProviderPlanCommand(Guid.NewGuid(), PlanType.EnterpriseMonthly);
+        var existingPlan = new ProviderPlan
+        {
+            Id = command.ProviderPlanId,
+            ProviderId = Guid.NewGuid(),
+            PlanType = PlanType.EnterpriseAnnually,
+            PurchasedSeats = 0,
+            AllocatedSeats = 0,
+            SeatMinimum = 0
+        };
+        providerPlanRepository
+            .GetByIdAsync(Arg.Is<Guid>(p => p == command.ProviderPlanId))
+            .Returns(existingPlan);
+
+        providerRepository.GetByIdAsync(Arg.Is(existingPlan.ProviderId)).Returns((Provider)null);
+
+        // Act
+        var actual = await Assert.ThrowsAsync<ConflictException>(async () => await sutProvider.Sut.ChangePlan(command));
+
+        // Assert
+        Assert.Equal("Provider not found.", actual.Message);
+
+        await providerPlanRepository.Received(0).ReplaceAsync(Arg.Any<ProviderPlan>());
+        await stripeAdapter.Received(0).SubscriptionUpdateAsync(Arg.Any<string>(), Arg.Any<SubscriptionUpdateOptions>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ChangePlan_UpdatesSubscriptionCorrectly(
+        Guid providerPlanId,
+        Provider provider,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        // Arrange
+        var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
+        var existingPlan = new ProviderPlan
+        {
+            Id = providerPlanId,
+            ProviderId = provider.Id,
+            PlanType = PlanType.EnterpriseAnnually,
+            PurchasedSeats = 2,
+            AllocatedSeats = 10,
+            SeatMinimum = 8
+        };
+        providerPlanRepository
+            .GetByIdAsync(Arg.Is<Guid>(p => p == providerPlanId))
+            .Returns(existingPlan);
+
+        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
+        providerRepository.GetByIdAsync(Arg.Is(existingPlan.ProviderId)).Returns(provider);
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.SubscriptionGetAsync(Arg.Is(provider.GatewaySubscriptionId))
+            .Returns(new Subscription
+            {
+                Id = provider.GatewaySubscriptionId,
+                Items = new StripeList<SubscriptionItem>
+                {
+                    Data =
+                    [
+                        new SubscriptionItem
+                        {
+                            Id = "si_ent_annual",
+                            Price = new Price { Id = StaticStore.GetPlan(PlanType.EnterpriseAnnually).PasswordManager.StripeProviderPortalSeatPlanId },
+                            Quantity = 10
+                        }
+                    ]
+                }
+            });
+
+        var command = new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly);
+
+        // Act
+        await sutProvider.Sut.ChangePlan(command);
+
+        // Assert
+        await providerPlanRepository.Received(1).ReplaceAsync(Arg.Is<ProviderPlan>(p => p.PlanType == PlanType.EnterpriseMonthly));
+
+        await stripeAdapter.Received(1)
+            .SubscriptionUpdateAsync(
+                Arg.Is(provider.GatewaySubscriptionId),
+                Arg.Is<SubscriptionUpdateOptions>(p => p.Items.Count(si => si.Id == "si_ent_annual" && si.Deleted == true) == 1));
+
+        var newPlanCfg = StaticStore.GetPlan(command.NewPlan);
+        await stripeAdapter.Received(1)
+            .SubscriptionUpdateAsync(
+                Arg.Is(provider.GatewaySubscriptionId),
+                Arg.Is<SubscriptionUpdateOptions>(p =>
+                    p.Items.Count(si =>
+                        si.Price == newPlanCfg.PasswordManager.StripeProviderPortalSeatPlanId &&
+                        si.Deleted == default &&
+                        si.Quantity == 10) == 1));
+
+    }
+
+    #endregion
+
     #region UpdateSeatMinimums
 
     [Theory, BitAutoData]
@@ -1409,5 +1587,6 @@ public class ProviderBillingServiceTests
                     options.Items.ElementAt(0).Id == enterpriseLineItemId &&
                     options.Items.ElementAt(0).Quantity == 70));
     }
+
     #endregion
 }

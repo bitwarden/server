@@ -452,11 +452,6 @@ public class ProviderBillingService(
             return;
         }
 
-        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
-
-        plan.PlanType = command.NewPlan;
-        await providerPlanRepository.ReplaceAsync(plan);
-
         var provider = await providerRepository.GetByIdAsync(plan.ProviderId);
 
         if (provider == null)
@@ -464,7 +459,15 @@ public class ProviderBillingService(
             throw new ConflictException("Provider not found.");
         }
 
+        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
+
+        plan.PlanType = command.NewPlan;
+        await providerPlanRepository.ReplaceAsync(plan);
+
         var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
+
+        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
+            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
 
         var updateOptions = new SubscriptionUpdateOptions
         {
@@ -473,25 +476,16 @@ public class ProviderBillingService(
                 new SubscriptionItemOptions
                 {
                     Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
-                    Quantity = plan.PurchasedSeats is > 0 && plan.AllocatedSeats > plan.SeatMinimum
-                        ? plan.AllocatedSeats
-                        : plan.SeatMinimum
-                }
-            ]
-        };
-
-        var oldSubscriptionItemId = subscription.Items.SingleOrDefault(x =>
-            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId)?.Id;
-
-        if (oldSubscriptionItemId != null)
-        {
-            updateOptions.Items.Add(
+                    Quantity = oldSubscriptionItem!.Quantity
+                },
                 new SubscriptionItemOptions
                 {
-                    Id = oldSubscriptionItemId,
+                    Id = oldSubscriptionItem.Id,
                     Deleted = true
-                });
-        }
+                }
+
+            ]
+        };
 
         await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, updateOptions);
     }
