@@ -110,6 +110,7 @@ public static class RolePermissionMapping
                 Permission.User_Licensing_View,
                 Permission.User_Billing_View,
                 Permission.User_Billing_LaunchGateway,
+                Permission.User_Delete,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
                 Permission.Org_GeneralDetails_View,

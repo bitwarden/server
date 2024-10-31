@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -10,26 +11,29 @@ public class OrganizationDomainService : IOrganizationDomainService
 {
     private readonly IOrganizationDomainRepository _domainRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
     private readonly IMailService _mailService;
+    private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<OrganizationDomainService> _logger;
     private readonly IGlobalSettings _globalSettings;
 
     public OrganizationDomainService(
         IOrganizationDomainRepository domainRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IDnsResolverService dnsResolverService,
         IEventService eventService,
         IMailService mailService,
+        IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
+        TimeProvider timeProvider,
         ILogger<OrganizationDomainService> logger,
         IGlobalSettings globalSettings)
     {
         _domainRepository = domainRepository;
         _organizationUserRepository = organizationUserRepository;
-        _dnsResolverService = dnsResolverService;
         _eventService = eventService;
         _mailService = mailService;
+        _verifyOrganizationDomainCommand = verifyOrganizationDomainCommand;
+        _timeProvider = timeProvider;
         _logger = logger;
         _globalSettings = globalSettings;
     }
@@ -37,7 +41,7 @@ public class OrganizationDomainService : IOrganizationDomainService
     public async Task ValidateOrganizationsDomainAsync()
     {
         //Date should be set 1 hour behind to ensure it selects all domains that should be verified
-        var runDate = DateTime.UtcNow.AddHours(-1);
+        var runDate = _timeProvider.GetUtcNow().UtcDateTime.AddHours(-1);
 
         var verifiableDomains = await _domainRepository.GetManyByNextRunDateAsync(runDate);
 
@@ -45,43 +49,17 @@ public class OrganizationDomainService : IOrganizationDomainService
 
         foreach (var domain in verifiableDomains)
         {
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "Attempting verification for organization {OrgId} with domain {Domain}",
+                domain.OrganizationId,
+                domain.DomainName);
+
             try
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Attempting verification for organization {OrgId} with domain {Domain}", domain.OrganizationId, domain.DomainName);
-
-                var status = await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt);
-                if (status)
-                {
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
-
-                    // Update entry on OrganizationDomain table
-                    domain.SetLastCheckedDate();
-                    domain.SetVerifiedDate();
-                    domain.SetJobRunCount();
-                    await _domainRepository.ReplaceAsync(domain);
-
-                    await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified,
-                        EventSystemUser.DomainVerification);
-                }
-                else
-                {
-                    // Update entry on OrganizationDomain table
-                    domain.SetLastCheckedDate();
-                    domain.SetJobRunCount();
-                    domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
-                    await _domainRepository.ReplaceAsync(domain);
-
-                    await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
-                        EventSystemUser.DomainVerification);
-                    _logger.LogInformation(Constants.BypassFiltersEventId, "Verification for organization {OrgId} with domain {Domain} failed",
-                        domain.OrganizationId, domain.DomainName);
-                }
+                _ = await _verifyOrganizationDomainCommand.SystemVerifyOrganizationDomainAsync(domain);
             }
             catch (Exception ex)
             {
-                // Update entry on OrganizationDomain table
-                domain.SetLastCheckedDate();
-                domain.SetJobRunCount();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
 
@@ -126,12 +104,6 @@ public class OrganizationDomainService : IOrganizationDomainService
         {
             _logger.LogError(ex, "Organization domain maintenance failed");
         }
-    }
-
-    public async Task<bool> HasVerifiedDomainsAsync(Guid orgId)
-    {
-        var orgDomains = await _domainRepository.GetDomainsByOrganizationIdAsync(orgId);
-        return orgDomains.Any(od => od.VerifiedDate != null);
     }
 
     private async Task<List<string>> GetAdminEmailsAsync(Guid organizationId)

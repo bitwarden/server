@@ -73,6 +73,7 @@ public class OrganizationService : IOrganizationService
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -107,7 +108,8 @@ public class OrganizationService : IOrganizationService
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -142,6 +144,7 @@ public class OrganizationService : IOrganizationService
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -705,9 +708,15 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = license.UseSecretsManager,
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
-            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion,
-            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems,
         };
+
+        // These fields are being removed from consideration when processing
+        // licenses.
+        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
+        {
+            organization.LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
+            organization.AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+        }
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 
@@ -1074,7 +1083,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true))
+        if (!invitedAreAllOwners && !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1524,149 +1533,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
-    {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, deletingUserId);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-    }
-
-    [Obsolete("IRemoveOrganizationUserCommand should be used instead. To be removed by EC-607.")]
-    public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId,
-        EventSystemUser systemUser)
-    {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
-    }
-
-    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != organizationId)
-        {
-            throw new BadRequestException("User not valid.");
-        }
-
-        if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
-        {
-            throw new BadRequestException("You cannot remove yourself.");
-        }
-
-        if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue &&
-            !await _currentContext.OrganizationOwner(organizationId))
-        {
-            throw new BadRequestException("Only owners can delete other owners.");
-        }
-
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        await _organizationUserRepository.DeleteAsync(orgUser);
-
-        if (orgUser.UserId.HasValue)
-        {
-            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-        }
-
-        return orgUser;
-    }
-
-    public async Task RemoveUserAsync(Guid organizationId, Guid userId)
-    {
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        if (orgUser == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { orgUser.Id }))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        await _organizationUserRepository.DeleteAsync(orgUser);
-        await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-
-        if (orgUser.UserId.HasValue)
-        {
-            await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-        }
-    }
-
-    public async Task<List<Tuple<OrganizationUser, string>>> RemoveUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUsersId,
-        Guid? deletingUserId)
-    {
-        var orgUsers = await _organizationUserRepository.GetManyAsync(organizationUsersId);
-        var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
-            .ToList();
-
-        if (!filteredUsers.Any())
-        {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        var deletingUserIsOwner = false;
-        if (deletingUserId.HasValue)
-        {
-            deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
-        }
-
-        var result = new List<Tuple<OrganizationUser, string>>();
-        var deletedUserIds = new List<Guid>();
-        foreach (var orgUser in filteredUsers)
-        {
-            try
-            {
-                if (deletingUserId.HasValue && orgUser.UserId == deletingUserId)
-                {
-                    throw new BadRequestException("You cannot remove yourself.");
-                }
-
-                if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
-                {
-                    throw new BadRequestException("Only owners can delete other owners.");
-                }
-
-                await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
-
-                if (orgUser.UserId.HasValue)
-                {
-                    await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
-                }
-                result.Add(Tuple.Create(orgUser, ""));
-                deletedUserIds.Add(orgUser.Id);
-            }
-            catch (BadRequestException e)
-            {
-                result.Add(Tuple.Create(orgUser, e.Message));
-            }
-
-            await _organizationUserRepository.DeleteManyAsync(deletedUserIds);
-        }
-
-        return result;
-    }
-
-    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
-    {
-        var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
-        var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
-        bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
-        if (!hasOtherOwner && includeProvider)
-        {
-            return (await _providerUserRepository.GetManyByOrganizationAsync(organizationId, ProviderUserStatusType.Confirmed)).Any();
-        }
-        return hasOtherOwner;
-    }
-
     public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
     {
         // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
@@ -1963,13 +1829,6 @@ public class OrganizationService : IOrganizationService
         await _groupRepository.UpdateUsersAsync(group.Id, users);
     }
 
-    private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)
-    {
-        var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
-            OrganizationUserType.Owner);
-        return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
-    }
-
     private async Task DeleteAndPushUserRegistrationAsync(Guid organizationId, Guid userId)
     {
         var devices = await GetUserDeviceIdsAsync(userId);
@@ -1979,12 +1838,12 @@ public class OrganizationService : IOrganizationService
     }
 
 
-    private async Task<IEnumerable<KeyValuePair<string, DeviceType>>> GetUserDeviceIdsAsync(Guid userId)
+    private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
         return devices
             .Where(d => !string.IsNullOrWhiteSpace(d.PushToken))
-            .Select(d => new KeyValuePair<string, DeviceType>(d.Id.ToString(), d.Type));
+            .Select(d => d.Id.ToString());
     }
 
     public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
@@ -2274,7 +2133,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Already revoked.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -2295,7 +2154,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Users invalid.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUserIds))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
