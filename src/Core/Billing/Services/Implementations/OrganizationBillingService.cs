@@ -71,7 +71,7 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
-        var isEligibleForSelfHost = await IsEligibleForSelfHost(organization, subscription);
+        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
         var isManaged = organization.Status == OrganizationStatusType.Managed;
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
 
@@ -339,26 +339,12 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
-    private async Task<bool> IsEligibleForSelfHost(
-        Organization organization,
-        Subscription? organizationSubscription)
+    private static bool IsEligibleForSelfHost(
+        Organization organization)
     {
-        if (organization.Status != OrganizationStatusType.Managed)
-        {
-            return organization.Plan.Contains("Families") ||
-                   organization.Plan.Contains("Enterprise") && IsActive(organizationSubscription);
-        }
+        var eligibleSelfHostPlans = StaticStore.Plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
 
-        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
-
-        var providerSubscription = await subscriberService.GetSubscriptionOrThrow(provider);
-
-        return organization.Plan.Contains("Enterprise") && IsActive(providerSubscription);
-
-        bool IsActive(Subscription? subscription) => subscription?.Status is
-            StripeConstants.SubscriptionStatus.Active or
-            StripeConstants.SubscriptionStatus.Trialing or
-            StripeConstants.SubscriptionStatus.PastDue;
+        return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
     private static bool IsOnSecretsManagerStandalone(
