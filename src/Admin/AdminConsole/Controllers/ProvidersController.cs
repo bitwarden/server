@@ -291,21 +291,15 @@ public class ProvidersController : Controller
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
-        if (provider.IsBillable() && providerPlans.Count == 0)
-        {
-            return Conflict("Provider must have at least one plan to be billable.");
-        }
-
         switch (provider.Type)
         {
             case ProviderType.Msp:
                 var updateMspSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
                     provider.Id,
-                    new Dictionary<PlanType, int>
-                    {
-                        { PlanType.TeamsMonthly, model.TeamsMonthlySeatMinimum },
-                        { PlanType.EnterpriseMonthly, model.EnterpriseMonthlySeatMinimum }
-                    });
+                    [
+                        (Plan: PlanType.TeamsMonthly, SeatsMinimum: model.TeamsMonthlySeatMinimum),
+                        (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
+                    ]);
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
                 break;
             case ProviderType.MultiOrganizationEnterprise:
@@ -321,10 +315,9 @@ public class ProvidersController : Controller
                     // 2. Update the seat minimums.
                     var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
                         provider.Id,
-                        new Dictionary<PlanType, int>
-                        {
-                            { model.Plan!.Value, model.EnterpriseMinimumSeats!.Value }
-                        });
+                        [
+                            (Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)
+                        ]);
                     await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
                     break;
                 }

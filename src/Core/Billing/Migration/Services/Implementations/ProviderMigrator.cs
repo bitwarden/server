@@ -308,11 +308,10 @@ public class ProviderMigrator(
                 .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly)?
                 .SeatMinimum ?? 0;
 
-            var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(provider.Id, new Dictionary<PlanType, int>
-            {
-                { PlanType.EnterpriseMonthly, enterpriseSeatMinimum },
-                { PlanType.TeamsMonthly, teamsSeatMinimum }
-            });
+            var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(provider.Id, [
+                (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: enterpriseSeatMinimum),
+                (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum)
+            ]);
             await providerBillingService.UpdateSeatMinimums(updateSeatMinimumsCommand);
 
             logger.LogInformation(

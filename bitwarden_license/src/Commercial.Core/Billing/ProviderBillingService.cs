@@ -483,7 +483,6 @@ public class ProviderBillingService(
                     Id = oldSubscriptionItem.Id,
                     Deleted = true
                 }
-
             ]
         };
 
@@ -507,25 +506,25 @@ public class ProviderBillingService(
 
         foreach (var newPlanConfiguration in command.Configuration)
         {
-            if (newPlanConfiguration.Value < 0)
+            if (newPlanConfiguration.SeatsMinimum < 0)
             {
                 throw new BadRequestException("Provider seat minimums must be at least 0.");
             }
 
             var providerPlan =
-                providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Key);
+                providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Plan);
 
-            if (providerPlan.SeatMinimum != newPlanConfiguration.Value)
+            if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
             {
-                var priceId = StaticStore.GetPlan(newPlanConfiguration.Key).PasswordManager
+                var priceId = StaticStore.GetPlan(newPlanConfiguration.Plan).PasswordManager
                     .StripeProviderPortalSeatPlanId;
                 var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
 
                 if (providerPlan.PurchasedSeats == 0)
                 {
-                    if (providerPlan.AllocatedSeats > newPlanConfiguration.Value)
+                    if (providerPlan.AllocatedSeats > newPlanConfiguration.SeatsMinimum)
                     {
-                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - newPlanConfiguration.Value;
+                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - newPlanConfiguration.SeatsMinimum;
 
                         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
                         {
@@ -540,17 +539,17 @@ public class ProviderBillingService(
                         {
                             Id = subscriptionItem.Id,
                             Price = priceId,
-                            Quantity = newPlanConfiguration.Value
+                            Quantity = newPlanConfiguration.SeatsMinimum
                         });
                     }
                 }
                 else
                 {
-                    var totalEnterpriseSeats = providerPlan.SeatMinimum + providerPlan.PurchasedSeats;
+                    var totalSeats = providerPlan.SeatMinimum + providerPlan.PurchasedSeats;
 
-                    if (newPlanConfiguration.Value <= totalEnterpriseSeats)
+                    if (newPlanConfiguration.SeatsMinimum <= totalSeats)
                     {
-                        providerPlan.PurchasedSeats = totalEnterpriseSeats - newPlanConfiguration.Value;
+                        providerPlan.PurchasedSeats = totalSeats - newPlanConfiguration.SeatsMinimum;
                     }
                     else
                     {
@@ -559,12 +558,12 @@ public class ProviderBillingService(
                         {
                             Id = subscriptionItem.Id,
                             Price = priceId,
-                            Quantity = newPlanConfiguration.Value
+                            Quantity = newPlanConfiguration.SeatsMinimum
                         });
                     }
                 }
 
-                providerPlan.SeatMinimum = newPlanConfiguration.Value;
+                providerPlan.SeatMinimum = newPlanConfiguration.SeatsMinimum;
 
                 await providerPlanRepository.ReplaceAsync(providerPlan);
             }

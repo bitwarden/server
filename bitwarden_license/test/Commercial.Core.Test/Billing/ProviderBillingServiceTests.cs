@@ -1217,11 +1217,10 @@ public class ProviderBillingServiceTests
         providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         var command = new UpdateProviderSeatMinimumsCommand(
             provider.Id,
-            new Dictionary<PlanType, int>
-            {
-                { PlanType.TeamsMonthly, -10 },
-                { PlanType.EnterpriseMonthly, 50 }
-            });
+            [
+                (PlanType.TeamsMonthly, -10),
+                (PlanType.EnterpriseMonthly, 50)
+            ]);
 
         // Act
         var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(command));
@@ -1278,7 +1277,10 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-            new Dictionary<PlanType, int> { { PlanType.EnterpriseMonthly, 30 }, { PlanType.TeamsMonthly, 20 } });
+        [
+            (PlanType.EnterpriseMonthly, 30),
+            (PlanType.TeamsMonthly, 20)
+        ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1348,11 +1350,10 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-            new Dictionary<PlanType, int>
-            {
-                { PlanType.EnterpriseMonthly, 70 },
-                { PlanType.TeamsMonthly, 50 }
-            });
+        [
+            (PlanType.EnterpriseMonthly, 70),
+            (PlanType.TeamsMonthly, 50)
+        ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1422,11 +1423,10 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-            new Dictionary<PlanType, int>
-            {
-                { PlanType.EnterpriseMonthly, 60 },
-                { PlanType.TeamsMonthly, 60 }
-            });
+        [
+            (PlanType.EnterpriseMonthly, 60),
+            (PlanType.TeamsMonthly, 60)
+        ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1490,11 +1490,10 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-            new Dictionary<PlanType, int>
-            {
-                { PlanType.EnterpriseMonthly, 80 },
-                { PlanType.TeamsMonthly, 80 }
-            });
+        [
+            (PlanType.EnterpriseMonthly, 80),
+            (PlanType.TeamsMonthly, 80)
+        ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
@@ -1564,11 +1563,10 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(provider.Id,
-            new Dictionary<PlanType, int>
-            {
-                { PlanType.TeamsMonthly, 30 },
-                { PlanType.EnterpriseMonthly, 70 }
-            });
+        [
+            (PlanType.EnterpriseMonthly, 70),
+            (PlanType.TeamsMonthly, 30)
+        ]);
 
         // Act
         await sutProvider.Sut.UpdateSeatMinimums(command);
