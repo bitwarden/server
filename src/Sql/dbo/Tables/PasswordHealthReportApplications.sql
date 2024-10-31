@@ -8,6 +8,8 @@ CREATE TABLE [dbo].[PasswordHealthReportApplications]
         CONSTRAINT [PK_PasswordHealthReportApplications] PRIMARY KEY CLUSTERED ([Id] ASC),
         CONSTRAINT [FK_PasswordHealthApplications_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     );
+GO
 
 CREATE NONCLUSTERED INDEX [IX_PasswordHealthReportApplications_OrganizationId]
         ON [dbo].[PasswordHealthReportApplications] (OrganizationId);
+GO

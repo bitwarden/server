@@ -8,4 +8,3 @@ AS
     SET NOCOUNT ON;
     INSERT INTO dbo.PasswordHealthReportApplications ( Id, OrganizationId, Uri, CreationDate, RevisionDate ) 
     VALUES ( @Id, @OrganizationId, @Uri, @CreationDate, @RevisionDate )
-GO

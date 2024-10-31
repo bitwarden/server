@@ -14,4 +14,3 @@ AS
         RevisionDate
     FROM [dbo].[PasswordHealthReportApplicationsView]
     WHERE OrganizationId = @OrganizationId;
-GO
