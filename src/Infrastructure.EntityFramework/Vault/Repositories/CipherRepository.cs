@@ -336,7 +336,16 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<bool> GetCanManageByIdAsync(Guid userId, Guid cipherId) => throw new NotImplementedException();
+    public async Task<bool> GetCanManageByIdAsync(Guid userId, Guid cipherId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherReadCanManageByIdUserIdQuery(userId, cipherId);
+            var canEdit = await query.Run(dbContext).AnyAsync();
+            return canEdit;
+        }
+    }
 
     public async Task<ICollection<Core.Vault.Entities.Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
     {

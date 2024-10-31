@@ -996,7 +996,6 @@ public class CipherService : ICipherService
 
     private async Task<bool> UserCanManageAsync(Cipher cipher, Guid userId)
     {
-        var check = await _cipherRepository.GetCanManageByIdAsync(userId, cipher.Id);
         return await _cipherRepository.GetCanManageByIdAsync(userId, cipher.Id);
     }
 
