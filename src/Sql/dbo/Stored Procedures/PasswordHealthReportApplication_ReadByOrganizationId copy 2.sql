@@ -1,4 +1,4 @@
-CREATE PROCEDURE dbo.PasswordHealthReportApplications_ReadByOrganizationId
+CREATE PROCEDURE dbo.PasswordHealthReportApplication_ReadByOrganizationId
     @OrganizationId UNIQUEIDENTIFIER
 AS
     SET NOCOUNT ON;
@@ -12,5 +12,5 @@ AS
         Uri,
         CreationDate,
         RevisionDate
-    FROM [dbo].[PasswordHealthReportApplicationsView]
+    FROM [dbo].[PasswordHealthReportApplicationView]
     WHERE OrganizationId = @OrganizationId;

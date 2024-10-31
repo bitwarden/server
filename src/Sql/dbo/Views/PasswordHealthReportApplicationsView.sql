@@ -1,2 +1,2 @@
-CREATE VIEW [dbo].[PasswordHealthReportApplicationsView] AS
-    SELECT * FROM [dbo].[PasswordHealthReportApplications]
+CREATE VIEW [dbo].[PasswordHealthReportApplicationView] AS
+    SELECT * FROM [dbo].[PasswordHealthReportApplication]

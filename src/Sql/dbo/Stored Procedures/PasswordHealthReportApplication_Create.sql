@@ -1,4 +1,4 @@
-CREATE PROCEDURE dbo.PasswordHealthReportApplications_Create
+CREATE PROCEDURE dbo.PasswordHealthReportApplication_Create
     @Id UNIQUEIDENTIFIER OUTPUT,
     @OrganizationId UNIQUEIDENTIFIER,
     @Uri nvarchar(max),
@@ -6,5 +6,5 @@ CREATE PROCEDURE dbo.PasswordHealthReportApplications_Create
     @RevisionDate DATETIME2(7)
 AS
     SET NOCOUNT ON;
-    INSERT INTO dbo.PasswordHealthReportApplications ( Id, OrganizationId, Uri, CreationDate, RevisionDate ) 
+    INSERT INTO dbo.PasswordHealthReportApplication ( Id, OrganizationId, Uri, CreationDate, RevisionDate ) 
     VALUES ( @Id, @OrganizationId, @Uri, @CreationDate, @RevisionDate )

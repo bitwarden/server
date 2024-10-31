@@ -11,7 +11,7 @@ public partial class PasswordHealthReportApplication : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "PasswordHealthReportApplications",
+            name: "PasswordHealthReportApplication",
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
@@ -22,22 +22,22 @@ public partial class PasswordHealthReportApplication : Migration
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_PasswordHealthReportApplications", x => x.Id);
+                table.PrimaryKey("PK_PasswordHealthReportApplication", x => x.Id);
                 table.ForeignKey(
-                    name: "FK_PasswordHealthReportApplications_Organization_OrganizationId",
+                    name: "FK_PasswordHealthReportApplication_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id");
             });
         migrationBuilder.CreateIndex(
-            name: "IX_PasswordHealthReportApplications_OrganizationId",
-            table: "PasswordHealthReportApplications",
+            name: "IX_PasswordHealthReportApplication_OrganizationId",
+            table: "PasswordHealthReportApplication",
             column: "OrganizationId");
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(name: "PasswordHealthReportApplications");
+        migrationBuilder.DropTable(name: "PasswordHealthReportApplication");
     }
 }

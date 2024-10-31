@@ -11,7 +11,7 @@ public partial class PasswordHealthReportApplication : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.CreateTable(
-            name: "PasswordHealthReportApplications",
+            name: "PasswordHealthReportApplication",
             columns: table => new
             {
                 Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
@@ -23,9 +23,9 @@ public partial class PasswordHealthReportApplication : Migration
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_PasswordHealthReportApplications", x => x.Id);
+                table.PrimaryKey("PK_PasswordHealthReportApplication", x => x.Id);
                 table.ForeignKey(
-                    name: "FK_PasswordHealthReportApplications_Organization_OrganizationId",
+                    name: "FK_PasswordHealthReportApplication_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id");
@@ -33,8 +33,8 @@ public partial class PasswordHealthReportApplication : Migration
             .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.CreateIndex(
-            name: "IX_PasswordHealthReportApplications_OrganizationId",
-            table: "PasswordHealthReportApplications",
+            name: "IX_PasswordHealthReportApplication_OrganizationId",
+            table: "PasswordHealthReportApplication",
             column: "OrganizationId");
     }
 
@@ -42,6 +42,6 @@ public partial class PasswordHealthReportApplication : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(name: "PasswordHealthReportApplications");
+        migrationBuilder.DropTable(name: "PasswordHealthReportApplication");
     }
 }
