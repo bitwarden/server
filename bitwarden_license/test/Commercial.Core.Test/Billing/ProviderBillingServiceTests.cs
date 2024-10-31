@@ -1159,21 +1159,6 @@ public class ProviderBillingServiceTests
     #region UpdateSeatMinimums
 
     [Theory, BitAutoData]
-    public async Task UpdateSeatMinimums_NullProvider_ThrowsArgumentNullException(
-        UpdateProviderSeatMinimumsCommand command,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns((Provider)null);
-
-        // Act
-        var actual = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSeatMinimums(command));
-
-        // Assert
-        Assert.Equal("Provider not found.", actual.Message);
-    }
-
-    [Theory, BitAutoData]
     public async Task UpdateSeatMinimums_NegativeSeatMinimum_ThrowsBadRequestException(
         Provider provider,
         SutProvider<ProviderBillingService> sutProvider)

@@ -484,18 +484,11 @@ public class ProviderBillingService(
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
     {
-        var provider = await providerRepository.GetByIdAsync(command.Id);
-
-        if (provider == null)
-        {
-            throw new BadRequestException("Provider not found.");
-        }
-
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.SubscriptionGetAsync(command.GatewaySubscriptionId);
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
-        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+        var providerPlans = await providerPlanRepository.GetByProviderId(command.Id);
 
         foreach (var newPlanConfiguration in command.Configuration)
         {
@@ -564,7 +557,7 @@ public class ProviderBillingService(
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
         }
     }
