@@ -25,8 +25,8 @@ public class UsersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
-    private readonly IFeatureService _featureService;
     private readonly IUserService _userService;
+    private readonly IFeatureService _featureService;
 
     public UsersController(
         IUserRepository userRepository,
@@ -35,8 +35,8 @@ public class UsersController : Controller
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IFeatureService featureService,
-        IUserService userService)
+        IUserService userService,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -44,8 +44,8 @@ public class UsersController : Controller
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
-        _featureService = featureService;
         _userService = userService;
+        _featureService = featureService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -64,22 +64,8 @@ public class UsersController : Controller
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
 
-        var userModels = new List<UserViewModel>();
-
-        if (_featureService.IsEnabled(FeatureFlagKeys.MembersTwoFAQueryOptimization))
-        {
-            var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
-
-            userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
-        }
-        else
-        {
-            foreach (var user in users)
-            {
-                var isTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
-                userModels.Add(UserViewModel.MapViewModel(user, isTwoFactorEnabled));
-            }
-        }
+        var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
+        var userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
 
         return View(new UsersModel
         {
@@ -103,8 +89,8 @@ public class UsersController : Controller
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
 
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-
-        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers));
+        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -120,7 +106,8 @@ public class UsersController : Controller
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
+        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
     }
 
     [HttpPost]
@@ -173,5 +160,13 @@ public class UsersController : Controller
         }
 
         return RedirectToAction("Index");
+    }
+
+    // TODO: Feature flag to be removed in PM-14207
+    private async Task<bool?> AccountDeprovisioningEnabled(Guid userId)
+    {
+        return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            ? await _userService.IsManagedByAnyOrganizationAsync(userId)
+            : null;
     }
 }

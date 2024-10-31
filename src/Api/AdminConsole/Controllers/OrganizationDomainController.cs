@@ -2,11 +2,13 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -99,7 +101,7 @@ public class OrganizationDomainController : Controller
             throw new NotFoundException();
         }
 
-        organizationDomain = await _verifyOrganizationDomainCommand.VerifyOrganizationDomainAsync(organizationDomain);
+        organizationDomain = await _verifyOrganizationDomainCommand.UserVerifyOrganizationDomainAsync(organizationDomain);
 
         return new OrganizationDomainResponseModel(organizationDomain);
     }
@@ -131,6 +133,20 @@ public class OrganizationDomainController : Controller
         }
 
         return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
+    }
+
+    [AllowAnonymous]
+    [HttpPost("domain/sso/verified")]
+    [RequireFeature(FeatureFlagKeys.VerifiedSsoDomainEndpoint)]
+    public async Task<VerifiedOrganizationDomainSsoDetailsResponseModel> GetVerifiedOrgDomainSsoDetailsAsync(
+        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
+    {
+        var ssoResults = (await _organizationDomainRepository
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email))
+            .ToList();
+
+        return new VerifiedOrganizationDomainSsoDetailsResponseModel(
+            ssoResults.Select(ssoResult => new VerifiedOrganizationDomainSsoDetailResponseModel(ssoResult)));
     }
 
     private async Task ValidateOrganizationAccessAsync(Guid orgIdGuid)
