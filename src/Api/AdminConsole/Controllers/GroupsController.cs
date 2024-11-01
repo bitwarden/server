@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
-[Route("organizations/{orgId}")]
+[Route("organizations/{orgId}/groups")]
 [Authorize("Application")]
 public class GroupsController : Controller
 {
@@ -65,7 +65,7 @@ public class GroupsController : Controller
         _collectionRepository = collectionRepository;
     }
 
-    [HttpGet("groups/{id}")]
+    [HttpGet("{id}")]
     public async Task<GroupResponseModel> Get(string orgId, string id)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -77,7 +77,7 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpGet("groups/{id}/details")]
+    [HttpGet("{id}/details")]
     public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
@@ -89,7 +89,7 @@ public class GroupsController : Controller
         return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
     }
 
-    [HttpGet("groups")]
+    [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroups(Guid orgId)
     {
         var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
@@ -110,7 +110,7 @@ public class GroupsController : Controller
         return new ListResponseModel<GroupDetailsResponseModel>(detailResponses);
     }
 
-    [HttpGet("group-details")]
+    [HttpGet("details")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
     {
         var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAllDetails);
@@ -124,7 +124,7 @@ public class GroupsController : Controller
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 
-    [HttpGet("groups/{id}/users")]
+    [HttpGet("{id}/users")]
     public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
     {
         var idGuid = new Guid(id);
@@ -138,7 +138,7 @@ public class GroupsController : Controller
         return groupIds;
     }
 
-    [HttpPost("groups")]
+    [HttpPost("")]
     public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
         if (!await _currentContext.ManageGroups(orgId))
@@ -166,8 +166,8 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpPut("groups/{id}")]
-    [HttpPost("groups/{id}")]
+    [HttpPut("{id}")]
+    [HttpPost("{id}")]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         if (!await _currentContext.ManageGroups(orgId))
@@ -241,8 +241,8 @@ public class GroupsController : Controller
         return new GroupResponseModel(group);
     }
 
-    [HttpDelete("groups/{id}")]
-    [HttpPost("groups/{id}/delete")]
+    [HttpDelete("{id}")]
+    [HttpPost("{id}/delete")]
     public async Task Delete(string orgId, string id)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
@@ -254,8 +254,8 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteAsync(group);
     }
 
-    [HttpDelete("groups/")]
-    [HttpPost("groups/delete")]
+    [HttpDelete("")]
+    [HttpPost("delete")]
     public async Task BulkDelete([FromBody] GroupBulkRequestModel model)
     {
         var groups = await _groupRepository.GetManyByManyIds(model.Ids);
@@ -271,8 +271,8 @@ public class GroupsController : Controller
         await _deleteGroupCommand.DeleteManyAsync(groups);
     }
 
-    [HttpDelete("groups/{id}/user/{orgUserId}")]
-    [HttpPost("groups/{id}/delete-user/{orgUserId}")]
+    [HttpDelete("{id}/user/{orgUserId}")]
+    [HttpPost("{id}/delete-user/{orgUserId}")]
     public async Task Delete(string orgId, string id, string orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
