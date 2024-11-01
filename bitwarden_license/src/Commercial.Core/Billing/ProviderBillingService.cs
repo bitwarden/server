@@ -457,9 +457,12 @@ public class ProviderBillingService(
         plan.PlanType = command.NewPlan;
         await providerPlanRepository.ReplaceAsync(plan);
 
-        var subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
-
-        if (subscription == null)
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+        }
+        catch (InvalidOperationException)
         {
             throw new ConflictException("Subscription not found.");
         }
@@ -494,9 +497,12 @@ public class ProviderBillingService(
             throw new BadRequestException("Provider seat minimums must be at least 0.");
         }
 
-        var subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
-
-        if (subscription == null)
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
+        }
+        catch (InvalidOperationException)
         {
             throw new ConflictException("Subscription not found.");
         }

@@ -89,7 +89,8 @@ public class StripeAdapter : IStripeAdapter
         {
             return subscription;
         }
-        return null;
+
+        throw new InvalidOperationException("Subscription does not belong to the provider.");
     }
 
     public Task<Stripe.Subscription> SubscriptionUpdateAsync(string id,
