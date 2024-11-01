@@ -545,7 +545,7 @@ public class AccountsControllerTests : IDisposable
 
         var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
 
-        Assert.Equal("Accounts managed by an organization cannot be deleted.", result.Message);
+        Assert.Equal("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
     }
 
     [Fact]
