@@ -69,14 +69,11 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
-        if (customer == null || subscription == null)
-        {
-            return OrganizationMetadata.Default();
-        }
-
+        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
+        var isManaged = organization.Status == OrganizationStatusType.Managed;
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        return new OrganizationMetadata(isOnSecretsManagerStandalone);
+        return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone);
     }
 
     public async Task UpdatePaymentMethod(
@@ -340,11 +337,24 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
+    private static bool IsEligibleForSelfHost(
+        Organization organization)
+    {
+        var eligibleSelfHostPlans = StaticStore.Plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
+
+        return eligibleSelfHostPlans.Contains(organization.PlanType);
+    }
+
     private static bool IsOnSecretsManagerStandalone(
         Organization organization,
-        Customer customer,
-        Subscription subscription)
+        Customer? customer,
+        Subscription? subscription)
     {
+        if (customer == null || subscription == null)
+        {
+            return false;
+        }
+
         var plan = StaticStore.GetPlan(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)

@@ -253,6 +253,9 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser1.Permissions, result.Permissions);
         Assert.Equal(organization.SmSeats, result.SmSeats);
         Assert.Equal(organization.SmServiceAccounts, result.SmServiceAccounts);
+        Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
+        Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
+        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         Assert.Equal(organization.LimitCollectionCreationDeletion, result.LimitCollectionCreationDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
     }

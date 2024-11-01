@@ -196,8 +196,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
-    public async Task<Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>>
-        GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -206,9 +205,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
-            var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
+            var organizationUserUserDetails = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
             var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
-            return new Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>(user, collections);
+            return (organizationUserUserDetails, collections);
         }
     }
 

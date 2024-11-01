@@ -194,7 +194,7 @@ public class AccountsControllerTests : IDisposable
             () => _sut.PostEmailToken(new EmailTokenRequestModel())
         );
 
-        Assert.Equal("Accounts managed by an organization cannot change email.", result.Message);
+        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
     }
 
     [Fact]
@@ -260,7 +260,7 @@ public class AccountsControllerTests : IDisposable
             () => _sut.PostEmail(new EmailRequestModel())
         );
 
-        Assert.Equal("Accounts managed by an organization cannot change email.", result.Message);
+        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
     }
 
     [Fact]
