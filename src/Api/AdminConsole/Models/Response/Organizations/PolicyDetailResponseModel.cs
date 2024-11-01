@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.AdminConsole.Models.Api.Response;
+namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class PolicyDetailResponseModel : PolicyResponseModel
 {
