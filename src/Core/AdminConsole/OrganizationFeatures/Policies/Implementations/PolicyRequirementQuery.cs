@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -7,22 +8,25 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
-public class PolicyRequirementsQuery
+public class PolicyRequirementQuery : IPolicyRequirementQuery
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly IEnumerable<IPolicyRequirementDefinition<IPolicyRequirement>> _policyRequirementDefinitions;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
 
-    public PolicyRequirementsQuery()
+    public PolicyRequirementQuery()
     {
         // TODO: deps
     }
 
-
-    public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
+    // Note: PolicyType parameter can be removed once legacy uses are updated
+    public async Task<T> GetAsync<T>(Guid userId, PolicyType type) where T : IPolicyRequirement
     {
-        var definition = _policyRequirementDefinitions.SingleOrDefault(def => def is IPolicyRequirementDefinition<T>);
+        var definition = _policyRequirementDefinitions.SingleOrDefault(def =>
+            def is IPolicyRequirementDefinition<T> &&
+            def.Type == type);
+
         if (definition is null)
         {
             throw new BadRequestException("No Policy Requirement Definition found for " + typeof(T));

@@ -34,6 +34,7 @@ public class PolicyService : IPolicyService
     private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -48,7 +49,9 @@ public class PolicyService : IPolicyService
         IFeatureService featureService,
         ISavePolicyCommand savePolicyCommand,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        IPolicyRequirementQuery policyRequirementQuery)
+
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -63,6 +66,7 @@ public class PolicyService : IPolicyService
         _savePolicyCommand = savePolicyCommand;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task SaveAsync(Policy policy, Guid? savingUserId)
@@ -147,6 +151,12 @@ public class PolicyService : IPolicyService
 
     public async Task<bool> AnyPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.Pm14439AddPolicyRequirements))
+        {
+            var requirement = await _policyRequirementQuery.GetAsync<IPolicyRequirement>(userId, policyType);
+            return requirement.AppliesToUser;
+        }
+
         var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minStatus);
         return result.Any();
     }
