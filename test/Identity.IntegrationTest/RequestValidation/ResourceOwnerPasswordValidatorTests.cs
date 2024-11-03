@@ -5,7 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -237,6 +237,11 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
             MasterPasswordHash = DefaultPassword
         });
         var userManager = factory.GetService<UserManager<User>>();
+        await factory.RegisterAsync(new RegisterRequestModel
+        {
+            Email = DefaultUsername,
+            MasterPasswordHash = DefaultPassword
+        });
         var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
 
