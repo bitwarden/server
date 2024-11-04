@@ -26,7 +26,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
