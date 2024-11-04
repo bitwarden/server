@@ -23,7 +23,7 @@ public interface ICurrentContext
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
-    ClientType ClientType { get; set; }
+    IdentityClientType IdentityClientType { get; set; }
     bool IsBot { get; set; }
     bool MaybeBot { get; set; }
     int? BotScore { get; set; }
@@ -36,8 +36,6 @@ public interface ICurrentContext
 
 
     Task<bool> OrganizationUser(Guid orgId);
-    [Obsolete("Manager role is deprecated after Flexible Collections.")]
-    Task<bool> OrganizationManager(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);
     Task<bool> OrganizationOwner(Guid orgId);
     Task<bool> OrganizationCustom(Guid orgId);
@@ -50,6 +48,7 @@ public interface ICurrentContext
     Task<bool> ManagePolicies(Guid orgId);
     Task<bool> ManageSso(Guid orgId);
     Task<bool> ManageUsers(Guid orgId);
+    Task<bool> AccessMembersTab(Guid orgId);
     Task<bool> ManageScim(Guid orgId);
     Task<bool> ManageResetPassword(Guid orgId);
     Task<bool> ViewSubscription(Guid orgId);

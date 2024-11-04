@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
@@ -39,10 +40,8 @@ public interface IUserService
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
-    Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
-        IOrganizationService organizationService);
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode,
-        IOrganizationService organizationService);
+    Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
+    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
     Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
@@ -65,6 +64,7 @@ public interface IUserService
     Task<bool> CheckPasswordAsync(User user, string password);
     Task<bool> CanAccessPremium(ITwoFactorProvidersUser user);
     Task<bool> HasPremiumFromOrganization(ITwoFactorProvidersUser user);
+    [Obsolete("Use ITwoFactorIsEnabledQuery instead.")]
     Task<bool> TwoFactorIsEnabledAsync(ITwoFactorProvidersUser user);
     Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user);
     Task<string> GenerateSignInTokenAsync(User user, string purpose);
@@ -75,7 +75,7 @@ public interface IUserService
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
-    Task<bool> VerifySecretAsync(User user, string secret);
+    Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
 
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
@@ -85,4 +85,25 @@ public interface IUserService
     /// We force these users to the web to migrate their encryption scheme.
     /// </summary>
     Task<bool> IsLegacyUser(string userId);
+
+    /// <summary>
+    /// Indicates if the user is managed by any organization.
+    /// </summary>
+    /// <remarks>
+    /// A user is considered managed by an organization if their email domain matches one of the verified domains of that organization, and the user is a member of it.
+    /// The organization must be enabled and able to have verified domains.
+    /// </remarks>
+    /// <returns>
+    /// False if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
+
+    /// <summary>
+    /// Gets the organizations that manage the user.
+    /// </summary>
+    /// <returns>
+    /// An empty collection if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    /// <inheritdoc cref="IsManagedByAnyOrganizationAsync(Guid)"/>
+    Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId);
 }

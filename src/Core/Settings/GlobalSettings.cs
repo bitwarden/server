@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Settings;
-using Bit.Core.Enums;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -65,7 +64,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SentrySettings Sentry { get; set; } = new SentrySettings();
     public virtual SyslogSettings Syslog { get; set; } = new SyslogSettings();
     public virtual ILogLevelSettings MinLogLevel { get; set; } = new LogLevelSettings();
-    public virtual List<NotificationHubSettings> NotificationHubs { get; set; } = new();
+    public virtual NotificationHubPoolSettings NotificationHubPool { get; set; } = new();
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
@@ -140,6 +139,7 @@ public class GlobalSettings : IGlobalSettings
         private string _internalSso;
         private string _internalVault;
         private string _internalScim;
+        private string _internalBilling;
 
         public BaseServiceUriSettings(GlobalSettings globalSettings)
         {
@@ -217,6 +217,12 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _globalSettings.BuildInternalUri(_scim, "scim");
             set => _internalScim = value;
+        }
+
+        public string InternalBilling
+        {
+            get => _globalSettings.BuildInternalUri(_internalBilling, "billing");
+            set => _internalBilling = value;
         }
     }
 
@@ -417,7 +423,7 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set => _connectionString = value?.Trim('"');
         }
         public string HubName { get; set; }
         /// <summary>
@@ -426,10 +432,32 @@ public class GlobalSettings : IGlobalSettings
         /// </summary>
         public bool EnableSendTracing { get; set; } = false;
         /// <summary>
-        /// At least one hub configuration should have registration enabled, preferably the General hub as a safety net.
+        /// The date and time at which registration will be enabled.
+        /// 
+        /// **This value should not be updated once set, as it is used to determine installation location of devices.**
+        /// 
+        /// If null, registration is disabled.
+        /// 
         /// </summary>
-        public bool EnableRegistration { get; set; }
-        public NotificationHubType HubType { get; set; }
+        public DateTime? RegistrationStartDate { get; set; }
+        /// <summary>
+        /// The date and time at which registration will be disabled.
+        /// 
+        /// **This value should not be updated once set, as it is used to determine installation location of devices.**
+        /// 
+        /// If null, hub registration has no yet known expiry.
+        /// </summary>
+        public DateTime? RegistrationEndDate { get; set; }
+    }
+
+    public class NotificationHubPoolSettings
+    {
+        /// <summary>
+        /// List of Notification Hub settings to use for sending push notifications.
+        /// 
+        /// Note that hubs on the same namespace share active device limits, so multiple namespaces should be used to increase capacity.
+        /// </summary>
+        public List<NotificationHubSettings> NotificationHubs { get; set; } = new();
     }
 
     public class YubicoSettings

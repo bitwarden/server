@@ -27,6 +27,19 @@
             ]
         },
         {
+            "label": "buildIdentityApiSso",
+            "hide": true,
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "buildIdentity",
+                "buildAPI",
+                "buildSso"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
             "label": "buildFullServer",
             "hide": true,
             "dependsOrder": "sequence",

@@ -9,7 +9,8 @@ services:
     command: sleep infinity
 
   bitwarden_mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     restart: unless-stopped
     # Can't use `required: false` until the docker host image updates to docker-compose 2.24+ https://github.com/github/codespaces-host-images
     # env_file:
@@ -19,7 +20,7 @@ services:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
     volumes:
-      - edgesql_dev_data:/var/opt/mssql
+      - mssql_dev_data:/var/opt/mssql
       - ../../util/Migrator:/mnt/migrator/
       - ../../dev/helpers/mssql:/mnt/helpers
       - ../../dev/.data/mssql:/mnt/data
@@ -31,4 +32,4 @@ services:
     network_mode: service:bitwarden_server
     
 volumes:
-  edgesql_dev_data:
+  mssql_dev_data:

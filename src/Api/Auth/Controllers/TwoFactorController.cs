@@ -33,7 +33,9 @@ public class TwoFactorController : Controller
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
-    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
+    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
 
     public TwoFactorController(
         IUserService userService,
@@ -43,7 +45,9 @@ public class TwoFactorController : Controller
         UserManager<User> userManager,
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IFeatureService featureService,
+        IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -52,7 +56,9 @@ public class TwoFactorController : Controller
         _userManager = userManager;
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
-        _tokenDataFactory = tokenDataFactory;
+        _featureService = featureService;
+        _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
+        _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
     }
 
     [HttpGet("")]
@@ -95,6 +101,8 @@ public class TwoFactorController : Controller
     {
         var user = await CheckAsync(model, false);
         var response = new TwoFactorAuthenticatorResponseModel(user);
+        var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
+        response.UserVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
         return response;
     }
 
@@ -103,8 +111,12 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
         [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
     {
-        var user = await CheckAsync(model, false);
-        model.ToUser(user);
+        var user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
+        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+        if (!decryptedToken.TokenIsValid(user, model.Key))
+        {
+            throw new BadRequestException("UserVerificationToken", "User verification failed.");
+        }
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
@@ -118,10 +130,25 @@ public class TwoFactorController : Controller
         return response;
     }
 
+    [HttpDelete("authenticator")]
+    public async Task<TwoFactorProviderResponseModel> DisableAuthenticator(
+    [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+        if (!decryptedToken.TokenIsValid(user, model.Key))
+        {
+            throw new BadRequestException("UserVerificationToken", "User verification failed.");
+        }
+
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
+        return new TwoFactorProviderResponseModel(model.Type.Value, user);
+    }
+
     [HttpPost("get-yubikey")]
     public async Task<TwoFactorYubiKeyResponseModel> GetYubiKey([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, true, true);
         var response = new TwoFactorYubiKeyResponseModel(user);
         return response;
     }
@@ -147,7 +174,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-duo")]
     public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, true, true);
         var response = new TwoFactorDuoResponseModel(user);
         return response;
     }
@@ -187,7 +214,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> GetOrganizationDuo(string id,
         [FromBody] SecretVerificationRequestModel model)
     {
-        await CheckAsync(model, false);
+        await CheckAsync(model, false, true);
 
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -244,7 +271,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
@@ -253,7 +280,7 @@ public class TwoFactorController : Controller
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var reg = await _userService.StartWebAuthnRegistrationAsync(user);
         return reg;
     }
@@ -288,7 +315,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-email")]
     public async Task<TwoFactorEmailResponseModel> GetEmail([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         var response = new TwoFactorEmailResponseModel(user);
         return response;
     }
@@ -296,7 +323,7 @@ public class TwoFactorController : Controller
     [HttpPost("send-email")]
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        var user = await CheckAsync(model, false, true);
         model.ToUser(user);
         await _userService.SendTwoFactorEmailAsync(user);
     }
@@ -369,7 +396,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody] TwoFactorProviderRequestModel model)
     {
         var user = await CheckAsync(model, false);
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
         var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
         return response;
     }
@@ -410,8 +437,7 @@ public class TwoFactorController : Controller
     [AllowAnonymous]
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)
     {
-        if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
-                _organizationService))
+        if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "Invalid information. Try again.");
@@ -433,7 +459,8 @@ public class TwoFactorController : Controller
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)
+    private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium,
+        bool skipVerification = false)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -441,7 +468,7 @@ public class TwoFactorController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!await _userService.VerifySecretAsync(user, model.Secret))
+        if (!await _userService.VerifySecretAsync(user, model.Secret, skipVerification))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
@@ -476,7 +503,7 @@ public class TwoFactorController : Controller
 
     private bool ValidateSsoEmail2FaToken(string ssoEmail2FaSessionToken, User user)
     {
-        return _tokenDataFactory.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
+        return _ssoEmailTwoFactorSessionDataProtector.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
                decryptedToken.Valid && decryptedToken.TokenIsValid(user);
     }
 

@@ -144,9 +144,11 @@ public class SelfHostedOrganizationDetails : Organization
             RevisionDate = RevisionDate,
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
+            LimitCollectionCreation = LimitCollectionCreation,
+            LimitCollectionDeletion = LimitCollectionDeletion,
+            // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
             LimitCollectionCreationDeletion = LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
-            FlexibleCollections = FlexibleCollections,
             Status = Status
         };
     }

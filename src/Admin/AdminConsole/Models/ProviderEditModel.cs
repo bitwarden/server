@@ -1,13 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class ProviderEditModel : ProviderViewModel
+public class ProviderEditModel : ProviderViewModel, IValidatableObject
 {
     public ProviderEditModel() { }
 
@@ -30,6 +32,7 @@ public class ProviderEditModel : ProviderViewModel
         GatewaySubscriptionId = provider.GatewaySubscriptionId;
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
+        Type = provider.Type;
     }
 
     [Display(Name = "Billing Email")]
@@ -52,6 +55,8 @@ public class ProviderEditModel : ProviderViewModel
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
+    [Display(Name = "Provider Type")]
+    public ProviderType Type { get; set; }
 
     public virtual Provider ToProvider(Provider existingProvider)
     {
@@ -65,4 +70,18 @@ public class ProviderEditModel : ProviderViewModel
 
     private static int GetSeatMinimum(IEnumerable<ProviderPlan> providerPlans, PlanType planType)
         => providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType)?.SeatMinimum ?? 0;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        switch (Type)
+        {
+            case ProviderType.Reseller:
+                if (string.IsNullOrWhiteSpace(BillingEmail))
+                {
+                    var billingEmailDisplayName = nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(BillingEmail);
+                    yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
+                }
+                break;
+        }
+    }
 }

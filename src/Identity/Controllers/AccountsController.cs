@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Diagnostics;
+using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
@@ -41,6 +42,7 @@ public class AccountsController : Controller
     private readonly ISendVerificationEmailForRegistrationCommand _sendVerificationEmailForRegistrationCommand;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
+    private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
     public AccountsController(
         ICurrentContext currentContext,
@@ -52,7 +54,8 @@ public class AccountsController : Controller
         IGetWebAuthnLoginCredentialAssertionOptionsCommand getWebAuthnLoginCredentialAssertionOptionsCommand,
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IReferenceEventService referenceEventService,
-        IFeatureService featureService
+        IFeatureService featureService,
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory
         )
     {
         _currentContext = currentContext;
@@ -65,6 +68,7 @@ public class AccountsController : Controller
         _sendVerificationEmailForRegistrationCommand = sendVerificationEmailForRegistrationCommand;
         _referenceEventService = referenceEventService;
         _featureService = featureService;
+        _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
     }
 
     [HttpPost("register")]
@@ -72,7 +76,7 @@ public class AccountsController : Controller
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
     {
         var user = model.ToUser();
-        var identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
+        var identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
             model.Token, model.OrganizationUserId);
         // delaysEnabled false is only for the new registration with email verification process
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
@@ -90,7 +94,7 @@ public class AccountsController : Controller
             Type = ReferenceEventType.SignupEmailSubmit,
             ClientId = _currentContext.ClientId,
             ClientVersion = _currentContext.ClientVersion,
-            Source = ReferenceEventSource.RegistrationStart
+            Source = ReferenceEventSource.Registration
         };
         await _referenceEventService.RaiseEventAsync(refEvent);
 
@@ -103,27 +107,87 @@ public class AccountsController : Controller
     }
 
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
+    [HttpPost("register/verification-email-clicked")]
+    public async Task<IActionResult> PostRegisterVerificationEmailClicked([FromBody] RegisterVerificationEmailClickedRequestModel model)
+    {
+        var tokenValid = RegistrationEmailVerificationTokenable.ValidateToken(_registrationEmailVerificationTokenDataFactory, model.EmailVerificationToken, model.Email);
+
+        // Check to see if the user already exists - this is just to catch the unlikely but possible case
+        // where a user finishes registration and then clicks the email verification link again.
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        var userExists = user != null;
+
+        var refEvent = new ReferenceEvent
+        {
+            Type = ReferenceEventType.SignupEmailClicked,
+            ClientId = _currentContext.ClientId,
+            ClientVersion = _currentContext.ClientVersion,
+            Source = ReferenceEventSource.Registration,
+            EmailVerificationTokenValid = tokenValid,
+            UserAlreadyExists = userExists
+        };
+
+        await _referenceEventService.RaiseEventAsync(refEvent);
+
+        if (!tokenValid || userExists)
+        {
+            throw new BadRequestException("Expired link. Please restart registration or try logging in. You may already have an account");
+        }
+
+        return Ok();
+
+
+    }
+
+    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/finish")]
     public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
         var user = model.ToUser();
 
-        // Users will either have an org invite token or an email verification token - not both.
+        // Users will either have an emailed token or an email verification token - not both.
 
         IdentityResult identityResult = null;
         var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
-        if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
+        switch (model.GetTokenType())
         {
-            identityResult = await _registerUserCommand.RegisterUserWithOptionalOrgInvite(user, model.MasterPasswordHash,
-                model.OrgInviteToken, model.OrganizationUserId);
+            case RegisterFinishTokenType.EmailVerification:
+                identityResult =
+                    await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
+                        model.EmailVerificationToken);
 
-            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.OrganizationInvite:
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
+                    model.OrgInviteToken, model.OrganizationUserId);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.EmergencyAccessInvite:
+                Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
+                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
+                    model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.ProviderInvite:
+                Debug.Assert(model.ProviderUserId.HasValue);
+                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
+                    model.ProviderInviteToken, model.ProviderUserId.Value);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+
+            default:
+                throw new BadRequestException("Invalid registration finish request");
         }
-
-        identityResult = await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash, model.EmailVerificationToken);
-
-        return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
     }
 
     private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)

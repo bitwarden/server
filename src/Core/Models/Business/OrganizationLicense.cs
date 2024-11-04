@@ -53,8 +53,11 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+
+        // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
+        //
 
         if (subscriptionInfo?.Subscription == null)
         {
@@ -138,8 +141,12 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+
+    // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
     public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
+    //
+
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -150,7 +157,8 @@ public class OrganizationLicense : ILicense
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
-    /// getting out of date license errors</remarks>
+    /// getting out of date license errors
+    /// </remarks>
     public const int CurrentLicenseFileVersion = 14;
     private bool ValidLicenseVersion
     {
@@ -230,35 +238,52 @@ public class OrganizationLicense : ILicense
 
     public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
-        if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+        var errorMessages = new StringBuilder();
+
+        if (!Enabled)
         {
-            exception = "Invalid license. Your organization is disabled or the license has expired.";
-            return false;
+            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
+        }
+
+        if (Issued > DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license hasn't been issued yet.");
+        }
+
+        if (Expires < DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license has expired.");
         }
 
         if (!ValidLicenseVersion)
         {
-            exception = $"Version {Version} is not supported.";
-            return false;
+            errorMessages.AppendLine($"Version {Version} is not supported.");
         }
 
-        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
+        if (InstallationId != globalSettings.Installation.Id)
         {
-            exception = "Invalid license. Make sure your license allows for on-premise " +
-                        "hosting of organizations and that the installation id matches your current installation.";
-            return false;
+            errorMessages.AppendLine("The installation ID does not match the current installation.");
+        }
+
+        if (!SelfHost)
+        {
+            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
         {
-            exception = "Premium licenses cannot be applied to an organization. "
-                        + "Upload this license from your personal account settings page.";
-            return false;
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
         }
 
         if (!licensingService.VerifyLicense(this))
         {
-            exception = "Invalid license.";
+            errorMessages.AppendLine("The license verification failed.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
             return false;
         }
 
@@ -350,23 +375,17 @@ public class OrganizationLicense : ILicense
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
 
-            // Restore validity check when Flexible Collections are enabled for cloud and self-host
-            // https://bitwarden.atlassian.net/browse/AC-1875
-            // if (valid && Version >= 14)
-            // {
-            //     valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
-            // }
-            // if (valid && Version >= 15)
-            // {
-            //     valid = organization.AllowAdminAccessToAllCollectionItems == AllowAdminAccessToAllCollectionItems;
-            // }
+            /*
+            * Version 14 added LimitCollectionCreationDeletion and Version
+            * 15 added AllowAdminAccessToAllCollectionItems, however they
+            * are no longer used and are intentionally excluded from
+            * validation.
+            */
 
             return valid;
         }
-        else
-        {
-            throw new NotSupportedException($"Version {Version} is not supported.");
-        }
+
+        throw new NotSupportedException($"Version {Version} is not supported.");
     }
 
     public bool VerifySignature(X509Certificate2 certificate)

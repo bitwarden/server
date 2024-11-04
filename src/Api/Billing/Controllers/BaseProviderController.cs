@@ -4,15 +4,18 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Billing.Controllers;
 
 public abstract class BaseProviderController(
     ICurrentContext currentContext,
     IFeatureService featureService,
-    IProviderRepository providerRepository) : Controller
+    ILogger<BaseProviderController> logger,
+    IProviderRepository providerRepository,
+    IUserService userService) : BaseBillingController
 {
+    protected readonly IUserService UserService = userService;
+
     protected Task<(Provider, IResult)> TryGetBillableProviderForAdminOperation(
         Guid providerId) => TryGetBillableProviderAsync(providerId, currentContext.ProviderProviderAdmin);
 
@@ -25,26 +28,53 @@ public abstract class BaseProviderController(
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
         {
-            return (null, TypedResults.NotFound());
+            logger.LogError(
+                "Cannot run Consolidated Billing operation for provider ({ProviderID}) while feature flag is disabled",
+                providerId);
+
+            return (null, Error.NotFound());
         }
 
         var provider = await providerRepository.GetByIdAsync(providerId);
 
         if (provider == null)
         {
-            return (null, TypedResults.NotFound());
+            logger.LogError(
+                "Cannot find provider ({ProviderID}) for Consolidated Billing operation",
+                providerId);
+
+            return (null, Error.NotFound());
         }
 
         if (!checkAuthorization(providerId))
         {
-            return (null, TypedResults.Unauthorized());
+            var user = await UserService.GetUserByPrincipalAsync(User);
+
+            logger.LogError(
+                "User ({UserID}) is not authorized to perform Consolidated Billing operation for provider ({ProviderID})",
+                user?.Id, providerId);
+
+            return (null, Error.Unauthorized());
         }
 
         if (!provider.IsBillable())
         {
-            return (null, TypedResults.Unauthorized());
+            logger.LogError(
+                "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is not billable",
+                providerId);
+
+            return (null, Error.Unauthorized());
         }
 
-        return (provider, null);
+        if (provider.IsStripeEnabled())
+        {
+            return (provider, null);
+        }
+
+        logger.LogError(
+            "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is missing Stripe configuration",
+            providerId);
+
+        return (null, Error.ServerError());
     }
 }

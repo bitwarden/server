@@ -25,19 +25,22 @@ public class DevicesController : Controller
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ILogger<DevicesController> _logger;
 
     public DevicesController(
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
         IUserService userService,
         IUserRepository userRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ILogger<DevicesController> logger)
     {
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
         _userService = userService;
         _userRepository = userRepository;
         _currentContext = currentContext;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -193,8 +196,8 @@ public class DevicesController : Controller
     }
 
     [HttpDelete("{id}")]
-    [HttpPost("{id}/delete")]
-    public async Task Delete(string id)
+    [HttpPost("{id}/deactivate")]
+    public async Task Deactivate(string id)
     {
         var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
         if (device == null)
@@ -202,7 +205,7 @@ public class DevicesController : Controller
             throw new NotFoundException();
         }
 
-        await _deviceService.DeleteAsync(device);
+        await _deviceService.DeactivateAsync(device);
     }
 
     [AllowAnonymous]
@@ -231,4 +234,30 @@ public class DevicesController : Controller
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, user.Id);
         return device != null;
     }
+
+    [HttpPost("lost-trust")]
+    public void PostLostTrust()
+    {
+        var userId = _currentContext.UserId.GetValueOrDefault();
+        if (userId == default)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var deviceId = _currentContext.DeviceIdentifier;
+        if (deviceId == null)
+        {
+            throw new BadRequestException("Please provide a device identifier");
+        }
+
+        var deviceType = _currentContext.DeviceType;
+        if (deviceType == null)
+        {
+            throw new BadRequestException("Please provide a device type");
+        }
+
+        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device} of type {deviceType}", userId,
+            deviceId, deviceType);
+    }
+
 }

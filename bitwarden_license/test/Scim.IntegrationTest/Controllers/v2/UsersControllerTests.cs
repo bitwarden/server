@@ -237,6 +237,46 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     }
 
     [Fact]
+    public async Task GetList_SearchUserNameWithoutOptionalParameters_Success()
+    {
+        string filter = "userName eq user2@example.com";
+        int? itemsPerPage = null;
+        int? startIndex = null;
+        var expectedResponse = new ScimListResponseModel<ScimUserResponseModel>
+        {
+            ItemsPerPage = 50, //default value
+            TotalResults = 1,
+            StartIndex = 1, //default value
+            Resources = new List<ScimUserResponseModel>
+            {
+                new ScimUserResponseModel
+                {
+                    Id = ScimApplicationFactory.TestOrganizationUserId2,
+                    DisplayName = "Test User 2",
+                    ExternalId = "UB",
+                    Active = true,
+                    Emails = new List<BaseScimUserModel.EmailModel>
+                    {
+                        new BaseScimUserModel.EmailModel { Primary = true, Type = "work", Value = "user2@example.com" }
+                    },
+                    Groups = new List<string>(),
+                    Name = new BaseScimUserModel.NameModel("Test User 2"),
+                    UserName = "user2@example.com",
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+        };
+
+        var context = await _factory.UsersGetListAsync(ScimApplicationFactory.TestOrganizationId1, filter, itemsPerPage, startIndex);
+
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimUserResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+    }
+
+    [Fact]
     public async Task Post_Success()
     {
         var email = "user5@example.com";

@@ -7,6 +7,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
@@ -93,18 +94,26 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// If set to false, any organization member can create a collection, and any member can delete a collection that
     /// they have Can Manage permissions for.
     /// </summary>
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    // Deprecated by https://bitwarden.atlassian.net/browse/PM-10863. This
+    // was replaced with `LimitCollectionCreation` and
+    // `LimitCollectionDeletion`.
+    public bool LimitCollectionCreationDeletion
+    {
+        get => LimitCollectionCreation || LimitCollectionDeletion;
+        set
+        {
+            LimitCollectionCreation = value;
+            LimitCollectionDeletion = value;
+        }
+    }
+
     /// <summary>
     /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
     /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
-    /// <summary>
-    /// This is an organization-level feature flag (not controlled via LaunchDarkly) to onboard organizations to the
-    /// Flexible Collections MVP changes. This has been fully released and must always be set to TRUE for all organizations.
-    /// AC-1714 will remove this flag after all old code has been removed.
-    /// </summary>
-    public bool FlexibleCollections { get; set; }
 
     public void SetNewId()
     {
@@ -270,12 +279,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         return providers[provider];
     }
 
-    public void UpdateFromLicense(OrganizationLicense license)
+    public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
     {
         // The following properties are intentionally excluded from being updated:
         // - Id - self-hosted org will have its own unique Guid
         // - MaxStorageGb - not enforced for self-hosted because we're not providing the storage
-        // - FlexibleCollections - the self-hosted organization must do its own data migration to set this property, it cannot be updated from cloud
 
         Name = license.Name;
         BusinessName = license.BusinessName;
@@ -306,7 +314,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-        LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-        AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+
+        if (!featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
+        {
+            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
+            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
+        }
     }
 }

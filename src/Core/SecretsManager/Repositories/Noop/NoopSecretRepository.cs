@@ -96,4 +96,10 @@ public class NoopSecretRepository : ISecretRepository
     {
         return Task.FromResult(0);
     }
+
+    public Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
+    {
+        return Task.FromResult(0);
+    }
 }

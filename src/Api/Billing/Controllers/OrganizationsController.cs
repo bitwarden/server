@@ -45,21 +45,6 @@ public class OrganizationsController(
     ISubscriberService subscriberService)
     : Controller
 {
-    [HttpGet("{id:guid}/billing-status")]
-    public async Task<OrganizationBillingStatusResponseModel> GetBillingStatus(Guid id)
-    {
-        if (!await currentContext.EditPaymentMethods(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await organizationRepository.GetByIdAsync(id);
-
-        var risksSubscriptionFailure = await paymentService.RisksSubscriptionFailure(organization);
-
-        return new OrganizationBillingStatusResponseModel(organization, risksSubscriptionFailure);
-    }
-
     [HttpGet("{id:guid}/subscription")]
     public async Task<OrganizationSubscriptionResponseModel> GetSubscription(Guid id)
     {
@@ -162,13 +147,13 @@ public class OrganizationsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
-        var organization = await organizationRepository.GetByIdAsync(id);
-        if (organization == null)
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        if (!await currentContext.EditSubscription(id))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
             throw new NotFoundException();
         }
@@ -195,13 +180,13 @@ public class OrganizationsController(
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
-        var organization = await organizationRepository.GetByIdAsync(id);
-        if (organization == null)
+        if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        if (!await currentContext.EditSubscription(id))
+        var organization = await organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
             throw new NotFoundException();
         }
@@ -216,7 +201,10 @@ public class OrganizationsController(
         var organizationDetails = await organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
 
-        return new ProfileOrganizationResponseModel(organizationDetails);
+        var organizationManagingActiveUser = await userService.GetOrganizationsManagingUserAsync(userId);
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+
+        return new ProfileOrganizationResponseModel(organizationDetails, organizationIdsManagingActiveUser);
     }
 
     [HttpPost("{id:guid}/seat")]

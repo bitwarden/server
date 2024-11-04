@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CollectionCipher = Bit.Core.Entities.CollectionCipher;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollectionCipherRepository
@@ -21,7 +23,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var entity = Mapper.Map<Models.CollectionCipher>(obj);
             dbContext.Add(entity);
             await dbContext.SaveChangesAsync();
-            var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId))).OrganizationId;
+            var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId)))?.OrganizationId;
             if (organizationId.HasValue)
             {
                 await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(obj.CollectionId, organizationId.Value);

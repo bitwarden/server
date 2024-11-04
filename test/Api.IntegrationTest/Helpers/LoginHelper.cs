@@ -32,6 +32,6 @@ public class LoginHelper
         var organizationApiKeyRepository = factory.GetService<IOrganizationApiKeyRepository>();
         var apiKeys = await organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(organizationId);
         var clientId = $"organization.{organizationId}";
-        return (clientId, apiKeys.SingleOrDefault().ApiKey);
+        return (clientId, apiKeys.Single().ApiKey);
     }
 }

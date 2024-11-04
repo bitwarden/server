@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -32,9 +32,10 @@ SELECT
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
     O.[PlanType],
-    O.[LimitCollectionCreationDeletion],
-    O.[AllowAdminAccessToAllCollectionItems],
-    O.[FlexibleCollections]
+    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

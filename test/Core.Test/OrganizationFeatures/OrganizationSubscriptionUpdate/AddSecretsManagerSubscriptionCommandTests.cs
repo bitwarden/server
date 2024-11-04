@@ -57,7 +57,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         // TODO: call ReferenceEventService - see AC-1481
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(c =>
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(c =>
             c.SmSeats == plan.SecretsManager.BaseSeats + additionalSmSeats &&
             c.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts &&
             c.UseSecretsManager == true));

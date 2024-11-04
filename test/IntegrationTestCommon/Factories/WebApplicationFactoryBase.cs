@@ -58,6 +58,16 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     }
 
     /// <summary>
+    /// Allows you to add your own services to the application as required.
+    /// </summary>
+    /// <param name="configure">The service collection you want added to the test service collection.</param>
+    /// <remarks>This needs to be ran BEFORE making any calls through the factory to take effect.</remarks>
+    public void ConfigureServices(Action<IServiceCollection> configure)
+    {
+        _configureTestServices.Add(configure);
+    }
+
+    /// <summary>
     /// Add your own configuration provider to the application.
     /// </summary>
     /// <param name="configure">The action adding your own providers.</param>
@@ -144,7 +154,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
                 // Email Verification
                 { "globalSettings:enableEmailVerification", "true" },
-                { "globalSettings:launchDarkly:flagValues:email-verification", "true" }
+                { "globalSettings:disableUserRegistration", "false" },
+                { "globalSettings:launchDarkly:flagValues:email-verification", "true" },
+
+                // New Device Verification
+                { "globalSettings:disableEmailNewDevice", "false" },
             });
         });
 

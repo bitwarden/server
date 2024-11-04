@@ -1,10 +1,11 @@
-﻿using Bit.Admin.Enums;
+﻿#nullable enable
+
+using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
-using Bit.Core.Context;
-using Bit.Core.Entities;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -23,11 +24,9 @@ public class UsersController : Controller
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
-    private readonly ICurrentContext _currentContext;
+    private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
+    private readonly IUserService _userService;
     private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections);
 
     public UsersController(
         IUserRepository userRepository,
@@ -35,7 +34,8 @@ public class UsersController : Controller
         IPaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext,
+        ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
+        IUserService userService,
         IFeatureService featureService)
     {
         _userRepository = userRepository;
@@ -43,7 +43,8 @@ public class UsersController : Controller
         _paymentService = paymentService;
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
-        _currentContext = currentContext;
+        _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
+        _userService = userService;
         _featureService = featureService;
     }
 
@@ -62,9 +63,13 @@ public class UsersController : Controller
 
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
+
+        var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
+        var userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
+
         return View(new UsersModel
         {
-            Items = users as List<User>,
+            Items = userModels,
             Email = string.IsNullOrWhiteSpace(email) ? null : email,
             Page = page,
             Count = count,
@@ -75,13 +80,17 @@ public class UsersController : Controller
     public async Task<IActionResult> View(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);
+
         if (user == null)
         {
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
-        return View(new UserViewModel(user, ciphers));
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        return View(UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, verifiedDomain));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -93,10 +102,12 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
-        return View(new UserEditModel(user, ciphers, billingInfo, billingHistoryInfo, _globalSettings));
+        var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
+        var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
     }
 
     [HttpPost]
@@ -149,5 +160,13 @@ public class UsersController : Controller
         }
 
         return RedirectToAction("Index");
+    }
+
+    // TODO: Feature flag to be removed in PM-14207
+    private async Task<bool?> AccountDeprovisioningEnabled(Guid userId)
+    {
+        return _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            ? await _userService.IsManagedByAnyOrganizationAsync(userId)
+            : null;
     }
 }

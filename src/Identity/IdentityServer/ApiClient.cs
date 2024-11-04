@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Settings;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 
 namespace Bit.Identity.IdentityServer;
@@ -33,7 +34,13 @@ public class ApiClient : Client
         }
         else if (id == "desktop")
         {
-            RedirectUris = new[] { "bitwarden://sso-callback" };
+            var desktopUris = new List<string>();
+            desktopUris.Add("bitwarden://sso-callback");
+            for (var port = 8065; port <= 8070; port++)
+            {
+                desktopUris.Add(string.Format("http://localhost:{0}", port));
+            }
+            RedirectUris = desktopUris;
             PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
         }
         else if (id == "connector")

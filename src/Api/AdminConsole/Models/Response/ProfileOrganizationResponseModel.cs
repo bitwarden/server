@@ -15,7 +15,10 @@ public class ProfileOrganizationResponseModel : ResponseModel
 {
     public ProfileOrganizationResponseModel(string str) : base(str) { }
 
-    public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
+    public ProfileOrganizationResponseModel(
+        OrganizationUserOrganizationDetails organization,
+        IEnumerable<Guid> organizationIdsManagingUser)
+        : this("profileOrganization")
     {
         Id = organization.OrganizationId;
         Name = organization.Name;
@@ -62,49 +65,18 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
         AccessSecretsManager = organization.AccessSecretsManager;
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        FlexibleCollections = organization.FlexibleCollections;
+        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
 
         if (organization.SsoConfig != null)
         {
             var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
-        }
-
-        if (FlexibleCollections)
-        {
-            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-            if (Type == OrganizationUserType.Custom && Permissions is not null)
-            {
-                if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
-                    Permissions is
-                    {
-                        AccessEventLogs: false,
-                        AccessImportExport: false,
-                        AccessReports: false,
-                        CreateNewCollections: false,
-                        EditAnyCollection: false,
-                        DeleteAnyCollection: false,
-                        ManageGroups: false,
-                        ManagePolicies: false,
-                        ManageSso: false,
-                        ManageUsers: false,
-                        ManageResetPassword: false,
-                        ManageScim: false
-                    })
-                {
-                    organization.Type = OrganizationUserType.User;
-                }
-            }
-
-            // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            if (Permissions is not null)
-            {
-                Permissions.EditAssignedCollections = false;
-                Permissions.DeleteAssignedCollections = false;
-            }
         }
     }
 
@@ -155,7 +127,20 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
-    public bool FlexibleCollections { get; set; }
+    /// <summary>
+    /// Indicates if the organization manages the user.
+    /// </summary>
+    /// <remarks>
+    /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// The organization must be enabled and able to have verified domains.
+    /// </remarks>
+    /// <returns>
+    /// False if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    public bool UserIsManagedByOrganization { get; set; }
 }

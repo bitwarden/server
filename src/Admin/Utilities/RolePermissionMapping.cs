@@ -110,6 +110,7 @@ public static class RolePermissionMapping
                 Permission.User_Licensing_View,
                 Permission.User_Billing_View,
                 Permission.User_Billing_LaunchGateway,
+                Permission.User_Delete,
                 Permission.Org_List_View,
                 Permission.Org_OrgInformation_View,
                 Permission.Org_GeneralDetails_View,
@@ -161,7 +162,9 @@ public static class RolePermissionMapping
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_ManageStripeSubscriptions,
-                Permission.Tools_CreateEditTransaction
+                Permission.Tools_CreateEditTransaction,
+                Permission.Tools_ProcessStripeEvents,
+                Permission.Tools_MigrateProviders
             }
         },
         { "sales", new List<Permission>

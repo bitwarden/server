@@ -7,9 +7,8 @@ namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 public class RegisterSendVerificationEmailRequestModel
 {
     [StringLength(50)] public string? Name { get; set; }
-    [Required]
     [StrictEmailAddress]
     [StringLength(256)]
-    public string Email { get; set; }
+    public required string Email { get; set; }
     public bool ReceiveMarketingEmails { get; set; }
 }

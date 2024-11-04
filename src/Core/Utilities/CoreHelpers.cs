@@ -76,6 +76,39 @@ public static class CoreHelpers
         return new Guid(guidArray);
     }
 
+    internal static DateTime DateFromComb(Guid combGuid)
+    {
+        var guidArray = combGuid.ToByteArray();
+        var daysArray = new byte[4];
+        var msecsArray = new byte[4];
+
+        Array.Copy(guidArray, guidArray.Length - 6, daysArray, 2, 2);
+        Array.Copy(guidArray, guidArray.Length - 4, msecsArray, 0, 4);
+
+        Array.Reverse(daysArray);
+        Array.Reverse(msecsArray);
+
+        var days = BitConverter.ToInt32(daysArray, 0);
+        var msecs = BitConverter.ToInt32(msecsArray, 0);
+
+        var time = TimeSpan.FromDays(days) + TimeSpan.FromMilliseconds(msecs * 3.333333);
+        return new DateTime(_baseDateTicks + time.Ticks, DateTimeKind.Utc);
+    }
+
+    internal static long BinForComb(Guid combGuid, int binCount)
+    {
+        // From System.Web.Util.HashCodeCombiner
+        uint CombineHashCodes(uint h1, byte h2)
+        {
+            return (uint)(((h1 << 5) + h1) ^ h2);
+        }
+        var guidArray = combGuid.ToByteArray();
+        var randomArray = new byte[10];
+        Array.Copy(guidArray, 0, randomArray, 0, 10);
+        var hash = randomArray.Aggregate((uint)randomArray.Length, CombineHashCodes);
+        return hash % binCount;
+    }
+
     public static string CleanCertificateThumbprint(string thumbprint)
     {
         // Clean possible garbage characters from thumbprint copy/paste
@@ -388,6 +421,8 @@ public static class CoreHelpers
     /// <returns>Base64 standard formatted string</returns>
     public static string TransformFromBase64Url(string input)
     {
+        // TODO: .NET 9 Ships Base64Url in box, investigate replacing this usage with that
+        // Ref: https://github.com/dotnet/runtime/pull/102364
         var output = input;
         // 62nd char of encoding
         output = output.Replace('-', '+');
@@ -700,12 +735,6 @@ public static class CoreHelpers
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationAdmin, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.Manager:
-                        foreach (var org in group)
-                        {
-                            claims.Add(new KeyValuePair<string, string>(Claims.OrganizationManager, org.Id.ToString()));
-                        }
-                        break;
                     case Enums.OrganizationUserType.User:
                         foreach (var org in group)
                         {
@@ -875,5 +904,41 @@ public static class CoreHelpers
     public static string ReplaceWhiteSpace(string input, string newValue)
     {
         return _whiteSpaceRegex.Replace(input, newValue);
+    }
+
+    public static string RedactEmailAddress(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return null;
+        }
+
+        var emailParts = email.Split('@');
+
+        string shownPart;
+        if (emailParts[0].Length > 2 && emailParts[0].Length <= 4)
+        {
+            shownPart = emailParts[0].Substring(0, 1);
+        }
+        else if (emailParts[0].Length > 4)
+        {
+            shownPart = emailParts[0].Substring(0, 2);
+        }
+        else
+        {
+            shownPart = string.Empty;
+        }
+
+        string redactedPart;
+        if (emailParts[0].Length > 4)
+        {
+            redactedPart = new string('*', emailParts[0].Length - 2);
+        }
+        else
+        {
+            redactedPart = new string('*', emailParts[0].Length - shownPart.Length);
+        }
+
+        return $"{shownPart}{redactedPart}@{emailParts[1]}";
     }
 }

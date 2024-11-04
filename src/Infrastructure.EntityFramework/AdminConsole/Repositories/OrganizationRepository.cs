@@ -99,9 +99,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseScim = e.UseScim,
                 UseCustomPermissions = e.UseCustomPermissions,
                 UsePolicies = e.UsePolicies,
+                LimitCollectionCreation = e.LimitCollectionCreation,
+                LimitCollectionDeletion = e.LimitCollectionDeletion,
+                // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
                 LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
-                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                FlexibleCollections = e.FlexibleCollections
+                AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems
             }).ToListAsync();
         }
     }
@@ -200,6 +202,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
+            await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
             // The below section are 3 SPROCS in SQL Server but are only called by here
             await dbContext.OrganizationApiKeys.Where(oa => oa.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
@@ -270,6 +277,25 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             select grouped.Key;
 
         return await query.ToListAsync();
+    }
+
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var query = from u in dbContext.Users
+                        join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
+                        join o in dbContext.Organizations on ou.OrganizationId equals o.Id
+                        join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                        where u.Id == userId
+                              && od.VerifiedDate != null
+                              && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
+                        select o;
+
+            return await query.ToArrayAsync();
+        }
     }
 
     public Task EnableCollectionEnhancements(Guid organizationId)

@@ -1,4 +1,5 @@
-﻿using Bit.Api.IntegrationTest.Factories;
+﻿using System.Diagnostics;
+using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -38,6 +39,8 @@ public static class OrganizationTestHelpers
             PaymentMethodType = paymentMethod
         });
 
+        Debug.Assert(signUpResult.organizationUser is not null);
+
         return new Tuple<Organization, OrganizationUser>(signUpResult.organization, signUpResult.organizationUser);
     }
 
@@ -57,6 +60,7 @@ public static class OrganizationTestHelpers
         var organizationUserRepository = factory.GetService<IOrganizationUserRepository>();
 
         var user = await userRepository.GetByEmailAsync(userEmail);
+        Debug.Assert(user is not null);
 
         var orgUser = new OrganizationUser
         {
@@ -65,7 +69,6 @@ public static class OrganizationTestHelpers
             Key = null,
             Type = type,
             Status = OrganizationUserStatusType.Confirmed,
-            AccessAll = false,
             ExternalId = null,
             AccessSecretsManager = accessSecretsManager,
         };
@@ -101,5 +104,23 @@ public static class OrganizationTestHelpers
             permissions: permissions);
 
         return (email, organizationUser);
+    }
+
+    /// <summary>
+    /// Creates a VerifiedDomain for the specified organization.
+    /// </summary>
+    public static async Task CreateVerifiedDomainAsync(ApiApplicationFactory factory, Guid organizationId, string domain)
+    {
+        var organizationDomainRepository = factory.GetService<IOrganizationDomainRepository>();
+
+        var verifiedDomain = new OrganizationDomain
+        {
+            OrganizationId = organizationId,
+            DomainName = domain,
+            Txt = "btw+test18383838383"
+        };
+        verifiedDomain.SetVerifiedDate();
+
+        await organizationDomainRepository.CreateAsync(verifiedDomain);
     }
 }

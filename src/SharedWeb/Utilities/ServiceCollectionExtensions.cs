@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
@@ -16,11 +17,15 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Implementations;
+using Bit.Core.Billing.TrialInitiation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
@@ -45,7 +50,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -57,7 +61,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Serilog.Context;
 using StackExchange.Redis;
 using NoopRepos = Bit.Core.Repositories.Noop;
 using Role = Bit.Core.Entities.Role;
@@ -99,10 +102,11 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICipherService, CipherService>();
         services.AddUserServices(globalSettings);
+        services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
+        services.AddPolicyServices();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
-        services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
@@ -185,14 +189,18 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<ProviderDeleteTokenable>>>())
         );
-
         services.AddSingleton<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>(
             serviceProvider => new DataProtectorTokenFactory<RegistrationEmailVerificationTokenable>(
                 RegistrationEmailVerificationTokenable.ClearTextPrefix,
                 RegistrationEmailVerificationTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>>()));
-
+        services.AddSingleton<IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>(
+                TwoFactorAuthenticatorUserVerificationTokenable.ClearTextPrefix,
+                TwoFactorAuthenticatorUserVerificationTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -215,6 +223,7 @@ public static class ServiceCollectionExtensions
             };
         });
         services.AddScoped<IPaymentService, StripePaymentService>();
+        services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
@@ -256,20 +265,35 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-        if (globalSettings.SelfHosted &&
-            CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-            globalSettings.Installation?.Id != null &&
-            CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+        if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
+                globalSettings.Installation?.Id != null &&
+                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
+                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            }
+            else
+            {
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            }
+
+            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
+            }
         }
         else if (!globalSettings.SelfHosted)
         {
+            services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
-        }
-        else
-        {
-            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
+            }
         }
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
@@ -400,7 +424,7 @@ public static class ServiceCollectionExtensions
             .AddTokenProvider<DataProtectorTokenProvider<User>>(TokenOptions.DefaultProvider)
             .AddTokenProvider<AuthenticatorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator))
-            .AddTokenProvider<EmailTokenProvider>(
+            .AddTokenProvider<EmailTwoFactorTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
@@ -408,7 +432,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
             .AddTokenProvider<TwoFactorRememberTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
-            .AddTokenProvider<EmailTokenProvider<User>>(TokenOptions.DefaultEmailProvider)
+            .AddTokenProvider<EmailTokenProvider>(TokenOptions.DefaultEmailProvider)
             .AddTokenProvider<WebAuthnTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn));
 
@@ -531,31 +555,7 @@ public static class ServiceCollectionExtensions
     public static void UseDefaultMiddleware(this IApplicationBuilder app,
         IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        string GetHeaderValue(HttpContext httpContext, string header)
-        {
-            if (httpContext.Request.Headers.ContainsKey(header))
-            {
-                return httpContext.Request.Headers[header];
-            }
-            return null;
-        }
-
-        // Add version information to response headers
-        app.Use(async (httpContext, next) =>
-        {
-            using (LogContext.PushProperty("IPAddress", httpContext.GetIpAddress(globalSettings)))
-            using (LogContext.PushProperty("UserAgent", GetHeaderValue(httpContext, "user-agent")))
-            using (LogContext.PushProperty("DeviceType", GetHeaderValue(httpContext, "device-type")))
-            using (LogContext.PushProperty("Origin", GetHeaderValue(httpContext, "origin")))
-            {
-                httpContext.Response.OnStarting((state) =>
-                {
-                    httpContext.Response.Headers.Append("Server-Version", AssemblyHelpers.GetVersion());
-                    return Task.FromResult(0);
-                }, null);
-                await next.Invoke();
-            }
-        });
+        app.UseMiddleware<RequestLoggingMiddleware>();
     }
 
     public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
