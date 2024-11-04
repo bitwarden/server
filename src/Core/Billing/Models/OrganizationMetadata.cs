@@ -3,4 +3,5 @@
 public record OrganizationMetadata(
     bool IsEligibleForSelfHost,
     bool IsManaged,
-    bool IsOnSecretsManagerStandalone);
+    bool IsOnSecretsManagerStandalone,
+    bool IsSubscriptionUnpaid);
