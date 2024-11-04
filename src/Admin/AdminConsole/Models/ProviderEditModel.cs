@@ -33,11 +33,12 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
         Type = provider.Type;
+
         if (Type == ProviderType.MultiOrganizationEnterprise)
         {
-            var plan = providerPlans.Single();
-            EnterpriseMinimumSeats = plan.SeatMinimum;
-            Plan = plan.PlanType;
+            var plan = providerPlans.SingleOrDefault();
+            EnterpriseMinimumSeats = plan?.SeatMinimum ?? 0;
+            Plan = plan?.PlanType;
         }
     }
 
