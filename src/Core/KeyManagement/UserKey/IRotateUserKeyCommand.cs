@@ -3,7 +3,7 @@ using Bit.Core.KeyManagement.Models.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Core.KeyManagement.UserFeatures.UserKey;
+namespace Bit.Core.KeyManagement.UserKey;
 
 /// <summary>
 /// Responsible for rotation of a user key and updating database with re-encrypted data

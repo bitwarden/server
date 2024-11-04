@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Bit.Core.KeyManagement.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Models;

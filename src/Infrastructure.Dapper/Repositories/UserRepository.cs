@@ -2,7 +2,7 @@
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Entities;
-using Bit.Core.KeyManagement.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;

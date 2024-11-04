@@ -1,4 +1,4 @@
-﻿using Bit.Core.KeyManagement.UserFeatures.UserKey;
+﻿using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 
