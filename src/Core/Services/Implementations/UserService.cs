@@ -297,6 +297,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return;
         }
 
+        if (await IsManagedByAnyOrganizationAsync(user.Id))
+        {
+            await _mailService.SendCannotDeleteManagedAccountEmailAsync(user.Email);
+            return;
+        }
+
         var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
