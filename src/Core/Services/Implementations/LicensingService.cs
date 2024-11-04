@@ -117,13 +117,19 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
+                if (!string.IsNullOrWhiteSpace(license.Token) && !VerifyToken(license.Token))
+                {
+                    await DisableOrganizationAsync(org, license, "Invalid token.");
+                    continue;
+                }
+
                 if (!license.VerifyData(org, _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
                     continue;
                 }
 
-                if (!license.VerifySignature(_certificate))
+                if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
                     continue;
@@ -222,7 +228,7 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (!license.VerifySignature(_certificate))
+        if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
         {
             await DisablePremiumAsync(user, license, "Invalid signature.");
             return false;
@@ -247,7 +253,9 @@ public class LicensingService : ILicensingService
 
     public bool VerifyLicense(ILicense license)
     {
-        return license.VerifySignature(_certificate);
+        return string.IsNullOrWhiteSpace(license.Token)
+            ? license.VerifySignature(_certificate)
+            : VerifyToken(license.Token);
     }
 
     public byte[] SignLicense(ILicense license)
@@ -300,8 +308,9 @@ public class LicensingService : ILicensingService
         };
 
         var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);
-        var audience = organization.Id.ToString();
+        var audience = $"organization:{organization.Id}";
         var expires = organization.CalculateFreshExpirationDate(subscriptionInfo);
+
         return GenerateToken(claims, audience, expires);
     }
 
@@ -314,7 +323,7 @@ public class LicensingService : ILicensingService
 
         var licenseContext = new LicenseContext { SubscriptionInfo = subscriptionInfo };
         var claims = await _userLicenseClaimsFactory.GenerateClaims(user, licenseContext);
-        var audience = user.Id.ToString();
+        var audience = $"user:{user.Id}";
         var expires = user.PremiumExpirationDate ?? DateTime.UtcNow.AddDays(7);
 
         return GenerateToken(claims, audience, expires);
@@ -341,5 +350,19 @@ public class LicensingService : ILicensingService
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
+    }
+
+    private bool VerifyToken(string token)
+    {
+        try
+        {
+            _ = token.ToClaimsPrincipal();
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Invalid token.");
+            return false;
+        }
     }
 }

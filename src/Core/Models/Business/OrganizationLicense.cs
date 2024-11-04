@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -240,6 +241,58 @@ public class OrganizationLicense : ILicense
 
     public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            return ObsoleteCanUse(globalSettings, licensingService, out exception);
+        }
+
+        var errorMessages = new StringBuilder();
+
+        var enabled = Token.ToClaimsPrincipal().GetValue<bool>(nameof(Enabled));
+        if (!enabled)
+        {
+            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
+        }
+
+        var installationId = Token.ToClaimsPrincipal().GetValue<Guid>(nameof(InstallationId));
+        if (installationId != globalSettings.Installation.Id)
+        {
+            errorMessages.AppendLine("The installation ID does not match the current installation.");
+        }
+
+        var selfHost = Token.ToClaimsPrincipal().GetValue<bool>(nameof(SelfHost));
+        if (!selfHost)
+        {
+            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
+        }
+
+        var licenseType = Token.ToClaimsPrincipal().GetValue<LicenseType>(nameof(LicenseType));
+        if (licenseType != Enums.LicenseType.Organization)
+        {
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
+            return false;
+        }
+
+        exception = "";
+        return true;
+    }
+
+    /// <summary>
+    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
+    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// </summary>
+    /// <param name="globalSettings"></param>
+    /// <param name="licensingService"></param>
+    /// <param name="exception"></param>
+    /// <returns></returns>
+    private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
+    {
         var errorMessages = new StringBuilder();
 
         if (!Enabled)
@@ -295,99 +348,280 @@ public class OrganizationLicense : ILicense
 
     public bool VerifyData(Organization organization, IGlobalSettings globalSettings)
     {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            return ObsoleteVerifyData(organization, globalSettings);
+        }
+
+        // It looks a little goofy to extend this file instead of moving this logic to a command, but in an effort
+        // to keep changes low in each PR, we'll move this to a command in a subsequent PR.
+        // The end goal will be to not have an OrganizationLicense file whatsoever, and instead simply rely on the token
+        var claimsPrincipal = Token.ToClaimsPrincipal();
+
+        var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
+        var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
+
+        if (issued > DateTime.UtcNow || expires < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
+        if (installationId != globalSettings.Installation.Id)
+        {
+            return false;
+        }
+
+        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
+        if (licenseKey != organization.LicenseKey)
+        {
+            return false;
+        }
+
+        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
+        if (enabled != organization.Enabled)
+        {
+            return false;
+        }
+
+        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
+        if (planType != organization.PlanType)
+        {
+            return false;
+        }
+
+        var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
+        if (seats != organization.Seats)
+        {
+            return false;
+        }
+
+        var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
+        if (maxCollections != organization.MaxCollections)
+        {
+            return false;
+        }
+
+        var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
+        if (useGroups != organization.UseGroups)
+        {
+            return false;
+        }
+
+        var useDirectory = claimsPrincipal.GetValue<bool>(nameof(UseDirectory));
+        if (useDirectory != organization.UseDirectory)
+        {
+            return false;
+        }
+
+        var useTotp = claimsPrincipal.GetValue<bool>(nameof(UseTotp));
+        if (useTotp != organization.UseTotp)
+        {
+            return false;
+        }
+
+        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
+        if (selfHost != organization.SelfHost)
+        {
+            return false;
+        }
+
+        var name = claimsPrincipal.GetValue<string>(nameof(Name));
+        if (name != organization.Name)
+        {
+            return false;
+        }
+
+        var usersGetPremium = claimsPrincipal.GetValue<bool>(nameof(UsersGetPremium));
+        if (usersGetPremium != organization.UsersGetPremium)
+        {
+            return false;
+        }
+
+        var useEvents = claimsPrincipal.GetValue<bool>(nameof(UseEvents));
+        if (useEvents != organization.UseEvents)
+        {
+            return false;
+        }
+
+        var use2fa = claimsPrincipal.GetValue<bool>(nameof(Use2fa));
+        if (use2fa != organization.Use2fa)
+        {
+            return false;
+        }
+
+        var useApi = claimsPrincipal.GetValue<bool>(nameof(UseApi));
+        if (useApi != organization.UseApi)
+        {
+            return false;
+        }
+
+        var usePolicies = claimsPrincipal.GetValue<bool>(nameof(UsePolicies));
+        if (usePolicies != organization.UsePolicies)
+        {
+            return false;
+        }
+
+        var useSso = claimsPrincipal.GetValue<bool>(nameof(UseSso));
+        if (useSso != organization.UseSso)
+        {
+            return false;
+        }
+
+        var useResetPassword = claimsPrincipal.GetValue<bool>(nameof(UseResetPassword));
+        if (useResetPassword != organization.UseResetPassword)
+        {
+            return false;
+        }
+
+        var useKeyConnector = claimsPrincipal.GetValue<bool>(nameof(UseKeyConnector));
+        if (useKeyConnector != organization.UseKeyConnector)
+        {
+            return false;
+        }
+
+        var useScim = claimsPrincipal.GetValue<bool>(nameof(UseScim));
+        if (useScim != organization.UseScim)
+        {
+            return false;
+        }
+
+        var useCustomPermissions = claimsPrincipal.GetValue<bool>(nameof(UseCustomPermissions));
+        if (useCustomPermissions != organization.UseCustomPermissions)
+        {
+            return false;
+        }
+
+        var useSecretsManager = claimsPrincipal.GetValue<bool>(nameof(UseSecretsManager));
+        if (useSecretsManager != organization.UseSecretsManager)
+        {
+            return false;
+        }
+
+        var usePasswordManager = claimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
+        if (usePasswordManager != organization.UsePasswordManager)
+        {
+            return false;
+        }
+
+        var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
+        if (smSeats != organization.SmSeats)
+        {
+            return false;
+        }
+
+        var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
+        if (smServiceAccounts != organization.SmServiceAccounts)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
+    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// </summary>
+    /// <param name="organization"></param>
+    /// <param name="globalSettings"></param>
+    /// <returns></returns>
+    /// <exception cref="NotSupportedException"></exception>
+    private bool ObsoleteVerifyData(Organization organization, IGlobalSettings globalSettings)
+    {
         if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
             return false;
         }
 
-        if (ValidLicenseVersion)
+        if (!ValidLicenseVersion)
         {
-            var valid =
-                globalSettings.Installation.Id == InstallationId &&
-                organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
-                organization.Enabled == Enabled &&
-                organization.PlanType == PlanType &&
-                organization.Seats == Seats &&
-                organization.MaxCollections == MaxCollections &&
-                organization.UseGroups == UseGroups &&
-                organization.UseDirectory == UseDirectory &&
-                organization.UseTotp == UseTotp &&
-                organization.SelfHost == SelfHost &&
-                organization.Name.Equals(Name);
+            throw new NotSupportedException($"Version {Version} is not supported.");
+        }
 
-            if (valid && Version >= 2)
-            {
-                valid = organization.UsersGetPremium == UsersGetPremium;
-            }
+        var valid =
+            globalSettings.Installation.Id == InstallationId &&
+            organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
+            organization.Enabled == Enabled &&
+            organization.PlanType == PlanType &&
+            organization.Seats == Seats &&
+            organization.MaxCollections == MaxCollections &&
+            organization.UseGroups == UseGroups &&
+            organization.UseDirectory == UseDirectory &&
+            organization.UseTotp == UseTotp &&
+            organization.SelfHost == SelfHost &&
+            organization.Name.Equals(Name);
 
-            if (valid && Version >= 3)
-            {
-                valid = organization.UseEvents == UseEvents;
-            }
+        if (valid && Version >= 2)
+        {
+            valid = organization.UsersGetPremium == UsersGetPremium;
+        }
 
-            if (valid && Version >= 4)
-            {
-                valid = organization.Use2fa == Use2fa;
-            }
+        if (valid && Version >= 3)
+        {
+            valid = organization.UseEvents == UseEvents;
+        }
 
-            if (valid && Version >= 5)
-            {
-                valid = organization.UseApi == UseApi;
-            }
+        if (valid && Version >= 4)
+        {
+            valid = organization.Use2fa == Use2fa;
+        }
 
-            if (valid && Version >= 6)
-            {
-                valid = organization.UsePolicies == UsePolicies;
-            }
+        if (valid && Version >= 5)
+        {
+            valid = organization.UseApi == UseApi;
+        }
 
-            if (valid && Version >= 7)
-            {
-                valid = organization.UseSso == UseSso;
-            }
+        if (valid && Version >= 6)
+        {
+            valid = organization.UsePolicies == UsePolicies;
+        }
 
-            if (valid && Version >= 8)
-            {
-                valid = organization.UseResetPassword == UseResetPassword;
-            }
+        if (valid && Version >= 7)
+        {
+            valid = organization.UseSso == UseSso;
+        }
 
-            if (valid && Version >= 9)
-            {
-                valid = organization.UseKeyConnector == UseKeyConnector;
-            }
+        if (valid && Version >= 8)
+        {
+            valid = organization.UseResetPassword == UseResetPassword;
+        }
 
-            if (valid && Version >= 10)
-            {
-                valid = organization.UseScim == UseScim;
-            }
+        if (valid && Version >= 9)
+        {
+            valid = organization.UseKeyConnector == UseKeyConnector;
+        }
 
-            if (valid && Version >= 11)
-            {
-                valid = organization.UseCustomPermissions == UseCustomPermissions;
-            }
+        if (valid && Version >= 10)
+        {
+            valid = organization.UseScim == UseScim;
+        }
 
-            /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
+        if (valid && Version >= 11)
+        {
+            valid = organization.UseCustomPermissions == UseCustomPermissions;
+        }
+
+        /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
             to the Organization object. It's validated as part of the hash but does not need to be validated here.
             */
 
-            if (valid && Version >= 13)
-            {
-                valid = organization.UseSecretsManager == UseSecretsManager &&
-                        organization.UsePasswordManager == UsePasswordManager &&
-                        organization.SmSeats == SmSeats &&
-                        organization.SmServiceAccounts == SmServiceAccounts;
-            }
+        if (valid && Version >= 13)
+        {
+            valid = organization.UseSecretsManager == UseSecretsManager &&
+                    organization.UsePasswordManager == UsePasswordManager &&
+                    organization.SmSeats == SmSeats &&
+                    organization.SmServiceAccounts == SmServiceAccounts;
+        }
 
-            /*
+        /*
             * Version 14 added LimitCollectionCreationDeletion and Version
             * 15 added AllowAdminAccessToAllCollectionItems, however they
             * are no longer used and are intentionally excluded from
             * validation.
             */
 
-            return valid;
-        }
-
-        throw new NotSupportedException($"Version {Version} is not supported.");
+        return valid;
     }
 
     public bool VerifySignature(X509Certificate2 certificate)
