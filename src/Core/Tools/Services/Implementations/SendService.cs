@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -35,6 +37,9 @@ public class SendService : ISendService
     private readonly IReferenceEventService _referenceEventService;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
+
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
 
     public SendService(
@@ -49,7 +54,9 @@ public class SendService : ISendService
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _sendRepository = sendRepository;
         _userRepository = userRepository;
@@ -63,12 +70,21 @@ public class SendService : ISendService
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     public async Task SaveSendAsync(Send send)
     {
         // Make sure user can save Sends
-        await ValidateUserCanSaveAsync(send.UserId, send);
+        if (_featureService.IsEnabled(FeatureFlagKeys.Pm14439AddPolicyRequirements))
+        {
+            await ValidateUserCanSaveAsync_vNext(send.UserId, send);
+        }
+        else
+        {
+            await ValidateUserCanSaveAsync(send.UserId, send);
+        }
 
         if (send.Id == default(Guid))
         {
@@ -301,6 +317,30 @@ public class SendService : ISendService
         {
             var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
             if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
+            {
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+            }
+        }
+    }
+
+    private async Task ValidateUserCanSaveAsync_vNext(Guid? userId, Send send)
+    {
+        if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
+        {
+            return;
+        }
+
+        var disableSendRequirement =
+            await _policyRequirementQuery.GetAsync<DisableSendPolicyRequirement>(userId.Value);
+        if (disableSendRequirement.DisableSend)
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+        }
+
+        if (send.HideEmail.GetValueOrDefault())
+        {
+            var sendOptionsRequirement = await _policyRequirementQuery.GetAsync<SendOptionsPolicyRequirement>(userId.Value);
+            if (sendOptionsRequirement.DisableHideEmail)
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
             }

@@ -21,11 +21,9 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     }
 
     // Note: PolicyType parameter can be removed once legacy uses are updated
-    public async Task<T> GetAsync<T>(Guid userId, PolicyType type) where T : IPolicyRequirement
+    public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
     {
-        var definition = _policyRequirementDefinitions.SingleOrDefault(def =>
-            def is IPolicyRequirementDefinition<T> &&
-            def.Type == type);
+        var definition = _policyRequirementDefinitions.SingleOrDefault(def => def is IPolicyRequirementDefinition<T>);
 
         if (definition is null)
         {

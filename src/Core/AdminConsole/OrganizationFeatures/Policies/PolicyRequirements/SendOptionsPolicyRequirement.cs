@@ -6,19 +6,23 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public record SendOptionsPolicyRequirementDefinition : IPolicyRequirementDefinition<SendOptionsPolicyData>
+public record SendOptionsPolicyRequirementDefinition : IPolicyRequirementDefinition<SendOptionsPolicyRequirement>
 {
     public PolicyType Type => PolicyType.SendOptions;
 
-    public SendOptionsPolicyData Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
+    public SendOptionsPolicyRequirement Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
         userPolicyDetails
             .Select(up => up.GetDataModel<SendOptionsPolicyData>())
-            .Aggregate((result, current) => new SendOptionsPolicyData
-            {
-                DisableHideEmail = result.DisableHideEmail || current.DisableHideEmail
-            });
+            .Aggregate(
+                new SendOptionsPolicyRequirement(),
+                (result, current) => new SendOptionsPolicyRequirement
+                {
+                    DisableHideEmail = result.DisableHideEmail || current.DisableHideEmail
+                });
 
     public bool FilterPredicate(OrganizationUserPolicyDetails userPolicyDetails) =>
         userPolicyDetails.OrganizationUserStatus > OrganizationUserStatusType.Invited;
 }
+
+public class SendOptionsPolicyRequirement : SendOptionsPolicyData, IPolicyRequirement;
 
