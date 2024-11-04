@@ -38,7 +38,6 @@ public class PutGroupCommandTests
         var expectedResult = new Group
         {
             Id = group.Id,
-            AccessAll = group.AccessAll,
             ExternalId = group.ExternalId,
             Name = displayName,
             OrganizationId = group.OrganizationId
@@ -77,7 +76,6 @@ public class PutGroupCommandTests
         var expectedResult = new Group
         {
             Id = group.Id,
-            AccessAll = group.AccessAll,
             ExternalId = group.ExternalId,
             Name = displayName,
             OrganizationId = group.OrganizationId

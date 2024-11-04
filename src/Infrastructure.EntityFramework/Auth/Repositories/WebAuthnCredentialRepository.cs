@@ -7,6 +7,8 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAuthnCredential, WebAuthnCredential, Guid>, IWebAuthnCredentialRepository
@@ -15,7 +17,7 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
         : base(serviceScopeFactory, mapper, (context) => context.WebAuthnCredentials)
     { }
 
-    public async Task<Core.Auth.Entities.WebAuthnCredential> GetByIdAsync(Guid id, Guid userId)
+    public async Task<Core.Auth.Entities.WebAuthnCredential?> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

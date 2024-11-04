@@ -15,13 +15,13 @@ namespace Bit.Api.Billing.Controllers;
 public class ProviderClientsController(
     ICurrentContext currentContext,
     IFeatureService featureService,
-    ILogger<ProviderClientsController> logger,
+    ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : BaseProviderController(currentContext, featureService, providerRepository)
+    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
 {
     [HttpPost]
     public async Task<IResult> CreateAsync(
@@ -35,11 +35,11 @@ public class ProviderClientsController(
             return result;
         }
 
-        var user = await userService.GetUserByPrincipalAsync(User);
+        var user = await UserService.GetUserByPrincipalAsync(User);
 
         if (user == null)
         {
-            return TypedResults.Unauthorized();
+            return Error.Unauthorized();
         }
 
         var organizationSignup = new OrganizationSignup
@@ -52,7 +52,8 @@ public class ProviderClientsController(
             OwnerKey = requestBody.Key,
             PublicKey = requestBody.KeyPair.PublicKey,
             PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
-            CollectionName = requestBody.CollectionName
+            CollectionName = requestBody.CollectionName,
+            IsFromProvider = true
         };
 
         var providerOrganization = await providerService.CreateOrganizationAsync(
@@ -62,13 +63,6 @@ public class ProviderClientsController(
             user);
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-
-        if (clientOrganization == null)
-        {
-            logger.LogError("Newly created client organization ({ID}) could not be found", providerOrganization.OrganizationId);
-
-            return TypedResults.Problem();
-        }
 
         await providerBillingService.ScaleSeats(
             provider,
@@ -103,17 +97,10 @@ public class ProviderClientsController(
 
         if (providerOrganization == null)
         {
-            return TypedResults.NotFound();
+            return Error.NotFound();
         }
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-
-        if (clientOrganization == null)
-        {
-            logger.LogError("The client organization ({OrganizationID}) represented by provider organization ({ProviderOrganizationID}) could not be found.", providerOrganization.OrganizationId, providerOrganization.Id);
-
-            return TypedResults.Problem();
-        }
 
         if (clientOrganization.Seats != requestBody.AssignedSeats)
         {

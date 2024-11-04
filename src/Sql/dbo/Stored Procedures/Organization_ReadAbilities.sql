@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -21,9 +21,10 @@ BEGIN
         [UseResetPassword],
         [UsePolicies],
         [Enabled],
-        [LimitCollectionCreationDeletion],
-        [AllowAdminAccessToAllCollectionItems],
-        [FlexibleCollections]
+        [LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
+        [LimitCollectionCreation],
+        [LimitCollectionDeletion],
+        [AllowAdminAccessToAllCollectionItems]
     FROM
         [dbo].[Organization]
 END

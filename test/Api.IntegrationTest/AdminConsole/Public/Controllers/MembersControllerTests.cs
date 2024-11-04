@@ -10,7 +10,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -21,8 +20,10 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
-    private Organization _organization;
-    private string _ownerEmail;
+
+    // These will get set in `InitializeAsync` which is ran before all tests
+    private Organization _organization = null!;
+    private string _ownerEmail = null!;
 
     public MembersControllerTests(ApiApplicationFactory factory)
     {
@@ -74,7 +75,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             m.Email == _ownerEmail && m.Type == OrganizationUserType.Owner));
 
         // The custom user
-        var user1Result = result.Data.SingleOrDefault(m => m.Email == userEmail1);
+        var user1Result = result.Data.Single(m => m.Email == userEmail1);
         Assert.Equal(OrganizationUserType.Custom, user1Result.Type);
         AssertHelper.AssertPropertyEqual(
             new PermissionsModel { AccessImportExport = true, ManagePolicies = true, AccessReports = true },
@@ -107,26 +108,6 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             result.Permissions);
     }
 
-    [Theory]
-    [BitAutoData(true, true)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    public async Task Get_CustomMember_WithDeprecatedPermissions_TreatsAsUser(bool editAssignedCollections, bool deleteAssignedCollections)
-    {
-        var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
-            OrganizationUserType.Custom, new Permissions { EditAssignedCollections = editAssignedCollections, DeleteAssignedCollections = deleteAssignedCollections });
-
-        var response = await _client.GetAsync($"/public/members/{orgUser.Id}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<MemberResponseModel>();
-        Assert.NotNull(result);
-        Assert.Equal(email, result.Email);
-
-        Assert.Equal(OrganizationUserType.User, result.Type);
-        Assert.Null(result.Permissions);
-    }
-
     [Fact]
     public async Task Post_CustomMember_Success()
     {
@@ -156,6 +137,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var orgUser = await organizationUserRepository.GetByIdAsync(result.Id);
 
+        Assert.NotNull(orgUser);
         Assert.Equal(email, orgUser.Email);
         Assert.Equal(OrganizationUserType.Custom, orgUser.Type);
         Assert.Equal("myCustomUser", orgUser.ExternalId);
@@ -201,6 +183,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var updatedOrgUser = await organizationUserRepository.GetByIdAsync(result.Id);
 
+        Assert.NotNull(updatedOrgUser);
         Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
         Assert.Equal("example", updatedOrgUser.ExternalId);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updatedOrgUser.Status);
@@ -240,6 +223,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         var updatedOrgUser = await organizationUserRepository.GetByIdAsync(result.Id);
 
+        Assert.NotNull(updatedOrgUser);
         Assert.Equal(OrganizationUserType.Custom, updatedOrgUser.Type);
         AssertHelper.AssertPropertyEqual(
             new Permissions { CreateNewCollections = true, ManageScim = true, ManageGroups = true, ManageUsers = true },

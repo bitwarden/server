@@ -112,11 +112,7 @@ public class CollectionServiceTest
         [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
-        organization.FlexibleCollections = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, Arg.Any<bool>())
-            .Returns(true);
         organization.AllowAdminAccessToAllCollectionItems = false;
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
@@ -178,7 +174,7 @@ public class CollectionServiceTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteUserAsync(collection, Guid.NewGuid()));
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync(default, default);
+            .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
     }
 
     [Theory, BitAutoData]

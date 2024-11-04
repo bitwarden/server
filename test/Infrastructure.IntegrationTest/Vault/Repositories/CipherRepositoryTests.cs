@@ -40,6 +40,7 @@ public class CipherRepositoryTests
 
         Assert.Null(deletedCipher);
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
         Assert.NotEqual(updatedUser.AccountRevisionDate, user.AccountRevisionDate);
     }
 
@@ -61,6 +62,7 @@ public class CipherRepositoryTests
         });
 
         user = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(user);
 
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -110,6 +112,7 @@ public class CipherRepositoryTests
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
+        Assert.NotNull(updatedUser);
         Assert.True(updatedUser.AccountRevisionDate - user.AccountRevisionDate > TimeSpan.Zero,
             "The AccountRevisionDate is expected to be changed");
 
@@ -135,6 +138,7 @@ public class CipherRepositoryTests
 
 
         user = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(user);
 
         // Create cipher in personal vault
         var createdCipher = await cipherRepository.CreateAsync(new Cipher
@@ -176,6 +180,7 @@ public class CipherRepositoryTests
 
         var updatedCipher = await cipherRepository.GetByIdAsync(createdCipher.Id);
 
+        Assert.NotNull(updatedCipher);
         Assert.Null(updatedCipher.UserId);
         Assert.Equal(organization.Id, updatedCipher.OrganizationId);
         Assert.NotNull(updatedCipher.Folders);

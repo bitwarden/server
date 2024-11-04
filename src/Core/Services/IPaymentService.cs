@@ -15,6 +15,9 @@ public interface IPaymentService
         string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false, int additionalSmSeats = 0,
         int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false);
+    Task<string> PurchaseOrganizationNoPaymentMethod(Organization org, Plan plan, int additionalSeats,
+        bool premiumAccessAddon, int additionalSmSeats = 0, int additionalServiceAccount = 0,
+        bool signupIsFromSecretsManagerTrial = false);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan, OrganizationUpgrade upgrade);

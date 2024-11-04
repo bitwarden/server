@@ -4,13 +4,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework;
 
 public class EntityFrameworkCache : IDistributedCache
 {
 #if DEBUG
     // Used for debugging in tests
-    public Task scanTask;
+    public Task? scanTask;
 #endif
     private static readonly TimeSpan _defaultSlidingExpiration = TimeSpan.FromMinutes(20);
     private static readonly TimeSpan _expiredItemsDeletionInterval = TimeSpan.FromMinutes(30);
@@ -22,21 +24,21 @@ public class EntityFrameworkCache : IDistributedCache
 
     public EntityFrameworkCache(
         IServiceScopeFactory serviceScopeFactory,
-        TimeProvider timeProvider = null)
+        TimeProvider? timeProvider = null)
     {
         _deleteExpiredCachedItemsDelegate = DeleteExpiredCacheItems;
         _serviceScopeFactory = serviceScopeFactory;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public byte[] Get(string key)
+    public byte[]? Get(string key)
     {
         ArgumentNullException.ThrowIfNull(key);
 
         using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = dbContext.Cache
-            .Where(c => c.Id == key && _timeProvider.GetUtcNow().DateTime <= c.ExpiresAtTime)
+            .Where(c => c.Id == key && _timeProvider.GetUtcNow().UtcDateTime <= c.ExpiresAtTime)
             .SingleOrDefault();
 
         if (cache == null)
@@ -53,7 +55,7 @@ public class EntityFrameworkCache : IDistributedCache
         return cache?.Value;
     }
 
-    public async Task<byte[]> GetAsync(string key, CancellationToken token = default)
+    public async Task<byte[]?> GetAsync(string key, CancellationToken token = default)
     {
         ArgumentNullException.ThrowIfNull(key);
         token.ThrowIfCancellationRequested();
@@ -61,7 +63,7 @@ public class EntityFrameworkCache : IDistributedCache
         using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var cache = await dbContext.Cache
-            .Where(c => c.Id == key && _timeProvider.GetUtcNow().DateTime <= c.ExpiresAtTime)
+            .Where(c => c.Id == key && _timeProvider.GetUtcNow().UtcDateTime <= c.ExpiresAtTime)
             .SingleOrDefaultAsync(cancellationToken: token);
 
         if (cache == null)
@@ -181,9 +183,9 @@ public class EntityFrameworkCache : IDistributedCache
         ScanForExpiredItemsIfRequired();
     }
 
-    private Cache SetCache(Cache cache, string key, byte[] value, DistributedCacheEntryOptions options)
+    private Cache SetCache(Cache? cache, string key, byte[] value, DistributedCacheEntryOptions options)
     {
-        var utcNow = _timeProvider.GetUtcNow().DateTime;
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
         // resolve options
         if (!options.AbsoluteExpiration.HasValue &&
@@ -217,7 +219,7 @@ public class EntityFrameworkCache : IDistributedCache
                 throw new InvalidOperationException("The absolute expiration value must be in the future.");
             }
 
-            absoluteExpiration = options.AbsoluteExpiration.Value.DateTime;
+            absoluteExpiration = options.AbsoluteExpiration.Value.UtcDateTime;
         }
 
         // set values on cache
@@ -242,7 +244,7 @@ public class EntityFrameworkCache : IDistributedCache
 
     private bool UpdateCacheExpiration(Cache cache)
     {
-        var utcNow = _timeProvider.GetUtcNow().DateTime;
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
         if (cache.SlidingExpirationInSeconds.HasValue && (cache.AbsoluteExpiration.HasValue || cache.AbsoluteExpiration != cache.ExpiresAtTime))
         {
             if (cache.AbsoluteExpiration.HasValue && (cache.AbsoluteExpiration.Value - utcNow).TotalSeconds <= cache.SlidingExpirationInSeconds)
@@ -262,7 +264,7 @@ public class EntityFrameworkCache : IDistributedCache
     {
         lock (_mutex)
         {
-            var utcNow = _timeProvider.GetUtcNow().DateTime;
+            var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
             if ((utcNow - _lastExpirationScan) > _expiredItemsDeletionInterval)
             {
                 _lastExpirationScan = utcNow;
@@ -278,7 +280,7 @@ public class EntityFrameworkCache : IDistributedCache
     {
         using var scope = _serviceScopeFactory.CreateScope();
         GetDatabaseContext(scope).Cache
-            .Where(c => _timeProvider.GetUtcNow().DateTime > c.ExpiresAtTime)
+            .Where(c => _timeProvider.GetUtcNow().UtcDateTime > c.ExpiresAtTime)
             .ExecuteDelete();
     }
 

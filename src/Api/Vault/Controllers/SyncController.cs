@@ -35,6 +35,7 @@ public class SyncController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
+    private readonly IFeatureService _featureService;
 
     public SyncController(
         IUserService userService,
@@ -47,7 +48,8 @@ public class SyncController : Controller
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -60,6 +62,7 @@ public class SyncController : Controller
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -98,15 +101,18 @@ public class SyncController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
-            providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
-            collectionCiphersGroupDict, excludeDomains, policies, sends);
+        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
+
+        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
+            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }
 
     private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
     {
-        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion && _currentContext.DeviceType != DeviceType.Android && _currentContext.DeviceType != DeviceType.iOS && _currentContext.DeviceType != DeviceType.AndroidAmazon)
+        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion)
         {
             return ciphers;
         }

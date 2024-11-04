@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -131,10 +132,6 @@ public class UpdateOrganizationUserCommandTests
     {
         Setup(sutProvider, organization, newUserData, oldUserData);
 
-        // Deprecated with Flexible Collections
-        oldUserData.AccessAll = false;
-        newUserData.AccessAll = false;
-
         // Arrange list of collections to make sure Manage is mutually exclusive
         for (var i = 0; i < collections.Count; i++)
         {
@@ -173,59 +170,9 @@ public class UpdateOrganizationUserCommandTests
         await organizationService.Received(1).ValidateOrganizationCustomPermissionsEnabledAsync(
             newUserData.OrganizationId,
             newUserData.Type);
-        await organizationService.Received(1).HasConfirmedOwnersExceptAsync(
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1).HasConfirmedOwnersExceptAsync(
             newUserData.OrganizationId,
             Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id)));
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithAccessAll_Throws(
-        Organization organization,
-        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
-        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser newUserData,
-        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        List<CollectionAccessSelection> collections,
-        List<Guid> groups,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = oldUserData.OrganizationId = savingUser.OrganizationId = organization.Id;
-        newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
-        newUserData.AccessAll = true;
-
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection { Id = guid, OrganizationId = oldUserData.OrganizationId }).ToList());
-
-        sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Group { Id = guid, OrganizationId = oldUserData.OrganizationId }).ToList());
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        sutProvider.GetDependency<IOrganizationService>()
-            .HasConfirmedOwnersExceptAsync(
-                newUserData.OrganizationId,
-                Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id)))
-            .Returns(true);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(oldUserData.Id)
-            .Returns(oldUserData);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(newUserData, oldUserData.UserId, collections, groups));
-
-        Assert.Contains("the accessall property has been deprecated", exception.Message.ToLowerInvariant());
     }
 
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,
@@ -241,7 +188,7 @@ public class UpdateOrganizationUserCommandTests
         newUser.UserId = oldUser.UserId;
         newUser.OrganizationId = oldUser.OrganizationId = organization.Id;
         organizationUserRepository.GetByIdAsync(oldUser.Id).Returns(oldUser);
-        organizationService
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 oldUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(oldUser.Id)))

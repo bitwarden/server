@@ -1,13 +1,15 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class ProviderEditModel : ProviderViewModel
+public class ProviderEditModel : ProviderViewModel, IValidatableObject
 {
     public ProviderEditModel() { }
 
@@ -30,6 +32,13 @@ public class ProviderEditModel : ProviderViewModel
         GatewaySubscriptionId = provider.GatewaySubscriptionId;
         GatewayCustomerUrl = gatewayCustomerUrl;
         GatewaySubscriptionUrl = gatewaySubscriptionUrl;
+        Type = provider.Type;
+        if (Type == ProviderType.MultiOrganizationEnterprise)
+        {
+            var plan = providerPlans.Single();
+            EnterpriseMinimumSeats = plan.SeatMinimum;
+            Plan = plan.PlanType;
+        }
     }
 
     [Display(Name = "Billing Email")]
@@ -52,17 +61,61 @@ public class ProviderEditModel : ProviderViewModel
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
+    [Display(Name = "Provider Type")]
+    public ProviderType Type { get; set; }
+
+    [Display(Name = "Plan")]
+    public PlanType? Plan { get; set; }
+
+    [Display(Name = "Enterprise Seats Minimum")]
+    public int? EnterpriseMinimumSeats { get; set; }
 
     public virtual Provider ToProvider(Provider existingProvider)
     {
         existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant().Trim();
         existingProvider.BillingPhone = BillingPhone?.ToLowerInvariant().Trim();
-        existingProvider.Gateway = Gateway;
-        existingProvider.GatewayCustomerId = GatewayCustomerId;
-        existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
+        switch (Type)
+        {
+            case ProviderType.Msp:
+                existingProvider.Gateway = Gateway;
+                existingProvider.GatewayCustomerId = GatewayCustomerId;
+                existingProvider.GatewaySubscriptionId = GatewaySubscriptionId;
+                break;
+        }
         return existingProvider;
     }
 
     private static int GetSeatMinimum(IEnumerable<ProviderPlan> providerPlans, PlanType planType)
         => providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType)?.SeatMinimum ?? 0;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        switch (Type)
+        {
+            case ProviderType.Reseller:
+                if (string.IsNullOrWhiteSpace(BillingEmail))
+                {
+                    var billingEmailDisplayName = nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(BillingEmail);
+                    yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
+                }
+                break;
+            case ProviderType.MultiOrganizationEnterprise:
+                if (Plan == null)
+                {
+                    var displayName = nameof(Plan).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(Plan);
+                    yield return new ValidationResult($"The {displayName} field is required.");
+                }
+                if (EnterpriseMinimumSeats == null)
+                {
+                    var displayName = nameof(EnterpriseMinimumSeats).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMinimumSeats);
+                    yield return new ValidationResult($"The {displayName} field is required.");
+                }
+                if (EnterpriseMinimumSeats < 0)
+                {
+                    var displayName = nameof(EnterpriseMinimumSeats).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMinimumSeats);
+                    yield return new ValidationResult($"The {displayName} field cannot be less than 0.");
+                }
+                break;
+        }
+    }
 }

@@ -179,30 +179,90 @@ public class OrganizationEditModel : OrganizationViewModel
      * This is mapped manually below to provide some type safety in case the plan objects change
      * Add mappings for individual properties as you need them
      */
-    public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
+    public object GetPlansHelper() =>
         StaticStore.Plans
-            .Where(p => p.SupportsSecretsManager)
-            .Select(p => new Dictionary<string, object>
+            .Select(p =>
             {
-                { "type", p.Type },
-                { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
+                var plan = new
+                {
+                    Type = p.Type,
+                    ProductTier = p.ProductTier,
+                    Name = p.Name,
+                    IsAnnual = p.IsAnnual,
+                    NameLocalizationKey = p.NameLocalizationKey,
+                    DescriptionLocalizationKey = p.DescriptionLocalizationKey,
+                    CanBeUsedByBusiness = p.CanBeUsedByBusiness,
+                    TrialPeriodDays = p.TrialPeriodDays,
+                    HasSelfHost = p.HasSelfHost,
+                    HasPolicies = p.HasPolicies,
+                    HasGroups = p.HasGroups,
+                    HasDirectory = p.HasDirectory,
+                    HasEvents = p.HasEvents,
+                    HasTotp = p.HasTotp,
+                    Has2fa = p.Has2fa,
+                    HasApi = p.HasApi,
+                    HasSso = p.HasSso,
+                    HasKeyConnector = p.HasKeyConnector,
+                    HasScim = p.HasScim,
+                    HasResetPassword = p.HasResetPassword,
+                    UsersGetPremium = p.UsersGetPremium,
+                    HasCustomPermissions = p.HasCustomPermissions,
+                    UpgradeSortOrder = p.UpgradeSortOrder,
+                    DisplaySortOrder = p.DisplaySortOrder,
+                    LegacyYear = p.LegacyYear,
+                    Disabled = p.Disabled,
+                    SupportsSecretsManager = p.SupportsSecretsManager,
+                    PasswordManager =
+                        new
+                        {
+                            StripePlanId = p.PasswordManager?.StripePlanId,
+                            StripeSeatPlanId = p.PasswordManager?.StripeSeatPlanId,
+                            StripeProviderPortalSeatPlanId = p.PasswordManager?.StripeProviderPortalSeatPlanId,
+                            BasePrice = p.PasswordManager?.BasePrice,
+                            SeatPrice = p.PasswordManager?.SeatPrice,
+                            ProviderPortalSeatPrice = p.PasswordManager?.ProviderPortalSeatPrice,
+                            AllowSeatAutoscale = p.PasswordManager?.AllowSeatAutoscale,
+                            HasAdditionalSeatsOption = p.PasswordManager?.HasAdditionalSeatsOption,
+                            MaxAdditionalSeats = p.PasswordManager?.MaxAdditionalSeats,
+                            BaseSeats = p.PasswordManager?.BaseSeats,
+                            HasPremiumAccessOption = p.PasswordManager?.HasPremiumAccessOption,
+                            StripePremiumAccessPlanId = p.PasswordManager?.StripePremiumAccessPlanId,
+                            PremiumAccessOptionPrice = p.PasswordManager?.PremiumAccessOptionPrice,
+                            MaxSeats = p.PasswordManager?.MaxSeats,
+                            BaseStorageGb = p.PasswordManager?.BaseStorageGb,
+                            HasAdditionalStorageOption = p.PasswordManager?.HasAdditionalStorageOption,
+                            AdditionalStoragePricePerGb = p.PasswordManager?.AdditionalStoragePricePerGb,
+                            StripeStoragePlanId = p.PasswordManager?.StripeStoragePlanId,
+                            MaxAdditionalStorage = p.PasswordManager?.MaxAdditionalStorage,
+                            MaxCollections = p.PasswordManager?.MaxCollections
+                        },
+                    SecretsManager = new
+                    {
+                        MaxServiceAccounts = p.SecretsManager?.MaxServiceAccounts,
+                        AllowServiceAccountsAutoscale = p.SecretsManager?.AllowServiceAccountsAutoscale,
+                        StripeServiceAccountPlanId = p.SecretsManager?.StripeServiceAccountPlanId,
+                        AdditionalPricePerServiceAccount = p.SecretsManager?.AdditionalPricePerServiceAccount,
+                        BaseServiceAccount = p.SecretsManager?.BaseServiceAccount,
+                        MaxAdditionalServiceAccount = p.SecretsManager?.MaxAdditionalServiceAccount,
+                        HasAdditionalServiceAccountOption = p.SecretsManager?.HasAdditionalServiceAccountOption,
+                        StripeSeatPlanId = p.SecretsManager?.StripeSeatPlanId,
+                        HasAdditionalSeatsOption = p.SecretsManager?.HasAdditionalSeatsOption,
+                        BasePrice = p.SecretsManager?.BasePrice,
+                        SeatPrice = p.SecretsManager?.SeatPrice,
+                        BaseSeats = p.SecretsManager?.BaseSeats,
+                        MaxSeats = p.SecretsManager?.MaxSeats,
+                        MaxAdditionalSeats = p.SecretsManager?.MaxAdditionalSeats,
+                        AllowSeatAutoscale = p.SecretsManager?.AllowSeatAutoscale,
+                        MaxProjects = p.SecretsManager?.MaxProjects
+                    }
+                };
+                return plan;
             });
 
-    public Organization CreateOrganization(Provider provider, bool flexibleCollectionsV1Enabled)
+    public Organization CreateOrganization(Provider provider)
     {
         BillingEmail = provider.BillingEmail;
-
-        var newOrg = new Organization
-        {
-            // Flexible Collections MVP is fully released and all organizations must always have this setting enabled.
-            // AC-1714 will remove this flag after all old code has been removed.
-            FlexibleCollections = true,
-
-            // This is a transitional setting that defaults to ON until Flexible Collections v1 is released
-            // (to preserve existing behavior) and defaults to OFF after release (enabling new behavior)
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1Enabled
-        };
-        return ToOrganization(newOrg);
+        return ToOrganization(new Organization());
     }
 
     public Organization ToOrganization(Organization existingOrganization)

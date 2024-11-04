@@ -9,11 +9,12 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -22,7 +23,6 @@ using Bit.Core.Utilities;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using static Bit.Core.Billing.Utilities;
 
 namespace Bit.Commercial.Core.Billing;
 
@@ -67,67 +67,6 @@ public class ProviderBillingService(
         organization.Seats = seats;
 
         await organizationRepository.ReplaceAsync(organization);
-    }
-
-    public async Task CreateCustomer(
-        Provider provider,
-        TaxInfo taxInfo)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(taxInfo);
-
-        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
-            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
-        {
-            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
-
-            throw ContactSupport();
-        }
-
-        var providerDisplayName = provider.DisplayName();
-
-        var customerCreateOptions = new CustomerCreateOptions
-        {
-            Address = new AddressOptions
-            {
-                Country = taxInfo.BillingAddressCountry,
-                PostalCode = taxInfo.BillingAddressPostalCode,
-                Line1 = taxInfo.BillingAddressLine1,
-                Line2 = taxInfo.BillingAddressLine2,
-                City = taxInfo.BillingAddressCity,
-                State = taxInfo.BillingAddressState
-            },
-            Description = provider.DisplayBusinessName(),
-            Email = provider.BillingEmail,
-            InvoiceSettings = new CustomerInvoiceSettingsOptions
-            {
-                CustomFields =
-                [
-                    new CustomerInvoiceSettingsCustomFieldOptions
-                    {
-                        Name = provider.SubscriberType(),
-                        Value = providerDisplayName.Length <= 30
-                            ? providerDisplayName
-                            : providerDisplayName[..30]
-                    }
-                ]
-            },
-            Metadata = new Dictionary<string, string>
-            {
-                { "region", globalSettings.BaseServiceUri.CloudRegion }
-            },
-            TaxIdData = taxInfo.HasTaxId ?
-                [
-                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
-                ]
-                : null
-        };
-
-        var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
-
-        provider.GatewayCustomerId = customer.Id;
-
-        await providerRepository.ReplaceAsync(provider);
     }
 
     public async Task CreateCustomerForClientOrganization(
@@ -204,15 +143,14 @@ public class ProviderBillingService(
     public async Task<byte[]> GenerateClientInvoiceReport(
         string invoiceId)
     {
-        if (string.IsNullOrEmpty(invoiceId))
-        {
-            throw new ArgumentNullException(nameof(invoiceId));
-        }
+        ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
         var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoiceId);
 
         if (invoiceItems.Count == 0)
         {
+            logger.LogError("No provider invoice item records were found for invoice ({InvoiceID})", invoiceId);
+
             return null;
         }
 
@@ -245,14 +183,14 @@ public class ProviderBillingService(
                 "Could not find provider ({ID}) when retrieving assigned seat total",
                 providerId);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         if (provider.Type == ProviderType.Reseller)
         {
             logger.LogError("Assigned seats cannot be retrieved for reseller-type provider ({ID})", providerId);
 
-            throw ContactSupport("Consolidated billing does not support reseller-type providers");
+            throw new BillingException();
         }
 
         var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
@@ -262,39 +200,6 @@ public class ProviderBillingService(
         return providerOrganizations
             .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
-    }
-
-    public async Task<ConsolidatedBillingSubscriptionDTO> GetConsolidatedBillingSubscription(
-        Provider provider)
-    {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        var subscription = await subscriberService.GetSubscription(provider, new SubscriptionGetOptions
-        {
-            Expand = ["customer", "test_clock"]
-        });
-
-        if (subscription == null)
-        {
-            return null;
-        }
-
-        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
-
-        var configuredProviderPlans = providerPlans
-            .Where(providerPlan => providerPlan.IsConfigured())
-            .Select(ConfiguredProviderPlanDTO.From)
-            .ToList();
-
-        var taxInformation = await subscriberService.GetTaxInformation(provider);
-
-        var suspension = await GetSuspensionAsync(stripeAdapter, subscription);
-
-        return new ConsolidatedBillingSubscriptionDTO(
-            configuredProviderPlans,
-            subscription,
-            taxInformation,
-            suspension);
     }
 
     public async Task ScaleSeats(
@@ -308,14 +213,14 @@ public class ProviderBillingService(
         {
             logger.LogError("Non-MSP provider ({ProviderID}) cannot scale their seats", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         if (!planType.SupportsConsolidatedBilling())
         {
             logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} as it does not support consolidated billing", provider.Id, planType.ToString());
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
@@ -326,7 +231,7 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} when their matching provider plan is not configured", provider.Id, planType);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
@@ -362,7 +267,7 @@ public class ProviderBillingService(
             {
                 logger.LogError("Service user for provider ({ProviderID}) cannot scale a provider's seat count over the seat minimum", provider.Id);
 
-                throw ContactSupport();
+                throw new BillingException();
             }
 
             await update(
@@ -393,7 +298,71 @@ public class ProviderBillingService(
         }
     }
 
-    public async Task StartSubscription(
+    public async Task<Customer> SetupCustomer(
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        ArgumentNullException.ThrowIfNull(taxInfo);
+
+        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
+            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        {
+            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
+
+            throw new BillingException();
+        }
+
+        var providerDisplayName = provider.DisplayName();
+
+        var customerCreateOptions = new CustomerCreateOptions
+        {
+            Address = new AddressOptions
+            {
+                Country = taxInfo.BillingAddressCountry,
+                PostalCode = taxInfo.BillingAddressPostalCode,
+                Line1 = taxInfo.BillingAddressLine1,
+                Line2 = taxInfo.BillingAddressLine2,
+                City = taxInfo.BillingAddressCity,
+                State = taxInfo.BillingAddressState
+            },
+            Description = provider.DisplayBusinessName(),
+            Email = provider.BillingEmail,
+            InvoiceSettings = new CustomerInvoiceSettingsOptions
+            {
+                CustomFields =
+                [
+                    new CustomerInvoiceSettingsCustomFieldOptions
+                    {
+                        Name = provider.SubscriberType(),
+                        Value = providerDisplayName?.Length <= 30
+                            ? providerDisplayName
+                            : providerDisplayName?[..30]
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "region", globalSettings.BaseServiceUri.CloudRegion }
+            },
+            TaxIdData = taxInfo.HasTaxId ?
+                [
+                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
+                ]
+                : null
+        };
+
+        try
+        {
+            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
+        {
+            throw new BadRequestException("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
+        }
+    }
+
+    public async Task<Subscription> SetupSubscription(
         Provider provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
@@ -406,46 +375,27 @@ public class ProviderBillingService(
         {
             logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
 
-            throw ContactSupport();
+            throw new BillingException();
         }
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
-        var teamsProviderPlan =
-            providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
-
-        if (teamsProviderPlan == null || !teamsProviderPlan.IsConfigured())
+        foreach (var providerPlan in providerPlans)
         {
-            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Teams plan", provider.Id);
+            var plan = StaticStore.GetPlan(providerPlan.PlanType);
 
-            throw ContactSupport();
+            if (!providerPlan.IsConfigured())
+            {
+                logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured {ProviderName} plan", provider.Id, plan.Name);
+                throw new BillingException();
+            }
+
+            subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+            {
+                Price = plan.PasswordManager.StripeProviderPortalSeatPlanId,
+                Quantity = providerPlan.SeatMinimum
+            });
         }
-
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-
-        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-        {
-            Price = teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId,
-            Quantity = teamsProviderPlan.SeatMinimum
-        });
-
-        var enterpriseProviderPlan =
-            providerPlans.SingleOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
-
-        if (enterpriseProviderPlan == null || !enterpriseProviderPlan.IsConfigured())
-        {
-            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured Enterprise plan", provider.Id);
-
-            throw ContactSupport();
-        }
-
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-
-        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-        {
-            Price = enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId,
-            Quantity = enterpriseProviderPlan.SeatMinimum
-        });
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
@@ -465,22 +415,167 @@ public class ProviderBillingService(
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
 
-        var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
-
-        provider.GatewaySubscriptionId = subscription.Id;
-
-        if (subscription.Status == StripeConstants.SubscriptionStatus.Incomplete)
+        try
         {
-            await providerRepository.ReplaceAsync(provider);
+            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
-            logger.LogError("Started incomplete provider ({ProviderID}) subscription ({SubscriptionID})", provider.Id, subscription.Id);
+            if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
+            {
+                return subscription;
+            }
 
-            throw ContactSupport();
+            logger.LogError(
+                "Newly created provider ({ProviderID}) subscription ({SubscriptionID}) has inactive status: {Status}",
+                provider.Id,
+                subscription.Id,
+                subscription.Status);
+
+            throw new BillingException();
+        }
+        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
+        {
+            throw new BadRequestException("Your location wasn't recognized. Please ensure your country and postal code are valid.");
+        }
+    }
+
+    public async Task ChangePlan(ChangeProviderPlanCommand command)
+    {
+        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
+
+        if (plan == null)
+        {
+            throw new BadRequestException("Provider plan not found.");
         }
 
-        provider.Status = ProviderStatusType.Billable;
+        if (plan.PlanType == command.NewPlan)
+        {
+            return;
+        }
 
-        await providerRepository.ReplaceAsync(provider);
+        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
+
+        plan.PlanType = command.NewPlan;
+        await providerPlanRepository.ReplaceAsync(plan);
+
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
+
+        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
+            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
+
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                new SubscriptionItemOptions
+                {
+                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
+                    Quantity = oldSubscriptionItem!.Quantity
+                },
+                new SubscriptionItemOptions
+                {
+                    Id = oldSubscriptionItem.Id,
+                    Deleted = true
+                }
+            ]
+        };
+
+        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
+    }
+
+    public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
+    {
+        if (command.Configuration.Any(x => x.SeatsMinimum < 0))
+        {
+            throw new BadRequestException("Provider seat minimums must be at least 0.");
+        }
+
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
+
+        var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
+
+        var providerPlans = await providerPlanRepository.GetByProviderId(command.Id);
+
+        foreach (var newPlanConfiguration in command.Configuration)
+        {
+            var providerPlan =
+                providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Plan);
+
+            if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
+            {
+                var priceId = StaticStore.GetPlan(newPlanConfiguration.Plan).PasswordManager
+                    .StripeProviderPortalSeatPlanId;
+                var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
+
+                if (providerPlan.PurchasedSeats == 0)
+                {
+                    if (providerPlan.AllocatedSeats > newPlanConfiguration.SeatsMinimum)
+                    {
+                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - newPlanConfiguration.SeatsMinimum;
+
+                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                        {
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = providerPlan.AllocatedSeats
+                        });
+                    }
+                    else
+                    {
+                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                        {
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = newPlanConfiguration.SeatsMinimum
+                        });
+                    }
+                }
+                else
+                {
+                    var totalSeats = providerPlan.SeatMinimum + providerPlan.PurchasedSeats;
+
+                    if (newPlanConfiguration.SeatsMinimum <= totalSeats)
+                    {
+                        providerPlan.PurchasedSeats = totalSeats - newPlanConfiguration.SeatsMinimum;
+                    }
+                    else
+                    {
+                        providerPlan.PurchasedSeats = 0;
+                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                        {
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = newPlanConfiguration.SeatsMinimum
+                        });
+                    }
+                }
+
+                providerPlan.SeatMinimum = newPlanConfiguration.SeatsMinimum;
+
+                await providerPlanRepository.ReplaceAsync(providerPlan);
+            }
+        }
+
+        if (subscriptionItemOptionsList.Count > 0)
+        {
+            await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
+        }
     }
 
     private Func<int, int, Task> CurrySeatScalingUpdate(

@@ -12,8 +12,4 @@
     <ProjectReference Include="..\Core\Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.5.171" />
-  </ItemGroup>
-
 </Project>

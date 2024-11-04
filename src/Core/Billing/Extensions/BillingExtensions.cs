@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
 
@@ -12,7 +13,7 @@ public static class BillingExtensions
     public static bool IsBillable(this Provider provider) =>
         provider is
         {
-            Type: ProviderType.Msp,
+            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
             Status: ProviderStatusType.Billable
         };
 
@@ -24,9 +25,9 @@ public static class BillingExtensions
             PlanType: PlanType.TeamsMonthly or PlanType.EnterpriseMonthly
         };
 
-    public static bool IsStripeEnabled(this Organization organization)
-        => !string.IsNullOrEmpty(organization.GatewayCustomerId) &&
-           !string.IsNullOrEmpty(organization.GatewaySubscriptionId);
+    public static bool IsStripeEnabled(this ISubscriber subscriber)
+        => !string.IsNullOrEmpty(subscriber.GatewayCustomerId) &&
+           !string.IsNullOrEmpty(subscriber.GatewaySubscriptionId);
 
     public static bool IsUnverifiedBankAccount(this SetupIntent setupIntent) =>
         setupIntent is

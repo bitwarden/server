@@ -33,7 +33,10 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        // `LimitCollectonCreationDeletionSplit` feature flag state isn't
+        // relevant for this test. The flag is never checked for in this
+        // test. This is asserted below.
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -45,11 +48,12 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().DidNotReceiveWithAnyArgs().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanCreateAsync_WhenUser_WithLimitCollectionCreationDeletionFalse_Success(
+    public async Task CanCreateAsync_WhenUser_WithLimitCollectionCreationFalse_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
@@ -58,7 +62,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         organization.Type = OrganizationUserType.User;
 
-        ArrangeOrganizationAbility(sutProvider, organization, false);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, false, false);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -67,16 +71,49 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            .Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateAsync_WhenUser_WithLimitCollectionCreationFalse_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, false, false);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Create },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            .Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanCreateAsync_WhenMissingPermissions_NoSuccess(
+    public async Task CanCreateAsync_WhenMissingPermissions_WithLimitCollectionCreationDeletionSplitFeatureDisabled_NoSuccess(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -93,7 +130,7 @@ public class BulkCollectionAuthorizationHandlerTests
             ManageUsers = false
         };
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -103,21 +140,61 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanCreateAsync_WhenMissingPermissions_WithLimitCollectionCreationDeletionSplitFeatureEnabled_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Create },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanCreateAsync_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanCreateAsync_WhenMissingOrgAccess_WithLimitCollectionCreationDeletionSplitDisabled_NoSuccess(
         Guid userId,
         CurrentContextOrganization organization,
         List<Collection> collections,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
     {
         collections.ForEach(c => c.OrganizationId = organization.Id);
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -128,8 +205,38 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateAsync_WhenMissingOrgAccess_WithLimitCollectionCreationDeletionSplitEnabled_NoSuccess(
+        Guid userId,
+        CurrentContextOrganization organization,
+        List<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        collections.ForEach(c => c.OrganizationId = organization.Id);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Create },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
@@ -537,44 +644,6 @@ public class BulkCollectionAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanUpdateCollection_WhenAdminOrOwner_WithoutV1Enabled_Success(
-        OrganizationUserType userType,
-        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections,
-        CurrentContextOrganization organization)
-    {
-        organization.Type = userType;
-        organization.Permissions = new Permissions();
-
-        var operationsToTest = new[]
-        {
-            BulkCollectionOperations.Update,
-            BulkCollectionOperations.ModifyUserAccess,
-            BulkCollectionOperations.ModifyGroupAccess,
-        };
-
-        foreach (var op in operationsToTest)
-        {
-            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-
-            var context = new AuthorizationHandlerContext(
-                new[] { op },
-                new ClaimsPrincipal(),
-                collections);
-
-            await sutProvider.Sut.HandleAsync(context);
-
-            Assert.True(context.HasSucceeded);
-
-            // Recreate the SUT to reset the mocks/dependencies between tests
-            sutProvider.Recreate();
-        }
-    }
-
-    [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Owner)]
     public async Task CanUpdateCollection_WhenAdminOrOwner_WithV1Enabled_PermittedByCollectionManagementSettings_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
@@ -599,7 +668,6 @@ public class BulkCollectionAuthorizationHandlerTests
             sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
             sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
                 .Returns(organizationAbility);
-            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
             var context = new AuthorizationHandlerContext(
                 new[] { op },
@@ -642,7 +710,6 @@ public class BulkCollectionAuthorizationHandlerTests
             sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
             sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
                 .Returns(organizationAbility);
-            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
 
             var context = new AuthorizationHandlerContext(
                 new[] { op },
@@ -828,32 +895,6 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdateUsers_WithManageUsersCustomPermission_V1Disabled_Success(
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
-        CurrentContextOrganization organization, Guid actingUserId)
-    {
-        organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            ManageUsers = true
-        };
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ModifyUserAccess },
-            new ClaimsPrincipal(),
-            collections);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
     public async Task CanUpdateUsers_WithManageUsersCustomPermission_AllowAdminAccessIsTrue_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
         CurrentContextOrganization organization, Guid actingUserId)
@@ -866,8 +907,6 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
 
@@ -894,8 +933,6 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = false });
 
@@ -907,32 +944,6 @@ public class BulkCollectionAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.False(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanUpdateGroups_WithManageGroupsCustomPermission_V1Disabled_Success(
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider, ICollection<Collection> collections,
-        CurrentContextOrganization organization, Guid actingUserId)
-    {
-        organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            ManageGroups = true
-        };
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ModifyGroupAccess },
-            new ClaimsPrincipal(),
-            collections);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        Assert.True(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -948,8 +959,6 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = true });
 
@@ -976,8 +985,6 @@ public class BulkCollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1)
-            .Returns(true);
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organization.Id)
             .Returns(new OrganizationAbility { AllowAdminAccessToAllCollectionItems = false });
 
@@ -1005,7 +1012,10 @@ public class BulkCollectionAuthorizationHandlerTests
             DeleteAnyCollection = true
         };
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        // `LimitCollectonCreationDeletionSplit` feature flag state isn't
+        // relevant for this test. The flag is never checked for in this
+        // test. This is asserted below.
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
@@ -1017,6 +1027,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().DidNotReceiveWithAnyArgs().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
@@ -1032,7 +1043,10 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        // `LimitCollectonCreationDeletionSplit` feature flag state isn't
+        // relevant for this test. The flag is never checked for in this
+        // test. This is asserted below.
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
@@ -1044,39 +1058,12 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(context.HasSucceeded);
-    }
-
-    [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanDeleteAsync_WhenAdminOrOwner_V1FlagDisabled_Success(
-        OrganizationUserType userType,
-        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections,
-        CurrentContextOrganization organization)
-    {
-        organization.Type = userType;
-        organization.Permissions = new Permissions();
-
-        ArrangeOrganizationAbility(sutProvider, organization, true, false);
-
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Delete },
-            new ClaimsPrincipal(),
-            collections);
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(false);
-
-        await sutProvider.Sut.HandleAsync(context);
-
+        sutProvider.GetDependency<IFeatureService>().DidNotReceiveWithAnyArgs().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionFalse_WithCanManagePermission_Success(
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionDeletionFalse_WithCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -1086,11 +1073,12 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, false);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, false, false);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         foreach (var c in collections)
         {
@@ -1104,6 +1092,41 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionDeletionFalse_WithCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, false, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+                new[] { BulkCollectionOperations.Delete },
+                new ClaimsPrincipal(),
+                collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
@@ -1111,7 +1134,7 @@ public class BulkCollectionAuthorizationHandlerTests
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
-    public async Task CanDeleteAsync_LimitCollectionCreationDeletionFalse_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_Success(
+    public async Task CanDeleteAsync_LimitCollectionDeletionFalse_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Success(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
@@ -1122,12 +1145,12 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, false, false);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, false, false, false);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         foreach (var c in collections)
         {
@@ -1141,13 +1164,15 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_Success(
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task CanDeleteAsync_LimitCollectionDeletionFalse_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Success(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
@@ -1158,12 +1183,12 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true, false);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, false, false, false);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
 
         foreach (var c in collections)
         {
@@ -1177,13 +1202,14 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.True(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithoutCanManagePermission_Failure(
+    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Success(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
@@ -1194,13 +1220,87 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true, false);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true, false);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Success(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithoutCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Failure(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         foreach (var c in collections)
         {
@@ -1214,11 +1314,50 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDeleteAsync_WhenAdminOrOwner_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithoutCanManagePermission_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Failure(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = false;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsTrue_Failure(
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsTrue_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Failure(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -1228,13 +1367,13 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         foreach (var c in collections)
         {
@@ -1248,11 +1387,12 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDeleteAsync_WhenUser_LimitCollectionCreationDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_Failure(
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsTrue_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Failure(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -1262,13 +1402,13 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
 
-        ArrangeOrganizationAbility(sutProvider, organization, true, false);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
 
         foreach (var c in collections)
         {
@@ -1282,13 +1422,88 @@ public class BulkCollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Failure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            .Returns(false);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenUser_LimitCollectionDeletionTrue_AllowAdminAccessToAllCollectionItemsFalse_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Failure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true, false);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
+            .Returns(true);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanDeleteAsync_WhenMissingPermissions_NoSuccess(
+    public async Task CanDeleteAsync_WhenMissingPermissions_WithLimitCollectionCreationDeletionSplitFeatureDisabled_NoSuccess(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -1305,7 +1520,7 @@ public class BulkCollectionAuthorizationHandlerTests
             ManageUsers = false
         };
 
-        ArrangeOrganizationAbility(sutProvider, organization, true);
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(sutProvider, organization, true, true);
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
@@ -1315,14 +1530,54 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
 
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanDeleteAsync_WhenMissingPermissions_WithLimitCollectionCreationDeletionSplitFeatureEnabled_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
+
+        ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(sutProvider, organization, true, true);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanDeleteAsync_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanDeleteAsync_WhenMissingOrgAccess_WithLimitCollectionCreationDeletionSplitFeatureDisabled_NoSuccess(
         Guid userId,
         ICollection<Collection> collections,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
@@ -1336,8 +1591,34 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenMissingOrgAccess_WithLimitCollectionCreationDeletionSplitFeatureEnabled_NoSuccess(
+        Guid userId,
+        ICollection<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        sutProvider.GetDependency<IFeatureService>().Received(1).IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
         Assert.False(context.HasSucceeded);
     }
 
@@ -1358,6 +1639,7 @@ public class BulkCollectionAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
         Assert.True(context.HasFailed);
         sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs();
+        sutProvider.GetDependency<IFeatureService>().DidNotReceiveWithAnyArgs().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -1381,10 +1663,11 @@ public class BulkCollectionAuthorizationHandlerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.HandleAsync(context));
         Assert.Equal("Requested collections must belong to the same organization.", exception.Message);
         sutProvider.GetDependency<ICurrentContext>().DidNotReceiveWithAnyArgs().GetOrganization(default);
+        sutProvider.GetDependency<IFeatureService>().DidNotReceiveWithAnyArgs().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_Provider_Success(
+    public async Task HandleRequirementAsync_Provider_WithLimitCollectionCreationDeletionSplitFeatureDisabled_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
@@ -1420,6 +1703,63 @@ public class BulkCollectionAuthorizationHandlerTests
             sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync()
                 .Returns(organizationAbilities);
             sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
+            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(false);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections
+            );
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+            await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(orgId);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task HandleRequirementAsync_Provider_WithLimitCollectionCreationDeletionSplitFeatureEnabled_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections)
+    {
+        var actingUserId = Guid.NewGuid();
+        var orgId = collections.First().OrganizationId;
+
+        var organizationAbilities = new Dictionary<Guid, OrganizationAbility>
+        {
+            { collections.First().OrganizationId,
+                new OrganizationAbility
+                {
+                    LimitCollectionCreation = true,
+                    LimitCollectionDeletion = true,
+                    AllowAdminAccessToAllCollectionItems = true
+                }
+            }
+        };
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Create,
+            BulkCollectionOperations.Read,
+            BulkCollectionOperations.ReadAccess,
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyUserAccess,
+            BulkCollectionOperations.ModifyGroupAccess,
+            BulkCollectionOperations.Delete,
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
+            sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync()
+                .Returns(organizationAbilities);
+            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
+            sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit).Returns(true);
 
             var context = new AuthorizationHandlerContext(
                 new[] { op },
@@ -1470,14 +1810,37 @@ public class BulkCollectionAuthorizationHandlerTests
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(Arg.Any<Guid>());
     }
 
-    private static void ArrangeOrganizationAbility(
+    private static void ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureDisabled(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        CurrentContextOrganization organization, bool limitCollectionCreationDeletion,
+        CurrentContextOrganization organization,
+        bool limitCollectionCreation,
+        bool limitCollectionDeletion,
         bool allowAdminAccessToAllCollectionItems = true)
     {
         var organizationAbility = new OrganizationAbility();
         organizationAbility.Id = organization.Id;
-        organizationAbility.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
+
+        organizationAbility.LimitCollectionCreationDeletion = limitCollectionCreation || limitCollectionDeletion;
+
+        organizationAbility.AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems;
+
+        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)
+            .Returns(organizationAbility);
+    }
+
+    private static void ArrangeOrganizationAbility_WithLimitCollectionCreationDeletionSplitFeatureEnabled(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization,
+        bool limitCollectionCreation,
+        bool limitCollectionDeletion,
+        bool allowAdminAccessToAllCollectionItems = true)
+    {
+        var organizationAbility = new OrganizationAbility();
+        organizationAbility.Id = organization.Id;
+
+        organizationAbility.LimitCollectionCreation = limitCollectionCreation;
+        organizationAbility.LimitCollectionDeletion = limitCollectionDeletion;
+
         organizationAbility.AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems;
 
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilityAsync(organizationAbility.Id)

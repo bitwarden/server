@@ -34,33 +34,30 @@ public class CoreHelpersTests
         // the comb are working properly
     }
 
-    public static IEnumerable<object[]> GenerateCombCases = new[]
-    {
-        new object[]
-        {
+    public static IEnumerable<object[]> GuidSeedCases = [
+        [
             Guid.Parse("a58db474-43d8-42f1-b4ee-0c17647cd0c0"), // Input Guid
             new DateTime(2022, 3, 12, 12, 12, 0, DateTimeKind.Utc), // Input Time
-            Guid.Parse("a58db474-43d8-42f1-b4ee-ae5600c90cc1"), // Expected Comb
-        },
-        new object[]
-        {
+        ],
+        [
             Guid.Parse("f776e6ee-511f-4352-bb28-88513002bdeb"),
             new DateTime(2021, 5, 10, 10, 52, 0, DateTimeKind.Utc),
-            Guid.Parse("f776e6ee-511f-4352-bb28-ad2400b313c1"),
-        },
-        new object[]
-        {
+        ],
+        [
             Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011648a1"),
             new DateTime(1999, 2, 26, 16, 53, 13, DateTimeKind.Utc),
-            Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011649cd"),
-        },
-        new object[]
-        {
+        ],
+        [
             Guid.Parse("bfb8f353-3b32-4a9e-bef6-24fe0b54bfb0"),
             new DateTime(2024, 10, 20, 1, 32, 16, DateTimeKind.Utc),
-            Guid.Parse("bfb8f353-3b32-4a9e-bef6-b20f00195780"),
-        }
-    };
+        ]
+    ];
+    public static IEnumerable<object[]> GenerateCombCases = GuidSeedCases.Zip([
+            Guid.Parse("a58db474-43d8-42f1-b4ee-ae5600c90cc1"), // Expected Comb for each Guid Seed case
+        Guid.Parse("f776e6ee-511f-4352-bb28-ad2400b313c1"),
+        Guid.Parse("51a25fc7-3cad-497d-8e2f-8d77011649cd"),
+        Guid.Parse("bfb8f353-3b32-4a9e-bef6-b20f00195780"),
+    ]).Select((zip) => new object[] { zip.Item1[0], zip.Item1[1], zip.Item2 });
 
     [Theory]
     [MemberData(nameof(GenerateCombCases))]
@@ -69,6 +66,31 @@ public class CoreHelpersTests
         var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
 
         Assert.Equal(expectedComb, comb);
+    }
+
+    [Theory]
+    [MemberData(nameof(GuidSeedCases))]
+    public void DateFromComb_WithComb_Success(Guid inputGuid, DateTime inputTime)
+    {
+        var comb = CoreHelpers.GenerateComb(inputGuid, inputTime);
+        var inverseComb = CoreHelpers.DateFromComb(comb);
+
+        Assert.Equal(inputTime, inverseComb, TimeSpan.FromMilliseconds(4));
+    }
+
+    [Theory]
+    [InlineData("00000000-0000-0000-0000-000000000000", 1, 0)]
+    [InlineData("00000000-0000-0000-0000-000000000001", 1, 0)]
+    [InlineData("00000000-0000-0000-0000-000000000000", 500, 430)]
+    [InlineData("00000000-0000-0000-0000-000000000001", 500, 430)]
+    [InlineData("10000000-0000-0000-0000-000000000001", 500, 454)]
+    [InlineData("00000000-0000-0100-0000-000000000001", 500, 19)]
+    public void BinForComb_Success(string guidString, int nbins, int expectedBin)
+    {
+        var guid = Guid.Parse(guidString);
+        var bin = CoreHelpers.BinForComb(guid, nbins);
+
+        Assert.Equal(expectedBin, bin);
     }
 
     /*

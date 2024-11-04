@@ -6,6 +6,8 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationDomainRepository : Repository<Core.Entities.OrganizationDomain, OrganizationDomain, Guid>, IOrganizationDomainRepository
@@ -67,7 +69,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
     }
 
-    public async Task<OrganizationDomainSsoDetailsData> GetOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
     {
         var domainName = new MailAddress(email).Host;
 
@@ -93,7 +95,30 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return ssoDetails;
     }
 
-    public async Task<Core.Entities.OrganizationDomain> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
+    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
+    {
+        var domainName = new MailAddress(email).Host;
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await (from o in dbContext.Organizations
+                      from od in o.Domains
+                      join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
+                      from s in sJoin.DefaultIfEmpty()
+                      where od.DomainName == domainName
+                            && o.Enabled
+                            && s.Enabled
+                            && od.VerifiedDate != null
+                      select new VerifiedOrganizationDomainSsoDetail(
+                          o.Id,
+                          o.Name,
+                          od.DomainName,
+                          o.Identifier))
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<Core.Entities.OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -105,7 +130,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
     }
 
-    public async Task<Core.Entities.OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
+    public async Task<Core.Entities.OrganizationDomain?> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

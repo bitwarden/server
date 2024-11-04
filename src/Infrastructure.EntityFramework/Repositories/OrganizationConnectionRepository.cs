@@ -5,6 +5,8 @@ using Bit.Core.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OrganizationConnectionRepository : Repository<OrganizationConnection, Models.OrganizationConnection, Guid>, IOrganizationConnectionRepository
@@ -15,7 +17,7 @@ public class OrganizationConnectionRepository : Repository<OrganizationConnectio
     {
     }
 
-    public async Task<OrganizationConnection> GetByIdOrganizationIdAsync(Guid id, Guid organizationId)
+    public async Task<OrganizationConnection?> GetByIdOrganizationIdAsync(Guid id, Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

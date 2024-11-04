@@ -1,4 +1,3 @@
----
 name: Build
 
 on:
@@ -19,10 +18,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
       - name: Verify format
         run: dotnet format --verify-no-changes
@@ -68,13 +67,13 @@ jobs:
             node: true
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
       - name: Set up Node
-        uses: actions/setup-node@1a4442cacd436585916779262731d5b162bc6ec7 # v3.8.2
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           cache: "npm"
           cache-dependency-path: "**/package-lock.json"
@@ -110,7 +109,7 @@ jobs:
           ls -atlh ../../../
 
       - name: Upload project artifact
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: ${{ matrix.project_name }}.zip
           path: ${{ matrix.base_path }}/${{ matrix.project_name }}/${{ matrix.project_name }}.zip
@@ -173,7 +172,7 @@ jobs:
             dotnet: true
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Check branch to publish
         env:
@@ -251,7 +250,7 @@ jobs:
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ${{ matrix.project_name }}.zip
 
@@ -263,7 +262,7 @@ jobs:
             -d ${{ matrix.base_path }}/${{ matrix.project_name }}/obj/build-output/publish
 
       - name: Build Docker image
-        uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3.3.1
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
@@ -275,14 +274,14 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@3343887d815d7b07465f6fdcd395bd66508d486a # v3.6.4
+        uses: anchore/scan-action@5ed195cc06065322983cae4bb31e2a751feb86fd # v5.2.0
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
           output-format: sarif
 
       - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
+        uses: github/codeql-action/upload-sarif@662472033e021d55d94146f66f6058822b0b39fd # v3.27.0
         with:
           sarif_file: ${{ steps.container-scan.outputs.sarif }}
 
@@ -292,10 +291,10 @@ jobs:
     needs: build-docker
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
       - name: Log in to Azure - production subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -311,7 +310,7 @@ jobs:
           github.ref == 'refs/heads/hotfix-rc'
         run: |
           # Set proper setup image based on branch
-          case "${{ github.ref }}" in
+          case "$GITHUB_REF" in
             "refs/heads/main")
                 SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
                 ;;
@@ -355,7 +354,7 @@ jobs:
 
       - name: Upload Docker stub US artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-US.zip
           path: docker-stub-US.zip
@@ -363,7 +362,7 @@ jobs:
 
       - name: Upload Docker stub EU artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-EU.zip
           path: docker-stub-EU.zip
@@ -371,7 +370,7 @@ jobs:
 
       - name: Upload Docker stub US checksum artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-US-sha256.txt
           path: docker-stub-US-sha256.txt
@@ -379,13 +378,13 @@ jobs:
 
       - name: Upload Docker stub EU checksum artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-EU-sha256.txt
           path: docker-stub-EU-sha256.txt
           if-no-files-found: error
 
-      - name: Build Swagger
+      - name: Build Public API Swagger
         run: |
           cd ./src/Api
           echo "Restore tools"
@@ -402,11 +401,52 @@ jobs:
           DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
           GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
-      - name: Upload Swagger artifact
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+      - name: Upload Public API Swagger artifact
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: swagger.json
           path: swagger.json
+          if-no-files-found: error
+
+      - name: Build Internal API Swagger
+        run: |
+          cd ./src/Api
+          echo "Restore API tools"
+          dotnet tool restore
+          echo "Publish API"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../internal.json --host https://api.bitwarden.com \
+            ./obj/build-output/publish/Api.dll internal
+
+          cd ../Identity
+
+          echo "Restore Identity tools"
+          dotnet tool restore
+          echo "Publish Identity"
+          dotnet publish -c "Release" -o obj/build-output/publish
+
+          dotnet swagger tofile --output ../../identity.json --host https://identity.bitwarden.com \
+            ./obj/build-output/publish/Identity.dll v1
+          cd ../..
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          swaggerGen: "True"
+          DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
+
+      - name: Upload Internal API Swagger artifact
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: internal.json
+          path: internal.json
+          if-no-files-found: error
+
+      - name: Upload Identity Swagger artifact
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: identity.json
+          path: identity.json
           if-no-files-found: error
 
   build-mssqlmigratorutility:
@@ -426,10 +466,10 @@ jobs:
           - win-x64
     steps:
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
 
       - name: Print environment
         run: |
@@ -445,7 +485,7 @@ jobs:
 
       - name: Upload project artifact for Windows
         if: ${{ contains(matrix.target, 'win') == true }}
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility.exe
@@ -453,7 +493,7 @@ jobs:
 
       - name: Upload project artifact
         if: ${{ contains(matrix.target, 'win') == false }}
-        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: MsSqlMigratorUtility-${{ matrix.target }}
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
@@ -477,7 +517,7 @@ jobs:
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Trigger self-host build
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           script: |
@@ -487,9 +527,9 @@ jobs:
               workflow_id: 'build-unified.yml',
               ref: 'main',
               inputs: {
-                server_branch: '${{ github.ref }}'
+                server_branch: process.env.GITHUB_REF
               }
-            })
+            });
 
   trigger-k8s-deploy:
     name: Trigger k8s deploy
@@ -510,7 +550,7 @@ jobs:
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Trigger k8s deploy
-        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
         with:
           github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           script: |
@@ -522,6 +562,39 @@ jobs:
               inputs: {
                 environment: 'US-DEV Cloud',
                 tag: 'main'
+              }
+            })
+
+  trigger-ee-updates:
+    name: Trigger Ephemeral Environment updates
+    if: github.ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
+    runs-on: ubuntu-24.04
+    needs: build-docker
+    steps:
+      - name: Log in to Azure - CI subscription
+        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve GitHub PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Trigger Ephemeral Environment update
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'devops',
+              workflow_id: '_update_ephemeral_tags.yml',
+              ref: 'main',
+              inputs: {
+                ephemeral_env_branch: process.env.GITHUB_HEAD_REF
               }
             })
 
