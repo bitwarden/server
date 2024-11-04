@@ -1,0 +1,61 @@
+@using Microsoft.AspNetCore.Components.Routing
+
+@inject NavigationManager NavigationManager
+
+<li class="@Class">
+    @if (Model.DropDownItems is { Count: > 0 })
+    {
+        <NavLink class="nav-link dropdown-toggle" href="@Model.Link" id="@Model.LinkId" role="button"
+                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Tools
+        </NavLink>
+        <div class="dropdown-menu" aria-labelledby="@Model.LinkId">
+            @foreach (var item in Model.DropDownItems)
+            {
+                <NavDropDownItem Model="item"/>
+            }
+        </div>
+    }
+    else
+    {
+        <NavLink class="nav-link" href="@Model.Link">
+            @Model.Label
+        </NavLink>
+    }
+</li>
+
+@code {
+    public string Class { get; private set; }
+
+    [Parameter]
+    public ViewModel Model { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var isActive = NavigationManager.Uri.ToLowerInvariant().Contains(Model.Link.ToLowerInvariant());
+        var classes = new List<string>();
+        if (isActive)
+        {
+            classes.Add("active");
+        }
+        classes.Add("nav-item");
+        if (Model.DropDownItems is { Count: > 0 })
+        {
+            classes.Add("dropdown");
+        }
+        Class = string.Join(" ", classes);
+    }
+
+    public class ViewModel
+    {
+        public required string Link { get; set; }
+
+        public string LinkId { get; set; }
+
+        public required string Label { get; set; }
+
+        public HashSet<NavDropDownItem.ViewModel>? DropDownItems { get; set; }
+
+        public bool Show { get; set; } = true;
+    }
+}

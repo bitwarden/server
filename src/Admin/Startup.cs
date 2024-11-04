@@ -170,7 +170,7 @@ public class Startup
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapDefaultControllerRoute();
-            endpoints.MapRazorComponents<AdminConsoleRootApp>();
+            endpoints.MapRazorComponents<App>();
         });
     }
 }

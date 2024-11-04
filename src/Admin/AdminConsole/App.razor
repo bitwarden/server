@@ -1,0 +1,92 @@
+@using Bit.Admin.Services
+@using Microsoft.AspNetCore.Identity
+@using Bit.Admin.Components.Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+@inject SignInManager<IdentityUser> SignInManager
+@inject Core.Settings.GlobalSettings GlobalSettings
+@inject IAccessControlService AccessControlService
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <base href="/"/>
+    <HeadOutlet/>
+    <link href="assets/site.css" rel="stylesheet"/>
+    <script src="assets/site.js"></script>
+</head>
+
+<body class="h-full bg-gray-50">
+<nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
+    <div class="container">
+        <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+            <i class="fa fa-lg fa-fw fa-shield"></i> Admin
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+                aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+                @if (SignInManager.IsSignedIn(HttpContextAccessor.HttpContext!.User))
+                {
+                    @foreach(var navItem in NavItems)
+                    {
+                        <NavItem Model="navItem"/>
+                    }
+                }
+                @if (GlobalSettings.SelfHosted)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank"
+                           rel="noreferrer">
+                            Docs
+                        </a>
+                    </li>
+                }
+            </ul>
+            @if (SignInManager.IsSignedIn(HttpContextAccessor.HttpContext.User))
+            {
+                <form asp-controller="Login" asp-action="Logout" method="post">
+                    <button type="submit" class="btn btn-sm btn-secondary">Log Out</button>
+                </form>
+            }
+            else
+            {
+                <a class="btn btn-sm btn-secondary" asp-controller="Login" asp-action="Index">Log In</a>
+            }
+        </div>
+    </div>
+</nav>
+
+<main role="main" class="container">
+    <Router AppAssembly="@typeof(Program).Assembly">
+        <Found Context="routeData">
+            <!-- The 'Resource' property will be used in 'HasAppHandler' to obtain the 'app' route parameter -->
+            <!-- If we implement new policies to protect resources, we should protect them with resource based uri and compare them with the user's claims. -->
+            <AuthorizeRouteView RouteData="@routeData" Resource="@HttpContextAccessor.HttpContext">
+                <!-- When visiting a page that requires authorization, but the user isn't authorized, redirect to the login page -->
+                <NotAuthorized>
+                    <!-- Empty -->
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
+        </Found>
+    </Router>
+</main>
+
+<footer class="container mb-4">
+    <hr/>
+    &copy; @DateTime.Now.Year, Bitwarden Inc.
+</footer>
+
+<script src="_framework/blazor.web.js" autostart="false"></script>
+<script>
+    Blazor.start({
+    ssr: { disableDomPreservation: true }
+    });
+</script>
+</body>
+</html>
