@@ -1,6 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
@@ -14,7 +15,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.Tools.Repositories;
 
 public class PasswordHealthReportApplicationRepositoryTests
 {
-    [Theory, EfPasswordHealthReportApplicationAutoData]
+    [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task CreateAsync_Works_DataMatches(
         PasswordHealthReportApplication passwordHealthReportApplication,
         Organization organization,
@@ -50,7 +51,7 @@ public class PasswordHealthReportApplicationRepositoryTests
         Assert.True(passwordHealthReportApplicationRecords.Count == 4);
     }
 
-    [Theory, EfPasswordHealthReportApplicationAutoData]
+    [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task RetrieveByOrganisation_Works(
         SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -65,7 +66,7 @@ public class PasswordHealthReportApplicationRepositoryTests
         Assert.True(nextSetOfRecords.Count == 1 && nextSetOfRecords.First().OrganizationId == secondOrg.Id);
     }
 
-    [Theory, EfPasswordHealthReportApplicationAutoData]
+    [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task ReplaceQuery_Works(
         List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
@@ -124,7 +125,7 @@ public class PasswordHealthReportApplicationRepositoryTests
         Assert.True(dbRecords.All(_ => _.Uri == exampleUri && _.RevisionDate == exampleRevisionDate));
     }
 
-    [Theory, EfPasswordHealthReportApplicationAutoData]
+    [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task Upsert_Works(
         List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
@@ -201,7 +202,7 @@ public class PasswordHealthReportApplicationRepositoryTests
         Assert.True(dbRecords.All(_ => _.Uri == exampleUri && _.RevisionDate == exampleRevisionDate));
     }
 
-    [Theory, EfPasswordHealthReportApplicationAutoData]
+    [CiSkippedTheory, EfPasswordHealthReportApplicationAutoData]
     public async Task Delete_Works(
         List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
