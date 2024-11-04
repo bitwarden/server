@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Tools.Repositories;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Tools.Models;
 using LinqToDB;
 using Microsoft.Extensions.DependencyInjection;
 using AdminConsoleEntities = Bit.Core.Tools.Entities;
