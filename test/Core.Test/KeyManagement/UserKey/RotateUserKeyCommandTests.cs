@@ -2,7 +2,7 @@
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Models.Data;
-using Bit.Core.KeyManagement.UserFeatures.UserKey.Implementations;
+using Bit.Core.KeyManagement.UserKey.Implementations;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Auth.UserFeatures.UserKey;
+namespace Bit.Core.Test.KeyManagement.UserFeatures.UserKey;
 
 [SutProviderCustomize]
 public class RotateUserKeyCommandTests
