@@ -26,7 +26,7 @@ public class OrganizationBillingController(
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        if (!await currentContext.AllUserMembersTab(organizationId))
+        if (!await currentContext.OrganizationUser(organizationId))
         {
             return Error.Unauthorized();
         }
