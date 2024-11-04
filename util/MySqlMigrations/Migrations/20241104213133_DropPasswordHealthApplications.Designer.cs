@@ -4,6 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20241104213133_DropPasswordHealthApplications")]
+    partial class DropPasswordHealthApplications
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -906,7 +909,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups", (string)null);
+                    b.ToTable("CollectionGroups");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -930,7 +933,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationUserId");
 
-                    b.ToTable("CollectionUsers", (string)null);
+                    b.ToTable("CollectionUsers");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -1909,7 +1912,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("PasswordHealthReportApplications", (string)null);
+                    b.ToTable("PasswordHealthReportApplications");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
@@ -1998,7 +2001,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("SecretsId");
 
-                    b.ToTable("ProjectSecret", (string)null);
+                    b.ToTable("ProjectSecret");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
