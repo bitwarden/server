@@ -2,8 +2,8 @@
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Fido2NetLib;
 
@@ -120,7 +120,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             results.Add(new ValidationResult("ClientSecret is required.", [nameof(ClientSecret)]));
         }
 
-        if (string.IsNullOrWhiteSpace(Host) || !DuoUtilities.ValidDuoHost(Host))
+        if (string.IsNullOrWhiteSpace(Host) || !DuoUniversalTokenService.ValidDuoHost(Host))
         {
             results.Add(new ValidationResult("Host is invalid.", [nameof(Host)]));
         }

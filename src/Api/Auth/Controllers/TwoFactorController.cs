@@ -4,9 +4,9 @@ using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -31,7 +31,7 @@ public class TwoFactorController : Controller
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
-    private readonly IDuoUniversalConfigService _duoUniversalConfigService;
+    private readonly IDuoUniversalTokenService _duoUniversalTokenService;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
 
@@ -42,7 +42,7 @@ public class TwoFactorController : Controller
         UserManager<User> userManager,
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
-        IDuoUniversalConfigService duoUniversalConfigService,
+        IDuoUniversalTokenService duoUniversalConfigService,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector)
     {
@@ -52,7 +52,7 @@ public class TwoFactorController : Controller
         _userManager = userManager;
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
-        _duoUniversalConfigService = duoUniversalConfigService;
+        _duoUniversalTokenService = duoUniversalConfigService;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
     }
@@ -180,7 +180,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
     {
         var user = await CheckAsync(model, true);
-        if (!await _duoUniversalConfigService.ValidateDuoConfiguration(model.ClientSecret, model.ClientId, model.Host))
+        if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientSecret, model.ClientId, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -223,7 +223,7 @@ public class TwoFactorController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
-        if (!await _duoUniversalConfigService.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
+        if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");

@@ -113,7 +113,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
-        services.AddScoped<IDuoUniversalConfigService, DuoUniversalConfigService>();
+        services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();

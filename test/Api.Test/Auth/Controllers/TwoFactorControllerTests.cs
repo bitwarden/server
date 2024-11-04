@@ -3,7 +3,7 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Auth.Services;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -107,7 +107,7 @@ public class TwoFactorControllerTests
     {
         // Arrange
         SetupCheckAsyncToPass(sutProvider, user);
-        sutProvider.GetDependency<IDuoUniversalConfigService>()
+        sutProvider.GetDependency<IDuoUniversalTokenService>()
             .ValidateDuoConfiguration(default, default, default)
             .Returns(false);
 
@@ -130,7 +130,7 @@ public class TwoFactorControllerTests
         user.TwoFactorProviders = GetUserTwoFactorDuoProvidersJson();
         SetupCheckAsyncToPass(sutProvider, user);
 
-        sutProvider.GetDependency<IDuoUniversalConfigService>()
+        sutProvider.GetDependency<IDuoUniversalTokenService>()
             .ValidateDuoConfiguration(default, default, default)
             .ReturnsForAnyArgs(true);
 
@@ -210,7 +210,7 @@ public class TwoFactorControllerTests
         SetupCheckAsyncToPass(sutProvider, user);
         SetupCheckOrganizationAsyncToPass(sutProvider, organization);
 
-        sutProvider.GetDependency<IDuoUniversalConfigService>()
+        sutProvider.GetDependency<IDuoUniversalTokenService>()
             .ValidateDuoConfiguration(default, default, default)
             .ReturnsForAnyArgs(false);
 
@@ -235,7 +235,7 @@ public class TwoFactorControllerTests
         SetupCheckOrganizationAsyncToPass(sutProvider, organization);
         organization.TwoFactorProviders = GetUserTwoFactorDuoProvidersJson();
 
-        sutProvider.GetDependency<IDuoUniversalConfigService>()
+        sutProvider.GetDependency<IDuoUniversalTokenService>()
             .ValidateDuoConfiguration(default, default, default)
             .ReturnsForAnyArgs(true);
 
