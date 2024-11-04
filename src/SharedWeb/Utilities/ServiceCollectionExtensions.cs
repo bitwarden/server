@@ -274,6 +274,11 @@ public static class ServiceCollectionExtensions
                 services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
             }
+            else
+            {
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            }
+
             if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
                 CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
             {
@@ -289,10 +294,6 @@ public static class ServiceCollectionExtensions
             {
                 services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
             }
-        }
-        else
-        {
-            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
         }
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))

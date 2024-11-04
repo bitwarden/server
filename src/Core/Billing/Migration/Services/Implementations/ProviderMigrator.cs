@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Migration.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -307,7 +308,14 @@ public class ProviderMigrator(
                 .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly)?
                 .SeatMinimum ?? 0;
 
-            await providerBillingService.UpdateSeatMinimums(provider, enterpriseSeatMinimum, teamsSeatMinimum);
+            var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                provider.Id,
+                provider.GatewaySubscriptionId,
+                [
+                    (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: enterpriseSeatMinimum),
+                    (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum)
+                ]);
+            await providerBillingService.UpdateSeatMinimums(updateSeatMinimumsCommand);
 
             logger.LogInformation(
                 "CB: Updated Stripe subscription for provider ({ProviderID}) with current seat minimums", provider.Id);
@@ -325,13 +333,16 @@ public class ProviderMigrator(
 
         var organizationCancellationCredit = organizationCustomers.Sum(customer => customer.Balance);
 
-        await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
-            new CustomerBalanceTransactionCreateOptions
-            {
-                Amount = organizationCancellationCredit,
-                Currency = "USD",
-                Description = "Unused, prorated time for client organization subscriptions."
-            });
+        if (organizationCancellationCredit != 0)
+        {
+            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+                new CustomerBalanceTransactionCreateOptions
+                {
+                    Amount = organizationCancellationCredit,
+                    Currency = "USD",
+                    Description = "Unused, prorated time for client organization subscriptions."
+                });
+        }
 
         var migrationRecords = await Task.WhenAll(organizations.Select(organization =>
             clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id)));

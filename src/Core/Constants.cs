@@ -106,7 +106,6 @@ public static class FeatureFlagKeys
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string ItemShare = "item-share";
     public const string DuoRedirect = "duo-redirect";
-    public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
@@ -117,7 +116,6 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
-    public const string BulkDeviceApproval = "bulk-device-approval";
     public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
@@ -142,12 +140,14 @@ public static class FeatureFlagKeys
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
-    public const string Pm3478RefactorOrganizationUserApi = "pm-3478-refactor-organizationuser-api";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
+    public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
     public const string Pm13322AddPolicyDefinitions = "pm-13322-add-policy-definitions";
     public const string LimitCollectionCreationDeletionSplit = "pm-10863-limit-collection-creation-deletion-split";
+    public const string GeneratorToolsModernization = "generator-tools-modernization";
+    public const string NewDeviceVerification = "new-device-verification";
 
     public static List<string> GetAllKeys()
     {
@@ -163,7 +163,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { BulkDeviceApproval, "true" },
             { CipherKeyEncryption, "true" },
         };
     }
