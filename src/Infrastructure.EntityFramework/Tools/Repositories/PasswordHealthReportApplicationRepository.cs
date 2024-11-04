@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB;
 using Microsoft.Extensions.DependencyInjection;
-using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
+using AdminConsoleEntities = Bit.Core.Tools.Entities;
 
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 

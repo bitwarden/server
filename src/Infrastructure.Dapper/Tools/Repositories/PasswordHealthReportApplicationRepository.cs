@@ -1,11 +1,10 @@
 ﻿using System.Data;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
-using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
+using AdminConsoleEntities = Bit.Core.Tools.Entities;
 
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
@@ -19,11 +18,11 @@ public class PasswordHealthReportApplicationRepository : Repository<AdminConsole
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<PasswordHealthReportApplication>> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<AdminConsoleEntities.PasswordHealthReportApplication>> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<PasswordHealthReportApplication>(
+            var results = await connection.QueryAsync<AdminConsoleEntities.PasswordHealthReportApplication>(
                 $"[{Schema}].[PasswordHealthReportApplication_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);

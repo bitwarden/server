@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Repositories;
+﻿using Bit.Core.Repositories;
+using Bit.Core.Tools.Entities;
 
 namespace Bit.Core.AdminConsole.Repositories;
 

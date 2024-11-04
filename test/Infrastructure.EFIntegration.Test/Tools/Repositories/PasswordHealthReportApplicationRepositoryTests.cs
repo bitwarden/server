@@ -1,15 +1,17 @@
 ﻿using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Xunit;
-using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+using EfToolsRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using Bit.Core.AdminConsole.Repositories;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories;
+namespace Bit.Infrastructure.EFIntegration.Test.Tools.Repositories;
 
 public class PasswordHealthReportApplicationRepositoryTests
 {
@@ -17,7 +19,7 @@ public class PasswordHealthReportApplicationRepositoryTests
     public async Task CreateAsync_Works_DataMatches(
         PasswordHealthReportApplication passwordHealthReportApplication,
         Organization organization,
-        List<EfAdminConsoleRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
         SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo
@@ -66,7 +68,7 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [Theory, EfPasswordHealthReportApplicationAutoData]
     public async Task ReplaceQuery_Works(
-        List<EfAdminConsoleRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
         SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -125,7 +127,7 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [Theory, EfPasswordHealthReportApplicationAutoData]
     public async Task Upsert_Works(
-        List<EfAdminConsoleRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
         SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
@@ -202,7 +204,7 @@ public class PasswordHealthReportApplicationRepositoryTests
 
     [Theory, EfPasswordHealthReportApplicationAutoData]
     public async Task Delete_Works(
-        List<EfAdminConsoleRepo.PasswordHealthReportApplicationRepository> suts,
+        List<EfToolsRepo.PasswordHealthReportApplicationRepository> suts,
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
         SqlAdminConsoleRepo.PasswordHealthReportApplicationRepository sqlPasswordHealthReportApplicationRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)

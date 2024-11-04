@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 #nullable enable
 
-namespace Bit.Core.AdminConsole.Entities;
+namespace Bit.Core.Tools.Entities;
 
 public class PasswordHealthReportApplication : ITableObject<Guid>, IRevisable
 {
