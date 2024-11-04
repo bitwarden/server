@@ -28,6 +28,7 @@ public class MemberAccessReportResponseModel
         this.GroupsCount = memberAccessCipherDetails.GroupsCount;
         this.CollectionsCount = memberAccessCipherDetails.CollectionsCount;
         this.TotalItemCount = memberAccessCipherDetails.TotalItemCount;
+        this.UserGuid = memberAccessCipherDetails.UserGuid;
         this.AccessDetails = memberAccessCipherDetails.AccessDetails;
     }
 }
