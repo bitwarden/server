@@ -1,14 +1,15 @@
 ﻿using AutoMapper;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Tools.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using LinqToDB;
 using Microsoft.Extensions.DependencyInjection;
 using AdminConsoleEntities = Bit.Core.Tools.Entities;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Tools.Repositories;
 
 public class PasswordHealthReportApplicationRepository :
-    Repository<AdminConsoleEntities.PasswordHealthReportApplication, Models.PasswordHealthReportApplication, Guid>,
+    Repository<AdminConsoleEntities.PasswordHealthReportApplication, PasswordHealthReportApplication, Guid>,
     IPasswordHealthReportApplicationRepository
 {
     public PasswordHealthReportApplicationRepository(IServiceScopeFactory serviceScopeFactory,
