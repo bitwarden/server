@@ -1,18 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
-public interface IPolicyRequirement
-{
-    /// <summary>
-    /// A transitional method used to map the policy requirement to the deprecated IPolicyService.AnyPoliciesApplicableToUser.
-    /// </summary>
-    bool AppliesToUser { get; }
-};
+public interface IPolicyRequirement;
 
 public interface IPolicyRequirementDefinition<T> where T : IPolicyRequirement
 {

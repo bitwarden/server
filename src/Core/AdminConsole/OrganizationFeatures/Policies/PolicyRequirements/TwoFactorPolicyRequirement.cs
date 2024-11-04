@@ -19,12 +19,6 @@ class TwoFactorPolicyRequirementDefinition : IPolicyRequirementDefinition<TwoFac
 
 class TwoFactorPolicyRequirement(IEnumerable<(Guid orgId, OrganizationUserStatusType status)> twoFactorOrganizations) : IPolicyRequirement
 {
-    /// <summary>
-    /// Returns true only for Confirmed users, which replicates the legacy behavior.
-    /// To enforce this policy before the user is allowed to join an organization, use CanJoinOrganization instead.
-    /// </summary>
-    public bool AppliesToUser => OrganizationsRequiringTwoFactor().Any();
-
     public bool CanJoinOrganization(Guid organizationId) => twoFactorOrganizations.Any(x => x.orgId == organizationId);
 
     public bool CanBeRestoredToOrganization(Guid organizationId) => CanJoinOrganization(organizationId);

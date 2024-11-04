@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
-public class SendOptionsPolicyData : IPolicyDataModel
+public class SendOptionsPolicyData : IPolicyDataModel, IPolicyRequirement
 {
     [Display(Name = "DisableHideEmail")]
     public bool DisableHideEmail { get; set; }

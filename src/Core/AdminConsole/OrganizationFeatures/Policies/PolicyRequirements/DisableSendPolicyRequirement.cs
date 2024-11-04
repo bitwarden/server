@@ -17,8 +17,4 @@ public record DisableSendPolicyRequirementDefinition : IPolicyRequirementDefinit
         !userPolicyDetails.IsAdminType();
 }
 
-public record DisableSendPolicyRequirement(bool DisableSend) : IPolicyRequirement
-{
-    public bool AppliesToUser => DisableSend;
-}
-
+public record DisableSendPolicyRequirement(bool DisableSend) : IPolicyRequirement;

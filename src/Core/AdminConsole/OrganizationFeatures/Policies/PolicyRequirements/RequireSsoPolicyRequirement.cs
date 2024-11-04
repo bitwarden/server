@@ -25,7 +25,4 @@ public class RequireSsoPolicyRequirementDefinition : IPolicyRequirementDefinitio
         (_globalSettings.Sso.EnforceSsoPolicyForAllUsers || !userPolicyDetails.IsAdminType());
 }
 
-public record RequireSsoPolicyRequirement(bool RequireSso) : IPolicyRequirement
-{
-    public bool AppliesToUser => RequireSso;
-}
+public record RequireSsoPolicyRequirement(bool RequireSso) : IPolicyRequirement;

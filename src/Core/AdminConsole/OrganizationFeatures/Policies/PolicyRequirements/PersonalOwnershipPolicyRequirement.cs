@@ -17,8 +17,5 @@ public record PersonalOwnershipPolicyRequirementDefinition : IPolicyRequirementD
         !userPolicyDetails.IsAdminType();
 }
 
-public record PersonalOwnershipPolicyRequirement(bool DisablePersonalOwnership) : IPolicyRequirement
-{
-    public bool AppliesToUser => DisablePersonalOwnership;
-};
+public record PersonalOwnershipPolicyRequirement(bool DisablePersonalOwnership) : IPolicyRequirement;
 

@@ -19,12 +19,6 @@ class SingleOrganizationPolicyRequirementDefinition : IPolicyRequirementDefiniti
 
 class SingleOrganizationPolicyRequirement(IEnumerable<(Guid orgId, OrganizationUserStatusType status)> singleOrgOrganizations) : IPolicyRequirement
 {
-    /// <summary>
-    /// Returns true only for Accepted and Confirmed users, which replicates the legacy behavior.
-    /// To enforce this policy before the user is allowed to join an organization, use CanJoinOrganization instead.
-    /// </summary>
-    public bool AppliesToUser => singleOrgOrganizations.Any(x =>
-        x.status is OrganizationUserStatusType.Accepted or OrganizationUserStatusType.Confirmed);
     public string CanJoinOrganization(Guid organizationId)
     {
         // Check for the org the user is trying to join
