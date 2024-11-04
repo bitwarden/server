@@ -89,6 +89,7 @@ public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityF
                     cfg.AddProfile<TaxRateMapperProfile>();
                     cfg.AddProfile<TransactionMapperProfile>();
                     cfg.AddProfile<UserMapperProfile>();
+                    cfg.AddProfile<PasswordHealthReportApplicationProfile>();
                 })
             .CreateMapper()));
 
