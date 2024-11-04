@@ -148,6 +148,13 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
+        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+        {
+            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
+        }
+
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
     }
 
@@ -163,6 +170,13 @@ public class AccountsController : Controller
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
+        }
+
+        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+        {
+            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
         }
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
@@ -443,11 +457,11 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, managedByOrganizationId);
+            hasPremiumFromOrg, organizationIdsManagingActiveUser);
         return response;
     }
 
@@ -457,7 +471,9 @@ public class AccountsController : Controller
         var userId = _userService.GetProperUserId(User);
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(userId.Value,
             OrganizationUserStatusType.Confirmed);
-        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o));
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(userId.Value);
+
+        var responseData = organizationUserDetails.Select(o => new ProfileOrganizationResponseModel(o, organizationIdsManagingActiveUser));
         return new ListResponseModel<ProfileOrganizationResponseModel>(responseData);
     }
 
@@ -475,9 +491,9 @@ public class AccountsController : Controller
 
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, managedByOrganizationId);
+        var response = new ProfileResponseModel(user, null, null, null, twoFactorEnabled, hasPremiumFromOrg, organizationIdsManagingActiveUser);
         return response;
     }
 
@@ -494,9 +510,9 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
 
-        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, managedByOrganizationId);
+        var response = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
         return response;
     }
 
@@ -564,6 +580,13 @@ public class AccountsController : Controller
         }
         else
         {
+            // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+            {
+                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
+            }
+
             var result = await _userService.DeleteAsync(user);
             if (result.Succeeded)
             {
@@ -647,9 +670,9 @@ public class AccountsController : Controller
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var managedByOrganizationId = await GetManagedByOrganizationIdAsync(user);
+        var organizationIdsManagingActiveUser = await GetOrganizationIdsManagingUserAsync(user.Id);
 
-        var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, managedByOrganizationId);
+        var profile = new ProfileResponseModel(user, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingActiveUser);
         return new PaymentResponseModel
         {
             UserProfile = profile,
@@ -937,14 +960,9 @@ public class AccountsController : Controller
         }
     }
 
-    private async Task<Guid?> GetManagedByOrganizationIdAsync(User user)
+    private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
-        {
-            return null;
-        }
-
-        var organizationManagingUser = await _userService.GetOrganizationManagingUserAsync(user.Id);
-        return organizationManagingUser?.Id;
+        var organizationManagingUser = await _userService.GetOrganizationsManagingUserAsync(userId);
+        return organizationManagingUser.Select(o => o.Id);
     }
 }

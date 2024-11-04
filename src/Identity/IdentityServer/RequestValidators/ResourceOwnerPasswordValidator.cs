@@ -1,8 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -10,13 +8,12 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Identity.IdentityServer;
+namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwnerPasswordValidationContext>,
     IResourceOwnerPasswordValidator
@@ -25,17 +22,14 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     private readonly ICurrentContext _currentContext;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
+    private readonly IDeviceValidator _deviceValidator;
     public ResourceOwnerPasswordValidator(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
         IUserService userService,
         IEventService eventService,
-        IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
-        IOrganizationRepository organizationRepository,
+        IDeviceValidator deviceValidator,
+        ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IApplicationCacheService applicationCacheService,
         IMailService mailService,
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
@@ -44,19 +38,31 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
-        : base(userManager, deviceRepository, deviceService, userService, eventService,
-              organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
-              tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
+        : base(
+            userManager,
+            userService,
+            eventService,
+            deviceValidator,
+            twoFactorAuthenticationValidator,
+            organizationUserRepository,
+            mailService,
+            logger,
+            currentContext,
+            globalSettings,
+            userRepository,
+            policyService,
+            featureService,
+            ssoConfigRepository,
+            userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _currentContext = currentContext;
         _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;
+        _deviceValidator = deviceValidator;
     }
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
@@ -72,7 +78,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await KnownDeviceAsync(user, context.Request)
+            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request),
         };
         string bypassToken = null;
         if (!validatorContext.KnownDevice &&

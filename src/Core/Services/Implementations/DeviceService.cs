@@ -38,13 +38,22 @@ public class DeviceService : IDeviceService
     public async Task ClearTokenAsync(Device device)
     {
         await _deviceRepository.ClearPushTokenAsync(device.Id);
-        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString(), device.Type);
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 
-    public async Task DeleteAsync(Device device)
+    public async Task DeactivateAsync(Device device)
     {
-        await _deviceRepository.DeleteAsync(device);
-        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString(), device.Type);
+        // already deactivated
+        if (!device.Active)
+        {
+            return;
+        }
+
+        device.Active = false;
+        device.RevisionDate = DateTime.UtcNow;
+        await _deviceRepository.UpsertAsync(device);
+
+        await _pushRegistrationService.DeleteRegistrationAsync(device.Id.ToString());
     }
 
     public async Task UpdateDevicesTrustAsync(string currentDeviceIdentifier,

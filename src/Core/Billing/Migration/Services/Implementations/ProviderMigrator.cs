@@ -8,6 +8,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Migration.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -41,7 +42,18 @@ public class ProviderMigrator(
 
         await migrationTrackerCache.StartTracker(provider);
 
-        await MigrateClientsAsync(providerId);
+        var organizations = await GetClientsAsync(provider.Id);
+
+        if (organizations.Count == 0)
+        {
+            logger.LogInformation("CB: Skipping migration for provider ({ProviderID}) with no clients", providerId);
+
+            await migrationTrackerCache.UpdateTrackingStatus(providerId, ProviderMigrationProgress.NoClients);
+
+            return;
+        }
+
+        await MigrateClientsAsync(providerId, organizations);
 
         await ConfigureTeamsPlanAsync(providerId);
 
@@ -63,6 +75,16 @@ public class ProviderMigrator(
         if (providerTracker == null)
         {
             return null;
+        }
+
+        if (providerTracker.Progress == ProviderMigrationProgress.NoClients)
+        {
+            return new ProviderMigrationResult
+            {
+                ProviderId = providerTracker.ProviderId,
+                ProviderName = providerTracker.ProviderName,
+                Result = providerTracker.Progress.ToString()
+            };
         }
 
         var clientTrackers = await Task.WhenAll(providerTracker.OrganizationIds.Select(organizationId =>
@@ -99,11 +121,9 @@ public class ProviderMigrator(
 
     #region Steps
 
-    private async Task MigrateClientsAsync(Guid providerId)
+    private async Task MigrateClientsAsync(Guid providerId, List<Organization> organizations)
     {
         logger.LogInformation("CB: Migrating clients for provider ({ProviderID})", providerId);
-
-        var organizations = await GetEnabledClientsAsync(providerId);
 
         var organizationIds = organizations.Select(organization => organization.Id);
 
@@ -129,7 +149,7 @@ public class ProviderMigrator(
     {
         logger.LogInformation("CB: Configuring Teams plan for provider ({ProviderID})", providerId);
 
-        var organizations = await GetEnabledClientsAsync(providerId);
+        var organizations = await GetClientsAsync(providerId);
 
         var teamsSeats = organizations
             .Where(IsTeams)
@@ -172,7 +192,7 @@ public class ProviderMigrator(
     {
         logger.LogInformation("CB: Configuring Enterprise plan for provider ({ProviderID})", providerId);
 
-        var organizations = await GetEnabledClientsAsync(providerId);
+        var organizations = await GetClientsAsync(providerId);
 
         var enterpriseSeats = organizations
             .Where(IsEnterprise)
@@ -215,7 +235,7 @@ public class ProviderMigrator(
     {
         if (string.IsNullOrEmpty(provider.GatewayCustomerId))
         {
-            var organizations = await GetEnabledClientsAsync(provider.Id);
+            var organizations = await GetClientsAsync(provider.Id);
 
             var sampleOrganization = organizations.FirstOrDefault(organization => !string.IsNullOrEmpty(organization.GatewayCustomerId));
 
@@ -288,7 +308,14 @@ public class ProviderMigrator(
                 .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly)?
                 .SeatMinimum ?? 0;
 
-            await providerBillingService.UpdateSeatMinimums(provider, enterpriseSeatMinimum, teamsSeatMinimum);
+            var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                provider.Id,
+                provider.GatewaySubscriptionId,
+                [
+                    (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: enterpriseSeatMinimum),
+                    (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum)
+                ]);
+            await providerBillingService.UpdateSeatMinimums(updateSeatMinimumsCommand);
 
             logger.LogInformation(
                 "CB: Updated Stripe subscription for provider ({ProviderID}) with current seat minimums", provider.Id);
@@ -299,28 +326,46 @@ public class ProviderMigrator(
 
     private async Task ApplyCreditAsync(Provider provider)
     {
-        var organizations = await GetEnabledClientsAsync(provider.Id);
+        var organizations = await GetClientsAsync(provider.Id);
 
         var organizationCustomers =
             await Task.WhenAll(organizations.Select(organization => stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)));
 
         var organizationCancellationCredit = organizationCustomers.Sum(customer => customer.Balance);
 
-        var legacyOrganizations = organizations.Where(organization =>
-            organization.PlanType is
-                PlanType.EnterpriseAnnually2020 or
-                PlanType.EnterpriseMonthly2020 or
-                PlanType.TeamsAnnually2020 or
-                PlanType.TeamsMonthly2020);
-
-        var legacyOrganizationCredit = legacyOrganizations.Sum(organization => organization.Seats ?? 0);
-
-        await stripeAdapter.CustomerUpdateAsync(provider.GatewayCustomerId, new CustomerUpdateOptions
+        if (organizationCancellationCredit != 0)
         {
-            Balance = organizationCancellationCredit + legacyOrganizationCredit
-        });
+            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+                new CustomerBalanceTransactionCreateOptions
+                {
+                    Amount = organizationCancellationCredit,
+                    Currency = "USD",
+                    Description = "Unused, prorated time for client organization subscriptions."
+                });
+        }
 
-        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", organizationCancellationCredit, provider.Id);
+        var migrationRecords = await Task.WhenAll(organizations.Select(organization =>
+            clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id)));
+
+        var legacyOrganizationMigrationRecords = migrationRecords.Where(migrationRecord =>
+            migrationRecord.PlanType is
+                PlanType.EnterpriseAnnually2020 or
+                PlanType.TeamsAnnually2020);
+
+        var legacyOrganizationCredit = legacyOrganizationMigrationRecords.Sum(migrationRecord => migrationRecord.Seats) * 12 * -100;
+
+        if (legacyOrganizationCredit < 0)
+        {
+            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+                new CustomerBalanceTransactionCreateOptions
+                {
+                    Amount = legacyOrganizationCredit,
+                    Currency = "USD",
+                    Description = "1 year rebate for legacy client organizations."
+                });
+        }
+
+        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", organizationCancellationCredit + legacyOrganizationCredit, provider.Id);
 
         await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.CreditApplied);
     }
@@ -340,13 +385,12 @@ public class ProviderMigrator(
 
     #region Utilities
 
-    private async Task<List<Organization>> GetEnabledClientsAsync(Guid providerId)
+    private async Task<List<Organization>> GetClientsAsync(Guid providerId)
     {
         var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
 
         return (await Task.WhenAll(providerOrganizations.Select(providerOrganization =>
                 organizationRepository.GetByIdAsync(providerOrganization.OrganizationId))))
-            .Where(organization => organization.Enabled)
             .ToList();
     }
 

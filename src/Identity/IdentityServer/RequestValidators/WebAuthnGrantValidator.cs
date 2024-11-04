@@ -1,10 +1,8 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -19,7 +17,7 @@ using Duende.IdentityServer.Validation;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Identity.IdentityServer;
+namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
 {
@@ -27,18 +25,15 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
 
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
     private readonly IAssertWebAuthnLoginCredentialCommand _assertWebAuthnLoginCredentialCommand;
+    private readonly IDeviceValidator _deviceValidator;
 
     public WebAuthnGrantValidator(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
         IUserService userService,
         IEventService eventService,
-        IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
-        IOrganizationRepository organizationRepository,
+        IDeviceValidator deviceValidator,
+        ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IApplicationCacheService applicationCacheService,
         IMailService mailService,
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
@@ -46,19 +41,31 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
         )
-        : base(userManager, deviceRepository, deviceService, userService, eventService,
-            organizationDuoWebTokenProvider, duoWebV4SDKService, organizationRepository, organizationUserRepository,
-            applicationCacheService, mailService, logger, currentContext, globalSettings,
-            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, userDecryptionOptionsBuilder)
+        : base(
+            userManager,
+            userService,
+            eventService,
+            deviceValidator,
+            twoFactorAuthenticationValidator,
+            organizationUserRepository,
+            mailService,
+            logger,
+            currentContext,
+            globalSettings,
+            userRepository,
+            policyService,
+            featureService,
+            ssoConfigRepository,
+            userDecryptionOptionsBuilder)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
+        _deviceValidator = deviceValidator;
     }
 
     string IExtensionGrantValidator.GrantType => "webauthn";
@@ -87,7 +94,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await KnownDeviceAsync(user, context.Request)
+            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
         };
 
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
@@ -119,12 +126,6 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
     protected override ClaimsPrincipal GetSubject(ExtensionGrantValidationContext context)
     {
         return context.Result.Subject;
-    }
-
-    protected override Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
-    {
-        // We consider Fido2 userVerification a second factor, so we don't require a second factor here.
-        return Task.FromResult(new Tuple<bool, Organization>(false, null));
     }
 
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,
