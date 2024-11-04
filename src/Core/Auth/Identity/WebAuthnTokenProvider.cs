@@ -81,7 +81,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         var keys = LoadKeys(provider);
 
-        if (!provider.MetaData.ContainsKey("login"))
+        if (!provider.MetaData.TryGetValue("login", out var login))
         {
             return false;
         }
@@ -89,7 +89,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        var jsonOptions = provider.MetaData["login"].ToString();
+        var jsonOptions = login.ToString();
         var options = AssertionOptions.FromJson(jsonOptions);
 
         var webAuthCred = keys.Find(k => k.Item2.Descriptor.Id.SequenceEqual(clientResponse.Id));
@@ -143,9 +143,9 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         for (var i = 1; i <= 5; i++)
         {
             var keyName = $"Key{i}";
-            if (provider.MetaData.ContainsKey(keyName))
+            if (provider.MetaData.TryGetValue(keyName, out var value))
             {
-                var key = new TwoFactorProvider.WebAuthnData((dynamic)provider.MetaData[keyName]);
+                var key = new TwoFactorProvider.WebAuthnData((dynamic)value);
 
                 keys.Add(new Tuple<string, TwoFactorProvider.WebAuthnData>(keyName, key));
             }

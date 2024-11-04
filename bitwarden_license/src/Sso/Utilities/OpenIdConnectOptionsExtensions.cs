@@ -46,9 +46,9 @@ public static class OpenIdConnectOptionsExtensions
 
             // Handle State if we've gotten that back
             var decodedState = options.StateDataFormat.Unprotect(state);
-            if (decodedState != null && decodedState.Items.ContainsKey("scheme"))
+            if (decodedState != null && decodedState.Items.TryGetValue("scheme", out var stateScheme))
             {
-                return decodedState.Items["scheme"] == scheme;
+                return stateScheme == scheme;
             }
         }
         catch

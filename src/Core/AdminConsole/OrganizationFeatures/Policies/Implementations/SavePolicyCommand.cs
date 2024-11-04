@@ -103,8 +103,8 @@ public class SavePolicyCommand : ISavePolicyCommand
             var dependentPolicyTypes = _policyValidators.Values
                 .Where(otherValidator => otherValidator.RequiredPolicies.Contains(policyUpdate.Type))
                 .Select(otherValidator => otherValidator.Type)
-                .Where(otherPolicyType => savedPoliciesDict.ContainsKey(otherPolicyType) &&
-                    savedPoliciesDict[otherPolicyType].Enabled)
+                .Where(otherPolicyType => savedPoliciesDict.TryGetValue(otherPolicyType, out var savedPolicy) &&
+                                          savedPolicy.Enabled)
                 .ToList();
 
             switch (dependentPolicyTypes)

@@ -20,8 +20,8 @@ public class Program
                             return e.Level >= globalSettings.MinLogLevel.BillingSettings.Jobs;
                         }
 
-                        if (e.Properties.ContainsKey("RequestPath") &&
-                            !string.IsNullOrWhiteSpace(e.Properties["RequestPath"]?.ToString()) &&
+                        if (e.Properties.TryGetValue("RequestPath", out var requestPath) &&
+                            !string.IsNullOrWhiteSpace(requestPath?.ToString()) &&
                             (context.Contains(".Server.Kestrel") || context.Contains(".Core.IISHttpServer")))
                         {
                             return false;

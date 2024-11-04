@@ -20,30 +20,29 @@ public class Program
 
         ParseParameters();
 
-        if (_context.Parameters.ContainsKey("q"))
+        if (_context.Parameters.TryGetValue("q", out var q))
         {
-            _context.Quiet = _context.Parameters["q"] == "true" || _context.Parameters["q"] == "1";
+            _context.Quiet = q == "true" || q == "1";
         }
-        if (_context.Parameters.ContainsKey("os"))
+        if (_context.Parameters.TryGetValue("os", out var os))
         {
-            _context.HostOS = _context.Parameters["os"];
+            _context.HostOS = os;
         }
-        if (_context.Parameters.ContainsKey("corev"))
+        if (_context.Parameters.TryGetValue("corev", out var coreVersion))
         {
-            _context.CoreVersion = _context.Parameters["corev"];
+            _context.CoreVersion = coreVersion;
         }
-        if (_context.Parameters.ContainsKey("webv"))
+        if (_context.Parameters.TryGetValue("webv", out var webVersion))
         {
-            _context.WebVersion = _context.Parameters["webv"];
+            _context.WebVersion = webVersion;
         }
-        if (_context.Parameters.ContainsKey("keyconnectorv"))
+        if (_context.Parameters.TryGetValue("keyconnectorv", out var keyConnectorVersion))
         {
-            _context.KeyConnectorVersion = _context.Parameters["keyconnectorv"];
+            _context.KeyConnectorVersion = keyConnectorVersion;
         }
-        if (_context.Parameters.ContainsKey("stub"))
+        if (_context.Parameters.TryGetValue("stub", out var stub))
         {
-            _context.Stub = _context.Parameters["stub"] == "true" ||
-                _context.Parameters["stub"] == "1";
+            _context.Stub = stub == "true" ||  stub == "1";
         }
 
         Helpers.WriteLine(_context);
@@ -68,18 +67,18 @@ public class Program
 
     private static void Install()
     {
-        if (_context.Parameters.ContainsKey("letsencrypt"))
+        if (_context.Parameters.TryGetValue("letsencrypt", out var sslManagedLetsEncrypt))
         {
             _context.Config.SslManagedLetsEncrypt =
-                _context.Parameters["letsencrypt"].ToLowerInvariant() == "y";
+                sslManagedLetsEncrypt.ToLowerInvariant() == "y";
         }
-        if (_context.Parameters.ContainsKey("domain"))
+        if (_context.Parameters.TryGetValue("domain", out var domain))
         {
-            _context.Install.Domain = _context.Parameters["domain"].ToLowerInvariant();
+            _context.Install.Domain = domain.ToLowerInvariant();
         }
-        if (_context.Parameters.ContainsKey("dbname"))
+        if (_context.Parameters.TryGetValue("dbname", out var database))
         {
-            _context.Install.Database = _context.Parameters["dbname"];
+            _context.Install.Database = database;
         }
 
         if (_context.Stub)

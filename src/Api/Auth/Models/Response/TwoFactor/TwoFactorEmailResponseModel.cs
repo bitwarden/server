@@ -15,9 +15,9 @@ public class TwoFactorEmailResponseModel : ResponseModel
         }
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider?.MetaData?.ContainsKey("Email") ?? false)
+        if (provider?.MetaData?.TryGetValue("Email", out var email) ?? false)
         {
-            Email = (string)provider.MetaData["Email"];
+            Email = (string)email;
             Enabled = provider.Enabled;
         }
         else

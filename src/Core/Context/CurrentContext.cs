@@ -61,39 +61,39 @@ public class CurrentContext : ICurrentContext
         HttpContext = httpContext;
         await BuildAsync(httpContext.User, globalSettings);
 
-        if (DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
+        if (DeviceIdentifier == null && httpContext.Request.Headers.TryGetValue("Device-Identifier", out var deviceIdentifier))
         {
-            DeviceIdentifier = httpContext.Request.Headers["Device-Identifier"];
+            DeviceIdentifier = deviceIdentifier;
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Device-Type") &&
-            Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
+        if (httpContext.Request.Headers.TryGetValue("Device-Type", out var deviceType) &&
+            Enum.TryParse(deviceType.ToString(), out DeviceType dType))
         {
             DeviceType = dType;
         }
 
-        if (!BotScore.HasValue && httpContext.Request.Headers.ContainsKey("X-Cf-Bot-Score") &&
-            int.TryParse(httpContext.Request.Headers["X-Cf-Bot-Score"], out var parsedBotScore))
+        if (!BotScore.HasValue && httpContext.Request.Headers.TryGetValue("X-Cf-Bot-Score", out var cfBotScore) &&
+            int.TryParse(cfBotScore, out var parsedBotScore))
         {
             BotScore = parsedBotScore;
         }
 
-        if (httpContext.Request.Headers.ContainsKey("X-Cf-Worked-Proxied"))
+        if (httpContext.Request.Headers.TryGetValue("X-Cf-Worked-Proxied", out var cfWorkedProxied))
         {
-            CloudflareWorkerProxied = httpContext.Request.Headers["X-Cf-Worked-Proxied"] == "1";
+            CloudflareWorkerProxied = cfWorkedProxied == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("X-Cf-Is-Bot"))
+        if (httpContext.Request.Headers.TryGetValue("X-Cf-Is-Bot", out var cfIsBot))
         {
-            IsBot = httpContext.Request.Headers["X-Cf-Is-Bot"] == "1";
+            IsBot = cfIsBot == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("X-Cf-Maybe-Bot"))
+        if (httpContext.Request.Headers.TryGetValue("X-Cf-Maybe-Bot", out var cfMaybeBot))
         {
-            MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
+            MaybeBot = cfMaybeBot == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
+        if (httpContext.Request.Headers.TryGetValue("Bitwarden-Client-Version", out var bitWardenClientVersion) && Version.TryParse(bitWardenClientVersion, out var cVersion))
         {
             ClientVersion = cVersion;
         }
@@ -171,14 +171,14 @@ public class CurrentContext : ICurrentContext
 
     private List<CurrentContextOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
     {
-        var accessSecretsManager = claimsDict.ContainsKey(Claims.SecretsManagerAccess)
-            ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
+        var accessSecretsManager = claimsDict.TryGetValue(Claims.SecretsManagerAccess, out var secretsManagerAccessClaim)
+            ? secretsManagerAccessClaim.ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
         var organizations = new List<CurrentContextOrganization>();
-        if (claimsDict.ContainsKey(Claims.OrganizationOwner))
+        if (claimsDict.TryGetValue(Claims.OrganizationOwner, out var organizationOwnerClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationOwner].Select(c =>
+            organizations.AddRange(organizationOwnerClaim.Select(c =>
                 new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
@@ -195,9 +195,9 @@ public class CurrentContext : ICurrentContext
             });
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationAdmin))
+        if (claimsDict.TryGetValue(Claims.OrganizationAdmin, out var organizationAdminClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationAdmin].Select(c =>
+            organizations.AddRange(organizationAdminClaim.Select(c =>
                 new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
@@ -206,9 +206,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationUser))
+        if (claimsDict.TryGetValue(Claims.OrganizationUser, out var organizationUserClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationUser].Select(c =>
+            organizations.AddRange(organizationUserClaim.Select(c =>
                 new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
@@ -217,9 +217,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationCustom))
+        if (claimsDict.TryGetValue(Claims.OrganizationCustom, out var organizationCustomClaim))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
+            organizations.AddRange(organizationCustomClaim.Select(c =>
                 new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
@@ -235,9 +235,9 @@ public class CurrentContext : ICurrentContext
     private List<CurrentContextProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
         var providers = new List<CurrentContextProvider>();
-        if (claimsDict.ContainsKey(Claims.ProviderAdmin))
+        if (claimsDict.TryGetValue(Claims.ProviderAdmin, out var providerAdminClaim))
         {
-            providers.AddRange(claimsDict[Claims.ProviderAdmin].Select(c =>
+            providers.AddRange(providerAdminClaim.Select(c =>
                 new CurrentContextProvider
                 {
                     Id = new Guid(c.Value),
@@ -245,9 +245,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.ProviderServiceUser))
+        if (claimsDict.TryGetValue(Claims.ProviderServiceUser, out var providerServiceUserClaim))
         {
-            providers.AddRange(claimsDict[Claims.ProviderServiceUser].Select(c =>
+            providers.AddRange(providerServiceUserClaim.Select(c =>
                 new CurrentContextProvider
                 {
                     Id = new Guid(c.Value),
@@ -485,20 +485,20 @@ public class CurrentContext : ICurrentContext
 
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
     {
-        if (!claims.ContainsKey(type))
+        if (!claims.TryGetValue(type, out var claim))
         {
             return null;
         }
 
-        return claims[type].FirstOrDefault()?.Value;
+        return claim.FirstOrDefault()?.Value;
     }
 
     private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
         bool hasClaim(string claimKey)
         {
-            return claimsDict.ContainsKey(claimKey) ?
-                claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
+            return claimsDict.TryGetValue(claimKey, out var claim) ?
+                claim.Any(x => x.Value == organizationId) : false;
         }
 
         return new Permissions

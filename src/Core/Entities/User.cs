@@ -145,10 +145,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
 
             // U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
             // To prevent issues with accounts being prompted for unsupported U2F we remove them
-            if (_twoFactorProviders.ContainsKey(TwoFactorProviderType.U2f))
-            {
-                _twoFactorProviders.Remove(TwoFactorProviderType.U2f);
-            }
+            _twoFactorProviders.Remove(TwoFactorProviderType.U2f);
 
             return _twoFactorProviders;
         }
@@ -183,12 +180,12 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider))
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
         {
             return null;
         }
 
-        return providers[provider];
+        return twoFactorProvider;
     }
 
     public long StorageBytesRemaining()

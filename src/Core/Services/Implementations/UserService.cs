@@ -332,12 +332,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task SendTwoFactorEmailAsync(User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
+        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
         {
             throw new ArgumentNullException("No email.");
         }
 
-        var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
+        var email = ((string)emailValue).ToLowerInvariant();
         var token = await base.GenerateTwoFactorTokenAsync(user,
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
         await _mailService.SendTwoFactorEmailAsync(email, token);
@@ -346,12 +346,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
-        if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
+        if (provider == null || provider.MetaData == null || !provider.MetaData.TryGetValue("Email", out var emailValue))
         {
             throw new ArgumentNullException("No email.");
         }
 
-        var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
+        var email = ((string)emailValue).ToLowerInvariant();
         return await base.VerifyTwoFactorTokenAsync(user,
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), token);
     }
@@ -409,12 +409,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var keyId = $"Key{id}";
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        if (!provider?.MetaData?.ContainsKey("pending") ?? true)
+        if (provider?.MetaData is null || !provider.MetaData.TryGetValue("pending", out var pendingValue))
         {
             return false;
         }
 
-        var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
+        var options = CredentialCreateOptions.FromJson((string)pendingValue);
 
         // Callback to ensure credential ID is unique. Always return true since we don't care if another
         // account uses the same 2FA key.
@@ -1208,7 +1208,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public async Task<bool> TwoFactorProviderIsEnabledAsync(TwoFactorProviderType provider, ITwoFactorProvidersUser user)
     {
         var providers = user.GetTwoFactorProviders();
-        if (providers == null || !providers.ContainsKey(provider) || !providers[provider].Enabled)
+        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider) || !twoFactorProvider.Enabled)
         {
             return false;
         }
@@ -1318,14 +1318,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     public void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true)
     {
         var providers = user.GetTwoFactorProviders();
-        if (!providers?.ContainsKey(type) ?? true)
+        if (providers is null || !providers.TryGetValue(type, out var provider))
         {
             return;
         }
 
         if (setEnabled)
         {
-            providers[type].Enabled = true;
+            provider.Enabled = true;
         }
         user.SetTwoFactorProviders(providers);
 

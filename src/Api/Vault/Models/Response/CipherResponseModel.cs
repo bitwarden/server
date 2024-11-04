@@ -110,13 +110,13 @@ public class CipherDetailsResponseModel : CipherResponseModel
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
         : base(cipher, globalSettings, obj)
     {
-        if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
+        if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
-            CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
+            CollectionIds = collectionCipher.Select(c => c.CollectionId);
         }
         else
         {
-            CollectionIds = new Guid[] { };
+            CollectionIds = [];
         }
     }
 
@@ -130,7 +130,7 @@ public class CipherDetailsResponseModel : CipherResponseModel
     public CipherDetailsResponseModel(CipherDetailsWithCollections cipher, GlobalSettings globalSettings, string obj = "cipherDetails")
         : base(cipher, globalSettings, obj)
     {
-        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+        CollectionIds = cipher.CollectionIds ?? Array.Empty<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }
@@ -142,13 +142,13 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, bool orgUseTotp, string obj = "cipherMiniDetails")
         : base(cipher, globalSettings, orgUseTotp, obj)
     {
-        if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
+        if (collectionCiphers?.TryGetValue(cipher.Id, out var collectionCipher) ?? false)
         {
-            CollectionIds = collectionCiphers[cipher.Id].Select(c => c.CollectionId);
+            CollectionIds = collectionCipher.Select(c => c.CollectionId);
         }
         else
         {
-            CollectionIds = new Guid[] { };
+            CollectionIds = [];
         }
     }
 
@@ -156,7 +156,7 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
         : base(cipher, globalSettings, orgUseTotp, obj)
     {
-        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+        CollectionIds = cipher.CollectionIds ?? Array.Empty<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }

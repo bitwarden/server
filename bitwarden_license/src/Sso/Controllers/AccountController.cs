@@ -370,8 +370,8 @@ public class AccountController : Controller
         //  for the user identifier.
         static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
             && (c.Properties == null
-            || !c.Properties.ContainsKey(SamlPropertyKeys.ClaimFormat)
-            || c.Properties[SamlPropertyKeys.ClaimFormat] != SamlNameIdFormats.Transient);
+            || !c.Properties.TryGetValue(SamlPropertyKeys.ClaimFormat, out var claimFormat)
+            || claimFormat != SamlNameIdFormats.Transient);
 
         // Try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
