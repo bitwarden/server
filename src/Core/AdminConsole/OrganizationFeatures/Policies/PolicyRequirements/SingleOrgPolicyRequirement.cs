@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -13,14 +14,13 @@ class SingleOrganizationPolicyRequirementDefinition : IPolicyRequirementDefiniti
 
     public bool FilterPredicate(OrganizationUserPolicyDetails userPolicyDetails) =>
         // Note: we include the invited status so that we can enforce this before joining an org
-        userPolicyDetails.OrganizationUserType is not (OrganizationUserType.Owner or OrganizationUserType.Admin) &&
-        !userPolicyDetails.IsProvider;
+        !userPolicyDetails.IsAdminType();
 }
 
 class SingleOrganizationPolicyRequirement(IEnumerable<(Guid orgId, OrganizationUserStatusType status)> singleOrgOrganizations) : IPolicyRequirement
 {
     /// <summary>
-    /// Returns true only for Accepted and Invited users, which replicates the legacy behavior.
+    /// Returns true only for Accepted and Confirmed users, which replicates the legacy behavior.
     /// To enforce this policy before the user is allowed to join an organization, use CanJoinOrganization instead.
     /// </summary>
     public bool AppliesToUser => singleOrgOrganizations.Any(x =>

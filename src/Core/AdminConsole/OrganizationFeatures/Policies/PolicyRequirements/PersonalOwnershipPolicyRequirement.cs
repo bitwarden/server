@@ -5,11 +5,11 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public record DisableSendPolicyRequirementDefinition : IPolicyRequirementDefinition<DisableSendPolicyRequirement>
+public record PersonalOwnershipPolicyRequirementDefinition : IPolicyRequirementDefinition<PersonalOwnershipPolicyRequirement>
 {
-    public PolicyType Type => PolicyType.DisableSend;
+    public PolicyType Type => PolicyType.PersonalOwnership;
 
-    public DisableSendPolicyRequirement Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
+    public PersonalOwnershipPolicyRequirement Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
         new(userPolicyDetails.Any());
 
     public bool FilterPredicate(OrganizationUserPolicyDetails userPolicyDetails) =>
@@ -17,8 +17,8 @@ public record DisableSendPolicyRequirementDefinition : IPolicyRequirementDefinit
         !userPolicyDetails.IsAdminType();
 }
 
-public record DisableSendPolicyRequirement(bool DisableSend) : IPolicyRequirement
+public record PersonalOwnershipPolicyRequirement(bool DisablePersonalOwnership) : IPolicyRequirement
 {
-    public bool AppliesToUser => DisableSend;
-}
+    public bool AppliesToUser => DisablePersonalOwnership;
+};
 
