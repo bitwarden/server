@@ -9,7 +9,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Auth.Validators;
+namespace Bit.Api.Test.KeyManagement.Validators;
 
 [SutProviderCustomize]
 public class WebAuthnLoginKeyRotationValidatorTests
