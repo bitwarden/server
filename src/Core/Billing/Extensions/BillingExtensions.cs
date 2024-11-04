@@ -13,7 +13,7 @@ public static class BillingExtensions
     public static bool IsBillable(this Provider provider) =>
         provider is
         {
-            Type: ProviderType.Msp,
+            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
             Status: ProviderStatusType.Billable
         };
 

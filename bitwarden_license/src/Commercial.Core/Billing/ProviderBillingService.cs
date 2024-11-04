@@ -11,6 +11,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -437,144 +438,142 @@ public class ProviderBillingService(
         }
     }
 
-    public async Task UpdateSeatMinimums(
-        Provider provider,
-        int enterpriseSeatMinimum,
-        int teamsSeatMinimum)
+    public async Task ChangePlan(ChangeProviderPlanCommand command)
     {
-        ArgumentNullException.ThrowIfNull(provider);
+        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
 
-        if (enterpriseSeatMinimum < 0 || teamsSeatMinimum < 0)
+        if (plan == null)
+        {
+            throw new BadRequestException("Provider plan not found.");
+        }
+
+        if (plan.PlanType == command.NewPlan)
+        {
+            return;
+        }
+
+        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
+
+        plan.PlanType = command.NewPlan;
+        await providerPlanRepository.ReplaceAsync(plan);
+
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
+
+        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
+            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
+
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                new SubscriptionItemOptions
+                {
+                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
+                    Quantity = oldSubscriptionItem!.Quantity
+                },
+                new SubscriptionItemOptions
+                {
+                    Id = oldSubscriptionItem.Id,
+                    Deleted = true
+                }
+            ]
+        };
+
+        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
+    }
+
+    public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
+    {
+        if (command.Configuration.Any(x => x.SeatsMinimum < 0))
         {
             throw new BadRequestException("Provider seat minimums must be at least 0.");
         }
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(provider.GatewaySubscriptionId);
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
-        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+        var providerPlans = await providerPlanRepository.GetByProviderId(command.Id);
 
-        var enterpriseProviderPlan =
-            providerPlans.Single(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
-
-        if (enterpriseProviderPlan.SeatMinimum != enterpriseSeatMinimum)
+        foreach (var newPlanConfiguration in command.Configuration)
         {
-            var enterprisePriceId = StaticStore.GetPlan(PlanType.EnterpriseMonthly).PasswordManager
-                .StripeProviderPortalSeatPlanId;
+            var providerPlan =
+                providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Plan);
 
-            var enterpriseSubscriptionItem = subscription.Items.First(item => item.Price.Id == enterprisePriceId);
-
-            if (enterpriseProviderPlan.PurchasedSeats == 0)
+            if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
             {
-                if (enterpriseProviderPlan.AllocatedSeats > enterpriseSeatMinimum)
-                {
-                    enterpriseProviderPlan.PurchasedSeats =
-                        enterpriseProviderPlan.AllocatedSeats - enterpriseSeatMinimum;
+                var priceId = StaticStore.GetPlan(newPlanConfiguration.Plan).PasswordManager
+                    .StripeProviderPortalSeatPlanId;
+                var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
 
-                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                if (providerPlan.PurchasedSeats == 0)
+                {
+                    if (providerPlan.AllocatedSeats > newPlanConfiguration.SeatsMinimum)
                     {
-                        Id = enterpriseSubscriptionItem.Id,
-                        Price = enterprisePriceId,
-                        Quantity = enterpriseProviderPlan.AllocatedSeats
-                    });
+                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - newPlanConfiguration.SeatsMinimum;
+
+                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                        {
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = providerPlan.AllocatedSeats
+                        });
+                    }
+                    else
+                    {
+                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                        {
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = newPlanConfiguration.SeatsMinimum
+                        });
+                    }
                 }
                 else
                 {
-                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                    var totalSeats = providerPlan.SeatMinimum + providerPlan.PurchasedSeats;
+
+                    if (newPlanConfiguration.SeatsMinimum <= totalSeats)
                     {
-                        Id = enterpriseSubscriptionItem.Id,
-                        Price = enterprisePriceId,
-                        Quantity = enterpriseSeatMinimum
-                    });
+                        providerPlan.PurchasedSeats = totalSeats - newPlanConfiguration.SeatsMinimum;
+                    }
+                    else
+                    {
+                        providerPlan.PurchasedSeats = 0;
+                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
+                        {
+                            Id = subscriptionItem.Id,
+                            Price = priceId,
+                            Quantity = newPlanConfiguration.SeatsMinimum
+                        });
+                    }
                 }
+
+                providerPlan.SeatMinimum = newPlanConfiguration.SeatsMinimum;
+
+                await providerPlanRepository.ReplaceAsync(providerPlan);
             }
-            else
-            {
-                var totalEnterpriseSeats = enterpriseProviderPlan.SeatMinimum + enterpriseProviderPlan.PurchasedSeats;
-
-                if (enterpriseSeatMinimum <= totalEnterpriseSeats)
-                {
-                    enterpriseProviderPlan.PurchasedSeats = totalEnterpriseSeats - enterpriseSeatMinimum;
-                }
-                else
-                {
-                    enterpriseProviderPlan.PurchasedSeats = 0;
-                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                    {
-                        Id = enterpriseSubscriptionItem.Id,
-                        Price = enterprisePriceId,
-                        Quantity = enterpriseSeatMinimum
-                    });
-                }
-            }
-
-            enterpriseProviderPlan.SeatMinimum = enterpriseSeatMinimum;
-
-            await providerPlanRepository.ReplaceAsync(enterpriseProviderPlan);
-        }
-
-        var teamsProviderPlan =
-            providerPlans.Single(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
-
-        if (teamsProviderPlan.SeatMinimum != teamsSeatMinimum)
-        {
-            var teamsPriceId = StaticStore.GetPlan(PlanType.TeamsMonthly).PasswordManager
-                .StripeProviderPortalSeatPlanId;
-
-            var teamsSubscriptionItem = subscription.Items.First(item => item.Price.Id == teamsPriceId);
-
-            if (teamsProviderPlan.PurchasedSeats == 0)
-            {
-                if (teamsProviderPlan.AllocatedSeats > teamsSeatMinimum)
-                {
-                    teamsProviderPlan.PurchasedSeats = teamsProviderPlan.AllocatedSeats - teamsSeatMinimum;
-
-                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                    {
-                        Id = teamsSubscriptionItem.Id,
-                        Price = teamsPriceId,
-                        Quantity = teamsProviderPlan.AllocatedSeats
-                    });
-                }
-                else
-                {
-                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                    {
-                        Id = teamsSubscriptionItem.Id,
-                        Price = teamsPriceId,
-                        Quantity = teamsSeatMinimum
-                    });
-                }
-            }
-            else
-            {
-                var totalTeamsSeats = teamsProviderPlan.SeatMinimum + teamsProviderPlan.PurchasedSeats;
-
-                if (teamsSeatMinimum <= totalTeamsSeats)
-                {
-                    teamsProviderPlan.PurchasedSeats = totalTeamsSeats - teamsSeatMinimum;
-                }
-                else
-                {
-                    teamsProviderPlan.PurchasedSeats = 0;
-                    subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                    {
-                        Id = teamsSubscriptionItem.Id,
-                        Price = teamsPriceId,
-                        Quantity = teamsSeatMinimum
-                    });
-                }
-            }
-
-            teamsProviderPlan.SeatMinimum = teamsSeatMinimum;
-
-            await providerPlanRepository.ReplaceAsync(teamsProviderPlan);
         }
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
+            await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
         }
     }
