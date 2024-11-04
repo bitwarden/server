@@ -248,25 +248,27 @@ public class OrganizationLicense : ILicense
 
         var errorMessages = new StringBuilder();
 
-        var enabled = Token.ToClaimsPrincipal().GetValue<bool>(nameof(Enabled));
+        var claimsPrincipal = Token.ToClaimsPrincipal();
+
+        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
         if (!enabled)
         {
             errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
         }
 
-        var installationId = Token.ToClaimsPrincipal().GetValue<Guid>(nameof(InstallationId));
+        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         if (installationId != globalSettings.Installation.Id)
         {
             errorMessages.AppendLine("The installation ID does not match the current installation.");
         }
 
-        var selfHost = Token.ToClaimsPrincipal().GetValue<bool>(nameof(SelfHost));
+        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
         if (!selfHost)
         {
             errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
-        var licenseType = Token.ToClaimsPrincipal().GetValue<LicenseType>(nameof(LicenseType));
+        var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
         if (licenseType != Enums.LicenseType.Organization)
         {
             errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +

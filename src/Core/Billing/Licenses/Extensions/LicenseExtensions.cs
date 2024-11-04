@@ -100,6 +100,67 @@ public static class LicenseExtensions
             return default;
         }
 
-        return (T)Convert.ChangeType(claim.Value, typeof(T));
+        // Handle Guid
+        if (typeof(T) == typeof(Guid))
+        {
+            return Guid.TryParse(claim.Value, out var guid)
+                ? (T)(object)guid
+                : default;
+        }
+
+        // Handle DateTime
+        if (typeof(T) == typeof(DateTime))
+        {
+            return DateTime.TryParse(claim.Value, out var dateTime)
+                ? (T)(object)dateTime
+                : default;
+        }
+
+        // Handle TimeSpan
+        if (typeof(T) == typeof(TimeSpan))
+        {
+            return TimeSpan.TryParse(claim.Value, out var timeSpan)
+                ? (T)(object)timeSpan
+                : default;
+        }
+
+        // Check for Nullable Types
+        var underlyingType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
+
+        // Handle Enums
+        if (underlyingType.IsEnum)
+        {
+            if (Enum.TryParse(underlyingType, claim.Value, true, out var enumValue))
+            {
+                return (T)enumValue; // Cast back to T
+            }
+
+            return default; // Return default value for non-nullable enums or null for nullable enums
+        }
+
+        // Handle other Nullable Types (e.g., int?, bool?)
+        if (underlyingType == typeof(int))
+        {
+            return int.TryParse(claim.Value, out var intValue)
+                ? (T)(object)intValue
+                : default;
+        }
+
+        if (underlyingType == typeof(bool))
+        {
+            return bool.TryParse(claim.Value, out var boolValue)
+                ? (T)(object)boolValue
+                : default;
+        }
+
+        if (underlyingType == typeof(double))
+        {
+            return double.TryParse(claim.Value, out var doubleValue)
+                ? (T)(object)doubleValue
+                : default;
+        }
+
+        // Fallback to Convert.ChangeType for other types including strings
+        return (T)Convert.ChangeType(claim.Value, underlyingType);
     }
 }
