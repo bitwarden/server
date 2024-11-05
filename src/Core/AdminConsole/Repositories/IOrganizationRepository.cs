@@ -19,7 +19,12 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId);
 
     /// <summary>
-    /// Gets the organizations that have a verified domain matching the user's email domain.
+    /// Retrieves organizations where the user's email domain matches a verified organization domain.
     /// </summary>
+    /// <remarks>
+    /// Only returns organizations where:
+    /// 1. The domain in the user's email matches a verified organization domain
+    /// 2. The user is an existing organization member with either 'Confirmed' or 'Revoked' status
+    /// </remarks>
     Task<ICollection<Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId);
 }

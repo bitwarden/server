@@ -57,5 +57,8 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// <summary>
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
+    /// <remarks>
+    /// Only returns users with a confirmed or revoked status.
+    /// </remarks>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
 }

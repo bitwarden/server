@@ -10,6 +10,7 @@ public interface IGetOrganizationUsersManagementStatusQuery
     /// <remarks>
     /// A managed user is a user whose email domain matches one of the Organization's verified domains.
     /// The organization must be enabled and be on an Enterprise plan.
+    /// The user must be a member of the organization with a confirmed or revoked status.
     /// </remarks>
     /// <returns>
     /// A dictionary containing the OrganizationUserId and a boolean indicating if the user is managed by the organization.

@@ -90,8 +90,10 @@ public interface IUserService
     /// Indicates if the user is managed by any organization.
     /// </summary>
     /// <remarks>
-    /// A user is considered managed by an organization if their email domain matches one of the verified domains of that organization, and the user is a member of it.
-    /// The organization must be enabled and able to have verified domains.
+    /// A user is considered "managed" when they meet all these criteria:
+    /// 1. Their email domain matches a verified domain of an organization
+    /// 2. They are a member of that organization (with confirmed or revoked status)
+    /// 3. The organization is enabled and has domain verification capabilities
     /// </remarks>
     /// <returns>
     /// False if the Account Deprovisioning feature flag is disabled.
