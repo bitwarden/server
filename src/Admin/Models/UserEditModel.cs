@@ -20,9 +20,11 @@ public class UserEditModel
         IEnumerable<Cipher> ciphers,
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        bool? domainVerified
+        )
     {
-        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers);
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, domainVerified);
 
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;
