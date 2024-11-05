@@ -11,13 +11,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly INotificationHubPool _notificationHubPool;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        INotificationHubPool notificationHubPool)
+        INotificationHubPool notificationHubPool,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _notificationHubPool = notificationHubPool;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -42,6 +45,12 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             installation.Tags.Add("deviceIdentifier:" + identifier);
+        }
+
+        foreach (var organizationUserDetails in await _organizationUserRepository.GetManyDetailsByUserAsync(
+                     Guid.Parse(userId), OrganizationUserStatusType.Confirmed))
+        {
+            installation.Tags.Add($"organizationId:{organizationUserDetails.OrganizationId}");
         }
 
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
