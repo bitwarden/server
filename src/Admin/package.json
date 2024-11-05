@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "bootstrap": "5.0.0",
-    "@popperjs/core": "^2.11.8",
     "font-awesome": "4.7.0",
     "jquery": "3.7.1",
     "toastr": "2.1.4"

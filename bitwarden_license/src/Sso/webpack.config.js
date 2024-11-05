@@ -13,7 +13,6 @@ module.exports = {
   entry: {
     site: [
       path.resolve(__dirname, paths.sassDir, "site.scss"),
-      "@popperjs/core",
       "bootstrap",
       "jquery",
       "font-awesome/css/font-awesome.css",
