@@ -52,20 +52,23 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
-                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                await using (var serviceScope = _serviceProvider.CreateAsyncScope())
                 {
-                    payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
-                    messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                                      "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                    installation.Platform = NotificationPlatform.FcmV1;
-                }
-                else
-                {
-                    payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
-                    messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                                      "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                    installation.Platform = NotificationPlatform.Fcm;
+                    var featureService = serviceScope.ServiceProvider.GetRequiredService<IFeatureService>();
+                    if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                    {
+                        payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
+                        messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
+                                          "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                        installation.Platform = NotificationPlatform.FcmV1;
+                    }
+                    else
+                    {
+                        payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
+                        messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                                          "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                        installation.Platform = NotificationPlatform.Fcm;
+                    }
                 }
 
                 break;
