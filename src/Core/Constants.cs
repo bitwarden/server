@@ -101,7 +101,6 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
@@ -151,6 +150,7 @@ public static class FeatureFlagKeys
     public const string LimitCollectionCreationDeletionSplit = "pm-10863-limit-collection-creation-deletion-split";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
 
     public static List<string> GetAllKeys()
     {
