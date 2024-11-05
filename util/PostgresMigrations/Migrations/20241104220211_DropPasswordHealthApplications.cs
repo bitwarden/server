@@ -3,16 +3,16 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
 /// <inheritdoc />
 public partial class DropPasswordHealthApplications : Migration
 {
-    string dropPasswordHealtReportApplicationsTable = "MySqlMigrations.HelperScripts.2024-11-04-00_DropPasswordHealthReportApplications.sql";
+    string _dropPasswordHealthReportApplications = "PostgresMigrations.HelperScripts.2024-11-04_00_DropPasswordHealthReportApplications.psql";
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(dropPasswordHealtReportApplicationsTable));
+        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(_dropPasswordHealthReportApplications));
     }
 
     /// <inheritdoc />
