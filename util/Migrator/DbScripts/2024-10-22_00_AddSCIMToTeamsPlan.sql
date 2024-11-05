@@ -1,4 +1,5 @@
-SET DEADLOCK_PRIORITY HIGH;
+SET DEADLOCK_PRIORITY HIGH
+GO
 UPDATE
     [dbo].[Organization]
 SET
@@ -7,4 +8,6 @@ WHERE
     [PlanType] IN (
         17, -- Teams (Monthly)
         18 -- Teams (Annually)
-    );
+    )
+SET DEADLOCK_PRIORITY NORMAL
+GO
