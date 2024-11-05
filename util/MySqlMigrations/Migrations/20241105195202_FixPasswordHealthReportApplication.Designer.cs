@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20241105184657_UpdatePasswordHealthReportApplication")]
-    partial class UpdatePasswordHealthReportApplication
+    [Migration("20241105195202_FixPasswordHealthReportApplication")]
+    partial class FixPasswordHealthReportApplication
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
