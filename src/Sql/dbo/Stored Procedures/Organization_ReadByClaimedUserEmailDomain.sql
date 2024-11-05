@@ -10,6 +10,10 @@ BEGIN
     INNER JOIN [dbo].[OrganizationView] O ON OU.[OrganizationId] = O.[Id]
     INNER JOIN [dbo].[OrganizationDomainView] OD ON OU.[OrganizationId] = OD.[OrganizationId]
     WHERE U.[Id] = @UserId
+        AND (
+            OU.[Status] = 2 -- Confirmed
+            OR OU.[Status] = -1 -- Revoked
+        )
         AND OD.[VerifiedDate] IS NOT NULL
         AND U.[Email] LIKE '%@' + OD.[DomainName];
 END

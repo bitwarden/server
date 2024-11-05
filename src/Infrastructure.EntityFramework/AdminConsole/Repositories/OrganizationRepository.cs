@@ -290,8 +290,9 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                         join o in dbContext.Organizations on ou.OrganizationId equals o.Id
                         join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
                         where u.Id == userId
-                              && od.VerifiedDate != null
-                              && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
+                            && (ou.Status == OrganizationUserStatusType.Confirmed || ou.Status == OrganizationUserStatusType.Revoked)
+                            && od.VerifiedDate != null
+                            && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
                         select o;
 
             return await query.ToArrayAsync();

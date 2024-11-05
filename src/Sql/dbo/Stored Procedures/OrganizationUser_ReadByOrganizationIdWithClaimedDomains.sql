@@ -8,6 +8,10 @@ BEGIN
     FROM [dbo].[OrganizationUserView] OU
     INNER JOIN [dbo].[UserView] U ON OU.[UserId] = U.[Id]
     WHERE OU.[OrganizationId] = @OrganizationId
+        AND (
+            OU.[Status] = 2 -- Confirmed
+            OR OU.[Status] = -1 -- Revoked
+        )
         AND EXISTS (
             SELECT 1
             FROM [dbo].[OrganizationDomainView] OD
