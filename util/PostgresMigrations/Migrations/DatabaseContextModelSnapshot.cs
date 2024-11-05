@@ -911,7 +911,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.ToTable("CollectionGroups");
+                    b.ToTable("CollectionGroups", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionUser", b =>
@@ -935,7 +935,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationUserId");
 
-                    b.ToTable("CollectionUsers");
+                    b.ToTable("CollectionUsers", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Device", b =>
@@ -1915,7 +1915,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.ToTable("PasswordHealthReportApplications");
+                    b.ToTable("PasswordHealthReportApplications", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
@@ -2004,7 +2004,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("SecretsId");
 
-                    b.ToTable("ProjectSecret");
+                    b.ToTable("ProjectSecret", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.GroupProjectAccessPolicy", b =>
