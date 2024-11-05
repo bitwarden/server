@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20241104221634_DropPasswordHealthApplications")]
-    partial class DropPasswordHealthApplications
+    [Migration("20241105202413_FixPasswordHealthReportApplication")]
+    partial class FixPasswordHealthReportApplication
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1882,7 +1882,6 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Tools.Models.PasswordHealthReportApplication", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
@@ -1899,9 +1898,13 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrganizationId");
+                    b.HasIndex("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
 
-                    b.ToTable("PasswordHealthReportApplications");
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("PasswordHealthReportApplication", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
