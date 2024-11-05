@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20241105181159_UpdatePasswordHealthReportApplication")]
-    partial class UpdatePasswordHealthReportApplication
+    [Migration("20241105202053_FixPasswordHealthReportApplication")]
+    partial class FixPasswordHealthReportApplication
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
