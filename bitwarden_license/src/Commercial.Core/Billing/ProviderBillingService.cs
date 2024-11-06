@@ -481,6 +481,23 @@ public class ProviderBillingService(
         };
 
         await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
+
+        // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
+        // 1. Retrieve PlanType and PlanName for ProviderPlan
+        // 2. Assign PlanType & PlanName to Organization
+        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization == null)
+            {
+                throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
+            }
+            organization.PlanType = command.NewPlan;
+            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
+            await organizationRepository.ReplaceAsync(organization);
+        }
     }
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
