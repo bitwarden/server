@@ -209,16 +209,9 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (provider.Type != ProviderType.Msp)
+        if (!provider.SupportsConsolidatedBilling())
         {
-            logger.LogError("Non-MSP provider ({ProviderID}) cannot scale their seats", provider.Id);
-
-            throw new BillingException();
-        }
-
-        if (!planType.SupportsConsolidatedBilling())
-        {
-            logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} as it does not support consolidated billing", provider.Id, planType.ToString());
+            logger.LogError("Provider ({ProviderID}) cannot scale their seats", provider.Id);
 
             throw new BillingException();
         }
