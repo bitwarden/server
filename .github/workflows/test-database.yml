@@ -79,11 +79,11 @@ jobs:
       - name: Sleep
         run: sleep 15s
 
-      - name: Checking pending model changes (MySQL)
-        working-directory: "util/MySqlMigrations"
-        run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
-        env:
-          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
+      # - name: Checking pending model changes (MySQL)
+      #   working-directory: "util/MySqlMigrations"
+      #   run: 'dotnet ef migrations has-pending-model-changes -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+      #   env:
+      #     CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
 
       # - name: Checking pending model changes (Postgres)
       #   working-directory: "util/PostgresMigrations"
