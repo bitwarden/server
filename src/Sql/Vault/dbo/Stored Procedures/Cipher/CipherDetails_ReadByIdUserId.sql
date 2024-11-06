@@ -19,9 +19,9 @@ SELECT
         [DeletedDate],
         [Reprompt],
         [Key],
-        [OrganizationUseTotp]
-        , MAX ([Edit]) AS [Edit]
-        , MAX ([ViewPassword]) AS [ViewPassword]
+        [OrganizationUseTotp],
+        MAX ([Edit]) AS [Edit],
+        MAX ([ViewPassword]) AS [ViewPassword]
     FROM
         [dbo].[UserCipherDetails](@UserId)
     WHERE
@@ -41,5 +41,4 @@ SELECT
         [Reprompt],
         [Key],
         [OrganizationUseTotp]
-
 END
