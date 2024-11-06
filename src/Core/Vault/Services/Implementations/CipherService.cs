@@ -678,7 +678,7 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
-    public async Task ImportFolderCiphersAsync(
+    public async Task ImportIntoIndividualVaultAsync(
         List<Folder> folders,
         List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> folderRelationships,
@@ -738,7 +738,7 @@ public class CipherService : ICipherService
         await _pushService.PushSyncVaultAsync(importingUserId);
     }
 
-    public async Task ImportCollectionCiphersAsync(
+    public async Task ImportIntoOrganizationalVaultAsync(
         List<Collection> collections,
         List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> collectionRelationships,
