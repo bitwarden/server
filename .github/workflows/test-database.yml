@@ -73,7 +73,7 @@ jobs:
       - name: Add Maria DB
         # Use a different port than MySQL
         run: |
-          docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password --port 4306:3306 mariadb:latest
+          docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password -p 4306:3306 mariadb:latest
 
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
