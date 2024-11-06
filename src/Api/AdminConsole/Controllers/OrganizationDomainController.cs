@@ -101,7 +101,7 @@ public class OrganizationDomainController : Controller
             throw new NotFoundException();
         }
 
-        organizationDomain = await _verifyOrganizationDomainCommand.VerifyOrganizationDomainAsync(organizationDomain);
+        organizationDomain = await _verifyOrganizationDomainCommand.UserVerifyOrganizationDomainAsync(organizationDomain);
 
         return new OrganizationDomainResponseModel(organizationDomain);
     }

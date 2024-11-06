@@ -26,6 +26,9 @@ util/SqliteMigrations/** @bitwarden/dept-dbops
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
 
+# Key Management team
+**/KeyManagement @bitwarden/team-key-management-dev
+
 **/SecretsManager @bitwarden/team-secrets-manager-dev
 **/Tools @bitwarden/team-tools-dev
 
