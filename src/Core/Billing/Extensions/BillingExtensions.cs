@@ -43,5 +43,5 @@ public static class BillingExtensions
         };
 
     public static bool SupportsConsolidatedBilling(this PlanType planType)
-        => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly;
+        => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually;
 }
