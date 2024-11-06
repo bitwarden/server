@@ -13,15 +13,18 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _notificationHubPool = notificationHubPool;
         _serviceProvider = serviceProvider;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
@@ -48,24 +51,33 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             installation.Tags.Add("deviceIdentifier:" + identifier);
         }
 
+        foreach (var organizationUserDetails in await _organizationUserRepository.GetManyDetailsByUserAsync(
+                     Guid.Parse(userId), OrganizationUserStatusType.Confirmed))
+        {
+            installation.Tags.Add($"organizationId:{organizationUserDetails.OrganizationId}");
+        }
+
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
         switch (type)
         {
             case DeviceType.Android:
-                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
-                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                await using (var serviceScope = _serviceProvider.CreateAsyncScope())
                 {
-                    payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
-                    messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                                      "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                    installation.Platform = NotificationPlatform.FcmV1;
-                }
-                else
-                {
-                    payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
-                    messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                                      "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                    installation.Platform = NotificationPlatform.Fcm;
+                    var featureService = serviceScope.ServiceProvider.GetRequiredService<IFeatureService>();
+                    if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
+                    {
+                        payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
+                        messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
+                                          "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                        installation.Platform = NotificationPlatform.FcmV1;
+                    }
+                    else
+                    {
+                        payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
+                        messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                                          "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                        installation.Platform = NotificationPlatform.Fcm;
+                    }
                 }
 
                 break;

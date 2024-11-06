@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
@@ -27,7 +26,6 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
-    IProviderRepository providerRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IOrganizationBillingService
@@ -64,18 +62,18 @@ public class OrganizationBillingService(
             return null;
         }
 
-        var customer = await subscriberService.GetCustomer(organization, new CustomerGetOptions
-        {
-            Expand = ["discount.coupon.applies_to"]
-        });
+        var customer = await subscriberService.GetCustomer(organization,
+            new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
 
         var subscription = await subscriberService.GetSubscription(organization);
 
-        var isEligibleForSelfHost = await IsEligibleForSelfHost(organization, subscription);
-
+        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
+        var isManaged = organization.Status == OrganizationStatusType.Managed;
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
+        var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
 
-        return new OrganizationMetadata(isEligibleForSelfHost, isOnSecretsManagerStandalone);
+        return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
+            isSubscriptionUnpaid);
     }
 
     public async Task UpdatePaymentMethod(
@@ -339,26 +337,12 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
-    private async Task<bool> IsEligibleForSelfHost(
-        Organization organization,
-        Subscription? organizationSubscription)
+    private static bool IsEligibleForSelfHost(
+        Organization organization)
     {
-        if (organization.Status != OrganizationStatusType.Managed)
-        {
-            return organization.Plan.Contains("Families") ||
-                   organization.Plan.Contains("Enterprise") && IsActive(organizationSubscription);
-        }
+        var eligibleSelfHostPlans = StaticStore.Plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
 
-        var provider = await providerRepository.GetByOrganizationIdAsync(organization.Id);
-
-        var providerSubscription = await subscriberService.GetSubscriptionOrThrow(provider);
-
-        return organization.Plan.Contains("Enterprise") && IsActive(providerSubscription);
-
-        bool IsActive(Subscription? subscription) => subscription?.Status is
-            StripeConstants.SubscriptionStatus.Active or
-            StripeConstants.SubscriptionStatus.Trialing or
-            StripeConstants.SubscriptionStatus.PastDue;
+        return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
     private static bool IsOnSecretsManagerStandalone(
@@ -391,6 +375,17 @@ public class OrganizationBillingService(
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }
+
+    private static bool IsSubscriptionUnpaid(Subscription subscription)
+    {
+        if (subscription == null)
+        {
+            return false;
+        }
+
+        return subscription.Status == "unpaid";
+    }
+
 
     #endregion
 }
