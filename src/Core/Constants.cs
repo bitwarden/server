@@ -22,6 +22,7 @@ public static class Constants
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+    public const string SSHKeyCipherMinimumVersion = "2024.12.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -100,7 +101,6 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
@@ -123,6 +123,8 @@ public static class FeatureFlagKeys
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
+    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
+    public const string SSHAgent = "ssh-agent";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
     public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
@@ -148,6 +150,7 @@ public static class FeatureFlagKeys
     public const string LimitCollectionCreationDeletionSplit = "pm-10863-limit-collection-creation-deletion-split";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
 
     public static List<string> GetAllKeys()
     {

@@ -115,12 +115,33 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.project_name }}/${{ matrix.project_name }}.zip
           if-no-files-found: error
 
+  check-akv-secrets:
+    name: Check for AKV secrets
+    runs-on: ubuntu-22.04
+    outputs:
+      available: ${{ steps.check-akv-secrets.outputs.available }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check
+        id: check-akv-secrets
+        run: |
+          if [ "${{ secrets.AZURE_PROD_KV_CREDENTIALS }}" != '' ]; then
+            echo "available=true" >> $GITHUB_OUTPUT;
+          else
+            echo "available=false" >> $GITHUB_OUTPUT;
+          fi
+
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
     permissions:
       security-events: write
-    needs: build-artifacts
+    needs:
+      - build-artifacts
+      - check-akv-secrets
+    if: ${{ needs.check-akv-secrets.outputs.available == 'true' }}
     strategy:
       fail-fast: false
       matrix:
