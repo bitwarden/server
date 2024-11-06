@@ -143,7 +143,7 @@ jobs:
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
           # Maria DB
           BW_TEST_DATABASES__4__TYPE: "MySql"
-          BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost:4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
+          BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
         shell: pwsh
 
