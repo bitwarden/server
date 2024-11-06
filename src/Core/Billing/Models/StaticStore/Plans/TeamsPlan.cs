@@ -24,6 +24,7 @@ public record TeamsPlan : Plan
         Has2fa = true;
         HasApi = true;
         UsersGetPremium = true;
+        HasScim = true;
 
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;

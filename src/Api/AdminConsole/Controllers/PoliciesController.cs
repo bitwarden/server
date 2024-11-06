@@ -16,6 +16,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -25,7 +26,6 @@ public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -36,7 +36,6 @@ public class PoliciesController : Controller
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
         ICurrentContext currentContext,
@@ -46,7 +45,6 @@ public class PoliciesController : Controller
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _userService = userService;
         _currentContext = currentContext;
@@ -58,17 +56,16 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyResponseModel> Get(string orgId, int type)
+    public async Task<PolicyResponseModel> Get(Guid orgId, int type)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
-            throw new NotFoundException();
+            return new PolicyResponseModel(new AdminConsoleEntities.Policy() { Type = (PolicyType)type, Enabled = false });
         }
 
         return new PolicyResponseModel(policy);
@@ -185,7 +182,7 @@ public class PoliciesController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _policyService.SaveAsync(policy, _organizationService, userId);
+        await _policyService.SaveAsync(policy, userId);
         return new PolicyResponseModel(policy);
     }
 }
