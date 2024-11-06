@@ -1,6 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Utilities;
 using Stripe;
@@ -39,6 +40,8 @@ public record ProviderSubscriptionResponse(
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
+                    plan.Type,
+                    plan.ProductTier,
                     configuredProviderPlan.SeatMinimum,
                     configuredProviderPlan.PurchasedSeats,
                     configuredProviderPlan.AssignedSeats,
@@ -64,6 +67,8 @@ public record ProviderSubscriptionResponse(
 
 public record ProviderPlanResponse(
     string PlanName,
+    PlanType Type,
+    ProductTierType ProductTier,
     int SeatMinimum,
     int PurchasedSeats,
     int AssignedSeats,
