@@ -7,18 +7,25 @@ on:
       - "main"
       - "rc"
       - "hotfix-rc"
-  pull_request:
+  pull_request_target:
+    types: [opened, synchronize]
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
 
 jobs:
+  check-run:
+    name: Check PR run
+    uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+
   lint:
     name: Lint
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
@@ -29,8 +36,7 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-22.04
-    needs:
-      - lint
+    needs: lint
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +74,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
@@ -115,24 +123,6 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.project_name }}/${{ matrix.project_name }}.zip
           if-no-files-found: error
 
-  check-akv-secrets:
-    name: Check for AKV secrets
-    runs-on: ubuntu-22.04
-    outputs:
-      available: ${{ steps.check-akv-secrets.outputs.available }}
-    permissions:
-      contents: read
-
-    steps:
-      - name: Check
-        id: check-akv-secrets
-        run: |
-          if [ "${{ secrets.AZURE_PROD_KV_CREDENTIALS }}" != '' ]; then
-            echo "available=true" >> $GITHUB_OUTPUT;
-          else
-            echo "available=false" >> $GITHUB_OUTPUT;
-          fi
-
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
@@ -140,8 +130,7 @@ jobs:
       security-events: write
     needs:
       - build-artifacts
-      - check-akv-secrets
-    if: ${{ needs.check-akv-secrets.outputs.available == 'true' }}
+      - check-run
     strategy:
       fail-fast: false
       matrix:
@@ -194,6 +183,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Check branch to publish
         env:
@@ -313,6 +304,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
@@ -488,6 +481,8 @@ jobs:
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up .NET
         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
