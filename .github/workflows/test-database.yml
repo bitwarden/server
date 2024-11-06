@@ -102,11 +102,11 @@ jobs:
       #   env:
       #     CONN_STR: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
 
-      - name: Migrate MySQL
-        working-directory: "util/MySqlMigrations"
-        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
-        env:
-          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
+      # - name: Migrate MySQL
+      #   working-directory: "util/MySqlMigrations"
+      #   run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+      #   env:
+      #     CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
       
       - name: Migrate MariaDB
         working-directory: "util/MySqlMigrations"
