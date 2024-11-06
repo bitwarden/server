@@ -1,4 +1,6 @@
-﻿using Bit.Core.Billing.Entities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Utilities;
@@ -15,7 +17,8 @@ public record ProviderSubscriptionResponse(
     decimal AccountCredit,
     TaxInformation TaxInformation,
     DateTime? CancelAt,
-    SubscriptionSuspension Suspension)
+    SubscriptionSuspension Suspension,
+    ProviderType ProviderType)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
@@ -24,7 +27,8 @@ public record ProviderSubscriptionResponse(
         Subscription subscription,
         ICollection<ProviderPlan> providerPlans,
         TaxInformation taxInformation,
-        SubscriptionSuspension subscriptionSuspension)
+        SubscriptionSuspension subscriptionSuspension,
+        Provider provider)
     {
         var providerPlanResponses = providerPlans
             .Where(providerPlan => providerPlan.IsConfigured())
@@ -56,7 +60,8 @@ public record ProviderSubscriptionResponse(
             accountCredit,
             taxInformation,
             subscription.CancelAt,
-            subscriptionSuspension);
+            subscriptionSuspension,
+            provider.Type);
     }
 }
 
