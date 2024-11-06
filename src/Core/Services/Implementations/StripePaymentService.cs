@@ -792,19 +792,16 @@ public class StripePaymentService : IPaymentService
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
-        var isPm5864DollarThresholdEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM5864DollarThreshold);
         var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
 
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = !isPm5864DollarThresholdEnabled || invoiceNow
-            ? Constants.AlwaysInvoice
-            : Constants.CreateProrations,
+            ProrationBehavior = invoiceNow ? Constants.AlwaysInvoice : Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice"
         };
-        if (!invoiceNow && isAnnualPlan && isPm5864DollarThresholdEnabled && sub.Status.Trim() != "trialing")
+        if (!invoiceNow && isAnnualPlan && sub.Status.Trim() != "trialing")
         {
             subUpdateOptions.PendingInvoiceItemInterval =
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
@@ -838,7 +835,7 @@ public class StripePaymentService : IPaymentService
             {
                 try
                 {
-                    if (!isPm5864DollarThresholdEnabled && !invoiceNow)
+                    if (invoiceNow)
                     {
                         if (chargeNow)
                         {

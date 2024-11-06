@@ -3,12 +3,13 @@ name: Repository management
 on:
   workflow_dispatch:
     inputs:
-      branch_to_cut:
-        default: "rc"
-        description: "Branch to cut"
+      task:
+        default: "Version Bump"
+        description: "Task to execute"
         options:
-          - "rc"
-          - "hotfix-rc"
+          - "Version Bump"
+          - "Version Bump and Cut rc"
+          - "Version Bump and Cut hotfix-rc"
         required: true
         type: choice
       target_ref:
@@ -22,18 +23,51 @@ on:
         type: string
 
 jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-24.04
+    outputs:
+      branch: ${{ steps.set-branch.outputs.branch }}
+      token: ${{ steps.app-token.outputs.token }}
+    steps:
+      - name: Set branch
+        id: set-branch
+        env:
+          TASK: ${{ inputs.task }}
+        run: |
+          if [[ "$TASK" == "Version Bump" ]]; then
+            BRANCH="none"
+          elif [[ "$TASK" == "Version Bump and Cut rc" ]]; then
+            BRANCH="rc"
+          elif [[ "$TASK" == "Version Bump and Cut hotfix-rc" ]]; then
+            BRANCH="hotfix-rc"
+          fi
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Generate GH App token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.BW_GHAPP_ID }}
+          private-key: ${{ secrets.BW_GHAPP_KEY }}
+
+
   cut_branch:
     name: Cut branch
-    runs-on: ubuntu-22.04
+    if: ${{ needs.setup.outputs.branch != 'none' }}
+    needs: setup
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out target ref
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.target_ref }}
+          token: ${{ needs.setup.outputs.token }}
 
-      - name: Check if ${{ inputs.branch_to_cut }} branch exists
+      - name: Check if ${{ needs.setup.outputs.branch }} branch exists
         env:
-          BRANCH_NAME: ${{ inputs.branch_to_cut }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
         run: |
           if [[ $(git ls-remote --heads origin $BRANCH_NAME) ]]; then
             echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> $GITHUB_STEP_SUMMARY
@@ -42,7 +76,7 @@ jobs:
 
       - name: Cut branch
         env:
-          BRANCH_NAME: ${{ inputs.branch_to_cut }}
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
         run: |
           git switch --quiet --create $BRANCH_NAME
           git push --quiet --set-upstream origin $BRANCH_NAME
@@ -50,8 +84,11 @@ jobs:
 
   bump_version:
     name: Bump Version
-    runs-on: ubuntu-22.04
-    needs: cut_branch
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    needs:
+      - cut_branch
+      - setup
     outputs:
       version: ${{ steps.set-final-version-output.outputs.version }}
     steps:
@@ -62,9 +99,15 @@ jobs:
           version: ${{ inputs.version_number_override }}
 
       - name: Check out branch
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
+          token: ${{ needs.setup.outputs.token }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Actions"
 
       - name: Install xmllint
         run: |
@@ -123,24 +166,14 @@ jobs:
 
       - name: Set final version output
         id: set-final-version-output
+        env:
+          VERSION: ${{ inputs.version_number_override }}
         run: |
           if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
-            echo "version=${{ inputs.version_number_override }}" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
           elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
             echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
-
-      - name: Configure Git
-        run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "Github Actions"
-
-      - name: Create version branch
-        id: create-branch
-        run: |
-          NAME=version_bump_${{ github.ref_name }}_$(date +"%Y-%m-%d")
-          git switch -c $NAME
-          echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Commit files
         run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
@@ -148,108 +181,54 @@ jobs:
       - name: Push changes
         run: git push
 
-      - name: Generate GH App token
-        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
-        id: app-token
-        with:
-          app-id: ${{ secrets.BW_GHAPP_ID }}
-          private-key: ${{ secrets.BW_GHAPP_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - name: Create version PR
-        id: create-pr
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
-          TITLE: "Bump version to ${{ steps.set-final-version-output.outputs.version }}"
-        run: |
-          PR_URL=$(gh pr create --title "$TITLE" \
-            --base "main" \
-            --head "$PR_BRANCH" \
-            --label "version update" \
-            --label "automated pr" \
-            --body "
-              ## Type of change
-              - [ ] Bug fix
-              - [ ] New feature development
-              - [ ] Tech debt (refactoring, code cleanup, dependency upgrades, etc)
-              - [ ] Build/deploy pipeline (DevOps)
-              - [X] Other
-              ## Objective
-              Automated version bump to ${{ steps.set-final-version-output.outputs.version }}")
-          echo "pr_number=${PR_URL##*/}" >> $GITHUB_OUTPUT
-
-      - name: Approve PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-        run: gh pr review $PR_NUMBER --approve
-
-      - name: Merge PR
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR_NUMBER: ${{ steps.create-pr.outputs.pr_number }}
-        run: gh pr merge $PR_NUMBER --squash --auto --delete-branch
-
 
   cherry_pick:
     name: Cherry-Pick Commit(s)
-    runs-on: ubuntu-22.04
-    needs: bump_version
+    if: ${{ needs.setup.outputs.branch != 'none' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - bump_version
+      - setup
     steps:
       - name: Check out main branch
-        uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 # v4.2.1
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: main
-
-      - name: Install xmllint
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxml2-utils
-
-      - name: Verify version has been updated
-        env:
-          NEW_VERSION: ${{ needs.bump_version.outputs.version }}
-        run: |
-          # Wait for version to change.
-          while : ; do
-            echo "Waiting for version to be updated..."
-            git pull --force
-            CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-
-            # If the versions don't match we continue the loop, otherwise we break out of the loop.
-            [[ "$NEW_VERSION" != "$CURRENT_VERSION" ]] || break
-            sleep 10
-          done
-
-      - name: Get last version commit(s)
-        id: get-commits
-        run: |
-          git switch main
-          MAIN_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
-          echo "main_commit=$MAIN_COMMIT" >> $GITHUB_OUTPUT
-
-          if [[ $(git ls-remote --heads origin rc) ]]; then
-            git switch rc
-            RC_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
-            echo "rc_commit=$RC_COMMIT" >> $GITHUB_OUTPUT
-
-            RC_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-            echo "rc_version=$RC_VERSION" >> $GITHUB_OUTPUT
-          fi
+          token: ${{ needs.setup.outputs.token }}
 
       - name: Configure Git
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "Github Actions"
 
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
       - name: Perform cherry-pick(s)
         env:
-          CUT_BRANCH: ${{ inputs.branch_to_cut }}
-          MAIN_COMMIT: ${{ steps.get-commits.outputs.main_commit }}
-          RC_COMMIT: ${{ steps.get-commits.outputs.rc_commit }}
-          RC_VERSION: ${{ steps.get-commits.outputs.rc_version }}
+          CUT_BRANCH: ${{ needs.setup.outputs.branch }}
         run: |
+          # Function for cherry-picking
+          cherry_pick () {
+            local source_branch=$1
+            local destination_branch=$2
+
+            # Get project commit/version from source branch
+            git switch $source_branch
+            SOURCE_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
+            SOURCE_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+            # Get project commit/version from destination branch
+            git switch $destination_branch
+            DESTINATION_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+            if [[ "$DESTINATION_VERSION" != "$SOURCE_VERSION" ]]; then
+              git cherry-pick --strategy-option=theirs -x $SOURCE_COMMIT
+              git push -u origin $destination_branch
+            fi
+
           # If we are cutting 'hotfix-rc':
           if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
 
@@ -257,25 +236,16 @@ jobs:
             if [[ $(git ls-remote --heads origin rc) ]]; then
 
               # Chery-pick from 'rc' into 'hotfix-rc'
-              git switch hotfix-rc
-              HOTFIX_RC_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
-              if [[ "$HOTFIX_RC_VERSION" != "$RC_VERSION" ]]; then
-                git cherry-pick --strategy-option=theirs -x $RC_COMMIT
-                git push -u origin hotfix-rc
-              fi
+              cherry_pick rc hotfix-rc
 
               # Cherry-pick from 'main' into 'rc'
-              git switch rc
-              git cherry-pick --strategy-option=theirs -x $MAIN_COMMIT
-              git push -u origin rc
+              cherry_pick main rc
 
             # If the 'rc' branch does not exist:
             else
 
               # Cherry-pick from 'main' into 'hotfix-rc'
-              git switch hotfix-rc
-              git cherry-pick --strategy-option=theirs -x $MAIN_COMMIT
-              git push -u origin hotfix-rc
+              cherry_pick main hotfix-rc
 
             fi
 
@@ -283,9 +253,7 @@ jobs:
           elif [[ "$CUT_BRANCH" == "rc" ]]; then
 
             # Cherry-pick from 'main' into 'rc'
-            git switch rc
-            git cherry-pick --strategy-option=theirs -x $MAIN_COMMIT
-            git push -u origin rc
+            cherry_pick main rc
 
           fi
 
