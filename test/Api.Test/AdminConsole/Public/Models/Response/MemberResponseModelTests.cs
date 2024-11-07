@@ -26,7 +26,7 @@ public class MemberResponseModelTests
     }
 
     [Fact]
-    public void ResetPasswordEnrolled_ShouldBeFalse_WhenUserHasResetPasswordKey()
+    public void ResetPasswordEnrolled_ShouldBeFalse_WhenUserDoesNotHaveResetPasswordKey()
     {
         // Arrange
         var user = Substitute.For<OrganizationUser>();
