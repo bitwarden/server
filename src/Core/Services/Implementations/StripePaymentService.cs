@@ -1360,8 +1360,7 @@ public class StripePaymentService : IPaymentService
         {
             if (braintreeCustomer?.Id != stripeCustomerMetadata["btCustomerId"])
             {
-                var nowSec = Utilities.CoreHelpers.ToEpocSeconds(DateTime.UtcNow);
-                stripeCustomerMetadata.Add($"btCustomerId_{nowSec}", stripeCustomerMetadata["btCustomerId"]);
+                stripeCustomerMetadata.Add("btCustomerId_old", stripeCustomerMetadata["btCustomerId"]);
             }
             stripeCustomerMetadata["btCustomerId"] = braintreeCustomer?.Id;
         }
