@@ -152,6 +152,8 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerification = "new-device-verification";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
+    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
+    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
 
     public static List<string> GetAllKeys()
     {
