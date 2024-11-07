@@ -117,12 +117,6 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!string.IsNullOrWhiteSpace(license.Token) && !VerifyToken(license.Token))
-                {
-                    await DisableOrganizationAsync(org, license, "Invalid token.");
-                    continue;
-                }
-
                 if (!license.VerifyData(org, _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
@@ -253,9 +247,17 @@ public class LicensingService : ILicensingService
 
     public bool VerifyLicense(ILicense license)
     {
-        return string.IsNullOrWhiteSpace(license.Token)
-            ? license.VerifySignature(_certificate)
-            : VerifyToken(license.Token);
+        if (string.IsNullOrWhiteSpace(license.Token))
+        {
+            return license.VerifySignature(_certificate);
+        }
+
+        return license switch
+        {
+            OrganizationLicense orgLicense => VerifyToken(license.Token, $"organization:{orgLicense.Id}"),
+            UserLicense userLicense => VerifyToken(license.Token, $"user:{userLicense.Id}"),
+            _ => throw new ArgumentException("Unsupported license type.", nameof(license)),
+        };
     }
 
     public byte[] SignLicense(ILicense license)
@@ -292,6 +294,32 @@ public class LicensingService : ILicensingService
 
         using var fs = File.OpenRead(filePath);
         return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+    }
+
+    public ClaimsPrincipal GetClaimsPrincipalFromToken(string token, string audience)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new X509SecurityKey(_certificate),
+            ValidateIssuer = true,
+            ValidIssuer = "bitwarden",
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+            RequireExpirationTime = true
+        };
+
+        try
+        {
+            return tokenHandler.ValidateToken(token, validationParameters, out _);
+        }
+        catch (Exception ex)
+        {
+            throw new SecurityTokenValidationException("License token validation failed.", ex);
+        }
     }
 
     public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
@@ -352,11 +380,11 @@ public class LicensingService : ILicensingService
         return tokenHandler.WriteToken(token);
     }
 
-    private bool VerifyToken(string token)
+    private bool VerifyToken(string token, string audience)
     {
         try
         {
-            _ = token.ToClaimsPrincipal();
+            _ = GetClaimsPrincipalFromToken(token, audience);
             return true;
         }
         catch (Exception e)

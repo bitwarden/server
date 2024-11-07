@@ -1,8 +1,10 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Billing.Licenses.Extensions;
 
@@ -75,20 +77,6 @@ public static class LicenseExtensions
         }
 
         return expirationDate;
-    }
-
-    public static ClaimsPrincipal ToClaimsPrincipal(this string token)
-    {
-        var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
-        var jwtSecurityToken = jwtSecurityTokenHandler.ReadJwtToken(token);
-
-        if (jwtSecurityToken is null)
-        {
-            throw new ArgumentException("Invalid token.", nameof(token));
-        }
-
-        var claimsIdentity = new ClaimsIdentity(jwtSecurityToken.Claims, "BitwardenLicense");
-        return new ClaimsPrincipal(claimsIdentity);
     }
 
     public static T GetValue<T>(this ClaimsPrincipal principal, string claimType)

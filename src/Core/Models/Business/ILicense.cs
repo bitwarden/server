@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Bit.Core.Models.Business;
 
@@ -14,6 +15,7 @@ public interface ILicense
     string Signature { get; set; }
     string Token { get; set; }
     byte[] SignatureBytes { get; }
+    ClaimsPrincipal ClaimsPrincipal { get; set; }
     byte[] GetDataBytes(bool forHash = false);
     byte[] ComputeHash();
     bool VerifySignature(X509Certificate2 certificate);

@@ -79,10 +79,11 @@ public class UpdateOrganizationLicenseCommandTests
                 .Received(1)
                 .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
-                        "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
-                        "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires", "ExpirationWithoutGracePeriod", "Token") &&
-                         // Same property but different name, use explicit mapping
-                         org.ExpirationDate == license.Expires));
+                               "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
+                               "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
+                               "ExpirationWithoutGracePeriod", "Token", "ClaimsPrincipal") &&
+                           // Same property but different name, use explicit mapping
+                           org.ExpirationDate == license.Expires));
         }
         finally
         {

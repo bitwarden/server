@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -55,6 +56,9 @@ public class UserLicense : ILicense
 
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
+        ClaimsPrincipal = string.IsNullOrWhiteSpace(Token)
+            ? null
+            : licenseService.GetClaimsPrincipalFromToken(Token, $"user:{Id}");
     }
 
     public string LicenseKey { get; set; }
@@ -74,6 +78,8 @@ public class UserLicense : ILicense
     public string Token { get; set; }
     [JsonIgnore]
     public byte[] SignatureBytes => Convert.FromBase64String(Signature);
+    [JsonIgnore]
+    public ClaimsPrincipal ClaimsPrincipal { get; set; }
 
     public byte[] GetDataBytes(bool forHash = false)
     {
@@ -87,6 +93,7 @@ public class UserLicense : ILicense
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
                     !p.Name.Equals(nameof(Token)) &&
+                    !p.Name.Equals(nameof(ClaimsPrincipal)) &&
                     (
                         !forHash ||
                         (
@@ -124,15 +131,14 @@ public class UserLicense : ILicense
         }
 
         var errorMessages = new StringBuilder();
-        var claimsPrincipal = Token.ToClaimsPrincipal();
 
-        var emailVerified = claimsPrincipal.GetValue<bool>(nameof(User.EmailVerified));
+        var emailVerified = ClaimsPrincipal.GetValue<bool>(nameof(User.EmailVerified));
         if (!emailVerified)
         {
             errorMessages.AppendLine("The user's email is not verified.");
         }
 
-        var email = claimsPrincipal.GetValue<string>(nameof(Email));
+        var email = ClaimsPrincipal.GetValue<string>(nameof(Email));
         if (!email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
         {
             errorMessages.AppendLine("The user's email does not match the license email.");
@@ -158,6 +164,7 @@ public class UserLicense : ILicense
     /// <exception cref="NotSupportedException"></exception>
     private bool ObsoleteCanUse(User user, out string exception)
     {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         var errorMessages = new StringBuilder();
 
         if (Issued > DateTime.UtcNow)
@@ -202,38 +209,25 @@ public class UserLicense : ILicense
             return ObsoleteVerifyData(user);
         }
 
-        var claimsPrincipal = Token.ToClaimsPrincipal();
+        var licenseKey = ClaimsPrincipal.GetValue<string>(nameof(LicenseKey));
+        var premium = ClaimsPrincipal.GetValue<bool>(nameof(Premium));
+        var email = ClaimsPrincipal.GetValue<string>(nameof(Email));
 
-        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
-        if (licenseKey != user.LicenseKey)
-        {
-            return false;
-        }
-
-        var premium = claimsPrincipal.GetValue<bool>(nameof(Premium));
-        if (premium != user.Premium)
-        {
-            return false;
-        }
-
-        var email = claimsPrincipal.GetValue<string>(nameof(Email));
-        if (!email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
-        {
-            return false;
-        }
-
-        return true;
+        return licenseKey == user.LicenseKey &&
+               premium == user.Premium &&
+               email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
     /// Do not extend this method. It is only here for backwards compatibility with old licenses.
-    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// Instead, extend the VerifyData method using the ClaimsPrincipal.
     /// </summary>
     /// <param name="user"></param>
     /// <returns></returns>
     /// <exception cref="NotSupportedException"></exception>
     private bool ObsoleteVerifyData(User user)
     {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
             return false;

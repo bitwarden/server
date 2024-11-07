@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
@@ -13,6 +14,7 @@ public interface ILicensingService
     byte[] SignLicense(ILicense license);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId);
+    ClaimsPrincipal GetClaimsPrincipalFromToken(string token, string audience);
 
     Task<string> CreateOrganizationTokenAsync(
         Organization organization,

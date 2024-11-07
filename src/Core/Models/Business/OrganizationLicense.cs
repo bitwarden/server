@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -105,6 +106,9 @@ public class OrganizationLicense : ILicense
 
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
+        ClaimsPrincipal = string.IsNullOrWhiteSpace(Token)
+            ? null
+            : licenseService.GetClaimsPrincipalFromToken(Token, $"organization:{Id}");
     }
 
     public string LicenseKey { get; set; }
@@ -154,6 +158,7 @@ public class OrganizationLicense : ILicense
     public string Signature { get; set; }
     public string Token { get; set; }
     [JsonIgnore] public byte[] SignatureBytes => Convert.FromBase64String(Signature);
+    [JsonIgnore] public ClaimsPrincipal ClaimsPrincipal { get; set; }
 
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
@@ -179,6 +184,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
                     !p.Name.Equals(nameof(Token)) &&
+                    !p.Name.Equals(nameof(ClaimsPrincipal)) &&
                     // UsersGetPremium was added in Version 2
                     (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                     // UseEvents was added in Version 3
@@ -248,27 +254,25 @@ public class OrganizationLicense : ILicense
 
         var errorMessages = new StringBuilder();
 
-        var claimsPrincipal = Token.ToClaimsPrincipal();
-
-        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
+        var enabled = ClaimsPrincipal.GetValue<bool>(nameof(Enabled));
         if (!enabled)
         {
             errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
         }
 
-        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
+        var installationId = ClaimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         if (installationId != globalSettings.Installation.Id)
         {
             errorMessages.AppendLine("The installation ID does not match the current installation.");
         }
 
-        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
+        var selfHost = ClaimsPrincipal.GetValue<bool>(nameof(SelfHost));
         if (!selfHost)
         {
             errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
-        var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
+        var licenseType = ClaimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
         if (licenseType != Enums.LicenseType.Organization)
         {
             errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
@@ -295,6 +299,7 @@ public class OrganizationLicense : ILicense
     /// <returns></returns>
     private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         var errorMessages = new StringBuilder();
 
         if (!Enabled)
@@ -355,175 +360,66 @@ public class OrganizationLicense : ILicense
             return ObsoleteVerifyData(organization, globalSettings);
         }
 
-        // It looks a little goofy to extend this file instead of moving this logic to a command, but in an effort
-        // to keep changes low in each PR, we'll move this to a command in a subsequent PR.
-        // The end goal will be to not have an OrganizationLicense file whatsoever, and instead simply rely on the token
-        var claimsPrincipal = Token.ToClaimsPrincipal();
+        var issued = ClaimsPrincipal.GetValue<DateTime>(nameof(Issued));
+        var expires = ClaimsPrincipal.GetValue<DateTime>(nameof(Expires));
+        var installationId = ClaimsPrincipal.GetValue<Guid>(nameof(InstallationId));
+        var licenseKey = ClaimsPrincipal.GetValue<string>(nameof(LicenseKey));
+        var enabled = ClaimsPrincipal.GetValue<bool>(nameof(Enabled));
+        var planType = ClaimsPrincipal.GetValue<PlanType>(nameof(PlanType));
+        var seats = ClaimsPrincipal.GetValue<int?>(nameof(Seats));
+        var maxCollections = ClaimsPrincipal.GetValue<short?>(nameof(MaxCollections));
+        var useGroups = ClaimsPrincipal.GetValue<bool>(nameof(UseGroups));
+        var useDirectory = ClaimsPrincipal.GetValue<bool>(nameof(UseDirectory));
+        var useTotp = ClaimsPrincipal.GetValue<bool>(nameof(UseTotp));
+        var selfHost = ClaimsPrincipal.GetValue<bool>(nameof(SelfHost));
+        var name = ClaimsPrincipal.GetValue<string>(nameof(Name));
+        var usersGetPremium = ClaimsPrincipal.GetValue<bool>(nameof(UsersGetPremium));
+        var useEvents = ClaimsPrincipal.GetValue<bool>(nameof(UseEvents));
+        var use2fa = ClaimsPrincipal.GetValue<bool>(nameof(Use2fa));
+        var useApi = ClaimsPrincipal.GetValue<bool>(nameof(UseApi));
+        var usePolicies = ClaimsPrincipal.GetValue<bool>(nameof(UsePolicies));
+        var useSso = ClaimsPrincipal.GetValue<bool>(nameof(UseSso));
+        var useResetPassword = ClaimsPrincipal.GetValue<bool>(nameof(UseResetPassword));
+        var useKeyConnector = ClaimsPrincipal.GetValue<bool>(nameof(UseKeyConnector));
+        var useScim = ClaimsPrincipal.GetValue<bool>(nameof(UseScim));
+        var useCustomPermissions = ClaimsPrincipal.GetValue<bool>(nameof(UseCustomPermissions));
+        var useSecretsManager = ClaimsPrincipal.GetValue<bool>(nameof(UseSecretsManager));
+        var usePasswordManager = ClaimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
+        var smSeats = ClaimsPrincipal.GetValue<int?>(nameof(SmSeats));
+        var smServiceAccounts = ClaimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
 
-        var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
-        var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
-
-        if (issued > DateTime.UtcNow || expires < DateTime.UtcNow)
-        {
-            return false;
-        }
-
-        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
-        if (installationId != globalSettings.Installation.Id)
-        {
-            return false;
-        }
-
-        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
-        if (licenseKey != organization.LicenseKey)
-        {
-            return false;
-        }
-
-        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
-        if (enabled != organization.Enabled)
-        {
-            return false;
-        }
-
-        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
-        if (planType != organization.PlanType)
-        {
-            return false;
-        }
-
-        var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
-        if (seats != organization.Seats)
-        {
-            return false;
-        }
-
-        var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
-        if (maxCollections != organization.MaxCollections)
-        {
-            return false;
-        }
-
-        var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
-        if (useGroups != organization.UseGroups)
-        {
-            return false;
-        }
-
-        var useDirectory = claimsPrincipal.GetValue<bool>(nameof(UseDirectory));
-        if (useDirectory != organization.UseDirectory)
-        {
-            return false;
-        }
-
-        var useTotp = claimsPrincipal.GetValue<bool>(nameof(UseTotp));
-        if (useTotp != organization.UseTotp)
-        {
-            return false;
-        }
-
-        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
-        if (selfHost != organization.SelfHost)
-        {
-            return false;
-        }
-
-        var name = claimsPrincipal.GetValue<string>(nameof(Name));
-        if (name != organization.Name)
-        {
-            return false;
-        }
-
-        var usersGetPremium = claimsPrincipal.GetValue<bool>(nameof(UsersGetPremium));
-        if (usersGetPremium != organization.UsersGetPremium)
-        {
-            return false;
-        }
-
-        var useEvents = claimsPrincipal.GetValue<bool>(nameof(UseEvents));
-        if (useEvents != organization.UseEvents)
-        {
-            return false;
-        }
-
-        var use2fa = claimsPrincipal.GetValue<bool>(nameof(Use2fa));
-        if (use2fa != organization.Use2fa)
-        {
-            return false;
-        }
-
-        var useApi = claimsPrincipal.GetValue<bool>(nameof(UseApi));
-        if (useApi != organization.UseApi)
-        {
-            return false;
-        }
-
-        var usePolicies = claimsPrincipal.GetValue<bool>(nameof(UsePolicies));
-        if (usePolicies != organization.UsePolicies)
-        {
-            return false;
-        }
-
-        var useSso = claimsPrincipal.GetValue<bool>(nameof(UseSso));
-        if (useSso != organization.UseSso)
-        {
-            return false;
-        }
-
-        var useResetPassword = claimsPrincipal.GetValue<bool>(nameof(UseResetPassword));
-        if (useResetPassword != organization.UseResetPassword)
-        {
-            return false;
-        }
-
-        var useKeyConnector = claimsPrincipal.GetValue<bool>(nameof(UseKeyConnector));
-        if (useKeyConnector != organization.UseKeyConnector)
-        {
-            return false;
-        }
-
-        var useScim = claimsPrincipal.GetValue<bool>(nameof(UseScim));
-        if (useScim != organization.UseScim)
-        {
-            return false;
-        }
-
-        var useCustomPermissions = claimsPrincipal.GetValue<bool>(nameof(UseCustomPermissions));
-        if (useCustomPermissions != organization.UseCustomPermissions)
-        {
-            return false;
-        }
-
-        var useSecretsManager = claimsPrincipal.GetValue<bool>(nameof(UseSecretsManager));
-        if (useSecretsManager != organization.UseSecretsManager)
-        {
-            return false;
-        }
-
-        var usePasswordManager = claimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
-        if (usePasswordManager != organization.UsePasswordManager)
-        {
-            return false;
-        }
-
-        var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
-        if (smSeats != organization.SmSeats)
-        {
-            return false;
-        }
-
-        var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
-        if (smServiceAccounts != organization.SmServiceAccounts)
-        {
-            return false;
-        }
-
-        return true;
+        return issued <= DateTime.UtcNow &&
+               expires >= DateTime.UtcNow &&
+               installationId == globalSettings.Installation.Id &&
+               licenseKey == organization.LicenseKey &&
+               enabled == organization.Enabled &&
+               planType == organization.PlanType &&
+               seats == organization.Seats &&
+               maxCollections == organization.MaxCollections &&
+               useGroups == organization.UseGroups &&
+               useDirectory == organization.UseDirectory &&
+               useTotp == organization.UseTotp &&
+               selfHost == organization.SelfHost &&
+               name == organization.Name &&
+               usersGetPremium == organization.UsersGetPremium &&
+               useEvents == organization.UseEvents &&
+               use2fa == organization.Use2fa &&
+               useApi == organization.UseApi &&
+               usePolicies == organization.UsePolicies &&
+               useSso == organization.UseSso &&
+               useResetPassword == organization.UseResetPassword &&
+               useKeyConnector == organization.UseKeyConnector &&
+               useScim == organization.UseScim &&
+               useCustomPermissions == organization.UseCustomPermissions &&
+               useSecretsManager == organization.UseSecretsManager &&
+               usePasswordManager == organization.UsePasswordManager &&
+               smSeats == organization.SmSeats &&
+               smServiceAccounts == organization.SmServiceAccounts;
     }
 
     /// <summary>
     /// Do not extend this method. It is only here for backwards compatibility with old licenses.
-    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// Instead, extend the VerifyData method using the ClaimsPrincipal.
     /// </summary>
     /// <param name="organization"></param>
     /// <param name="globalSettings"></param>
@@ -531,6 +427,7 @@ public class OrganizationLicense : ILicense
     /// <exception cref="NotSupportedException"></exception>
     private bool ObsoleteVerifyData(Organization organization, IGlobalSettings globalSettings)
     {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
             return false;
