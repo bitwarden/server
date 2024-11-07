@@ -14,7 +14,7 @@ public interface ILicensingService
     byte[] SignLicense(ILicense license);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization);
     Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId);
-    ClaimsPrincipal GetClaimsPrincipalFromToken(string token, string audience);
+    ClaimsPrincipal GetClaimsPrincipalFromLicense(ILicense license);
 
     Task<string> CreateOrganizationTokenAsync(
         Organization organization,

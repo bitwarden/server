@@ -56,9 +56,6 @@ public class UserLicense : ILicense
 
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
-        ClaimsPrincipal = string.IsNullOrWhiteSpace(Token)
-            ? null
-            : licenseService.GetClaimsPrincipalFromToken(Token, $"user:{Id}");
     }
 
     public string LicenseKey { get; set; }
@@ -78,8 +75,6 @@ public class UserLicense : ILicense
     public string Token { get; set; }
     [JsonIgnore]
     public byte[] SignatureBytes => Convert.FromBase64String(Signature);
-    [JsonIgnore]
-    public ClaimsPrincipal ClaimsPrincipal { get; set; }
 
     public byte[] GetDataBytes(bool forHash = false)
     {
@@ -93,7 +88,6 @@ public class UserLicense : ILicense
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
                     !p.Name.Equals(nameof(Token)) &&
-                    !p.Name.Equals(nameof(ClaimsPrincipal)) &&
                     (
                         !forHash ||
                         (
@@ -123,22 +117,22 @@ public class UserLicense : ILicense
         }
     }
 
-    public bool CanUse(User user, out string exception)
+    public bool CanUse(User user, ClaimsPrincipal claimsPrincipal, out string exception)
     {
-        if (string.IsNullOrWhiteSpace(Token))
+        if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
         {
             return ObsoleteCanUse(user, out exception);
         }
 
         var errorMessages = new StringBuilder();
 
-        var emailVerified = ClaimsPrincipal.GetValue<bool>(nameof(User.EmailVerified));
+        var emailVerified = claimsPrincipal.GetValue<bool>(nameof(User.EmailVerified));
         if (!emailVerified)
         {
             errorMessages.AppendLine("The user's email is not verified.");
         }
 
-        var email = ClaimsPrincipal.GetValue<string>(nameof(Email));
+        var email = claimsPrincipal.GetValue<string>(nameof(Email));
         if (!email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
         {
             errorMessages.AppendLine("The user's email does not match the license email.");
@@ -202,16 +196,16 @@ public class UserLicense : ILicense
         return true;
     }
 
-    public bool VerifyData(User user)
+    public bool VerifyData(User user, ClaimsPrincipal claimsPrincipal)
     {
-        if (string.IsNullOrWhiteSpace(Token))
+        if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
         {
             return ObsoleteVerifyData(user);
         }
 
-        var licenseKey = ClaimsPrincipal.GetValue<string>(nameof(LicenseKey));
-        var premium = ClaimsPrincipal.GetValue<bool>(nameof(Premium));
-        var email = ClaimsPrincipal.GetValue<string>(nameof(Email));
+        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
+        var premium = claimsPrincipal.GetValue<bool>(nameof(Premium));
+        var email = claimsPrincipal.GetValue<string>(nameof(Email));
 
         return licenseKey == user.LicenseKey &&
                premium == user.Premium &&

@@ -908,7 +908,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user, out var exceptionMessage))
+            var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
+
+            if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
             {
                 throw new BadRequestException(exceptionMessage);
             }
@@ -987,7 +989,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user, out var exceptionMessage))
+        var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
+
+        if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
         {
             throw new BadRequestException(exceptionMessage);
         }

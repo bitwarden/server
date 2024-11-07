@@ -117,7 +117,7 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!license.VerifyData(org, _globalSettings))
+                if (!license.VerifyData(org, GetClaimsPrincipalFromLicense(license), _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
                     continue;
@@ -216,7 +216,8 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (!license.VerifyData(user))
+        var claimsPrincipal = GetClaimsPrincipalFromLicense(license);
+        if (!license.VerifyData(user, claimsPrincipal))
         {
             await DisablePremiumAsync(user, license, "Invalid data.");
             return false;
@@ -252,12 +253,16 @@ public class LicensingService : ILicensingService
             return license.VerifySignature(_certificate);
         }
 
-        return license switch
+        try
         {
-            OrganizationLicense orgLicense => VerifyToken(license.Token, $"organization:{orgLicense.Id}"),
-            UserLicense userLicense => VerifyToken(license.Token, $"user:{userLicense.Id}"),
-            _ => throw new ArgumentException("Unsupported license type.", nameof(license)),
-        };
+            _ = GetClaimsPrincipalFromLicense(license);
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Invalid token.");
+            return false;
+        }
     }
 
     public byte[] SignLicense(ILicense license)
@@ -296,8 +301,21 @@ public class LicensingService : ILicensingService
         return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
     }
 
-    public ClaimsPrincipal GetClaimsPrincipalFromToken(string token, string audience)
+    public ClaimsPrincipal GetClaimsPrincipalFromLicense(ILicense license)
     {
+        if (string.IsNullOrWhiteSpace(license.Token))
+        {
+            return null;
+        }
+
+        var audience = license switch
+        {
+            OrganizationLicense orgLicense => $"organization:{orgLicense.Id}",
+            UserLicense userLicense => $"user:{userLicense.Id}",
+            _ => throw new ArgumentException("Unsupported license type.", nameof(license)),
+        };
+
+        var token = license.Token;
         var tokenHandler = new JwtSecurityTokenHandler();
         var validationParameters = new TokenValidationParameters
         {
@@ -378,19 +396,5 @@ public class LicensingService : ILicensingService
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
-    }
-
-    private bool VerifyToken(string token, string audience)
-    {
-        try
-        {
-            _ = GetClaimsPrincipalFromToken(token, audience);
-            return true;
-        }
-        catch (Exception e)
-        {
-            _logger.LogWarning(e, "Invalid token.");
-            return false;
-        }
     }
 }

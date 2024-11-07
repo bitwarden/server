@@ -55,7 +55,7 @@ public class NoopLicensingService : ILicensingService
         return Task.FromResult<OrganizationLicense>(null);
     }
 
-    public ClaimsPrincipal GetClaimsPrincipalFromToken(string token, string audience)
+    public ClaimsPrincipal GetClaimsPrincipalFromLicense(ILicense license)
     {
         return null;
     }
