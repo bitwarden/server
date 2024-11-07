@@ -8,6 +8,7 @@ using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -336,7 +337,9 @@ public class LicensingService : ILicensingService
         }
         catch (Exception ex)
         {
-            throw new SecurityTokenValidationException("License token validation failed.", ex);
+            // Token exceptions thrown are interpreted by the client as Identity errors and cause the user to logout
+            // Mask them by rethrowing as BadRequestException
+            throw new BadRequestException($"Invalid license. {ex.Message}");
         }
     }
 

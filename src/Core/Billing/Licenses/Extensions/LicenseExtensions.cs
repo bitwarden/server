@@ -1,10 +1,7 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Billing.Licenses.Extensions;
 
