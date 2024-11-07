@@ -39,6 +39,7 @@ public class CurrentContext : ICurrentContext
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
+    public virtual bool ClientVersionIsPrerelease { get; set; }
     public virtual IdentityClientType IdentityClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
 
@@ -96,6 +97,11 @@ public class CurrentContext : ICurrentContext
         if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
         {
             ClientVersion = cVersion;
+        }
+
+        if (httpContext.Request.Headers.TryGetValue("Is-Prerelease", out var clientVersionIsPrerelease))
+        {
+            ClientVersionIsPrerelease = clientVersionIsPrerelease == "true";
         }
     }
 
