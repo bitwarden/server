@@ -593,7 +593,9 @@ jobs:
 
   trigger-ee-updates:
     name: Trigger Ephemeral Environment updates
-    if: github.ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
+    if: |
+      github.event_name == 'pull_request_target'
+      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     runs-on: ubuntu-24.04
     needs: build-docker
     steps:
