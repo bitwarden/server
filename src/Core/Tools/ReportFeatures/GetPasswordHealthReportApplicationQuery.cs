@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.ReportFeatures.Interfaces;
 using Bit.Core.Tools.Repositories;
 
 namespace Bit.Core.Tools.ReportFeatures;
@@ -14,8 +15,7 @@ public class GetPasswordHealthReportApplicationQuery : IGetPasswordHealthReportA
         _passwordHealthReportApplicationRepo = passwordHealthReportApplicationRepo;
     }
 
-    public async Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplicationAsync(
-        Guid organizationId)
+    public async Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplicationAsync(Guid organizationId)
     {
         if (organizationId == Guid.Empty)
         {
