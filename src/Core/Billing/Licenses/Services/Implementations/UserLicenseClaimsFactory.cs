@@ -3,7 +3,6 @@ using System.Security.Claims;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 
 namespace Bit.Core.Billing.Licenses.Services.Implementations;
 
@@ -20,17 +19,17 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
 
         var claims = new List<Claim>
         {
-            new(nameof(UserLicense.LicenseType), LicenseType.User.ToString()),
-            new(nameof(UserLicense.LicenseKey), entity.LicenseKey),
-            new(nameof(UserLicense.Id), entity.Id.ToString()),
-            new(nameof(UserLicense.Name), entity.Name),
-            new(nameof(UserLicense.Email), entity.Email),
-            new(nameof(UserLicense.Premium), entity.Premium.ToString()),
-            new(nameof(UserLicense.MaxStorageGb), entity.MaxStorageGb.ToString()),
-            new(nameof(UserLicense.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(UserLicense.Expires), expires.ToString()),
-            new(nameof(UserLicense.Refresh), refresh.ToString()),
-            new(nameof(UserLicense.Trial), trial.ToString()),
+            new(nameof(UserLicenseConstants.LicenseType), LicenseType.User.ToString()),
+            new(nameof(UserLicenseConstants.LicenseKey), entity.LicenseKey),
+            new(nameof(UserLicenseConstants.Id), entity.Id.ToString()),
+            new(nameof(UserLicenseConstants.Name), entity.Name),
+            new(nameof(UserLicenseConstants.Email), entity.Email),
+            new(nameof(UserLicenseConstants.Premium), entity.Premium.ToString()),
+            new(nameof(UserLicenseConstants.MaxStorageGb), entity.MaxStorageGb.ToString()),
+            new(nameof(UserLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(UserLicenseConstants.Expires), expires.ToString()),
+            new(nameof(UserLicenseConstants.Refresh), refresh.ToString()),
+            new(nameof(UserLicenseConstants.Trial), trial.ToString()),
         };
 
         return Task.FromResult(claims);

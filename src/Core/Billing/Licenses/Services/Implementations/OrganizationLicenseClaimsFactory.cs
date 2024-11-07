@@ -21,52 +21,48 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
 
         var claims = new List<Claim>
         {
-            new(nameof(OrganizationLicense.LicenseType), LicenseType.Organization.ToString()),
-            new(nameof(OrganizationLicense.InstallationId), licenseContext.InstallationId.ToString()),
-            new(nameof(OrganizationLicense.Id), entity.Id.ToString()),
-            new(nameof(OrganizationLicense.Name), entity.Name),
-            new(nameof(OrganizationLicense.BillingEmail), entity.BillingEmail),
-            new(nameof(OrganizationLicense.Enabled), entity.Enabled.ToString()),
-            new(nameof(OrganizationLicense.Plan), entity.Plan),
-            new(nameof(OrganizationLicense.PlanType), entity.PlanType.ToString()),
-            new(nameof(OrganizationLicense.Seats), entity.Seats.ToString()),
-            new(nameof(OrganizationLicense.MaxCollections), entity.MaxCollections.ToString()),
-            new(nameof(OrganizationLicense.UsePolicies), entity.UsePolicies.ToString()),
-            new(nameof(OrganizationLicense.UseSso), entity.UseSso.ToString()),
-            new(nameof(OrganizationLicense.UseKeyConnector), entity.UseKeyConnector.ToString()),
-            new(nameof(OrganizationLicense.UseScim), entity.UseScim.ToString()),
-            new(nameof(OrganizationLicense.UseGroups), entity.UseGroups.ToString()),
-            new(nameof(OrganizationLicense.UseEvents), entity.UseEvents.ToString()),
-            new(nameof(OrganizationLicense.UseDirectory), entity.UseDirectory.ToString()),
-            new(nameof(OrganizationLicense.UseTotp), entity.UseTotp.ToString()),
-            new(nameof(OrganizationLicense.Use2fa), entity.Use2fa.ToString()),
-            new(nameof(OrganizationLicense.UseApi), entity.UseApi.ToString()),
-            new(nameof(OrganizationLicense.UseResetPassword), entity.UseResetPassword.ToString()),
-            new(nameof(OrganizationLicense.MaxStorageGb), entity.MaxStorageGb.ToString()),
-            new(nameof(OrganizationLicense.SelfHost), entity.SelfHost.ToString()),
-            new(nameof(OrganizationLicense.UsersGetPremium), entity.UsersGetPremium.ToString()),
-            new(nameof(OrganizationLicense.UseCustomPermissions), entity.UseCustomPermissions.ToString()),
-            new(nameof(OrganizationLicense.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(OrganizationLicense.UsePasswordManager), entity.UsePasswordManager.ToString()),
-            new(nameof(OrganizationLicense.UseSecretsManager), entity.UseSecretsManager.ToString()),
-            new(nameof(OrganizationLicense.SmSeats), entity.SmSeats.ToString()),
-            new(nameof(OrganizationLicense.SmServiceAccounts), entity.SmServiceAccounts.ToString()),
-            new(nameof(OrganizationLicense.LimitCollectionCreationDeletion), entity.LimitCollectionCreationDeletion.ToString()),
-            new(nameof(OrganizationLicense.AllowAdminAccessToAllCollectionItems), entity.AllowAdminAccessToAllCollectionItems.ToString()),
-            new(nameof(OrganizationLicense.Expires), expires.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(OrganizationLicense.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(OrganizationLicense.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(OrganizationLicense.Trial), trial.ToString()),
+            new(nameof(OrganizationLicenseConstants.LicenseType), LicenseType.Organization.ToString()),
+            new Claim(nameof(OrganizationLicenseConstants.LicenseKey), entity.LicenseKey),
+            new(nameof(OrganizationLicenseConstants.InstallationId), licenseContext.InstallationId.ToString()),
+            new(nameof(OrganizationLicenseConstants.Id), entity.Id.ToString()),
+            new(nameof(OrganizationLicenseConstants.Name), entity.Name),
+            new(nameof(OrganizationLicenseConstants.BillingEmail), entity.BillingEmail),
+            new(nameof(OrganizationLicenseConstants.Enabled), entity.Enabled.ToString()),
+            new(nameof(OrganizationLicenseConstants.Plan), entity.Plan),
+            new(nameof(OrganizationLicenseConstants.PlanType), entity.PlanType.ToString()),
+            new(nameof(OrganizationLicenseConstants.Seats), entity.Seats.ToString()),
+            new(nameof(OrganizationLicenseConstants.MaxCollections), entity.MaxCollections.ToString()),
+            new(nameof(OrganizationLicenseConstants.UsePolicies), entity.UsePolicies.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseSso), entity.UseSso.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseKeyConnector), entity.UseKeyConnector.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseScim), entity.UseScim.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseGroups), entity.UseGroups.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseEvents), entity.UseEvents.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseDirectory), entity.UseDirectory.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseTotp), entity.UseTotp.ToString()),
+            new(nameof(OrganizationLicenseConstants.Use2fa), entity.Use2fa.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseApi), entity.UseApi.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseResetPassword), entity.UseResetPassword.ToString()),
+            new(nameof(OrganizationLicenseConstants.MaxStorageGb), entity.MaxStorageGb.ToString()),
+            new(nameof(OrganizationLicenseConstants.SelfHost), entity.SelfHost.ToString()),
+            new(nameof(OrganizationLicenseConstants.UsersGetPremium), entity.UsersGetPremium.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseCustomPermissions), entity.UseCustomPermissions.ToString()),
+            new(nameof(OrganizationLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.UsePasswordManager), entity.UsePasswordManager.ToString()),
+            new(nameof(OrganizationLicenseConstants.UseSecretsManager), entity.UseSecretsManager.ToString()),
+            new(nameof(OrganizationLicenseConstants.SmSeats), entity.SmSeats.ToString()),
+            new(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()),
+            new(nameof(OrganizationLicenseConstants.LimitCollectionCreationDeletion), entity.LimitCollectionCreationDeletion.ToString()),
+            new(nameof(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems), entity.AllowAdminAccessToAllCollectionItems.ToString()),
+            new(nameof(OrganizationLicenseConstants.Expires), expires.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
+            new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
         };
-
-        if (entity.LicenseKey is not null)
-        {
-            claims.Add(new Claim(nameof(OrganizationLicense.LicenseKey), entity.LicenseKey));
-        }
 
         if (entity.BusinessName is not null)
         {
-            claims.Add(new Claim(nameof(OrganizationLicense.BusinessName), entity.BusinessName));
+            claims.Add(new Claim(nameof(OrganizationLicenseConstants.BusinessName), entity.BusinessName));
         }
 
         return Task.FromResult(claims);
