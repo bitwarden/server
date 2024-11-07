@@ -101,7 +101,7 @@ public class CurrentContext : ICurrentContext
 
         if (httpContext.Request.Headers.TryGetValue("Is-Prerelease", out var clientVersionIsPrerelease))
         {
-            ClientVersionIsPrerelease = clientVersionIsPrerelease == "true";
+            ClientVersionIsPrerelease = clientVersionIsPrerelease == "1";
         }
     }
 
