@@ -151,8 +151,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 50 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
@@ -226,8 +224,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 95 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
@@ -293,8 +289,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 95 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
@@ -376,8 +370,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
@@ -455,8 +447,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 110 seats currently assigned with a seat minimum of 100
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
@@ -669,70 +659,6 @@ public class ProviderBillingServiceTests
         Assert.Equal(20, record.Remaining);
         Assert.Equal("Teams (Monthly)", record.Plan);
         Assert.Equal("$500.00", record.Total);
-    }
-
-    #endregion
-
-    #region GetAssignedSeatTotalForPlanOrThrow
-
-    [Theory, BitAutoData]
-    public async Task GetAssignedSeatTotalForPlanOrThrow_NullProvider_ContactSupport(
-        Guid providerId,
-        SutProvider<ProviderBillingService> sutProvider)
-        => await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
-
-    [Theory, BitAutoData]
-    public async Task GetAssignedSeatTotalForPlanOrThrow_ResellerProvider_ContactSupport(
-        Guid providerId,
-        Provider provider,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        provider.Type = ProviderType.Reseller;
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).Returns(provider);
-
-        await ThrowsBillingExceptionAsync(
-            () => sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly));
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetAssignedSeatTotalForPlanOrThrow_Succeeds(
-        Guid providerId,
-        Provider provider,
-        SutProvider<ProviderBillingService> sutProvider)
-    {
-        provider.Type = ProviderType.Msp;
-
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).Returns(provider);
-
-        var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterpriseMonthlyPlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-
-        var providerOrganizationOrganizationDetailList = new List<ProviderOrganizationOrganizationDetails>
-        {
-            new() { Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 10 },
-            new() { Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 10 },
-            new()
-            {
-                // Ignored because of status.
-                Plan = teamsMonthlyPlan.Name, Status = OrganizationStatusType.Created, Seats = 100
-            },
-            new()
-            {
-                // Ignored because of plan.
-                Plan = enterpriseMonthlyPlan.Name, Status = OrganizationStatusType.Managed, Seats = 30
-            }
-        };
-
-        sutProvider.GetDependency<IProviderOrganizationRepository>()
-            .GetManyDetailsByProviderAsync(providerId)
-            .Returns(providerOrganizationOrganizationDetailList);
-
-        var assignedSeatTotal =
-            await sutProvider.Sut.GetAssignedSeatTotalForPlanOrThrow(providerId, PlanType.TeamsMonthly);
-
-        Assert.Equal(20, assignedSeatTotal);
     }
 
     #endregion
@@ -1107,9 +1033,6 @@ public class ProviderBillingServiceTests
             .GetByIdAsync(Arg.Is<Guid>(p => p == providerPlanId))
             .Returns(existingPlan);
 
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(Arg.Is(existingPlan.ProviderId)).Returns(provider);
-
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.ProviderSubscriptionGetAsync(
                 Arg.Is(provider.GatewaySubscriptionId),
@@ -1172,8 +1095,6 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         var command = new UpdateProviderSeatMinimumsCommand(
             provider.Id,
             provider.GatewaySubscriptionId,
@@ -1197,7 +1118,6 @@ public class ProviderBillingServiceTests
         // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1235,7 +1155,6 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 25 }
         };
 
-        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
@@ -1274,8 +1193,6 @@ public class ProviderBillingServiceTests
         // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1349,8 +1266,6 @@ public class ProviderBillingServiceTests
         // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1418,8 +1333,6 @@ public class ProviderBillingServiceTests
         // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";
@@ -1493,8 +1406,6 @@ public class ProviderBillingServiceTests
         // Arrange
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
-        var providerRepository = sutProvider.GetDependency<IProviderRepository>();
-        providerRepository.GetByIdAsync(provider.Id).Returns(provider);
 
         const string enterpriseLineItemId = "enterprise_line_item_id";
         const string teamsLineItemId = "teams_line_item_id";

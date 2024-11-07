@@ -2,7 +2,6 @@
 using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
@@ -35,7 +34,6 @@ public class ProviderBillingService(
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
-    IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IProviderBillingService
 {
@@ -171,37 +169,6 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
-    public async Task<int> GetAssignedSeatTotalForPlanOrThrow(
-        Guid providerId,
-        PlanType planType)
-    {
-        var provider = await providerRepository.GetByIdAsync(providerId);
-
-        if (provider == null)
-        {
-            logger.LogError(
-                "Could not find provider ({ID}) when retrieving assigned seat total",
-                providerId);
-
-            throw new BillingException();
-        }
-
-        if (provider.Type == ProviderType.Reseller)
-        {
-            logger.LogError("Assigned seats cannot be retrieved for reseller-type provider ({ID})", providerId);
-
-            throw new BillingException();
-        }
-
-        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
-
-        var plan = StaticStore.GetPlan(planType);
-
-        return providerOrganizations
-            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
-            .Sum(providerOrganization => providerOrganization.Seats ?? 0);
-    }
-
     public async Task ScaleSeats(
         Provider provider,
         PlanType planType,
@@ -229,7 +196,7 @@ public class ProviderBillingService(
 
         var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
 
-        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalForPlanOrThrow(provider.Id, planType);
+        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalAsync(provider, planType);
 
         var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
 
@@ -610,4 +577,17 @@ public class ProviderBillingService(
 
         await providerPlanRepository.ReplaceAsync(providerPlan);
     };
+
+    // TODO: Replace with SPROC
+    private async Task<int> GetAssignedSeatTotalAsync(Provider provider, PlanType planType)
+    {
+        var providerOrganizations =
+            await providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id);
+
+        var plan = StaticStore.GetPlan(planType);
+
+        return providerOrganizations
+            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
+            .Sum(providerOrganization => providerOrganization.Seats ?? 0);
+    }
 }

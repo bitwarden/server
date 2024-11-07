@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services.Contracts;
@@ -43,18 +42,6 @@ public interface IProviderBillingService
     /// <returns>The provider's client invoice report as a byte array.</returns>
     Task<byte[]> GenerateClientInvoiceReport(
         string invoiceId);
-
-    /// <summary>
-    /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.
-    /// </summary>
-    /// <param name="providerId">The ID of the MSP to retrieve the assigned seat total for.</param>
-    /// <param name="planType">The type of plan to retrieve the assigned seat total for.</param>
-    /// <returns>An <see cref="int"/> representing the number of seats the provider has assigned to its client organizations with the specified <paramref name="planType"/>.</returns>
-    /// <exception cref="BillingException">Thrown when the provider represented by the <paramref name="providerId"/> is <see langword="null"/>.</exception>
-    /// <exception cref="BillingException">Thrown when the provider represented by the <paramref name="providerId"/> has <see cref="Provider.Type"/> <see cref="ProviderType.Reseller"/>.</exception>
-    Task<int> GetAssignedSeatTotalForPlanOrThrow(
-        Guid providerId,
-        PlanType planType);
 
     /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
