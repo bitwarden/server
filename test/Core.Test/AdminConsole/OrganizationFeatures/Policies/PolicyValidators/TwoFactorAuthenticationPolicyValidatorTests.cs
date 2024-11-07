@@ -176,6 +176,10 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             HasMasterPassword = false
         };
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(false);
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
             .Returns(new List<OrganizationUserUserDetails>
@@ -206,4 +210,11 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
             .RemoveUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
     }
+
+
+    // TODO feature flag is disabled we don't call command
+    // TODO the feature flag is enabled, make sure it calls command
+    // TODO the feature flag is enabled and revocable members aren't both missing 2FA and MP, throw error
+    // TODO the feature flag is enabled and command returns errors, make sure we throw
+    // TODO the feature flag is enabled and command returns no errors, make sure we don't throw
 }

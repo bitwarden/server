@@ -126,4 +126,9 @@ public class SingleOrgPolicyValidatorTests
             .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),
                 "user3@example.com");
     }
+
+    // TODO feature flag is enabled, we call the revoke command
+    // TODO feature flag is enabled and revoke returns errors, we throw
+    // TODO feature flag is enabled and revoke returns no errors, no throw
+    // TODO feature flag is disabled we don't call command
 }

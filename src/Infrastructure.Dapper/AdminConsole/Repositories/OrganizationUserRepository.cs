@@ -557,4 +557,14 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.ToList();
         }
     }
+
+    public async Task SetOrganizationUsersStatusAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_SetStatusForUsersById]",
+            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), Status = status },
+            commandType: CommandType.StoredProcedure);
+    }
 }

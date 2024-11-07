@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -9,6 +10,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -34,6 +36,7 @@ public class PolicyService : IPolicyService
     private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly ICurrentContext _currentContext;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -48,7 +51,8 @@ public class PolicyService : IPolicyService
         IFeatureService featureService,
         ISavePolicyCommand savePolicyCommand,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        ICurrentContext currentContext)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -63,6 +67,7 @@ public class PolicyService : IPolicyService
         _savePolicyCommand = savePolicyCommand;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _currentContext = currentContext;
     }
 
     public async Task SaveAsync(Policy policy, Guid? savingUserId)
@@ -70,12 +75,16 @@ public class PolicyService : IPolicyService
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
         {
             // Transitional mapping - this will be moved to callers once the feature flag is removed
+            // TODO make sure to populate with SystemUser if not an actual user
             var policyUpdate = new PolicyUpdate
             {
                 OrganizationId = policy.OrganizationId,
                 Type = policy.Type,
                 Enabled = policy.Enabled,
-                Data = policy.Data
+                Data = policy.Data,
+                PerformedBy = savingUserId.HasValue
+                    ? new StandardUser(savingUserId.Value, await _currentContext.OrganizationOwner(policy.OrganizationId))
+                    : null
             };
 
             await _savePolicyCommand.SaveAsync(policyUpdate);

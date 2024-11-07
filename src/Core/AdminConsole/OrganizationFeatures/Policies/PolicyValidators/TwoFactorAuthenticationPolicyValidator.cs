@@ -2,12 +2,16 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -21,6 +25,10 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     private readonly ICurrentContext _currentContext;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
+
+    private const string _nonCompliantMembersWillLoseAccess = "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.";
 
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
     public IEnumerable<PolicyType> RequiredPolicies => [];
@@ -31,7 +39,9 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         IOrganizationRepository organizationRepository,
         ICurrentContext currentContext,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IFeatureService featureService,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
@@ -39,6 +49,8 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         _currentContext = currentContext;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _featureService = featureService;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public async Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
@@ -55,33 +67,65 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         var savingUserId = _currentContext.UserId;
 
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers);
-        var removableOrgUsers = orgUsers.Where(ou =>
-            ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
-            ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
-            ou.UserId != savingUserId);
 
-        // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
-        foreach (var orgUser in removableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
+        // this can get moved into the private method after AccountDeprovisiong flag check is removed.
+        var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers)).ToList();
+
+        var revocableOrgUsers = orgUsers.Where(ou =>
+                ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
+                ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
+                ou.UserId != savingUserId)
+            .ToList();
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == orgUser.Id)
-                .twoFactorIsEnabled;
-            if (!userTwoFactorEnabled)
+            if (DoMembersNotHaveAPasswordWithTwoFactorAuthenticationEnabled(revocableOrgUsers, organizationUsersTwoFactorEnabled))
             {
-                if (!orgUser.HasMasterPassword)
+                throw new BadRequestException(_nonCompliantMembersWillLoseAccess);
+            }
+
+            var result = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                new RevokeOrganizationUsers(organizationId, revocableOrgUsers,
+                    new StandardUser(savingUserId ?? Guid.Empty,
+                        await _currentContext.OrganizationOwner(organizationId))));
+
+            if (result.HasErrors)
+            {
+                throw new BadRequestException(string.Join(", ", result.ErrorMessages));
+            }
+
+            // TODO Send out User Revoked Email
+        }
+        else
+        {
+            // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+            foreach (var orgUser in revocableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
+            {
+                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled
+                    .FirstOrDefault(u => u.user.Id == orgUser.Id).twoFactorIsEnabled;
+                if (!userTwoFactorEnabled)
                 {
-                    throw new BadRequestException(
-                        "Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.");
+                    if (!orgUser.HasMasterPassword)
+                    {
+                        throw new BadRequestException(_nonCompliantMembersWillLoseAccess);
+                    }
+
+                    await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
+                        savingUserId);
+
+                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                        org!.DisplayName(), orgUser.Email);
                 }
-
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
-                    savingUserId);
-
-                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                    org!.DisplayName(), orgUser.Email);
             }
         }
     }
+
+    private static bool DoMembersNotHaveAPasswordWithTwoFactorAuthenticationEnabled(
+        IEnumerable<OrganizationUserUserDetails> orgUserDetails,
+        IEnumerable<(OrganizationUserUserDetails user, bool isTwoFactorEnabled)> organizationUsersTwoFactorEnabled) =>
+            orgUserDetails.Any(x =>
+                !x.HasMasterPassword && !organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == x.Id)
+                    .isTwoFactorEnabled);
 
     public Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult("");
 }

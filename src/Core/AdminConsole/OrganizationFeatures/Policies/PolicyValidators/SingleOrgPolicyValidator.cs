@@ -2,7 +2,10 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -24,6 +27,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
+    private readonly IFeatureService _featureService;
 
     public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -31,7 +36,9 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IOrganizationRepository organizationRepository,
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
+        IFeatureService featureService)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
@@ -39,6 +46,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
+        _featureService = featureService;
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
@@ -73,17 +82,41 @@ public class SingleOrgPolicyValidator : IPolicyValidator
 
         var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
                 removableOrgUsers.Select(ou => ou.UserId!.Value));
-        foreach (var orgUser in removableOrgUsers)
-        {
-            if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
-                        && ou.OrganizationId != org.Id
-                        && ou.Status != OrganizationUserStatusType.Invited))
-            {
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
-                    savingUserId);
 
-                await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                    org.DisplayName(), orgUser.Email);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            var isOwner = await _currentContext.OrganizationOwner(organizationId);
+
+            var revocableUsers = removableOrgUsers.Where(nonCompliantUser => orgUsers.Any(orgUser =>
+                nonCompliantUser.UserId == orgUser.UserId
+                && nonCompliantUser.OrganizationId != org.Id
+                && nonCompliantUser.Status != OrganizationUserStatusType.Invited));
+
+            var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                new RevokeOrganizationUsers(organizationId, revocableUsers, new StandardUser(savingUserId ?? Guid.Empty, isOwner)));
+
+            // might need to throw if list of errors returned
+            if (commandResult.HasErrors)
+            {
+                throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
+            }
+
+            // TODO send email
+        }
+        else
+        {
+            foreach (var orgUser in removableOrgUsers)
+            {
+                if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
+                                       && ou.OrganizationId != org.Id
+                                       && ou.Status != OrganizationUserStatusType.Invited))
+                {
+                    await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
+                        savingUserId);
+
+                    await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+                        org.DisplayName(), orgUser.Email);
+                }
             }
         }
     }

@@ -721,4 +721,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return data;
         }
     }
+
+    public async Task SetOrganizationUsersStatusAsync(IEnumerable<Guid> userIds, OrganizationUserStatusType status)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.OrganizationUsers.Where(x => userIds.Contains(x.OrganizationId))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, status));
+    }
 }
