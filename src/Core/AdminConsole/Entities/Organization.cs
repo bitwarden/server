@@ -271,12 +271,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
-        {
-            return null;
-        }
-
-        return twoFactorProvider;
+        return providers?.GetValueOrDefault(provider);
     }
 
     public void UpdateFromLicense(OrganizationLicense license, IFeatureService featureService)
