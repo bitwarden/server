@@ -358,9 +358,8 @@ public class LicensingService : ILicensingService
 
         var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);
         var audience = $"organization:{organization.Id}";
-        var expires = organization.CalculateFreshExpirationDate(subscriptionInfo);
 
-        return GenerateToken(claims, audience, expires);
+        return GenerateToken(claims, audience);
     }
 
     public async Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo)
@@ -373,12 +372,11 @@ public class LicensingService : ILicensingService
         var licenseContext = new LicenseContext { SubscriptionInfo = subscriptionInfo };
         var claims = await _userLicenseClaimsFactory.GenerateClaims(user, licenseContext);
         var audience = $"user:{user.Id}";
-        var expires = user.PremiumExpirationDate ?? DateTime.UtcNow.AddDays(7);
 
-        return GenerateToken(claims, audience, expires);
+        return GenerateToken(claims, audience);
     }
 
-    private string GenerateToken(List<Claim> claims, string audience, DateTime expires)
+    private string GenerateToken(List<Claim> claims, string audience)
     {
         if (claims.All(claim => claim.Type != JwtClaimTypes.JwtId))
         {
@@ -392,7 +390,7 @@ public class LicensingService : ILicensingService
             Issuer = "bitwarden",
             Audience = audience,
             NotBefore = DateTime.UtcNow,
-            Expires = expires,
+            Expires = DateTime.UtcNow.AddYears(1), // Org expiration is a claim
             SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256Signature)
         };
 
