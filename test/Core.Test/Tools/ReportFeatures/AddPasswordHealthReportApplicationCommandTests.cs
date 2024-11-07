@@ -143,5 +143,7 @@ public class AddPasswordHealthReportApplicationCommandTests
 
         // Assert
         Assert.True(result.Count() == 2);
+        sutProvider.GetDependency<IOrganizationRepository>().Received(2);
+        sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>().Received(2);
     }
 }
