@@ -36,6 +36,75 @@ public class ProviderBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IProviderBillingService
 {
+    public async Task ChangePlan(ChangeProviderPlanCommand command)
+    {
+        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
+
+        if (plan == null)
+        {
+            throw new BadRequestException("Provider plan not found.");
+        }
+
+        if (plan.PlanType == command.NewPlan)
+        {
+            return;
+        }
+
+        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
+
+        plan.PlanType = command.NewPlan;
+        await providerPlanRepository.ReplaceAsync(plan);
+
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
+
+        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
+            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
+
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                new SubscriptionItemOptions
+                {
+                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
+                    Quantity = oldSubscriptionItem!.Quantity
+                },
+                new SubscriptionItemOptions
+                {
+                    Id = oldSubscriptionItem.Id,
+                    Deleted = true
+                }
+            ]
+        };
+
+        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
+
+        // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
+        // 1. Retrieve PlanType and PlanName for ProviderPlan
+        // 2. Assign PlanType & PlanName to Organization
+        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization == null)
+            {
+                throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
+            }
+            organization.PlanType = command.NewPlan;
+            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
+            await organizationRepository.ReplaceAsync(organization);
+        }
+    }
+
     public async Task CreateCustomerForClientOrganization(
         Provider provider,
         Organization organization)
@@ -359,75 +428,6 @@ public class ProviderBillingService(
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
         {
             throw new BadRequestException("Your location wasn't recognized. Please ensure your country and postal code are valid.");
-        }
-    }
-
-    public async Task ChangePlan(ChangeProviderPlanCommand command)
-    {
-        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
-
-        if (plan == null)
-        {
-            throw new BadRequestException("Provider plan not found.");
-        }
-
-        if (plan.PlanType == command.NewPlan)
-        {
-            return;
-        }
-
-        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
-
-        plan.PlanType = command.NewPlan;
-        await providerPlanRepository.ReplaceAsync(plan);
-
-        Subscription subscription;
-        try
-        {
-            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
-        }
-        catch (InvalidOperationException)
-        {
-            throw new ConflictException("Subscription not found.");
-        }
-
-        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
-            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
-
-        var updateOptions = new SubscriptionUpdateOptions
-        {
-            Items =
-            [
-                new SubscriptionItemOptions
-                {
-                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
-                    Quantity = oldSubscriptionItem!.Quantity
-                },
-                new SubscriptionItemOptions
-                {
-                    Id = oldSubscriptionItem.Id,
-                    Deleted = true
-                }
-            ]
-        };
-
-        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
-
-        // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
-        // 1. Retrieve PlanType and PlanName for ProviderPlan
-        // 2. Assign PlanType & PlanName to Organization
-        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
-
-        foreach (var providerOrganization in providerOrganizations)
-        {
-            var organization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-            if (organization == null)
-            {
-                throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
-            }
-            organization.PlanType = command.NewPlan;
-            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
-            await organizationRepository.ReplaceAsync(organization);
         }
     }
 

@@ -11,6 +11,13 @@ namespace Bit.Core.Billing.Services;
 public interface IProviderBillingService
 {
     /// <summary>
+    /// Changes the assigned provider plan for the provider.
+    /// </summary>
+    /// <param name="command">The command to change the provider plan.</param>
+    /// <returns></returns>
+    Task ChangePlan(ChangeProviderPlanCommand command);
+
+    /// <summary>
     /// Create a Stripe <see cref="Stripe.Customer"/> for the provided client <paramref name="organization"/> utilizing
     /// the address and tax information of its <paramref name="provider"/>.
     /// </summary>
@@ -78,13 +85,6 @@ public interface IProviderBillingService
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
     Task<Subscription> SetupSubscription(
         Provider provider);
-
-    /// <summary>
-    /// Changes the assigned provider plan for the provider.
-    /// </summary>
-    /// <param name="command">The command to change the provider plan.</param>
-    /// <returns></returns>
-    Task ChangePlan(ChangeProviderPlanCommand command);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }
