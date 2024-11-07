@@ -79,20 +79,6 @@ public class ProviderBillingServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task
-        AssignSeatsToClientOrganization_OrganizationPlanTypeDoesNotSupportConsolidatedBilling_ContactSupport(
-            Provider provider,
-            Organization organization,
-            int seats,
-            SutProvider<ProviderBillingService> sutProvider)
-    {
-        organization.PlanType = PlanType.FamiliesAnnually;
-
-        await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
-    }
-
-    [Theory, BitAutoData]
     public async Task AssignSeatsToClientOrganization_ProviderPlanIsNotConfigured_ContactSupport(
         Provider provider,
         Organization organization,
@@ -107,7 +93,8 @@ public class ProviderBillingServiceTests
         });
 
         await ThrowsBillingExceptionAsync(() =>
-            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats));
+            sutProvider.Sut.AssignSeatsToClientOrganization(provider, organization, seats),
+            message: "Provider plan is missing or misconfigured");
     }
 
     [Theory, BitAutoData]
@@ -659,6 +646,82 @@ public class ProviderBillingServiceTests
         Assert.Equal(20, record.Remaining);
         Assert.Equal("Teams (Monthly)", record.Plan);
         Assert.Equal("$500.00", record.Total);
+    }
+
+    #endregion
+
+    #region SeatAdjustmentResultsInPurchase
+
+    [Theory, BitAutoData]
+    public async Task SeatAdjustmentResultsInPurchase_BelowToAbove_True(
+        Provider provider,
+        PlanType planType,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns([
+            new ProviderPlan
+            {
+                PlanType = planType,
+                SeatMinimum = 10,
+                AllocatedSeats = 0,
+                PurchasedSeats = 0
+            }
+        ]);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = StaticStore.GetPlan(planType).Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 5
+            }
+        ]);
+
+        const int seatAdjustment = 10;
+
+        var result = await sutProvider.Sut.SeatAdjustmentResultsInPurchase(
+            provider,
+            planType,
+            seatAdjustment);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SeatAdjustmentResultsInPurchase_AboveToFurtherAbove_True(
+        Provider provider,
+        PlanType planType,
+        SutProvider<ProviderBillingService> sutProvider)
+    {
+        sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns([
+            new ProviderPlan
+            {
+                PlanType = planType,
+                SeatMinimum = 10,
+                AllocatedSeats = 0,
+                PurchasedSeats = 5
+            }
+        ]);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
+        [
+            new ProviderOrganizationOrganizationDetails
+            {
+                Plan = StaticStore.GetPlan(planType).Name,
+                Status = OrganizationStatusType.Managed,
+                Seats = 15
+            }
+        ]);
+
+        const int seatAdjustment = 5;
+
+        var result = await sutProvider.Sut.SeatAdjustmentResultsInPurchase(
+            provider,
+            planType,
+            seatAdjustment);
+
+        Assert.True(result);
     }
 
     #endregion

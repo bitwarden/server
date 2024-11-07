@@ -57,6 +57,22 @@ public interface IProviderBillingService
         int seatAdjustment);
 
     /// <summary>
+    /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="planType"/>.
+    /// Seat adjustments that result in purchases include:
+    /// <list type="bullet">
+    /// <item>The <paramref name="provider"/> going from below the seat minimum to above the seat minimum for the provided <paramref name="planType"/></item>
+    /// <item>The <paramref name="provider"/> going from above the seat minimum to further above the seat minimum for the provided <paramref name="planType"/></item>
+    /// </list>
+    /// </summary>
+    /// <param name="provider">The provider to check seat adjustments for.</param>
+    /// <param name="planType">The plan type to check seat adjustments for.</param>
+    /// <param name="seatAdjustment">The change in seats for the <paramref name="provider"/>'s <paramref name="planType"/>.</param>
+    Task<bool> SeatAdjustmentResultsInPurchase(
+        Provider provider,
+        PlanType planType,
+        int seatAdjustment);
+
+    /// <summary>
     /// For use during the provider setup process, this method creates a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="taxInfo"/>.
     /// </summary>
     /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>

@@ -183,16 +183,7 @@ public class ProviderBillingService(
             throw new BillingException();
         }
 
-        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
-
-        var providerPlan = providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType);
-
-        if (providerPlan == null || !providerPlan.IsConfigured())
-        {
-            logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} when their matching provider plan is not configured", provider.Id, planType);
-
-            throw new BillingException();
-        }
+        var providerPlan = await GetProviderPlanAsync(provider, planType);
 
         var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
 
@@ -256,6 +247,26 @@ public class ProviderBillingService(
                 currentlyAssignedSeatTotal,
                 seatMinimum);
         }
+    }
+
+    public async Task<bool> SeatAdjustmentResultsInPurchase(
+        Provider provider,
+        PlanType planType,
+        int seatAdjustment)
+    {
+        var providerPlan = await GetProviderPlanAsync(provider, planType);
+
+        var seatMinimum = providerPlan.SeatMinimum;
+
+        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalAsync(provider, planType);
+
+        var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
+
+        return
+            // Below the limit to above the limit
+            (currentlyAssignedSeatTotal <= seatMinimum && newlyAssignedSeatTotal > seatMinimum) ||
+            // Above the limit to further above the limit
+            (currentlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > currentlyAssignedSeatTotal);
     }
 
     public async Task<Customer> SetupCustomer(
@@ -589,5 +600,20 @@ public class ProviderBillingService(
         return providerOrganizations
             .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
+    }
+
+    // TODO: Replace with SPROC
+    private async Task<ProviderPlan> GetProviderPlanAsync(Provider provider, PlanType planType)
+    {
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        var providerPlan = providerPlans.FirstOrDefault(x => x.PlanType == planType);
+
+        if (providerPlan == null || !providerPlan.IsConfigured())
+        {
+            throw new BillingException(message: "Provider plan is missing or misconfigured");
+        }
+
+        return providerPlan;
     }
 }
