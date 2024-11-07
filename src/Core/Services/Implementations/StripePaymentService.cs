@@ -1360,8 +1360,9 @@ public class StripePaymentService : IPaymentService
         {
             if (braintreeCustomer?.Id != stripeCustomerMetadata["btCustomerId"])
             {
-                stripeCustomerMetadata.Add("btCustomerId_old", stripeCustomerMetadata["btCustomerId"]);
+                stripeCustomerMetadata["btCustomerId_old"] = stripeCustomerMetadata["btCustomerId"];
             }
+
             stripeCustomerMetadata["btCustomerId"] = braintreeCustomer?.Id;
         }
         else if (!string.IsNullOrWhiteSpace(braintreeCustomer?.Id))
