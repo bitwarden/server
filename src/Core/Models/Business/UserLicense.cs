@@ -126,8 +126,7 @@ public class UserLicense : ILicense
 
         var errorMessages = new StringBuilder();
 
-        var emailVerified = claimsPrincipal.GetValue<bool>(nameof(User.EmailVerified));
-        if (!emailVerified)
+        if (!user.EmailVerified)
         {
             errorMessages.AppendLine("The user's email is not verified.");
         }
