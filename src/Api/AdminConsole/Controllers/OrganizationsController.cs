@@ -252,8 +252,8 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+        var managingOrgs = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && managingOrgs.Where(o => o.Id == id).Count() > 0)
         {
             throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
         }
