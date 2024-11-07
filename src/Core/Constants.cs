@@ -154,6 +154,7 @@ public static class FeatureFlagKeys
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
+    public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
 
     public static List<string> GetAllKeys()
     {

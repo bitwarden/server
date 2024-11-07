@@ -5,8 +5,10 @@ using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -230,7 +232,23 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
-        var organization = await GetOrganization(id, model);
+        var organization = await _organizationRepository.GetByIdAsync(id);
+
+        if (organization == null)
+        {
+            TempData["Error"] = "Could not find organization to update.";
+            return RedirectToAction("Edit", new { id });
+        }
+
+        var existingOrganizationData = new Organization
+        {
+            Id = organization.Id,
+            Status = organization.Status,
+            PlanType = organization.PlanType,
+            Seats = organization.Seats
+        };
+
+        UpdateOrganization(organization, model);
 
         if (organization.UseSecretsManager &&
             !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
@@ -239,7 +257,12 @@ public class OrganizationsController : Controller
             return RedirectToAction("Edit", new { id });
         }
 
+        await HandlePotentialProviderSeatScalingAsync(
+            existingOrganizationData,
+            model);
+
         await _organizationRepository.ReplaceAsync(organization);
+
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
         {
@@ -394,10 +417,9 @@ public class OrganizationsController : Controller
 
         return Json(null);
     }
-    private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
-    {
-        var organization = await _organizationRepository.GetByIdAsync(id);
 
+    private void UpdateOrganization(Organization organization, OrganizationEditModel model)
+    {
         if (_accessControlService.UserHasPermission(Permission.Org_CheckEnabledBox))
         {
             organization.Enabled = model.Enabled;
@@ -449,7 +471,64 @@ public class OrganizationsController : Controller
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
         }
+    }
 
-        return organization;
+    private async Task HandlePotentialProviderSeatScalingAsync(
+        Organization organization,
+        OrganizationEditModel update)
+    {
+        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
+
+        var scaleMSPOnClientOrganizationUpdate =
+            _featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate);
+
+        if (!consolidatedBillingEnabled || !scaleMSPOnClientOrganizationUpdate)
+        {
+            return;
+        }
+
+        var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        // No scaling required
+        if (provider is not { Type: ProviderType.Msp, Status: ProviderStatusType.Billable } ||
+            organization is not { Status: OrganizationStatusType.Managed } ||
+            !organization.Seats.HasValue ||
+            update is { Seats: null, PlanType: null } ||
+            update is { PlanType: not PlanType.TeamsMonthly and not PlanType.EnterpriseMonthly } ||
+            (PlanTypesMatch() && SeatsMatch()))
+        {
+            return;
+        }
+
+        // Only scale the plan
+        if (!PlanTypesMatch() && SeatsMatch())
+        {
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
+            await _providerBillingService.ScaleSeats(provider, update.PlanType!.Value, organization.Seats.Value);
+        }
+        // Only scale the seats
+        else if (PlanTypesMatch() && !SeatsMatch())
+        {
+            var seatAdjustment = update.Seats!.Value - organization.Seats.Value;
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, seatAdjustment);
+        }
+        // Scale both
+        else if (!PlanTypesMatch() && !SeatsMatch())
+        {
+            var seatAdjustment = update.Seats!.Value - organization.Seats.Value;
+            var planTypeAdjustment = organization.Seats.Value;
+            var totalAdjustment = seatAdjustment + planTypeAdjustment;
+
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
+            await _providerBillingService.ScaleSeats(provider, update.PlanType!.Value, totalAdjustment);
+        }
+
+        return;
+
+        bool PlanTypesMatch()
+            => update.PlanType.HasValue && update.PlanType.Value == organization.PlanType;
+
+        bool SeatsMatch()
+            => update.Seats.HasValue && update.Seats.Value == organization.Seats;
     }
 }
