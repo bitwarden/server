@@ -11,20 +11,6 @@ namespace Bit.Core.Billing.Services;
 public interface IProviderBillingService
 {
     /// <summary>
-    /// Assigns a specified number of <paramref name="seats"/> to a client <paramref name="organization"/> on behalf of
-    /// its <paramref name="provider"/>. Seat adjustments for the client organization may autoscale the provider's Stripe
-    /// <see cref="Stripe.Subscription"/> depending on the provider's seat minimum for the client <paramref name="organization"/>'s
-    /// <see cref="PlanType"/>.
-    /// </summary>
-    /// <param name="provider">The <see cref="Provider"/> that manages the client <paramref name="organization"/>.</param>
-    /// <param name="organization">The client <see cref="Organization"/> whose <paramref name="seats"/> you want to update.</param>
-    /// <param name="seats">The number of seats to assign to the client organization.</param>
-    Task AssignSeatsToClientOrganization(
-        Provider provider,
-        Organization organization,
-        int seats);
-
-    /// <summary>
     /// Create a Stripe <see cref="Stripe.Customer"/> for the provided client <paramref name="organization"/> utilizing
     /// the address and tax information of its <paramref name="provider"/>.
     /// </summary>

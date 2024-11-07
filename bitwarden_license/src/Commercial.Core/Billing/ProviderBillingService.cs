@@ -26,7 +26,6 @@ using Stripe;
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
-    ICurrentContext currentContext,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -37,36 +36,6 @@ public class ProviderBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IProviderBillingService
 {
-    public async Task AssignSeatsToClientOrganization(
-        Provider provider,
-        Organization organization,
-        int seats)
-    {
-        ArgumentNullException.ThrowIfNull(organization);
-
-        if (seats < 0)
-        {
-            throw new BillingException(
-                "You cannot assign negative seats to a client.",
-                "MSP cannot assign negative seats to a client organization");
-        }
-
-        if (seats == organization.Seats)
-        {
-            logger.LogWarning("Client organization ({ID}) already has {Seats} seats assigned to it", organization.Id, organization.Seats);
-
-            return;
-        }
-
-        var seatAdjustment = seats - (organization.Seats ?? 0);
-
-        await ScaleSeats(provider, organization.PlanType, seatAdjustment);
-
-        organization.Seats = seats;
-
-        await organizationRepository.ReplaceAsync(organization);
-    }
-
     public async Task CreateCustomerForClientOrganization(
         Provider provider,
         Organization organization)
@@ -174,18 +143,9 @@ public class ProviderBillingService(
         PlanType planType,
         int seatAdjustment)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-
-        if (!provider.SupportsConsolidatedBilling())
-        {
-            logger.LogError("Provider ({ProviderID}) cannot scale their seats", provider.Id);
-
-            throw new BillingException();
-        }
-
         var providerPlan = await GetProviderPlanAsync(provider, planType);
 
-        var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
+        var seatMinimum = providerPlan.SeatMinimum ?? 0;
 
         var currentlyAssignedSeatTotal = await GetAssignedSeatTotalAsync(provider, planType);
 
@@ -214,13 +174,6 @@ public class ProviderBillingService(
         else if (currentlyAssignedSeatTotal <= seatMinimum &&
                  newlyAssignedSeatTotal > seatMinimum)
         {
-            if (!currentContext.ProviderProviderAdmin(provider.Id))
-            {
-                logger.LogError("Service user for provider ({ProviderID}) cannot scale a provider's seat count over the seat minimum", provider.Id);
-
-                throw new BillingException();
-            }
-
             await update(
                 seatMinimum,
                 newlyAssignedSeatTotal);
