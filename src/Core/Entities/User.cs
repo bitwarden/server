@@ -180,12 +180,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public TwoFactorProvider? GetTwoFactorProvider(TwoFactorProviderType provider)
     {
         var providers = GetTwoFactorProviders();
-        if (providers == null || !providers.TryGetValue(provider, out var twoFactorProvider))
-        {
-            return null;
-        }
-
-        return twoFactorProvider;
+        return providers?.GetValueOrDefault(provider);
     }
 
     public long StorageBytesRemaining()
