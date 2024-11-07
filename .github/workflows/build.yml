@@ -549,7 +549,7 @@ jobs:
 
   trigger-k8s-deploy:
     name: Trigger k8s deploy
-    if: github.ref == 'refs/heads/main'
+    if: github.head_ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
@@ -583,7 +583,7 @@ jobs:
 
   trigger-ee-updates:
     name: Trigger Ephemeral Environment updates
-    if: github.ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
+    if: github.head_ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     runs-on: ubuntu-24.04
     needs: build-docker
     steps:
