@@ -151,6 +151,7 @@ public static class FeatureFlagKeys
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
+    public const string IntegrationPage = "pm-14505-admin-console-integration-page";
 
     public static List<string> GetAllKeys()
     {
