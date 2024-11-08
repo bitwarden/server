@@ -648,6 +648,12 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
+        if (license.LicenseType != LicenseType.Organization)
+        {
+            throw new BadRequestException("Premium licenses cannot be applied to an organization. " +
+                "Upload this license from your personal account settings page.");
+        }
+
         var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
         if (!canUse)
         {
