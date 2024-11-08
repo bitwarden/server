@@ -4,7 +4,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Licenses.Models;
 using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Entities;

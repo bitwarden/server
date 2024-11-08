@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Licenses;
+﻿namespace Bit.Core.Billing.Licenses;
 
 public static class OrganizationLicenseConstants
 {
