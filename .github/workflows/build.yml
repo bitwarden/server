@@ -36,7 +36,9 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-22.04
-    needs: lint
+    needs:
+      - lint
+      - check-run
     strategy:
       fail-fast: false
       matrix:
