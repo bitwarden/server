@@ -22,6 +22,11 @@ jobs:
     name: Lint
     runs-on: ubuntu-22.04
     steps:
+      - name: Debug
+        run: |
+          echo "GitHub ref: $GITHUB_REF"
+          echo "GitHub event: $GITHUB_EVENT"
+          echo "GitHub head ref: $GITHUB_HEAD_REF"
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
