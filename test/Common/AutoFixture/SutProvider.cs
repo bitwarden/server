@@ -18,7 +18,7 @@ public class SutProvider<TSut> : ISutProvider
     public SutProvider(IFixture fixture)
     {
         _dependencies = new Dictionary<Type, Dictionary<string, object>>();
-        _fixture = (fixture ?? new Fixture()).WithAutoNSubstitutions().Customize(new GlobalSettings());
+        _fixture = (fixture ?? new Fixture()).WithAutoNSubstitutions().Customize(new GlobalSettingsCustomization());
         _constructorParameterRelay = new ConstructorParameterRelay<TSut>(this, _fixture);
         _fixture.Customizations.Add(_constructorParameterRelay);
     }
@@ -82,6 +82,13 @@ public class SutProvider<TSut> : ISutProvider
     public SutProvider<TSut> Create()
     {
         Sut = _fixture.Create<TSut>();
+        return this;
+    }
+
+    public SutProvider<TSut> CreateSubstitude()
+    {
+        Create();
+        var constructor = SutType.GetConstructor(_dependencies.Keys.ToArray());
         return this;
     }
 
