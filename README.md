@@ -3,7 +3,7 @@
 </p>
 <p align="center">
   <a href="https://github.com/bitwarden/server/actions/workflows/build.yml?query=branch:main" target="_blank">
-    <img src="https://github.com/bitwarden/server/actions/workflows/build.yml/badge.svg?branch=main" alt="Github Workflow build on main" />
+    <img src="https://github.com/bitwarden/server/actions/workflows/build.yml/badge.svg?branch=main" alt="GitHub Workflow build on main" />
   </a>
   <a href="https://hub.docker.com/u/bitwarden/" target="_blank">
     <img src="https://img.shields.io/docker/pulls/bitwarden/api.svg" alt="DockerHub" />
