@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
@@ -13,6 +14,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
 using NSubstitute;
 using Xunit;
 
@@ -22,6 +24,53 @@ namespace Bit.Core.Test.Services;
 [HttpClientCustomize]
 public class NotificationsApiPushNotificationServiceTests
 {
+    [Theory]
+    [BitAutoData]
+    [GlobalSettingsCustomize]
+    public async void Constructor_DefaultGlobalSettings_CorrectHttpRequests(
+        SutProvider<NotificationsApiPushNotificationService> sutProvider, GlobalSettings globalSettings,
+        MockedHttpMessageHandler mockedHttpMessageHandler)
+    {
+        globalSettings.SelfHosted = true;
+        globalSettings.BaseServiceUri = new GlobalSettings.BaseServiceUriSettings(globalSettings);
+        globalSettings.ProjectName = "Notifications";
+        globalSettings.InternalIdentityKey = "internal-identity-key";
+
+        var tokenResponse = mockedHttpMessageHandler
+            .When(request =>
+            {
+                if (request.Method != HttpMethod.Post ||
+                    !request.RequestUri!.Equals(new Uri("http://identity:5000/connect/token")) ||
+                    request.Content == null ||
+                    request.Content.Headers.ContentType?.MediaType != "application/x-www-form-urlencoded")
+                {
+                    return false;
+                }
+
+                var formReader = new FormReader(request.Content.ReadAsStream()).ReadForm();
+
+                return formReader["scope"] == "internal" && formReader["client_id"] == "internal.Notifications" &&
+                       formReader["client_secret"] == "internal-identity-key";
+            })
+            .RespondWith(HttpStatusCode.OK, new StringContent("{\"access_token\":\"token\"}"));
+        var sendResponse = mockedHttpMessageHandler
+            .When(request => request.Method == HttpMethod.Post &&
+                             (request.RequestUri?.Equals(new Uri("http://notifications:5000/send")) ?? false) &&
+                             request.Headers.Authorization?.ToString() == "Bearer token")
+            .RespondWith(HttpStatusCode.OK);
+
+        sutProvider.Reset();
+        sutProvider.SetDependency(typeof(GlobalSettings), globalSettings)
+            .Create();
+
+        // var sut = new NotificationsApiPushNotificationService(httpFactory, globalSettings, httpContextAccessor, logger);
+
+        await sutProvider.Sut.SendAsync(HttpMethod.Post, "send", "payload");
+
+        Assert.Equal(1, tokenResponse.NumberOfResponses);
+        Assert.Equal(1, sendResponse.NumberOfResponses);
+    }
+
     [Theory]
     [BitAutoData]
     [NotificationCustomize]
