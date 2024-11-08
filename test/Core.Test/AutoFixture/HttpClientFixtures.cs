@@ -18,7 +18,7 @@ public class HttpClientFactoryBuilder : ISpecimenBuilder
         {
             var handler = context.Create<MockedHttpMessageHandler>();
             var httpClientFactory = Substitute.For<IHttpClientFactory>();
-            httpClientFactory.CreateClient(Arg.Any<string>()).Returns(handler.ToHttpClient());
+            httpClientFactory.CreateClient(Arg.Any<string>()).Returns(_ => handler.ToHttpClient());
             return httpClientFactory;
         }
 
