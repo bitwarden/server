@@ -51,7 +51,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-
     private readonly OrganizationsController _sut;
 
     public OrganizationsControllerTests()
@@ -123,10 +122,41 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization> { null });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
+            exception.Message);
+
+        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
+    }
+
+    [Theory, AutoData]
+    public async Task OrganizationsController_UserCannotLeaveOrganizationThatManagesUser(
+        Guid orgId, User user)
+    {
+        var ssoConfig = new SsoConfig
+        {
+            Id = default,
+            Data = new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.KeyConnector
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = orgId,
+        };
+        var foundOrg = new Organization();
+        foundOrg.Id = orgId;
+
+        _currentContext.OrganizationUser(orgId).Returns(true);
+        _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization> { { foundOrg } });
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
+
+        Assert.Contains("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.",
             exception.Message);
 
         await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
@@ -157,6 +187,8 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization>());
 
         await _sut.Leave(orgId);
 
