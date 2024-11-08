@@ -32,8 +32,8 @@ public static class DatabaseOptionsFactory
             })
             .BuildServiceProvider();
 
-        var globalSettings = GlobalSettingsFactory.GlobalSettings;
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.PostgreSql?.ConnectionString))
+        var globalSettings = GlobalSettingsFactory.Create();
+        if (!string.IsNullOrWhiteSpace(globalSettings.PostgreSql?.ConnectionString))
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
@@ -44,7 +44,7 @@ public static class DatabaseOptionsFactory
                 .UseApplicationServiceProvider(services)
                 .Options);
         }
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.MySql?.ConnectionString))
+        if (!string.IsNullOrWhiteSpace(globalSettings.MySql?.ConnectionString))
         {
             var mySqlConnectionString = globalSettings.MySql.ConnectionString;
             Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
@@ -55,7 +55,7 @@ public static class DatabaseOptionsFactory
                 .UseApplicationServiceProvider(services)
                 .Options);
         }
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.Sqlite?.ConnectionString))
+        if (!string.IsNullOrWhiteSpace(globalSettings.Sqlite?.ConnectionString))
         {
             var sqliteConnectionString = globalSettings.Sqlite.ConnectionString;
             Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
