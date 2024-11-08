@@ -654,10 +654,15 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException(exception);
         }
 
-        if (license.PlanType != PlanType.Custom &&
-            StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType);
+        if (plan is null)
         {
-            throw new BadRequestException("Plan not found.");
+            throw new BadRequestException($"Server must be updated to support {license.Plan}.");
+        }
+
+        if (license.PlanType != PlanType.Custom && plan.Disabled)
+        {
+            throw new BadRequestException($"Plan {plan.Name} is disabled.");
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
