@@ -242,6 +242,11 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await SendAsync(HttpMethod.Post, "push/send", request);
     }
 
+    internal virtual async Task SendAsync(HttpMethod method, string path, object payload)
+    {
+        await base.SendAsync(method, path, payload);
+    }
+
     private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
     {
         var currentContext =

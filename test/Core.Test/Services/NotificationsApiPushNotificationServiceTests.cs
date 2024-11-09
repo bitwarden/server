@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Bit.Core.Test.Services;
 
-[SutProviderCustomize]
+[SutProviderCustomize(false)]
 [HttpClientCustomize]
 public class NotificationsApiPushNotificationServiceTests
 {
@@ -32,9 +32,10 @@ public class NotificationsApiPushNotificationServiceTests
         MockedHttpMessageHandler mockedHttpMessageHandler)
     {
         globalSettings.SelfHosted = true;
-        globalSettings.BaseServiceUri = new GlobalSettings.BaseServiceUriSettings(globalSettings);
         globalSettings.ProjectName = "Notifications";
         globalSettings.InternalIdentityKey = "internal-identity-key";
+        sutProvider.SetDependency(typeof(GlobalSettings), globalSettings)
+            .Create();
 
         var tokenResponse = mockedHttpMessageHandler
             .When(request =>
@@ -59,12 +60,6 @@ public class NotificationsApiPushNotificationServiceTests
                              request.Headers.Authorization?.ToString() == "Bearer token")
             .RespondWith(HttpStatusCode.OK);
 
-        sutProvider.Reset();
-        sutProvider.SetDependency(typeof(GlobalSettings), globalSettings)
-            .Create();
-
-        // var sut = new NotificationsApiPushNotificationService(httpFactory, globalSettings, httpContextAccessor, logger);
-
         await sutProvider.Sut.SendAsync(HttpMethod.Post, "send", "payload");
 
         Assert.Equal(1, tokenResponse.NumberOfResponses);
@@ -79,6 +74,11 @@ public class NotificationsApiPushNotificationServiceTests
         SutProvider<NotificationsApiPushNotificationService> sutProvider, Notification notification,
         Guid deviceIdentifier, ICurrentContext currentContext, MockedHttpMessageHandler mockedHttpMessageHandler)
     {
+        sutProvider.Create();
+        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
+        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
+            .GetService(Arg.Any<Type>()).Returns(currentContext);
+
         var tokenResponse = mockedHttpMessageHandler
             .When(request =>
                 request.Method == HttpMethod.Post && request.RequestUri!.ToString().EndsWith("/connect/token"))
@@ -97,10 +97,6 @@ public class NotificationsApiPushNotificationServiceTests
                     new SyncNotificationEquals(notification), deviceIdentifier.ToString());
             })
             .RespondWith(HttpStatusCode.OK);
-
-        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
-        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
-            .GetService(Arg.Any<Type>()).Returns(currentContext);
 
         await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
