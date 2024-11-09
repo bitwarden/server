@@ -90,6 +90,12 @@ public abstract class BaseIdentityClientService : IDisposable
         catch (Exception e)
         {
             _logger.LogError(12334, e, "Failed to send to {0}.", message.RequestUri.ToString());
+            // Throw for testing purposes
+            // TODO Fixed by https://bitwarden.atlassian.net/browse/PM-14675
+            if (e.GetType().Namespace?.StartsWith("Xunit") ?? false)
+            {
+                throw;
+            }
             return default;
         }
     }
