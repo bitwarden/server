@@ -85,13 +85,6 @@ public class SutProvider<TSut> : ISutProvider
         return this;
     }
 
-    public SutProvider<TSut> CreateSubstitude()
-    {
-        Create();
-        var constructor = SutType.GetConstructor(_dependencies.Keys.ToArray());
-        return this;
-    }
-
     private bool DependencyIsSet(Type dependencyType, string parameterName = "")
         => _dependencies.ContainsKey(dependencyType) && _dependencies[dependencyType].ContainsKey(parameterName);
 

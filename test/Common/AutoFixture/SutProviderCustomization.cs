@@ -3,7 +3,7 @@ using AutoFixture.Kernel;
 
 namespace Bit.Test.Common.AutoFixture.Attributes;
 
-public class SutProviderCustomization : ICustomization, ISpecimenBuilder
+public class SutProviderCustomization(bool create = true) : ICustomization, ISpecimenBuilder
 {
     private IFixture _fixture = null;
 
@@ -13,16 +13,20 @@ public class SutProviderCustomization : ICustomization, ISpecimenBuilder
         {
             throw new ArgumentNullException(nameof(context));
         }
+
         if (!(request is Type typeRequest))
         {
             return new NoSpecimen();
         }
+
         if (!typeof(ISutProvider).IsAssignableFrom(typeRequest))
         {
             return new NoSpecimen();
         }
 
-        return ((ISutProvider)Activator.CreateInstance(typeRequest, _fixture)).Create();
+        var sutProvider = (ISutProvider)Activator.CreateInstance(typeRequest, _fixture);
+
+        return create ? sutProvider?.Create() : sutProvider;
     }
 
     public void Customize(IFixture fixture)
