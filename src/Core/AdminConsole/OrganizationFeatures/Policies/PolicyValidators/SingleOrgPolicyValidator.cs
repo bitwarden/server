@@ -2,6 +2,7 @@
 
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Auth.Enums;
@@ -23,7 +24,9 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -31,14 +34,18 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IOrganizationRepository organizationRepository,
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IFeatureService featureService,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
+        _featureService = featureService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
@@ -93,9 +100,21 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         if (policyUpdate is not { Enabled: true })
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            return ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+
+            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+
+            if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
+            {
+                return validateDecryptionErrorMessage;
+            }
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
+            {
+                return "The Single organization policy is required for organizations that have enabled domain verification.";
+            }
         }
 
-        return "";
+        return string.Empty;
     }
 }

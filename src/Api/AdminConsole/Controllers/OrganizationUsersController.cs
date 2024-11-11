@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
@@ -546,7 +545,7 @@ public class OrganizationUsersController : Controller
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
-    public async Task DeleteAccount(Guid orgId, Guid id, [FromBody] SecretVerificationRequestModel model)
+    public async Task DeleteAccount(Guid orgId, Guid id)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -557,12 +556,6 @@ public class OrganizationUsersController : Controller
         if (currentUser == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
@@ -571,7 +564,7 @@ public class OrganizationUsersController : Controller
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("delete-account")]
     [HttpPost("delete-account")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] SecureOrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -582,12 +575,6 @@ public class OrganizationUsersController : Controller
         if (currentUser == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);

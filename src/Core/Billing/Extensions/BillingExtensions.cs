@@ -11,11 +11,10 @@ namespace Bit.Core.Billing.Extensions;
 public static class BillingExtensions
 {
     public static bool IsBillable(this Provider provider) =>
-        provider is
-        {
-            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
-            Status: ProviderStatusType.Billable
-        };
+        provider.SupportsConsolidatedBilling() && provider.Status == ProviderStatusType.Billable;
+
+    public static bool SupportsConsolidatedBilling(this Provider provider)
+        => provider.Type is ProviderType.Msp or ProviderType.MultiOrganizationEnterprise;
 
     public static bool IsValidClient(this Organization organization)
         => organization is
@@ -44,5 +43,5 @@ public static class BillingExtensions
         };
 
     public static bool SupportsConsolidatedBilling(this PlanType planType)
-        => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly;
+        => planType is PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually;
 }

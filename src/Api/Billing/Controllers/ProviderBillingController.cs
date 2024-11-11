@@ -93,7 +93,8 @@ public class ProviderBillingController(
             subscription,
             providerPlans,
             taxInformation,
-            subscriptionSuspension);
+            subscriptionSuspension,
+            provider);
 
         return TypedResults.Ok(response);
     }
