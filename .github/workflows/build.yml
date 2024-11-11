@@ -21,6 +21,8 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-22.04
+    needs:
+      - check-run
     steps:
       - name: Debug
         run: |
@@ -41,7 +43,8 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-22.04
-    needs: lint
+    needs:
+      - lint
     strategy:
       fail-fast: false
       matrix:
@@ -135,7 +138,6 @@ jobs:
       security-events: write
     needs:
       - build-artifacts
-      - check-run
     strategy:
       fail-fast: false
       matrix:
@@ -481,7 +483,8 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
     runs-on: ubuntu-22.04
-    needs: lint
+    needs:
+      - lint
     defaults:
       run:
         shell: bash
@@ -534,7 +537,8 @@ jobs:
     name: Trigger self-host build
     if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
-    needs: build-docker
+    needs:
+      - build-docker
     steps:
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -567,7 +571,8 @@ jobs:
     name: Trigger k8s deploy
     if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
-    needs: build-docker
+    needs:
+      - build-docker
     steps:
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -603,7 +608,8 @@ jobs:
       github.event_name == 'pull_request_target'
       && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     runs-on: ubuntu-24.04
-    needs: build-docker
+    needs:
+      - build-docker
     steps:
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
