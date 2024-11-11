@@ -59,6 +59,7 @@ public static class DapperServiceCollectionExtensions
         services
             .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
         services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
+        services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
 
         if (selfHosted)
         {
