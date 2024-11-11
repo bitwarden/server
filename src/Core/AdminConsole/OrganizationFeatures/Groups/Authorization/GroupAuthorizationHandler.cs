@@ -6,10 +6,6 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 
-/// <summary>
-/// Handles authorization logic for Group operations.
-/// This uses new logic implemented in the Flexible Collections initiative.
-/// </summary>
 public class GroupAuthorizationHandler(ICurrentContext currentContext)
     : AuthorizationHandler<GroupOperationRequirement, OrganizationScope>
 {
@@ -36,7 +32,12 @@ public class GroupAuthorizationHandler(ICurrentContext currentContext)
         || await currentContext.ProviderUserForOrgAsync(organizationScope);
 
     private async Task<bool> CanViewGroupDetailsAsync(OrganizationScope organizationScope) =>
-        currentContext.GetOrganization(organizationScope) is { Type: OrganizationUserType.Owner } or { Type: OrganizationUserType.Admin }
-            or { Permissions: { ManageGroups: true } or { ManageUsers: true } }
-        || await currentContext.ProviderUserForOrgAsync(organizationScope);
+        currentContext.GetOrganization(organizationScope) is
+    { Type: OrganizationUserType.Owner } or
+    { Type: OrganizationUserType.Admin } or
+    {
+        Permissions: { ManageGroups: true } or
+        { ManageUsers: true }
+    } ||
+        await currentContext.ProviderUserForOrgAsync(organizationScope);
 }
