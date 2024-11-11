@@ -265,4 +265,52 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task DeleteManyAsync(IEnumerable<Core.Entities.User> users)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            dbContext.WebAuthnCredentials.RemoveRange(dbContext.WebAuthnCredentials.Where(w => users.Any(u => u.Id == w.UserId)));
+            dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => users.Any(u => u.Id == c.UserId)));
+            dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => users.Any(u => u.Id == f.UserId)));
+            dbContext.AuthRequests.RemoveRange(dbContext.AuthRequests.Where(s => users.Any(u => u.Id == s.UserId)));
+            dbContext.Devices.RemoveRange(dbContext.Devices.Where(d => users.Any(u => u.Id == d.UserId)));
+            var collectionUsers = from cu in dbContext.CollectionUsers
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  where users.Any(u => u.Id == ou.UserId)
+                                  select cu;
+            dbContext.CollectionUsers.RemoveRange(collectionUsers);
+            var groupUsers = from gu in dbContext.GroupUsers
+                             join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                             where users.Any(u => u.Id == ou.UserId)
+                             select gu;
+            dbContext.GroupUsers.RemoveRange(groupUsers);
+            dbContext.UserProjectAccessPolicy.RemoveRange(
+                dbContext.UserProjectAccessPolicy.Where(ap => users.Any(u => u.Id == ap.OrganizationUser.UserId)));
+            dbContext.UserServiceAccountAccessPolicy.RemoveRange(
+                dbContext.UserServiceAccountAccessPolicy.Where(ap => users.Any(u => u.Id == ap.OrganizationUser.UserId)));
+            dbContext.OrganizationUsers.RemoveRange(dbContext.OrganizationUsers.Where(ou => users.Any(u => u.Id == ou.UserId)));
+            dbContext.ProviderUsers.RemoveRange(dbContext.ProviderUsers.Where(pu => users.Any(u => u.Id == pu.UserId)));
+            dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => users.Any(u => u.Id == su.UserId)));
+            dbContext.EmergencyAccesses.RemoveRange(
+                dbContext.EmergencyAccesses.Where(ea => users.Any(u => u.Id == ea.GrantorId || u.Id == ea.GranteeId)));
+            dbContext.Sends.RemoveRange(dbContext.Sends.Where(s => users.Any(u => u.Id == s.UserId)));
+            dbContext.NotificationStatuses.RemoveRange(dbContext.NotificationStatuses.Where(ns => users.Any(u => u.Id == ns.UserId)));
+            dbContext.Notifications.RemoveRange(dbContext.Notifications.Where(n => users.Any(u => u.Id == n.UserId)));
+
+            foreach (User u in users)
+            {
+                var mappedUser = Mapper.Map<User>(u);
+                dbContext.Users.Remove(mappedUser);
+            }
+
+
+            await transaction.CommitAsync();
+            await dbContext.SaveChangesAsync();
+        }
+    }
 }

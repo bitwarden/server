@@ -172,6 +172,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandTimeout: 180);
         }
     }
+    public async Task DeleteManyAsync(IEnumerable<User> users)
+    {
+        var list = users.Select(user => user.Id);
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = list.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
 
     public async Task UpdateStorageAsync(Guid id)
     {
