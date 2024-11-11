@@ -1,9 +1,9 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Api.AdminConsole.Controllers;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Api.Response;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -157,7 +157,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.IsType<PolicyResponseModel>(result);
+        Assert.IsType<PolicyDetailResponseModel>(result);
         Assert.Equal(policy.Id, result.Id);
         Assert.Equal(policy.Type, result.Type);
         Assert.Equal(policy.Enabled, result.Enabled);
@@ -182,7 +182,7 @@ public class PoliciesControllerTests
         var result = await sutProvider.Sut.Get(orgId, type);
 
         // Assert
-        Assert.IsType<PolicyResponseModel>(result);
+        Assert.IsType<PolicyDetailResponseModel>(result);
         Assert.Equal(result.Type, (PolicyType)type);
         Assert.False(result.Enabled);
     }
