@@ -41,14 +41,13 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(PolicyType type)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
-            _currentContext.OrganizationId.Value, type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(_currentContext.OrganizationId.Value, type);
         if (policy == null)
         {
             return new NotFoundResult();
         }
-        var response = new PolicyResponseModel(policy);
-        return new JsonResult(response);
+
+        return new JsonResult(new PolicyResponseModel(policy));
     }
 
     /// <summary>
@@ -62,9 +61,8 @@ public class PoliciesController : Controller
     public async Task<IActionResult> List()
     {
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-        var policyResponses = policies.Select(p => new PolicyResponseModel(p));
-        var response = new ListResponseModel<PolicyResponseModel>(policyResponses);
-        return new JsonResult(response);
+
+        return new JsonResult(new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p))));
     }
 
     /// <summary>

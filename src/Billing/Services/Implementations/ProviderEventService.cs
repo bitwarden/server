@@ -94,20 +94,17 @@ public class ProviderEventService(
 
                         var unassignedEnterpriseSeats = enterpriseProviderPlan.SeatMinimum - enterpriseClientSeats ?? 0;
 
-                        if (unassignedEnterpriseSeats > 0)
+                        invoiceItems.Add(new ProviderInvoiceItem
                         {
-                            invoiceItems.Add(new ProviderInvoiceItem
-                            {
-                                ProviderId = parsedProviderId,
-                                InvoiceId = invoice.Id,
-                                InvoiceNumber = invoice.Number,
-                                ClientName = "Unassigned seats",
-                                PlanName = enterprisePlan.Name,
-                                AssignedSeats = unassignedEnterpriseSeats,
-                                UsedSeats = 0,
-                                Total = unassignedEnterpriseSeats * discountedEnterpriseSeatPrice
-                            });
-                        }
+                            ProviderId = parsedProviderId,
+                            InvoiceId = invoice.Id,
+                            InvoiceNumber = invoice.Number,
+                            ClientName = "Unassigned seats",
+                            PlanName = enterprisePlan.Name,
+                            AssignedSeats = unassignedEnterpriseSeats,
+                            UsedSeats = 0,
+                            Total = unassignedEnterpriseSeats * discountedEnterpriseSeatPrice
+                        });
                     }
 
                     if (teamsProviderPlan.PurchasedSeats is null or 0)
@@ -118,20 +115,17 @@ public class ProviderEventService(
 
                         var unassignedTeamsSeats = teamsProviderPlan.SeatMinimum - teamsClientSeats ?? 0;
 
-                        if (unassignedTeamsSeats > 0)
+                        invoiceItems.Add(new ProviderInvoiceItem
                         {
-                            invoiceItems.Add(new ProviderInvoiceItem
-                            {
-                                ProviderId = parsedProviderId,
-                                InvoiceId = invoice.Id,
-                                InvoiceNumber = invoice.Number,
-                                ClientName = "Unassigned seats",
-                                PlanName = teamsPlan.Name,
-                                AssignedSeats = unassignedTeamsSeats,
-                                UsedSeats = 0,
-                                Total = unassignedTeamsSeats * discountedTeamsSeatPrice
-                            });
-                        }
+                            ProviderId = parsedProviderId,
+                            InvoiceId = invoice.Id,
+                            InvoiceNumber = invoice.Number,
+                            ClientName = "Unassigned seats",
+                            PlanName = teamsPlan.Name,
+                            AssignedSeats = unassignedTeamsSeats,
+                            UsedSeats = 0,
+                            Total = unassignedTeamsSeats * discountedTeamsSeatPrice
+                        });
                     }
 
                     await Task.WhenAll(invoiceItems.Select(providerInvoiceItemRepository.CreateAsync));
