@@ -36,7 +36,9 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-22.04
-    needs: lint
+    needs:
+      - lint
+      - check-run
     strategy:
       fail-fast: false
       matrix:
@@ -224,7 +226,7 @@ jobs:
       - name: Generate Docker image tag
         id: tag
         run: |
-          if [[ $(grep "pull" <<< "${GITHUB_REF}") ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
             IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g")
           else
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
@@ -527,6 +529,7 @@ jobs:
 
   self-host-build:
     name: Trigger self-host build
+    if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
