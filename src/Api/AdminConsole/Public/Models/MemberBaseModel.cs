@@ -18,7 +18,6 @@ public abstract class MemberBaseModel
 
         Type = user.Type;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
         if (Type == OrganizationUserType.Custom)
         {
@@ -35,7 +34,6 @@ public abstract class MemberBaseModel
 
         Type = user.Type;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
         if (Type == OrganizationUserType.Custom)
         {
@@ -55,11 +53,7 @@ public abstract class MemberBaseModel
     /// <example>external_id_123456</example>
     [StringLength(300)]
     public string ExternalId { get; set; }
-    /// <summary>
-    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
-    /// </summary>
-    [Required]
-    public bool ResetPasswordEnrolled { get; set; }
+
     /// <summary>
     /// The member's custom permissions if the member has a Custom role. If not supplied, all custom permissions will
     /// default to false.
