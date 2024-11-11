@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Models.Api;
 
-namespace Bit.Core.AdminConsole.Models.Api.Response;
+namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class PolicyResponseModel : ResponseModel
 {
