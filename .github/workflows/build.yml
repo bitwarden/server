@@ -36,7 +36,9 @@ jobs:
   build-artifacts:
     name: Build artifacts
     runs-on: ubuntu-22.04
-    needs: lint
+    needs:
+      - lint
+      - check-run
     strategy:
       fail-fast: false
       matrix:
@@ -224,7 +226,7 @@ jobs:
       - name: Generate Docker image tag
         id: tag
         run: |
-          if [[ $(grep "pull" <<< "${GITHUB_REF}") ]]; then
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
             IMAGE_TAG=$(echo "${GITHUB_HEAD_REF}" | sed "s#/#-#g")
           else
             IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")
@@ -319,9 +321,9 @@ jobs:
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       - name: Make Docker stubs
-        if: github.ref == 'refs/heads/main' ||
-          github.ref == 'refs/heads/rc' ||
-          github.ref == 'refs/heads/hotfix-rc'
+        if: |
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
         run: |
           # Set proper setup image based on branch
           case "$GITHUB_REF" in
@@ -361,13 +363,17 @@ jobs:
           cd docker-stub/EU; zip -r ../../docker-stub-EU.zip *; cd ../..
 
       - name: Make Docker stub checksums
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: |
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
         run: |
           sha256sum docker-stub-US.zip > docker-stub-US-sha256.txt
           sha256sum docker-stub-EU.zip > docker-stub-EU-sha256.txt
 
       - name: Upload Docker stub US artifact
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: |
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-US.zip
@@ -375,7 +381,9 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub EU artifact
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: |
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-EU.zip
@@ -383,7 +391,9 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub US checksum artifact
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: |
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-US-sha256.txt
@@ -391,7 +401,9 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Docker stub EU checksum artifact
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        if: |
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
         with:
           name: docker-stub-EU-sha256.txt
@@ -517,6 +529,7 @@ jobs:
 
   self-host-build:
     name: Trigger self-host build
+    if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
@@ -549,7 +562,7 @@ jobs:
 
   trigger-k8s-deploy:
     name: Trigger k8s deploy
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
@@ -583,7 +596,9 @@ jobs:
 
   trigger-ee-updates:
     name: Trigger Ephemeral Environment updates
-    if: github.ref != 'refs/heads/main' && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
+    if: |
+      github.event_name == 'pull_request_target'
+      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     runs-on: ubuntu-24.04
     needs: build-docker
     steps:
@@ -629,9 +644,8 @@ jobs:
     steps:
       - name: Check if any job failed
         if: |
-          (github.ref == 'refs/heads/main'
-          || github.ref == 'refs/heads/rc'
-          || github.ref == 'refs/heads/hotfix-rc')
+          github.event_name != 'pull_request_target'
+          && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
           && contains(needs.*.result, 'failure')
         run: exit 1
 

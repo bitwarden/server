@@ -28,6 +28,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Email = user.Email;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
+        ResetPasswordEnrolled = user.ResetPasswordKey != null;
     }
 
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
@@ -45,6 +46,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
+        ResetPasswordEnrolled = user.ResetPasswordKey != null;
     }
 
     /// <summary>
@@ -93,4 +95,10 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// The associated collections that this member can access.
     /// </summary>
     public IEnumerable<AssociationWithPermissionsResponseModel> Collections { get; set; }
+
+    /// <summary>
+    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
+    /// </summary>
+    [Required]
+    public bool ResetPasswordEnrolled { get; }
 }
