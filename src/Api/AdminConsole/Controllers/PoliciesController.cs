@@ -1,7 +1,11 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response.Helpers;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Api.Response;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -16,7 +20,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
-using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -32,6 +35,8 @@ public class PoliciesController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
@@ -41,7 +46,9 @@ public class PoliciesController : Controller
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IFeatureService featureService,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
@@ -53,10 +60,12 @@ public class PoliciesController : Controller
             "OrganizationServiceDataProtector");
 
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _featureService = featureService;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyResponseModel> Get(Guid orgId, int type)
+    public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
     {
         if (!await _currentContext.ManagePolicies(orgId))
         {
@@ -65,10 +74,15 @@ public class PoliciesController : Controller
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
-            return new PolicyResponseModel(new AdminConsoleEntities.Policy() { Type = (PolicyType)type, Enabled = false });
+            return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
         }
 
-        return new PolicyResponseModel(policy);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
+        {
+            return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
+        }
+
+        return new PolicyDetailResponseModel(policy);
     }
 
     [HttpGet("")]
@@ -81,8 +95,8 @@ public class PoliciesController : Controller
         }
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-        var responses = policies.Select(p => new PolicyResponseModel(p));
-        return new ListResponseModel<PolicyResponseModel>(responses);
+
+        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
     }
 
     [AllowAnonymous]
