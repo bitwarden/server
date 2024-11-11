@@ -99,7 +99,10 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        return new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp);
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+        var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+
+        return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
     [HttpGet("{id}/full-details")]
@@ -600,10 +603,10 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/collections-admin")]
     [HttpPost("{id}/collections-admin")]
-    public async Task PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
+    public async Task<CipherMiniDetailsResponseModel> PutCollectionsAdmin(string id, [FromBody] CipherCollectionsRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
+        var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(new Guid(id));
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanEditCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
@@ -621,6 +624,11 @@ public class CiphersController : Controller
         }
 
         await _cipherService.SaveCollectionsAsync(cipher, collectionIds, userId, true);
+
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(cipher.OrganizationId.Value);
+        var collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+
+        return new CipherMiniDetailsResponseModel(cipher, _globalSettings, collectionCiphersGroupDict, cipher.OrganizationUseTotp);
     }
 
     [HttpPost("bulk-collections")]
