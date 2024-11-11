@@ -1,7 +1,7 @@
-﻿using Bit.Api.Models.Response;
+﻿using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Models.Api.Response;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;

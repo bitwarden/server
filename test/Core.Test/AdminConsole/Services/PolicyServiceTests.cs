@@ -842,6 +842,6 @@ public class PolicyServiceTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy, null));
 
-        Assert.Equal("Organization has verified domains.", badRequestException.Message);
+        Assert.Equal("The Single organization policy is required for organizations that have enabled domain verification.", badRequestException.Message);
     }
 }
