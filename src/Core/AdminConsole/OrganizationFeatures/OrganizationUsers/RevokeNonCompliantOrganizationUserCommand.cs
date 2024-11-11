@@ -19,12 +19,12 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     IHasConfirmedOwnersExceptQuery confirmedOwnersExceptQuery,
     TimeProvider timeProvider) : IRevokeNonCompliantOrganizationUserCommand
 {
-    private const string _cannotRevokeSelfMessage = "You cannot revoke yourself.";
-    private const string _onlyOwnersCanRevokeOtherOwners = "Only owners can revoke other owners.";
-    private const string _userAlreadyRevoked = "User is already revoked.";
-    private const string _orgMustHaveAtLeastOneOwner = "Organization must have at least one confirmed owner.";
-    private const string _invalidUsers = "Invalid users.";
-    private const string _requestedByWasNotValid = "Action was performed by an unexpected type.";
+    public const string CannotRevokeSelfMessage = "You cannot revoke yourself.";
+    public const string OnlyOwnersCanRevokeOtherOwners = "Only owners can revoke other owners.";
+    public const string UserAlreadyRevoked = "User is already revoked.";
+    public const string OrgMustHaveAtLeastOneOwner = "Organization must have at least one confirmed owner.";
+    public const string InvalidUsers = "Invalid users.";
+    public const string RequestedByWasNotValid = "Action was performed by an unexpected type.";
 
     public async Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsers request)
     {
@@ -64,40 +64,40 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
 
     private async Task<CommandResult> ValidateAsync(RevokeOrganizationUsers request)
     {
-        if (PerformedByIsAnExpectedType(request.ActionPerformedBy))
+        if (!PerformedByIsAnExpectedType(request.ActionPerformedBy))
         {
-            return new CommandResult([_requestedByWasNotValid]);
+            return new CommandResult([RequestedByWasNotValid]);
         }
 
         if (request.ActionPerformedBy is StandardUser loggableUser
             && request.OrganizationUsers.Any(x => x.UserId == loggableUser.UserId))
         {
-            return new CommandResult([_cannotRevokeSelfMessage]);
+            return new CommandResult([CannotRevokeSelfMessage]);
         }
 
         if (request.OrganizationUsers.Any(x => x.OrganizationId != request.OrganizationId))
         {
-            return new CommandResult([_invalidUsers]);
+            return new CommandResult([InvalidUsers]);
         }
 
         if (!await confirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                     request.OrganizationId,
                     request.OrganizationUsers.Select(x => x.Id)))
         {
-            return new CommandResult([_orgMustHaveAtLeastOneOwner]);
+            return new CommandResult([OrgMustHaveAtLeastOneOwner]);
         }
 
         return request.OrganizationUsers.Aggregate(new CommandResult(), (result, userToRevoke) =>
         {
             if (IsAlreadyRevoked(userToRevoke))
             {
-                result.ErrorMessages.Add($"{_userAlreadyRevoked} Id: {userToRevoke.Id}");
+                result.ErrorMessages.Add($"{UserAlreadyRevoked} Id: {userToRevoke.Id}");
                 return result;
             }
 
             if (IsNonOwnerRevokingAnOwner(userToRevoke, request.ActionPerformedBy))
             {
-                result.ErrorMessages.Add($"{_onlyOwnersCanRevokeOtherOwners}");
+                result.ErrorMessages.Add($"{OnlyOwnersCanRevokeOtherOwners}");
                 return result;
             }
 
@@ -112,7 +112,7 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
 
     private static bool IsNonOwnerRevokingAnOwner(OrganizationUserUserDetails organizationUser,
         IActingUser requestingUser) => requestingUser is StandardUser standardUser &&
-                                           IsActingUserAllowedToRevokeOwner(organizationUser, standardUser);
+                                           !IsActingUserAllowedToRevokeOwner(organizationUser, standardUser);
 
     private static bool IsActingUserAllowedToRevokeOwner(OrganizationUserUserDetails organizationUser,
         StandardUser requestingOrganizationUser) => organizationUser is { Type: OrganizationUserType.Owner }
