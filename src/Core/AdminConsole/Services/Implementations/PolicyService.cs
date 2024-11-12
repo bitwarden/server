@@ -34,6 +34,7 @@ public class PolicyService : IPolicyService
     private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -48,7 +49,8 @@ public class PolicyService : IPolicyService
         IFeatureService featureService,
         ISavePolicyCommand savePolicyCommand,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -63,6 +65,7 @@ public class PolicyService : IPolicyService
         _savePolicyCommand = savePolicyCommand;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _organizationSponsorshipRepository = organizationSponsorshipRepository;
     }
 
     public async Task SaveAsync(Policy policy, Guid? savingUserId)
@@ -116,6 +119,10 @@ public class PolicyService : IPolicyService
         }
 
         await EnablePolicyAsync(policy, org, savingUserId);
+        if (policy.Type == PolicyType.FreeFamiliesSponsorshipPolicy && _featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship))
+        {
+            await NotifiesUserWithApplicablePoliciesAsync(policy, org.Name);
+        }
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
@@ -354,5 +361,23 @@ public class PolicyService : IPolicyService
         }
 
         await SetPolicyConfiguration(policy);
+    }
+
+    private async Task NotifiesUserWithApplicablePoliciesAsync(Policy policy, string organizationName)
+    {
+        var organizationSponsorships = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(policy.OrganizationId))
+            .Where(p => p.SponsoredOrganizationId is not null)
+            .ToList();
+        if (string.IsNullOrWhiteSpace(organizationName))
+        {
+            var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
+            organizationName = organization?.Name;
+        }
+        foreach (var org in organizationSponsorships)
+        {
+            var offerAcceptanceDate = org.ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
+            await _mailService.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(org.FriendlyName, offerAcceptanceDate,
+                org.SponsoredOrganizationId.ToString(), organizationName);
+        }
     }
 }

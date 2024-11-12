@@ -155,6 +155,7 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
+    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
 
     public static List<string> GetAllKeys()
     {

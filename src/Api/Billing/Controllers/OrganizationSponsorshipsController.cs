@@ -1,6 +1,9 @@
-﻿using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Billing.Models.Responses;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -31,6 +34,7 @@ public class OrganizationSponsorshipsController : Controller
     private readonly ICloudSyncSponsorshipsCommand _syncSponsorshipsCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
+    private readonly IPolicyRepository _policyRepository;
 
     public OrganizationSponsorshipsController(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
@@ -45,7 +49,8 @@ public class OrganizationSponsorshipsController : Controller
         IRemoveSponsorshipCommand removeSponsorshipCommand,
         ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IPolicyRepository policyRepository)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -60,6 +65,7 @@ public class OrganizationSponsorshipsController : Controller
         _syncSponsorshipsCommand = syncSponsorshipsCommand;
         _userService = userService;
         _currentContext = currentContext;
+        _policyRepository = policyRepository;
     }
 
     [Authorize("Application")]
@@ -185,6 +191,20 @@ public class OrganizationSponsorshipsController : Controller
 
         var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
+    }
+
+    [HttpGet("{sponsoredEmail}")]
+    public async Task<IResult> GetSponsoringSponsoredEmailAsync(string sponsoredEmail)
+    {
+        if (string.IsNullOrWhiteSpace(sponsoredEmail))
+        {
+            throw new NotFoundException();
+        }
+        var sponsorship = await _organizationSponsorshipRepository.GetBySponsoredOrganizationUserEmailAsync(sponsoredEmail);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync((Guid)sponsorship.SponsoringOrganizationId,
+            PolicyType.FreeFamiliesSponsorshipPolicy);
+        var response = OrganizationSponsorshipResponse.From(policy);
+        return TypedResults.Ok(response);
     }
 
     private Task<User> CurrentUser => _userService.GetUserByIdAsync(_currentContext.UserId.Value);
