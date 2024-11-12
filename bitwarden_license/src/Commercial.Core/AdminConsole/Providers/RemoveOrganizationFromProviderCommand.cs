@@ -102,11 +102,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled &&
-            provider.Status == ProviderStatusType.Billable &&
-            organization.Status == OrganizationStatusType.Managed &&
+        if (provider.IsBillable() &&
+            organization.IsValidClient() &&
             !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
             await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
