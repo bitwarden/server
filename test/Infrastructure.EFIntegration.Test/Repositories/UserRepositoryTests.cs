@@ -97,6 +97,7 @@ public class UserRepositoryTests
     {
         foreach (var sut in suts)
         {
+            List<User> efUserList = new List<User>();
             foreach (var user in users)
             {
                 var postEfUser = await sut.CreateAsync(user);
@@ -105,11 +106,15 @@ public class UserRepositoryTests
                 var savedEfUser = await sut.GetByIdAsync(postEfUser.Id);
                 Assert.True(savedEfUser != null);
                 sut.ClearChangeTracking();
+                efUserList.Add(savedEfUser);
+            }
 
-                await sut.DeleteAsync(savedEfUser);
-                sut.ClearChangeTracking();
+            await sut.DeleteManyAsync(efUserList);
+            sut.ClearChangeTracking();
 
-                savedEfUser = await sut.GetByIdAsync(savedEfUser.Id);
+            foreach (var efUser in efUserList)
+            {
+                var savedEfUser = await sut.GetByIdAsync(efUser.Id);
                 Assert.True(savedEfUser == null);
             }
         }
