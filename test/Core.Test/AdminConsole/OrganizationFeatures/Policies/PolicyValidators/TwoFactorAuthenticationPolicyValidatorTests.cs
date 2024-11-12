@@ -207,18 +207,20 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy));
 
-        Assert.Contains("Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccess, badRequestException.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
             .RemoveUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_GivenPolicyUpdate_WhenAccountProvisioningIsDisabled_ThenRevokeUserCommandShouldNotBeCalled(
-        Organization organization,
-        [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
-        [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
-        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+    public async Task OnSaveSideEffectsAsync_GivenUpdateTo2faPolicy_WhenAccountProvisioningIsDisabled_ThenRevokeUserCommandShouldNotBeCalled(
+            Organization organization,
+            [PolicyUpdate(PolicyType.TwoFactorAuthentication)]
+            PolicyUpdate policyUpdate,
+            [Policy(PolicyType.TwoFactorAuthentication, false)]
+            Policy policy,
+            SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -226,10 +228,6 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(false);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
-            .Returns([]);
 
         var orgUserDetailUserAcceptedWithout2Fa = new OrganizationUserUserDetails
         {
@@ -241,6 +239,14 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             UserId = Guid.NewGuid(),
             HasMasterPassword = true
         };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns(new List<OrganizationUserUserDetails>
+            {
+                orgUserDetailUserAcceptedWithout2Fa
+            });
+
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
@@ -254,5 +260,48 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .DidNotReceive()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsers>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_GivenUpdateTo2faPolicy_WhenAccountProvisioningIsEnabled_ThenRevokeUserCommandShouldNotBeCalled(
+        Organization organization,
+        [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
+        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        var orgUserDetailUserWithout2Fa = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
+            Email = "user3@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = false
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([orgUserDetailUserWithout2Fa]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
+            .Returns(new List<(OrganizationUserUserDetails user, bool hasTwoFactor)>()
+            {
+                (orgUserDetailUserWithout2Fa, false),
+            });
+
+        var action = () => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(action);
+        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccess, exception.Message);
     }
 }
