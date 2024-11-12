@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.AdminConsole.Models.Api.Response;
+﻿namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared;
 
 public class CommandResult(IEnumerable<string> errors)
 {
