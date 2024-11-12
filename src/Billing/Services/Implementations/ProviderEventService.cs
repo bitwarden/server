@@ -45,13 +45,6 @@ public class ProviderEventService(
 
                     var providerPlans = await providerPlanRepository.GetByProviderId(parsedProviderId);
 
-                    if (providerPlans.Any(x => !x.IsConfigured()))
-                    {
-                        logger.LogError("Provider {ProviderID} is missing or has misconfigured provider plans", parsedProviderId);
-
-                        throw new Exception("Cannot record invoice line items for Provider with missing or misconfigured provider plans");
-                    }
-
                     var invoiceItems = new List<ProviderInvoiceItem>();
 
                     foreach (var client in clients)
