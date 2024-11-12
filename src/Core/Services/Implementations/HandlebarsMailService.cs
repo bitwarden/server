@@ -897,10 +897,10 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token) =>
-        await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, new[] { (email, existingAccount, token) });
+    public async Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string sponsoringOrgId, string email, bool existingAccount, string token) =>
+        await BulkSendFamiliesForEnterpriseOfferEmailAsync(sponsorOrgName, sponsoringOrgId, new[] { (email, existingAccount, token) });
 
-    public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
+    public async Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string sponsoringOrgId, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
     {
         MailQueueMessage CreateMessage((string Email, bool ExistingAccount, string Token) invite)
         {

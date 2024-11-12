@@ -74,8 +74,8 @@ public interface IMailService
         string providerName,
         IEnumerable<string> emails);
     Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
-    Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token);
-    Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
+    Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string sponsorOrgId, string email, bool existingAccount, string token);
+    Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, string SponsorOrgId, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
     Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail);
     Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate);
     Task SendOTPEmailAsync(string email, string token);
