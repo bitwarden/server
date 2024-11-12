@@ -3,6 +3,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
@@ -26,9 +27,10 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
-    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
     private readonly IFeatureService _featureService;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
     public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -36,18 +38,20 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IOrganizationRepository organizationRepository,
         ISsoConfigRepository ssoConfigRepository,
         ICurrentContext currentContext,
+        IFeatureService featureService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
-        IFeatureService featureService)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _currentContext = currentContext;
-        _removeOrganizationUserCommand = removeOrganizationUserCommand;
-        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
         _featureService = featureService;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
@@ -125,9 +129,21 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         if (policyUpdate is not { Enabled: true })
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            return ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+
+            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+
+            if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
+            {
+                return validateDecryptionErrorMessage;
+            }
+
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
+            {
+                return "The Single organization policy is required for organizations that have enabled domain verification.";
+            }
         }
 
-        return "";
+        return string.Empty;
     }
 }

@@ -143,6 +143,7 @@ public static class FeatureFlagKeys
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
+    public const string SecureOrgGroupDetails = "pm-3479-secure-org-group-details";
     public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
@@ -152,6 +153,9 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerification = "new-device-verification";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
+    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
+    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
+    public const string SecurityTasks = "security-tasks";
 
     public static List<string> GetAllKeys()
     {
