@@ -1,6 +1,5 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
