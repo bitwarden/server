@@ -3,7 +3,6 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -53,7 +52,6 @@ public class OrganizationsController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
 
     public OrganizationsController(
@@ -80,7 +78,6 @@ public class OrganizationsController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IFeatureService featureService,
         IProviderBillingService providerBillingService)
     {
         _organizationService = organizationService;
@@ -106,7 +103,6 @@ public class OrganizationsController : Controller
         _serviceAccountRepository = serviceAccountRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _featureService = featureService;
         _providerBillingService = providerBillingService;
     }
 
@@ -262,9 +258,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Index");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
