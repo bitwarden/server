@@ -71,6 +71,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        HasSubscription = !string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId);
 
         if (organization.SsoConfig != null)
         {
@@ -143,4 +144,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
     public bool UserIsManagedByOrganization { get; set; }
+    public bool HasSubscription { get; set; }
 }
