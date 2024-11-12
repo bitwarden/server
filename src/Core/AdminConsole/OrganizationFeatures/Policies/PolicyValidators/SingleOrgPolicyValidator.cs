@@ -94,7 +94,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             var revocableUsers = removableOrgUsers.Where(nonCompliantUser => orgUsers.Any(orgUser =>
                 nonCompliantUser.UserId == orgUser.UserId
                 && nonCompliantUser.OrganizationId != org.Id
-                && nonCompliantUser.Status != OrganizationUserStatusType.Invited));
+                && nonCompliantUser.Status != OrganizationUserStatusType.Invited))
+                .ToList();
 
             var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
                 new RevokeOrganizationUsers(organizationId, revocableUsers, new StandardUser(savingUserId ?? Guid.Empty, isOwner)));
@@ -104,7 +105,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
                 throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
             }
 
-            // TODO send email
+            await Task.WhenAll(revocableUsers.Select(x =>
+                _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(org.DisplayName(), x.Email)));
         }
         else
         {

@@ -496,6 +496,20 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email)
+    {
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicySingleOrgViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "OrganizationUserRevokedForPolicySingleOrg", model);
+        message.Category = "OrganizationUserRevokedForPolicySingleOrg";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendEnqueuedMailMessageAsync(IMailQueueMessage queueMessage)
     {
         var message = CreateDefaultMessage(queueMessage.Subject, queueMessage.ToEmails);
