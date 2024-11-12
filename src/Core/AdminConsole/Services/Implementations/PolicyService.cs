@@ -119,10 +119,6 @@ public class PolicyService : IPolicyService
         }
 
         await EnablePolicyAsync(policy, org, savingUserId);
-        if (policy.Type == PolicyType.FreeFamiliesSponsorshipPolicy && _featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship))
-        {
-            await NotifiesUserWithApplicablePoliciesAsync(policy, org.Name);
-        }
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
@@ -353,6 +349,12 @@ public class PolicyService : IPolicyService
                             await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
                                 org.DisplayName(), orgUser.Email);
                         }
+                    }
+                    break;
+                case PolicyType.FreeFamiliesSponsorshipPolicy:
+                    if (_featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship))
+                    {
+                        await NotifiesUserWithApplicablePoliciesAsync(policy, org.Name);
                     }
                     break;
                 default:

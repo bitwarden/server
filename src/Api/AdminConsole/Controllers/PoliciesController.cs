@@ -199,11 +199,4 @@ public class PoliciesController : Controller
         await _policyService.SaveAsync(policy, userId);
         return new PolicyResponseModel(policy);
     }
-
-    [HttpGet("{policyTypeId}/status")]
-    public async Task<bool> GetStatusAsync(Guid orgId, int policyTypeId)
-    {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)policyTypeId);
-        return policy?.Enabled ?? false;
-    }
 }
