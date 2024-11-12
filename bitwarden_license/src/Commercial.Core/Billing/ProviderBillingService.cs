@@ -209,7 +209,7 @@ public class ProviderBillingService(
     {
         ArgumentNullException.ThrowIfNull(provider);
 
-        if (!provider.SupportsConsolidatedBilling())
+        if (!provider.IsBillable())
         {
             logger.LogError("Provider ({ProviderID}) cannot scale their seats", provider.Id);
 
