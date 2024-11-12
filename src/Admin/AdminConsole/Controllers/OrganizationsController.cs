@@ -237,7 +237,7 @@ public class OrganizationsController : Controller
         if (organization == null)
         {
             TempData["Error"] = "Could not find organization to update.";
-            return RedirectToAction("Edit", new { id });
+            return RedirectToAction("Index");
         }
 
         var existingOrganizationData = new Organization

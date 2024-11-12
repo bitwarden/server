@@ -14,7 +14,6 @@ public interface IProviderBillingService
     /// Changes the assigned provider plan for the provider.
     /// </summary>
     /// <param name="command">The command to change the provider plan.</param>
-    /// <returns></returns>
     Task ChangePlan(ChangeProviderPlanCommand command);
 
     /// <summary>
