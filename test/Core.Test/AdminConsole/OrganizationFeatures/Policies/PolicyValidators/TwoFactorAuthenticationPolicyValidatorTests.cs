@@ -281,7 +281,6 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             Id = Guid.NewGuid(),
             Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.User,
-            // Needs to be different from what is passed in as the savingUserId to Sut.SaveAsync
             Email = "user3@test.com",
             Name = "TEST",
             UserId = Guid.NewGuid(),
@@ -299,9 +298,8 @@ public class TwoFactorAuthenticationPolicyValidatorTests
                 (orgUserDetailUserWithout2Fa, false),
             });
 
-        var action = () => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(action);
         Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccess, exception.Message);
     }
 }
