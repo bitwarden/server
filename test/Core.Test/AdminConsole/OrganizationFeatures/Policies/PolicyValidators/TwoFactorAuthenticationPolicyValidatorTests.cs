@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -211,10 +213,46 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             .RemoveUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
     }
 
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_GivenPolicyUpdate_WhenAccountProvisioningIsDisabled_ThenRevokeUserCommandShouldNotBeCalled(
+        Organization organization,
+        [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
+        SutProvider<TwoFactorAuthenticationPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-    // TODO feature flag is disabled we don't call command
-    // TODO the feature flag is enabled, make sure it calls command
-    // TODO the feature flag is enabled and revocable members aren't both missing 2FA and MP, throw error
-    // TODO the feature flag is enabled and command returns errors, make sure we throw
-    // TODO the feature flag is enabled and command returns no errors, make sure we don't throw
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(false);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([]);
+
+        var orgUserDetailUserAcceptedWithout2Fa = new OrganizationUserUserDetails
+        {
+            Id = Guid.NewGuid(),
+            Status = OrganizationUserStatusType.Accepted,
+            Type = OrganizationUserType.User,
+            Email = "user3@test.com",
+            Name = "TEST",
+            UserId = Guid.NewGuid(),
+            HasMasterPassword = true
+        };
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
+            .Returns(new List<(OrganizationUserUserDetails user, bool hasTwoFactor)>()
+            {
+                (orgUserDetailUserAcceptedWithout2Fa, false),
+            });
+
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .DidNotReceive()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsers>());
+    }
 }
