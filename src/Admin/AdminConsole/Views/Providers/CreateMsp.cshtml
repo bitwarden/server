@@ -1,9 +1,4 @@
-@using Bit.Core.AdminConsole.Enums.Provider
-@using Bit.Core
-
 @model CreateMspProviderModel
-
-@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     ViewData["Title"] = "Create Managed Service Provider";
@@ -17,8 +12,6 @@
             <label asp-for="OwnerEmail"></label>
             <input type="text" class="form-control" asp-for="OwnerEmail">
         </div>
-        @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
         <div class="row">
             <div class="col-sm">
                 <div class="form-group">
@@ -33,7 +26,6 @@
                 </div>
             </div>
         </div>
-        }
         <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
     </form>
 </div>
