@@ -66,6 +66,9 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UsePasswordManager = o.UsePasswordManager,
                         SmSeats = o.SmSeats,
                         SmServiceAccounts = o.SmServiceAccounts,
+                        LimitCollectionCreation = o.LimitCollectionCreation,
+                        LimitCollectionDeletion = o.LimitCollectionDeletion,
+                        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
                         LimitCollectionCreationDeletion = o.LimitCollectionCreationDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
                     };

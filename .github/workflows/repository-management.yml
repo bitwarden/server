@@ -1,0 +1,265 @@
+name: Repository management
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        default: "Version Bump"
+        description: "Task to execute"
+        options:
+          - "Version Bump"
+          - "Version Bump and Cut rc"
+          - "Version Bump and Cut hotfix-rc"
+        required: true
+        type: choice
+      target_ref:
+        default: "main"
+        description: "Branch/Tag to target for cut"
+        required: true
+        type: string
+      version_number_override:
+        description: "New version override (leave blank for automatic calculation, example: '2024.1.0')"
+        required: false
+        type: string
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-24.04
+    outputs:
+      branch: ${{ steps.set-branch.outputs.branch }}
+      token: ${{ steps.app-token.outputs.token }}
+    steps:
+      - name: Set branch
+        id: set-branch
+        env:
+          TASK: ${{ inputs.task }}
+        run: |
+          if [[ "$TASK" == "Version Bump" ]]; then
+            BRANCH="none"
+          elif [[ "$TASK" == "Version Bump and Cut rc" ]]; then
+            BRANCH="rc"
+          elif [[ "$TASK" == "Version Bump and Cut hotfix-rc" ]]; then
+            BRANCH="hotfix-rc"
+          fi
+
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Generate GH App token
+        uses: actions/create-github-app-token@5d869da34e18e7287c1daad50e0b8ea0f506ce69 # v1.11.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.BW_GHAPP_ID }}
+          private-key: ${{ secrets.BW_GHAPP_KEY }}
+
+
+  cut_branch:
+    name: Cut branch
+    if: ${{ needs.setup.outputs.branch != 'none' }}
+    needs: setup
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out target ref
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ inputs.target_ref }}
+          token: ${{ needs.setup.outputs.token }}
+
+      - name: Check if ${{ needs.setup.outputs.branch }} branch exists
+        env:
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
+        run: |
+          if [[ $(git ls-remote --heads origin $BRANCH_NAME) ]]; then
+            echo "$BRANCH_NAME already exists! Please delete $BRANCH_NAME before running again." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Cut branch
+        env:
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
+        run: |
+          git switch --quiet --create $BRANCH_NAME
+          git push --quiet --set-upstream origin $BRANCH_NAME
+
+
+  bump_version:
+    name: Bump Version
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    needs:
+      - cut_branch
+      - setup
+    outputs:
+      version: ${{ steps.set-final-version-output.outputs.version }}
+    steps:
+      - name: Validate version input format
+        if: ${{ inputs.version_number_override != '' }}
+        uses: bitwarden/gh-actions/version-check@main
+        with:
+          version: ${{ inputs.version_number_override }}
+
+      - name: Check out branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          token: ${{ needs.setup.outputs.token }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Actions"
+
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Get current version
+        id: current-version
+        run: |
+          CURRENT_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify input version
+        if: ${{ inputs.version_number_override != '' }}
+        env:
+          CURRENT_VERSION: ${{ steps.current-version.outputs.version }}
+          NEW_VERSION: ${{ inputs.version_number_override }}
+        run: |
+          # Error if version has not changed.
+          if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
+            echo "Specified override version is the same as the current version." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+          # Check if version is newer.
+          printf '%s\n' "${CURRENT_VERSION}" "${NEW_VERSION}" | sort -C -V
+          if [ $? -eq 0 ]; then
+            echo "Version is newer than the current version."
+          else
+            echo "Version is older than the current version." >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+
+      - name: Calculate next release version
+        if: ${{ inputs.version_number_override == '' }}
+        id: calculate-next-version
+        uses: bitwarden/gh-actions/version-next@main
+        with:
+          version: ${{ steps.current-version.outputs.version }}
+
+      - name: Bump version props - Version Override
+        if: ${{ inputs.version_number_override != '' }}
+        id: bump-version-override
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+          version: ${{ inputs.version_number_override }}
+
+      - name: Bump version props - Automatic Calculation
+        if: ${{ inputs.version_number_override == '' }}
+        id: bump-version-automatic
+        uses: bitwarden/gh-actions/version-bump@main
+        with:
+          file_path: "Directory.Build.props"
+          version: ${{ steps.calculate-next-version.outputs.version }}
+
+      - name: Set final version output
+        id: set-final-version-output
+        env:
+          VERSION: ${{ inputs.version_number_override }}
+        run: |
+          if [[ "${{ steps.bump-version-override.outcome }}" = "success" ]]; then
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.bump-version-automatic.outcome }}" = "success" ]]; then
+            echo "version=${{ steps.calculate-next-version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit files
+        run: git commit -m "Bumped version to ${{ steps.set-final-version-output.outputs.version }}" -a
+
+      - name: Push changes
+        run: git push
+
+
+  cherry_pick:
+    name: Cherry-Pick Commit(s)
+    if: ${{ needs.setup.outputs.branch != 'none' }}
+    runs-on: ubuntu-24.04
+    needs:
+      - bump_version
+      - setup
+    steps:
+      - name: Check out main branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          token: ${{ needs.setup.outputs.token }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "Github Actions"
+
+      - name: Install xmllint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxml2-utils
+
+      - name: Perform cherry-pick(s)
+        env:
+          CUT_BRANCH: ${{ needs.setup.outputs.branch }}
+        run: |
+          # Function for cherry-picking
+          cherry_pick () {
+            local source_branch=$1
+            local destination_branch=$2
+
+            # Get project commit/version from source branch
+            git switch $source_branch
+            SOURCE_COMMIT=$(git log --reverse --pretty=format:"%H" --max-count=1 Directory.Build.props)
+            SOURCE_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+            # Get project commit/version from destination branch
+            git switch $destination_branch
+            DESTINATION_VERSION=$(xmllint -xpath "/Project/PropertyGroup/Version/text()" Directory.Build.props)
+
+            if [[ "$DESTINATION_VERSION" != "$SOURCE_VERSION" ]]; then
+              git cherry-pick --strategy-option=theirs -x $SOURCE_COMMIT
+              git push -u origin $destination_branch
+            fi
+
+          # If we are cutting 'hotfix-rc':
+          if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
+
+            # If the 'rc' branch exists:
+            if [[ $(git ls-remote --heads origin rc) ]]; then
+
+              # Chery-pick from 'rc' into 'hotfix-rc'
+              cherry_pick rc hotfix-rc
+
+              # Cherry-pick from 'main' into 'rc'
+              cherry_pick main rc
+
+            # If the 'rc' branch does not exist:
+            else
+
+              # Cherry-pick from 'main' into 'hotfix-rc'
+              cherry_pick main hotfix-rc
+
+            fi
+
+          # If we are cutting 'rc':
+          elif [[ "$CUT_BRANCH" == "rc" ]]; then
+
+            # Cherry-pick from 'main' into 'rc'
+            cherry_pick main rc
+
+          fi
+
+
+  move_future_db_scripts:
+    name: Move finalization database scripts
+    needs: cherry_pick
+    uses: ./.github/workflows/_move_finalization_db_scripts.yml
+    secrets: inherit

@@ -1,4 +1,5 @@
-﻿using Bit.Api.Billing.Models.Requests;
+﻿#nullable enable
+using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core;
 using Bit.Core.Billing.Services;
@@ -25,7 +26,7 @@ public class OrganizationBillingController(
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        if (!await currentContext.AccessMembersTab(organizationId))
+        if (!await currentContext.OrganizationUser(organizationId))
         {
             return Error.Unauthorized();
         }
@@ -63,7 +64,7 @@ public class OrganizationBillingController(
     }
 
     [HttpGet("invoices")]
-    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string startAfter = null)
+    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string? status = null, [FromQuery] string? startAfter = null)
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
@@ -80,6 +81,7 @@ public class OrganizationBillingController(
         var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
             organization,
             5,
+            status,
             startAfter);
 
         return TypedResults.Ok(invoices);

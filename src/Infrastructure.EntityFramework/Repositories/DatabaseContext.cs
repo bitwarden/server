@@ -7,6 +7,7 @@ using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -74,6 +75,8 @@ public class DatabaseContext : DbContext
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
+    public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
+    public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

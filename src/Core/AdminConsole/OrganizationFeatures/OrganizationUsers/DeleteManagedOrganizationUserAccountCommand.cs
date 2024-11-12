@@ -18,7 +18,8 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IOrganizationService _organizationService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+
     public DeleteManagedOrganizationUserAccountCommand(
         IUserService userService,
         IEventService eventService,
@@ -26,7 +27,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        IOrganizationService organizationService)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     {
         _userService = userService;
         _eventService = eventService;
@@ -34,7 +35,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _organizationUserRepository = organizationUserRepository;
         _userRepository = userRepository;
         _currentContext = currentContext;
-        _organizationService = organizationService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
@@ -46,7 +47,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
 
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { organizationUserId });
-        var hasOtherConfirmedOwners = await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true);
+        var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true);
 
         await ValidateDeleteUserAsync(organizationId, organizationUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
 
@@ -67,7 +68,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var users = await _userRepository.GetManyAsync(userIds);
 
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
-        var hasOtherConfirmedOwners = await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
+        var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
 
         var results = new List<(Guid OrganizationUserId, string? ErrorMessage)>();
         foreach (var orgUserId in orgUserIds)

@@ -1,6 +1,9 @@
 ﻿@using Bit.Admin.Enums;
 @using Bit.Core
+@using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core.Billing.Enums
 @using Bit.Core.Billing.Extensions
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @inject Bit.Core.Services.IFeatureService FeatureService
 
@@ -47,60 +50,97 @@
     </div>
     @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && Model.Provider.IsBillable())
     {
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="TeamsMonthlySeatMinimum"></label>
-                    <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="EnterpriseMonthlySeatMinimum"></label>
-                    <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <div class="form-group">
-                        <label asp-for="Gateway"></label>
-                        <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                            <option value="">--</option>
-                        </select>
+        switch (Model.Provider.Type)
+        {
+            case ProviderType.Msp:
+            {
+                <div class="row">
+                    <div class="col-sm">
+                        <div class="form-group">
+                            <label asp-for="TeamsMonthlySeatMinimum"></label>
+                            <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
+                        </div>
                     </div>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="GatewayCustomerId"></label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" asp-for="GatewayCustomerId">
-                        <div class="input-group-append">
-                            <a href="@Model.GatewayCustomerUrl" class="btn btn-secondary" target="_blank">
-                                <i class="fa fa-external-link"></i>
-                            </a>
+                    <div class="col-sm">
+                        <div class="form-group">
+                            <label asp-for="EnterpriseMonthlySeatMinimum"></label>
+                            <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="GatewaySubscriptionId"></label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
-                        <div class="input-group-append">
-                            <a href="@Model.GatewaySubscriptionUrl" class="btn btn-secondary" target="_blank">
-                                <i class="fa fa-external-link"></i>
-                            </a>
+                <div class="row">
+                    <div class="col-sm">
+                        <div class="form-group">
+                            <div class="form-group">
+                                <label asp-for="Gateway"></label>
+                                <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                                    <option value="">--</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+                <div class="row">
+                    <div class="col-sm">
+                        <div class="form-group">
+                            <label asp-for="GatewayCustomerId"></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                                <div class="input-group-append">
+                                    <a href="@Model.GatewayCustomerUrl" class="btn btn-secondary" target="_blank">
+                                        <i class="fa fa-external-link"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm">
+                        <div class="form-group">
+                            <label asp-for="GatewaySubscriptionId"></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                                <div class="input-group-append">
+                                    <a href="@Model.GatewaySubscriptionUrl" class="btn btn-secondary" target="_blank">
+                                        <i class="fa fa-external-link"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                break;
+            }
+            case ProviderType.MultiOrganizationEnterprise:
+            {
+                @if (FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises) && Model.Provider.Type == ProviderType.MultiOrganizationEnterprise)
+                {
+                    <div class="row">
+                        <div class="col-sm">
+                            <div class="form-group">
+                                @{
+                                    var multiOrgPlans = new List<PlanType>
+                                    {
+                                        PlanType.EnterpriseAnnually,
+                                        PlanType.EnterpriseMonthly
+                                    };
+                                }
+                                <label asp-for="Plan"></label>
+                                <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                                    <option value="">--</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm">
+                            <div class="form-group">
+                                <label asp-for="EnterpriseMinimumSeats"></label>
+                                <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+                            </div>
+                        </div>
+                    </div>
+                }
+                break;
+            }
+        }
     }
 </form>
 @await Html.PartialAsync("Organizations", Model)
@@ -174,18 +214,15 @@
 
     <div class="d-flex mt-4">
         <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-        @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableDeleteProvider))
-        {
-            <div class="ml-auto d-flex">
-                <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
-                <button id="requestDeletionBtn" hidden="hidden" data-toggle="modal" data-target="#requestDeletionModal"></button>
+        <div class="ml-auto d-flex">
+            <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
+            <button id="requestDeletionBtn" hidden="hidden" data-toggle="modal" data-target="#requestDeletionModal"></button>
 
-                <button class="btn btn-outline-danger ml-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
-                <button id="deleteBtn" hidden="hidden" data-toggle="modal" data-target="#DeleteModal"></button>
+            <button class="btn btn-outline-danger ml-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
+            <button id="deleteBtn" hidden="hidden" data-toggle="modal" data-target="#DeleteModal"></button>
 
-                <button id="linkAccWarningBtn" hidden="hidden" data-toggle="modal" data-target="#linkedWarningModal"></button>
+            <button id="linkAccWarningBtn" hidden="hidden" data-toggle="modal" data-target="#linkedWarningModal"></button>
 
-            </div>
-        }
+        </div>
     </div>
 }

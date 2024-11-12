@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
   <PropertyGroup>
     <UserSecretsId>bitwarden-Api</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
@@ -32,10 +31,10 @@
   </Choose>
 
   <ItemGroup>
-    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="8.0.0" />
-    <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="8.0.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="8.0.2" />
+    <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="8.0.1" />
     <PackageReference Include="Azure.Messaging.EventGrid" Version="4.25.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.8.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
 
 </Project>
