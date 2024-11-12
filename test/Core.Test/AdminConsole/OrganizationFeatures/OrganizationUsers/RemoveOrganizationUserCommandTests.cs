@@ -217,6 +217,60 @@ public class RemoveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task RemoveUser_RemovingManagedUser_WithAccountDeprovisioningEnabled_ThrowsException(
+        [OrganizationUser(status: OrganizationUserStatusType.Accepted, OrganizationUserType.User)] OrganizationUser orgUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(orgUser.OrganizationId)
+            .Returns(false);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+            .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveUserAsync(orgUser.OrganizationId, orgUser.Id, null));
+
+        Assert.Contains("Managed members cannot be simply removed, their entire individual account must be deleted.", exception.Message);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogOrganizationUserEventAsync((OrganizationUser)default, EventType.OrganizationUser_Removed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_RemovingUnmanagedUser_WithAccountDeprovisioningEnabled_Success(
+        [OrganizationUser(status: OrganizationUserStatusType.Accepted, OrganizationUserType.User)] OrganizationUser orgUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(orgUser);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(orgUser.OrganizationId)
+            .Returns(false);
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+            .Returns(new Dictionary<Guid, bool> { { orgUser.Id, false } });
+
+        await sutProvider.Sut.RemoveUserAsync(orgUser.OrganizationId, orgUser.Id, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(orgUser);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
+    }
+
+    [Theory, BitAutoData]
     public async Task RemoveUsers_FilterInvalid_ThrowsException(OrganizationUser organizationUser, OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
@@ -266,6 +320,62 @@ public class RemoveOrganizationUserCommandTests
 
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
         Assert.Contains("Only owners can delete other owners.", result[0].Item2);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUsers_RemovingManagedUser_WithAccountDeprovisioningEnabled_ThrowsException(
+        [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+            .Returns(new[] { orgUser });
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+            .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
+
+        var result = await sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogOrganizationUserEventAsync((OrganizationUser)default, EventType.OrganizationUser_Removed);
+        Assert.Contains("Managed members cannot be simply removed, their entire individual account must be deleted.", result[0].Item2);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUsers_RemovingUnmanagedUser_WithAccountDeprovisioningEnabled_Success(
+        [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+            .Returns(new[] { orgUser });
+
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)))
+            .Returns(new Dictionary<Guid, bool> { { orgUser.Id, false } });
+
+        var result = await sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
+
+        Assert.True(result.Count == 1 && result[0].Item1.Id == orgUser.Id && result[0].Item2 == string.Empty);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
 
     [Theory, BitAutoData]

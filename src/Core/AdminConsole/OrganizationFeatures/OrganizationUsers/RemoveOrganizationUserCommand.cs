@@ -17,6 +17,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IPushRegistrationService _pushRegistrationService;
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IFeatureService _featureService;
 
     public RemoveOrganizationUserCommand(
         IDeviceRepository deviceRepository,
@@ -25,7 +27,9 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
         ICurrentContext currentContext,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IFeatureService featureService)
     {
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -34,6 +38,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _pushRegistrationService = pushRegistrationService;
         _currentContext = currentContext;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _featureService = featureService;
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
@@ -90,6 +96,9 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
+        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) ?
+            await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, filteredUsers.Select(u => u.Id)) :
+            filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<Tuple<OrganizationUser, string>>();
         var deletedUserIds = new List<Guid>();
         foreach (var orgUser in filteredUsers)
@@ -106,13 +115,18 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                     throw new BadRequestException("Only owners can delete other owners.");
                 }
 
+                if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
+                {
+                    throw new BadRequestException("Managed members cannot be simply removed, their entire individual account must be deleted.");
+                }
+
                 await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
 
                 if (orgUser.UserId.HasValue)
                 {
                     await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
                 }
-                result.Add(Tuple.Create(orgUser, ""));
+                result.Add(Tuple.Create(orgUser, string.Empty));
                 deletedUserIds.Add(orgUser.Id);
             }
             catch (BadRequestException e)
@@ -151,6 +165,15 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, new[] { orgUser.Id }, includeProvider: true))
             {
                 throw new BadRequestException("Organization must have at least one confirmed owner.");
+            }
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
+            if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
+            {
+                throw new BadRequestException("Managed members cannot be simply removed, their entire individual account must be deleted.");
             }
         }
 
