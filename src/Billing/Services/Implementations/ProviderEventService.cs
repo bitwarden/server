@@ -61,13 +61,11 @@ public class ProviderEventService(
                             continue;
                         }
 
-                        var plan = StaticStore.Plans.Single(x => x.Name == client.Plan);
+                        var plan = StaticStore.Plans.Single(x => x.Name == client.Plan && providerPlans.Any(y => y.PlanType == x.Type));
 
                         var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
 
                         var discountedSeatPrice = plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
-
-
 
                         invoiceItems.Add(new ProviderInvoiceItem
                         {
