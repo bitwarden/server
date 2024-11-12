@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyValidators;
 using Bit.Core.Auth.Entities;
@@ -127,7 +129,70 @@ public class SingleOrgPolicyValidatorTests
                 "user3@example.com");
     }
 
-    // TODO feature flag is enabled, we call the revoke command
+    [Theory, BitAutoData]
+    public async Task OnSaveSideEffectsAsync_GivenUpdatedSingleOrgPolicy_WhenAccountDeprovisioningIsDisabled_Then(
+        [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
+        [Policy(PolicyType.SingleOrg, false)] Policy policy,
+        Guid savingUserId,
+        Guid nonCompliantUserId,
+        Organization organization, SutProvider<SingleOrgPolicyValidator> sutProvider)
+    {
+        policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
+
+        var compliantUser1 = new OrganizationUserUserDetails
+        {
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = new Guid(),
+            Email = "user1@example.com"
+        };
+
+        var compliantUser2 = new OrganizationUserUserDetails
+        {
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = new Guid(),
+            Email = "user2@example.com"
+        };
+
+        var nonCompliantUser = new OrganizationUserUserDetails
+        {
+            OrganizationId = organization.Id,
+            Type = OrganizationUserType.User,
+            Status = OrganizationUserStatusType.Confirmed,
+            UserId = nonCompliantUserId,
+            Email = "user3@example.com"
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
+            .Returns([compliantUser1, compliantUser2, nonCompliantUser]);
+
+        var otherOrganizationUser = new OrganizationUser
+        {
+            OrganizationId = new Guid(),
+            UserId = nonCompliantUserId,
+            Status = OrganizationUserStatusType.Confirmed
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId)))
+            .Returns([otherOrganizationUser]);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(false);
+
+        await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
+
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .DidNotReceive()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsers>());
+    }
     // TODO feature flag is enabled and revoke returns errors, we throw
     // TODO feature flag is enabled and revoke returns no errors, no throw
     // TODO feature flag is disabled we don't call command
