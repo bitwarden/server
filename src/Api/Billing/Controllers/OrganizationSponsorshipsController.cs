@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -46,8 +45,7 @@ public class OrganizationSponsorshipsController : Controller
         IRemoveSponsorshipCommand removeSponsorshipCommand,
         ICloudSyncSponsorshipsCommand syncSponsorshipsCommand,
         IUserService userService,
-        ICurrentContext currentContext,
-        IPolicyRepository policyRepository)
+        ICurrentContext currentContext)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
