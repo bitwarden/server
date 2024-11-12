@@ -116,8 +116,10 @@ public class ProviderBillingServiceTests
         Organization organization,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        organization.Seats = 10;
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
 
+        organization.Seats = 10;
         organization.PlanType = PlanType.TeamsMonthly;
 
         // Scale up 10 seats
@@ -258,8 +260,10 @@ public class ProviderBillingServiceTests
         Organization organization,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        organization.Seats = 10;
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
 
+        organization.Seats = 10;
         organization.PlanType = PlanType.TeamsMonthly;
 
         // Scale up 10 seats
@@ -339,9 +343,9 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
 
         organization.Seats = 10;
-
         organization.PlanType = PlanType.TeamsMonthly;
 
         // Scale up 10 seats
@@ -419,8 +423,10 @@ public class ProviderBillingServiceTests
         Organization organization,
         SutProvider<ProviderBillingService> sutProvider)
     {
-        organization.Seats = 50;
+        provider.Type = ProviderType.Msp;
+        provider.Status = ProviderStatusType.Billable;
 
+        organization.Seats = 50;
         organization.PlanType = PlanType.TeamsMonthly;
 
         // Scale down 30 seats
