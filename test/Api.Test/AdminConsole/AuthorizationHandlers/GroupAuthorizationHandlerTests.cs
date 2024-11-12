@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Vault.AuthorizationHandlers;
+namespace Bit.Api.Test.AdminConsole.AuthorizationHandlers;
 
 [SutProviderCustomize]
 public class GroupAuthorizationHandlerTests
