@@ -185,6 +185,7 @@ public class OrganizationSponsorshipsController : Controller
 
         var lastSyncDate =
             await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
+
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
     }
 
