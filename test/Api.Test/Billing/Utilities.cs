@@ -59,9 +59,6 @@ public static class Utilities
         Provider provider,
         SutProvider<T> sutProvider) where T : BaseProviderController
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 

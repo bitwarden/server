@@ -14,14 +14,13 @@ namespace Bit.Api.Billing.Controllers;
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
+    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
     [HttpPost]
     public async Task<IResult> CreateAsync(
