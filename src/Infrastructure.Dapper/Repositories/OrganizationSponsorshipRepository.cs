@@ -145,4 +145,15 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
         }
     }
 
+    public async Task<OrganizationSponsorship?> GetBySponsoredOrganizationUserEmailAsync(string email)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<OrganizationSponsorship>(
+            "[dbo].[OrganizationSponsorship_ReadByOfferedToEmail]",
+            new { OfferedToEmail = email },
+            commandType: CommandType.StoredProcedure);
+
+        return results.SingleOrDefault();
+    }
+
 }

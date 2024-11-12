@@ -140,4 +140,13 @@ public class OrganizationSponsorshipRepository : Repository<Core.Entities.Organi
         }
     }
 
+    public async Task<Core.Entities.OrganizationSponsorship?> GetBySponsoredOrganizationUserEmailAsync(string email)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var orgSponsorship = await GetDbSet(dbContext).Where(e => e.OfferedToEmail == email)
+            .FirstOrDefaultAsync();
+        return orgSponsorship;
+    }
+
 }

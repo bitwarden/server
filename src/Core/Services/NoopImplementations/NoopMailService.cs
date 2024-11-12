@@ -236,6 +236,13 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
+        string organizationId,
+        string organizationName)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
     {
         return Task.FromResult(0);

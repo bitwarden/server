@@ -937,6 +937,22 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+        string organizationName)
+    {
+        var message = CreateDefaultMessage("Removal of Free Bitwarden Families plan", email);
+        var model = new FamiliesForEnterpriseRemoveOfferViewModel
+        {
+            SponsoredOrganizationId = organizationId,
+            SponsoringOrgName = CoreHelpers.SanitizeForEmail(organizationName),
+            OfferAcceptanceDate = offerAcceptanceDate,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+        };
+        await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);
+        message.Category = "FamiliesForEnterpriseRemovedFromFamilyUser";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
     {
         var message = CreateDefaultMessage("Your Families Sponsorship was Removed", email);
