@@ -5,5 +5,5 @@ namespace Bit.Core.Vault.Repositories;
 
 public interface ISecurityTaskRepository : IRepository<SecurityTask, Guid>
 {
-    
+
 }
