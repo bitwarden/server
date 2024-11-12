@@ -95,6 +95,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
         services
             .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
+        services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
 
         if (selfHosted)
         {

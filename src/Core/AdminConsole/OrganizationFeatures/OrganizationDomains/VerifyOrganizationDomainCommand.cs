@@ -20,7 +20,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
     private readonly IGlobalSettings _globalSettings;
     private readonly IPolicyService _policyService;
     private readonly IFeatureService _featureService;
-    private readonly IOrganizationService _organizationService;
     private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
 
     public VerifyOrganizationDomainCommand(
@@ -30,7 +29,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         IGlobalSettings globalSettings,
         IPolicyService policyService,
         IFeatureService featureService,
-        IOrganizationService organizationService,
         ILogger<VerifyOrganizationDomainCommand> logger)
     {
         _organizationDomainRepository = organizationDomainRepository;
@@ -39,7 +37,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         _globalSettings = globalSettings;
         _policyService = policyService;
         _featureService = featureService;
-        _organizationService = organizationService;
         _logger = logger;
     }
 
