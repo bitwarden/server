@@ -17,6 +17,9 @@ public static class BillingExtensions
             Status: ProviderStatusType.Billable
         };
 
+    public static bool SupportsConsolidatedBilling(this ProviderType providerType)
+        => providerType is ProviderType.Msp or ProviderType.MultiOrganizationEnterprise;
+
     public static bool IsValidClient(this Organization organization)
         => organization is
         {
