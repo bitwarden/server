@@ -25,7 +25,7 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
 
         await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
 
-        await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.SponsoringOrganizationId.ToString(), sponsorship.OfferedToEmail, true, Arg.Any<string>());
+        await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, true, Arg.Any<string>());
     }
 
 
@@ -37,7 +37,7 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
 
         await sutProvider.Sut.SendSponsorshipOfferAsync(sponsorship, sponsoringOrgName);
 
-        await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.SponsoringOrganizationId.ToString(), sponsorship.OfferedToEmail, false, Arg.Any<string>());
+        await sutProvider.GetDependency<IMailService>().Received(1).SendFamiliesForEnterpriseOfferEmailAsync(sponsoringOrgName, sponsorship.OfferedToEmail, false, Arg.Any<string>());
     }
 
     [Theory]
@@ -52,7 +52,7 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
         Assert.Contains("Cannot find the requested sponsoring organization.", exception.Message);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default, default);
+            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
     }
 
     [Theory]
@@ -66,7 +66,7 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
         Assert.Contains("Only confirmed users can sponsor other organizations.", exception.Message);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default, default);
+            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
     }
 
     [Theory]
@@ -84,7 +84,7 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
         Assert.Contains("Only confirmed users can sponsor other organizations.", exception.Message);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default, default);
+            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
     }
 
     [Theory]
@@ -101,7 +101,7 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
         Assert.Contains("Cannot find an outstanding sponsorship offer for this organization.", exception.Message);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default, default);
+            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
     }
 
     [Theory]
@@ -119,6 +119,6 @@ public class SendSponsorshipOfferCommandTests : FamiliesForEnterpriseTestsBase
         Assert.Contains("Cannot find an outstanding sponsorship offer for this organization.", exception.Message);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default, default);
+            .SendFamiliesForEnterpriseOfferEmailAsync(default, default, default, default);
     }
 }

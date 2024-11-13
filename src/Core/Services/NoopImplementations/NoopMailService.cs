@@ -226,12 +226,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, string sponsoringOrgId, string email, bool existingAccount, string token)
+    public Task SendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, string email, bool existingAccount, string token)
     {
         return Task.FromResult(0);
     }
 
-    public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, string sponsoringOrgId, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
+    public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
     {
         return Task.FromResult(0);
     }
