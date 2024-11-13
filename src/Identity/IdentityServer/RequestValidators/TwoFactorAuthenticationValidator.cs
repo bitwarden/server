@@ -117,8 +117,8 @@ public class TwoFactorAuthenticationValidator(
 
         var twoFactorResultDict = new Dictionary<string, object>
         {
-            { "TwoFactorProviders", null },
-            { "TwoFactorProviders2", providers }, // backwards compatibility
+            { "TwoFactorProviders", providers.Keys }, // backwards compatibility
+            { "TwoFactorProviders2", providers },
         };
 
         // If we have email as a 2FA provider, we might need an SsoEmail2fa Session Token

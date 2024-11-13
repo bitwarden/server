@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 
 /// <summary>
 /// A typed wrapper for an organization Guid. This is used for authorization checks
