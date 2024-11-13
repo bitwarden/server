@@ -148,9 +148,10 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
     {
         userToRevoke.OrganizationId = organizationId;
+        userToRevoke.Type = OrganizationUserType.Admin;
 
         var command = new RevokeOrganizationUsers(organizationId, userToRevoke,
-            new StandardUser(Guid.NewGuid(), true));
+            new StandardUser(Guid.NewGuid(), false));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())

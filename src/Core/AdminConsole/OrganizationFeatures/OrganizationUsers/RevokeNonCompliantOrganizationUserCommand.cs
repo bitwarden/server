@@ -90,7 +90,7 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
                 return result;
             }
 
-            if (IsNonOwnerRevokingAnOwner(userToRevoke, request.ActionPerformedBy))
+            if (NonOwnersCannotRevokeOwners(userToRevoke, request.ActionPerformedBy))
             {
                 result.ErrorMessages.Add($"{OnlyOwnersCanRevokeOtherOwners}");
                 return result;
@@ -105,13 +105,9 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     private static bool IsAlreadyRevoked(OrganizationUserUserDetails organizationUser) =>
         organizationUser is { Status: OrganizationUserStatusType.Revoked };
 
-    private static bool IsNonOwnerRevokingAnOwner(OrganizationUserUserDetails organizationUser,
-        IActingUser requestingUser) => requestingUser is StandardUser standardUser &&
-                                       !IsActingUserAllowedToRevokeOwner(organizationUser, standardUser) &&
-                                       !IsActingUserRevokingNonOwner(organizationUser);
-
-    private static bool IsActingUserRevokingNonOwner(OrganizationUserUserDetails organizationUser) =>
-        organizationUser is not { Type: OrganizationUserType.Owner };
+    private static bool NonOwnersCannotRevokeOwners(OrganizationUserUserDetails organizationUser,
+        IActingUser actingUser) =>
+        actingUser is StandardUser { IsOrganizationOwner: false } && organizationUser.Type == OrganizationUserType.Owner;
 
     private static bool IsActingUserAllowedToRevokeOwner(OrganizationUserUserDetails organizationUser,
         StandardUser requestingOrganizationUser) => organizationUser is { Type: OrganizationUserType.Owner }
