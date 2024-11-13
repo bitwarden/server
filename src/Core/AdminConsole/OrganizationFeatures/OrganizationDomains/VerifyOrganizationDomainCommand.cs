@@ -1,4 +1,7 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -15,6 +18,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
     private readonly IDnsResolverService _dnsResolverService;
     private readonly IEventService _eventService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IPolicyService _policyService;
+    private readonly IFeatureService _featureService;
     private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
 
     public VerifyOrganizationDomainCommand(
@@ -22,12 +27,16 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         IDnsResolverService dnsResolverService,
         IEventService eventService,
         IGlobalSettings globalSettings,
+        IPolicyService policyService,
+        IFeatureService featureService,
         ILogger<VerifyOrganizationDomainCommand> logger)
     {
         _organizationDomainRepository = organizationDomainRepository;
         _dnsResolverService = dnsResolverService;
         _eventService = eventService;
         _globalSettings = globalSettings;
+        _policyService = policyService;
+        _featureService = featureService;
         _logger = logger;
     }
 
@@ -102,6 +111,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
             {
                 domain.SetVerifiedDate();
+
+                await EnableSingleOrganizationPolicyAsync(domain.OrganizationId);
             }
         }
         catch (Exception e)
@@ -111,5 +122,14 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         }
 
         return domain;
+    }
+
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId)
+    {
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            await _policyService.SaveAsync(
+                new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true }, null);
+        }
     }
 }

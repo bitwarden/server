@@ -94,6 +94,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendPasswordlessSignInAsync(string returnUrl, string token, string email)
     {
         return Task.FromResult(0);

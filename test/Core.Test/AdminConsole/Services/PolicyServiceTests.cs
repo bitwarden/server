@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
@@ -814,5 +815,33 @@ public class PolicyServiceTests
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
             });
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_GivenOrganizationUsingPoliciesAndHasVerifiedDomains_WhenSingleOrgPolicyIsDisabled_ThenAnErrorShouldBeThrownOrganizationHasVerifiedDomains(
+        [AdminConsoleFixtures.Policy(PolicyType.SingleOrg)] Policy policy, Organization org, SutProvider<PolicyService> sutProvider)
+    {
+        org.Id = policy.OrganizationId;
+        org.UsePolicies = true;
+
+        policy.Enabled = false;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policy.OrganizationId)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
+            .HasVerifiedDomainsAsync(org.Id)
+            .Returns(true);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy, null));
+
+        Assert.Equal("The Single organization policy is required for organizations that have enabled domain verification.", badRequestException.Message);
     }
 }
