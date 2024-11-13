@@ -9,7 +9,7 @@ using Duo = DuoUniversal;
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
 /// <summary>
-/// OrganizationDuo and Duo types both use the same flows so both of those Token Providers will
+/// OrganizationDuo and Duo TwoFactorProviderTypes both use the same flows so both of those Token Providers will
 /// have this class injected to utilize these methods
 /// </summary>
 public interface IDuoUniversalTokenService

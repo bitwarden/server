@@ -4,7 +4,6 @@ using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
-using Microsoft.Extensions.DependencyInjection;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
@@ -12,23 +11,20 @@ namespace Bit.Core.Auth.Identity.TokenProviders;
 public interface IOrganizationDuoUniversalTokenProvider : IOrganizationTwoFactorTokenProvider { }
 
 public class OrganizationDuoUniversalTokenProvider(
-    IServiceProvider serviceProvider,
+    IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
     IDuoUniversalTokenService duoUniversalTokenService) : IOrganizationDuoUniversalTokenProvider
 {
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = duoUniversalTokenService;
 
     public Task<bool> CanGenerateTwoFactorTokenAsync(Organization organization)
     {
-        if (organization == null || !organization.Enabled || !organization.Use2fa)
+        var provider = GetDuoTwoFactorProvider(organization);
+        if (provider != null && provider.Enabled)
         {
-            return Task.FromResult(false);
+            return Task.FromResult(true);
         }
-
-        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-        var canGenerate = organization.TwoFactorProviderIsEnabled(TwoFactorProviderType.OrganizationDuo)
-            && _duoUniversalTokenService.HasProperDuoMetadata(provider);
-        return Task.FromResult(canGenerate);
+        return Task.FromResult(false);
     }
 
     public async Task<string> GenerateAsync(Organization organization, User user)
@@ -38,9 +34,7 @@ public class OrganizationDuoUniversalTokenProvider(
         {
             return null;
         }
-
-        var tokenDataFactory = _serviceProvider.GetRequiredService<IDataProtectorTokenFactory<DuoUserStateTokenable>>();
-        return _duoUniversalTokenService.GenerateAuthUrl(duoClient, tokenDataFactory, user);
+        return _duoUniversalTokenService.GenerateAuthUrl(duoClient, _tokenDataFactory, user);
     }
 
     public async Task<bool> ValidateAsync(string token, Organization organization, User user)
@@ -50,9 +44,7 @@ public class OrganizationDuoUniversalTokenProvider(
         {
             return false;
         }
-
-        var tokenDataFactory = _serviceProvider.GetRequiredService<IDataProtectorTokenFactory<DuoUserStateTokenable>>();
-        return await _duoUniversalTokenService.RequestDuoValidationAsync(duoClient, tokenDataFactory, user, token);
+        return await _duoUniversalTokenService.RequestDuoValidationAsync(duoClient, _tokenDataFactory, user, token);
     }
 
     private TwoFactorProvider GetDuoTwoFactorProvider(Organization organization)

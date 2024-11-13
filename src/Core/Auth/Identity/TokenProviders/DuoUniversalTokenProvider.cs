@@ -5,16 +5,17 @@ using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public class DuoUniversalTokenProvider(
-    IServiceProvider serviceProvider,
+    IUserService userService,
+    IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
     IDuoUniversalTokenService duoUniversalTokenService) : IUserTwoFactorTokenProvider<User>
 {
-    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly IUserService _userService = userService;
+    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = duoUniversalTokenService;
 
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
@@ -24,9 +25,7 @@ public class DuoUniversalTokenProvider(
         {
             return false;
         }
-
-        var userService = _serviceProvider.GetRequiredService<IUserService>();
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
+        return await _userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -36,9 +35,7 @@ public class DuoUniversalTokenProvider(
         {
             return null;
         }
-
-        var tokenDataFactory = _serviceProvider.GetRequiredService<IDataProtectorTokenFactory<DuoUserStateTokenable>>();
-        return _duoUniversalTokenService.GenerateAuthUrl(duoClient, tokenDataFactory, user);
+        return _duoUniversalTokenService.GenerateAuthUrl(duoClient, _tokenDataFactory, user);
     }
 
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
@@ -48,9 +45,7 @@ public class DuoUniversalTokenProvider(
         {
             return false;
         }
-
-        var tokenDataFactory = _serviceProvider.GetRequiredService<IDataProtectorTokenFactory<DuoUserStateTokenable>>();
-        return await _duoUniversalTokenService.RequestDuoValidationAsync(duoClient, tokenDataFactory, user, token);
+        return await _duoUniversalTokenService.RequestDuoValidationAsync(duoClient, _tokenDataFactory, user, token);
     }
 
     /// <summary>
@@ -60,8 +55,7 @@ public class DuoUniversalTokenProvider(
     /// <returns>null or Duo TwoFactorProvider</returns>
     private async Task<TwoFactorProvider> GetDuoTwoFactorProvider(User user)
     {
-        var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!await userService.CanAccessPremium(user))
+        if (!await _userService.CanAccessPremium(user))
         {
             return null;
         }
