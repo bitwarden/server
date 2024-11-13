@@ -9,11 +9,6 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public interface IRevokeNonCompliantOrganizationUserCommand
-{
-    Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsers request);
-}
-
 public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserRepository organizationUserRepository,
     IEventService eventService,
     IHasConfirmedOwnersExceptQuery confirmedOwnersExceptQuery,
