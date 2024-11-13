@@ -94,7 +94,8 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
                 throw new BadRequestException(string.Join(", ", result.ErrorMessages));
             }
 
-            // TODO Send out User Revoked Email
+            await Task.WhenAll(revocableOrgUsers.Select(x =>
+                _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(org!.DisplayName(), x.Email)));
         }
         else
         {
