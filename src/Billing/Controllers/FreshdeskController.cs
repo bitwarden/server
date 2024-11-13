@@ -165,7 +165,7 @@ public class FreshdeskController : Controller
                 throw;
             }
         }
-        retriedCount ++;
+        retriedCount++;
         await Task.Delay(30000 * retriedCount);
         return await CallFreshdeskApiAsync(request, retriedCount);
     }
