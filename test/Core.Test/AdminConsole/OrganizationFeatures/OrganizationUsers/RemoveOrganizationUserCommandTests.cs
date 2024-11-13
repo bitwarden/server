@@ -298,7 +298,7 @@ public class RemoveOrganizationUserCommandTests
             .Returns(true);
 
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
-        Assert.Contains("You cannot remove yourself.", result[0].Item2);
+        Assert.Contains("You cannot remove yourself.", result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -319,7 +319,7 @@ public class RemoveOrganizationUserCommandTests
             .Returns(true);
 
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
-        Assert.Contains("Only owners can delete other owners.", result[0].Item2);
+        Assert.Contains("Only owners can delete other owners.", result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -347,7 +347,7 @@ public class RemoveOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogOrganizationUserEventAsync((OrganizationUser)default, EventType.OrganizationUser_Removed);
-        Assert.Contains("Managed members cannot be simply removed, their entire individual account must be deleted.", result[0].Item2);
+        Assert.Contains("Managed members cannot be simply removed, their entire individual account must be deleted.", result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -373,7 +373,7 @@ public class RemoveOrganizationUserCommandTests
 
         var result = await sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
 
-        Assert.True(result.Count == 1 && result[0].Item1.Id == orgUser.Id && result[0].Item2 == string.Empty);
+        Assert.True(result.Count() == 1 && result.First().OrganizationUserId == orgUser.Id && result.First().ErrorMessage == string.Empty);
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed);
     }
