@@ -11,3 +11,5 @@ BEGIN
     WHERE
         [Id] IN (SELECT Id from @OrganizationUserIds)
 END
+
+EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @OrganizationUserIds
