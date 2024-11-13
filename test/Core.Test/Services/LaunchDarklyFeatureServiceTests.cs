@@ -24,6 +24,7 @@ public class LaunchDarklyFeatureServiceTests
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
         currentContext.ClientVersion.Returns(new Version(AssemblyHelpers.GetVersion()));
+        currentContext.ClientVersionIsPrerelease.Returns(true);
         currentContext.DeviceType.Returns(Enums.DeviceType.ChromeBrowser);
 
         var client = Substitute.For<ILdClient>();

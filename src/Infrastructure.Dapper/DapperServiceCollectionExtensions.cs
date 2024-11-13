@@ -60,6 +60,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
         services
             .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
+        services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
 
         if (selfHosted)
