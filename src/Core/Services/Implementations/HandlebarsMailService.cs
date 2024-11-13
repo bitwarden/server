@@ -289,7 +289,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicyTwoStep", model);
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRemovedForPolicyTwoStep", model);
         message.Category = "OrganizationUserRemovedForPolicyTwoStep";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -303,7 +303,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "OrganizationUserRevokedForTwoFactorPolicy", model);
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForTwoFactorPolicy", model);
         message.Category = "OrganizationUserRevokedForTwoFactorPolicy";
         await _mailDeliveryService.SendEmailAsync(message);
     }

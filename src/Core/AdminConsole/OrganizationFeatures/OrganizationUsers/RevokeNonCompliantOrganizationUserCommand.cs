@@ -95,7 +95,7 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
                 return result;
             }
 
-            if (IsNonOwnerRevokingAnOwner(userToRevoke, request.ActionPerformedBy))
+            if (!IsNonOwnerRevokingAnOwner(userToRevoke, request.ActionPerformedBy))
             {
                 result.ErrorMessages.Add($"{OnlyOwnersCanRevokeOtherOwners}");
                 return result;
