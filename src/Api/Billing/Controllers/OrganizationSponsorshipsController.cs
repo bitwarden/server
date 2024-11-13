@@ -183,8 +183,7 @@ public class OrganizationSponsorshipsController : Controller
             throw new NotFoundException();
         }
 
-        var lastSyncDate = await
-            _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
+        var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
 
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
     }
