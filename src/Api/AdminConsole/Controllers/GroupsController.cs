@@ -2,15 +2,16 @@
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Api.Vault.AuthorizationHandlers.Groups;
+using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -89,11 +90,34 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroups(Guid orgId)
     {
-        var authorized =
-            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
-        if (!authorized)
+        var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
+        if (!authResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SecureOrgGroupDetails))
+        {
+            var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
+            var responses = groups.Select(g => new GroupDetailsResponseModel(g, []));
+            return new ListResponseModel<GroupDetailsResponseModel>(responses);
+        }
+
+        var groupDetails = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
+        var detailResponses = groupDetails.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        return new ListResponseModel<GroupDetailsResponseModel>(detailResponses);
+    }
+
+    [HttpGet("details")]
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
+    {
+        var authResult = _featureService.IsEnabled(FeatureFlagKeys.SecureOrgGroupDetails)
+            ? await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAllDetails)
+            : await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
+
+        if (!authResult.Succeeded)
         {
             throw new NotFoundException();
         }
