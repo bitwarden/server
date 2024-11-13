@@ -132,7 +132,7 @@ public class OrganizationSponsorshipsController : Controller
         }
 
         var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.DisplayName(), sponsoringOrg.Id.ToString(), offersToSend);
+        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.DisplayName(), offersToSend);
         return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
     }
 
@@ -183,8 +183,8 @@ public class OrganizationSponsorshipsController : Controller
             throw new NotFoundException();
         }
 
-        var lastSyncDate =
-            await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
+        var lastSyncDate = await
+            _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
 
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
     }
