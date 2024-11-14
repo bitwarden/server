@@ -105,16 +105,3 @@ WHERE [Id] = @Id
 END
 GO
 
--- Stored Procedures: DeleteById
-CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_DeleteById]
-	@Id UNIQUEIDENTIFIER
-AS
-BEGIN
-	SET NOCOUNT ON
-
-DELETE FROM
-    [dbo].[SecurityTask]
-WHERE
-    [Id] = @Id
-END
-GO
