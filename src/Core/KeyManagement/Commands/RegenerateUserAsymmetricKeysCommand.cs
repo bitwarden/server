@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands.Interfaces;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.KeyManagement.Commands;
@@ -17,15 +18,18 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<RegenerateUserAsymmetricKeysCommand> _logger;
     private readonly IUserAsymmetricKeysRepository _userAsymmetricKeysRepository;
+    private readonly IPushNotificationService _pushService;
 
     public RegenerateUserAsymmetricKeysCommand(
         ICurrentContext currentContext,
         IUserAsymmetricKeysRepository userAsymmetricKeysRepository,
+        IPushNotificationService pushService,
         ILogger<RegenerateUserAsymmetricKeysCommand> logger)
     {
         _currentContext = currentContext;
         _logger = logger;
         _userAsymmetricKeysRepository = userAsymmetricKeysRepository;
+        _pushService = pushService;
     }
 
     public async Task RegenerateKeysAsync(UserAsymmetricKeys userAsymmetricKeys,
@@ -61,5 +65,7 @@ public class RegenerateUserAsymmetricKeysCommand : IRegenerateUserAsymmetricKeys
         _logger.LogInformation(
             "User's asymmetric keys regenerated. UserId: {userId} OrganizationMembership: {inOrganizations} DesignatedEmergencyAccess: {hasDesignatedEmergencyAccess} DeviceType: {deviceType}",
             userAsymmetricKeys.UserId, inOrganizations, hasDesignatedEmergencyAccess, _currentContext.DeviceType);
+
+        await _pushService.PushSyncSettingsAsync(userId.Value);
     }
 }

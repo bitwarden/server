@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -49,6 +50,9 @@ public class RegenerateUserAsymmetricKeysCommandTests
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .Received(1)
             .RegenerateUserAsymmetricKeysAsync(Arg.Is(userAsymmetricKeys));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncSettingsAsync(Arg.Is(userAsymmetricKeys.UserId));
     }
 
     [Theory]
@@ -88,6 +92,9 @@ public class RegenerateUserAsymmetricKeysCommandTests
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .ReceivedWithAnyArgs(0)
             .RegenerateUserAsymmetricKeysAsync(Arg.Any<UserAsymmetricKeys>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .ReceivedWithAnyArgs(0)
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -110,6 +117,9 @@ public class RegenerateUserAsymmetricKeysCommandTests
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .ReceivedWithAnyArgs(0)
             .RegenerateUserAsymmetricKeysAsync(Arg.Any<UserAsymmetricKeys>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .ReceivedWithAnyArgs(0)
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -134,6 +144,9 @@ public class RegenerateUserAsymmetricKeysCommandTests
         await sutProvider.GetDependency<IUserAsymmetricKeysRepository>()
             .ReceivedWithAnyArgs(0)
             .RegenerateUserAsymmetricKeysAsync(Arg.Any<UserAsymmetricKeys>());
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .ReceivedWithAnyArgs(0)
+            .PushSyncSettingsAsync(Arg.Any<Guid>());
     }
 
     private static ICollection<OrganizationUser> CreateInOrganizationAccounts(Guid userId,
