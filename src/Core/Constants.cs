@@ -125,7 +125,6 @@ public static class FeatureFlagKeys
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string SSHAgent = "ssh-agent";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
-    public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
