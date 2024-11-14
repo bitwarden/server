@@ -17,9 +17,9 @@ public class DuoUniversalTokenProvider(
 {
     /// <summary>
     /// We need the IServiceProvider to resolve the IUserService. There is a complex dependency dance
-    /// occuring between IUserService, which extends the UserManager<User>, and the usage of the 
+    /// occurring between IUserService, which extends the UserManager<User>, and the usage of the 
     /// UserManager<User> within this class. Trying to resolve the IUserService using the DI pipeline
-    /// will not allow the server to start and it will hand and give no helpful indication as to the problem.
+    /// will not allow the server to start and it will hang and give no helpful indication as to the problem.
     /// </summary>
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
