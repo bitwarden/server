@@ -53,3 +53,11 @@ h3 {
 .form-check-input {
     margin-top: .45rem;
 }
+
+a {
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+}
