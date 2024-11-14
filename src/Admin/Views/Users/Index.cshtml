@@ -55,7 +55,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-star-o fa-lg fa-fw text-muted" title="Not Premium"></i>
+                            <i class="fa fa-star-o fa-lg fa-fw text-body-secondary" title="Not Premium"></i>
                         }
                         @if (user.MaxStorageGb.HasValue && user.MaxStorageGb > 1)
                         {
@@ -65,7 +65,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-plus-square-o fa-lg fa-fw text-muted"
+                            <i class="fa fa-plus-square-o fa-lg fa-fw text-body-secondary"
                                title="No Additional Storage">
                             </i>
                         }
@@ -75,7 +75,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
+                            <i class="fa fa-times-circle-o fa-lg fa-fw text-body-secondary" title="Email Not Verified"></i>
                         }
                         @if (user.TwoFactorEnabled)
                         {
@@ -83,7 +83,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
+                            <i class="fa fa-unlock fa-lg fa-fw text-body-secondary" title="2FA Not Enabled"></i>
                         }
                     </td>
                 </tr>
