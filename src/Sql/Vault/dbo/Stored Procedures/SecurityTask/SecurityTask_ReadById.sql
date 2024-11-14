@@ -4,7 +4,10 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-SELECT *
-FROM [dbo].[SecurityTaskView]
-WHERE [Id] = @Id
+    SELECT
+        *
+    FROM
+        [dbo].[SecurityTaskView]
+    WHERE
+        [Id] = @Id
 END

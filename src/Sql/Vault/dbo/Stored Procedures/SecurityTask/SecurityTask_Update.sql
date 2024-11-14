@@ -10,12 +10,15 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	UPDATE [dbo].[SecurityTask]
-	SET [OrganizationId] = @OrganizationId,
+	UPDATE
+	    [dbo].[SecurityTask]
+	SET
+        [OrganizationId] = @OrganizationId,
 		[CipherId] = @CipherId,
 		[Type] = @Type,
 		[Status] = @Status,
 		[CreationDate] = @CreationDate,
 		[RevisionDate] = @RevisionDate
-	WHERE [Id] = @Id
+	WHERE
+        [Id] = @Id
 END

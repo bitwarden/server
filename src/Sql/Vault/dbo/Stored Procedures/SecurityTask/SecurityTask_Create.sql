@@ -10,7 +10,8 @@ AS
 BEGIN
 	SET NOCOUNT ON
 
-	INSERT INTO [dbo].[SecurityTask] (
+	INSERT INTO [dbo].[SecurityTask]
+    (
 		[Id],
 		[OrganizationId],
 		[CipherId],
@@ -19,7 +20,8 @@ BEGIN
 		[CreationDate],
 		[RevisionDate]
 	)
-    VALUES (
+    VALUES
+    (
 		@Id,
 		@OrganizationId,
 		@CipherId,
