@@ -351,35 +351,11 @@ public class PolicyService : IPolicyService
                         }
                     }
                     break;
-                case PolicyType.FreeFamiliesSponsorshipPolicy:
-                    if (_featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship))
-                    {
-                        await NotifiesUserWithApplicablePoliciesAsync(policy, org.Name);
-                    }
-                    break;
                 default:
                     break;
             }
         }
 
         await SetPolicyConfiguration(policy);
-    }
-
-    private async Task NotifiesUserWithApplicablePoliciesAsync(Policy policy, string organizationName)
-    {
-        var organizationSponsorships = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(policy.OrganizationId))
-            .Where(p => p.SponsoredOrganizationId is not null)
-            .ToList();
-        if (string.IsNullOrWhiteSpace(organizationName))
-        {
-            var organization = await _organizationRepository.GetByIdAsync(policy.OrganizationId);
-            organizationName = organization?.Name;
-        }
-        foreach (var org in organizationSponsorships)
-        {
-            var offerAcceptanceDate = org.ValidUntil!.Value.AddDays(-7).ToString("MM/dd/yyyy");
-            await _mailService.SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(org.FriendlyName, offerAcceptanceDate,
-                org.SponsoredOrganizationId.ToString(), organizationName);
-        }
     }
 }
