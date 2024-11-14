@@ -95,11 +95,11 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
-        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) ?
-            await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, filteredUsers.Select(u => u.Id)) :
-            filteredUsers.ToDictionary(u => u.Id, u => false);
+        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            ? await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
+            : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(Guid OrganizationUserId, string ErrorMessage)>();
-        var deletedUserIds = new List<Guid>();
+        var userIdsToDelete = new List<Guid>();
         foreach (var orgUser in filteredUsers)
         {
             try
@@ -126,7 +126,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
                     await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
                 }
                 result.Add((orgUser.Id, string.Empty));
-                deletedUserIds.Add(orgUser.Id);
+                userIdsToDelete.Add(orgUser.Id);
             }
             catch (BadRequestException e)
             {
@@ -134,12 +134,12 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             }
         }
 
-        if (deletedUserIds.Any())
+        if (userIdsToDelete.Any())
         {
             DateTime? eventDate = DateTime.UtcNow;
-            await _organizationUserRepository.DeleteManyAsync(deletedUserIds);
+            await _organizationUserRepository.DeleteManyAsync(userIdsToDelete);
             await _eventService.LogOrganizationUserEventsAsync(
-                orgUsers.Where(u => deletedUserIds.Contains(u.Id))
+                filteredUsers.Where(u => userIdsToDelete.Contains(u.Id))
                     .Select(u => (u, EventType.OrganizationUser_Removed, eventDate)));
         }
 
@@ -205,30 +205,5 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(devices,
             organizationId.ToString());
         await _pushNotificationService.PushSyncOrgKeysAsync(userId);
-    }
-
-    private async Task LogDeletedOrganizationUsersAsync(
-        IEnumerable<OrganizationUser> orgUsers,
-        IEnumerable<(Guid OrgUserId, string ErrorMessage)> results)
-    {
-        var eventDate = DateTime.UtcNow;
-        var events = new List<(OrganizationUser OrgUser, EventType Event, DateTime? EventDate)>();
-
-        foreach (var (orgUserId, errorMessage) in results)
-        {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.Id == orgUserId);
-            // If the user was not found or there was an error, we skip logging the event
-            if (orgUser == null || !string.IsNullOrEmpty(errorMessage))
-            {
-                continue;
-            }
-
-            events.Add((orgUser, EventType.OrganizationUser_Deleted, eventDate));
-        }
-
-        if (events.Any())
-        {
-            await _eventService.LogOrganizationUserEventsAsync(events);
-        }
     }
 }
