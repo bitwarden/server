@@ -3,7 +3,6 @@ using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -87,26 +86,13 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
         user.Premium = true;
         user.PremiumExpirationDate = DateTime.UtcNow.AddDays(1);
 
-        var userManager = SubstituteUserManager();
-        MockDatabase(user, metaData);
-
-        sutProvider.GetDependency<IUserService>()
-            .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
-            .Returns(true);
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
-
         sutProvider.GetDependency<IDuoUniversalTokenService>()
             .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
             .Returns(expectedResponse);
 
         // Act
-        var response = await sutProvider.Sut.CanGenerateTwoFactorTokenAsync(userManager, user);
-
         // Assert
-        Assert.Equal(expectedResponse, response);
+        await base.RunCanGenerateTwoFactorTokenAsync(metaData, expectedResponse, user, sutProvider);
     }
 
     [Theory, BitMemberAutoData(nameof(NonPremiumCanGenerateTwoFactorTokenAsyncData))]
@@ -114,25 +100,15 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
     User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
-        user.Premium = true;
-        user.PremiumExpirationDate = DateTime.UtcNow.AddDays(1);
+        user.Premium = false;
 
-        var userManager = SubstituteUserManager();
-        MockDatabase(user, metaData);
-
-        sutProvider.GetDependency<IUserService>()
-            .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
-            .Returns(true);
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(false);
+        sutProvider.GetDependency<IDuoUniversalTokenService>()
+            .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
+            .Returns(expectedResponse);
 
         // Act
-        var response = await sutProvider.Sut.CanGenerateTwoFactorTokenAsync(userManager, user);
-
         // Assert
-        Assert.Equal(expectedResponse, response);
+        await base.RunCanGenerateTwoFactorTokenAsync(metaData, expectedResponse, user, sutProvider);
     }
 
     [Theory]
@@ -164,11 +140,9 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
         User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
+        user.Premium = true;
         user.TwoFactorProviders = GetTwoFactorDuoProvidersJson();
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
+        AdditionalSetup(sutProvider, user);
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()
             .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
@@ -191,9 +165,9 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
     User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(false);
+        user.Premium = false;
+        user.TwoFactorProviders = GetTwoFactorDuoProvidersJson();
+        AdditionalSetup(sutProvider, user);
 
         // Act
         var token = await sutProvider.Sut.GenerateAsync("purpose", SubstituteUserManager(), user);
@@ -230,11 +204,9 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
     public async Task ValidateToken_DuoClientNull_ReturnsFalse(
     User user, SutProvider<DuoUniversalTokenProvider> sutProvider, string token)
     {
+        user.Premium = true;
         user.TwoFactorProviders = GetTwoFactorDuoProvidersJson();
-
-        sutProvider.GetDependency<IUserService>()
-            .CanAccessPremium(user)
-            .Returns(true);
+        AdditionalSetup(sutProvider, user);
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()
             .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
@@ -260,12 +232,11 @@ public class DuoUniversalTwoFactorTokenProviderTests : BaseTokenProviderTests<Du
     /// <param name="sutProvider">self</param>
     private void SetUpProperDuoUniversalTokenService(User user, SutProvider<DuoUniversalTokenProvider> sutProvider)
     {
+        user.Premium = true;
         user.TwoFactorProviders = GetTwoFactorDuoProvidersJson();
         var client = BuildDuoClient();
 
-        sutProvider.GetDependency<IUserService>()
-                .CanAccessPremium(user)
-                .Returns(true);
+        AdditionalSetup(sutProvider, user);
 
         sutProvider.GetDependency<IDuoUniversalTokenService>()
                 .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())

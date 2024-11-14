@@ -5,27 +5,29 @@ using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 using Duo = DuoUniversal;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public class DuoUniversalTokenProvider(
-    IUserService userService,
+    IServiceProvider serviceProvider,
     IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
     IDuoUniversalTokenService duoUniversalTokenService) : IUserTwoFactorTokenProvider<User>
 {
-    private readonly IUserService _userService = userService;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = duoUniversalTokenService;
 
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
-        var provider = await GetDuoTwoFactorProvider(user);
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        var provider = await GetDuoTwoFactorProvider(user, userService);
         if (provider == null)
         {
             return false;
         }
-        return await _userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
+        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -53,9 +55,9 @@ public class DuoUniversalTokenProvider(
     /// </summary>
     /// <param name="user">Active User</param>
     /// <returns>null or Duo TwoFactorProvider</returns>
-    private async Task<TwoFactorProvider> GetDuoTwoFactorProvider(User user)
+    private async Task<TwoFactorProvider> GetDuoTwoFactorProvider(User user, IUserService userService)
     {
-        if (!await _userService.CanAccessPremium(user))
+        if (!await userService.CanAccessPremium(user))
         {
             return null;
         }
@@ -76,7 +78,8 @@ public class DuoUniversalTokenProvider(
     /// <returns>null or Duo TwoFactorProvider</returns>
     private async Task<Duo.Client> GetDuoClientAsync(User user)
     {
-        var provider = await GetDuoTwoFactorProvider(user);
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        var provider = await GetDuoTwoFactorProvider(user, userService);
         if (provider == null)
         {
             return null;

@@ -54,14 +54,18 @@ public interface IDuoUniversalTokenService
     Task<bool> ValidateDuoConfiguration(string clientSecret, string clientId, string host);
 
     /// <summary>
-    /// Checks provider for the correct Duo metadata: ClientId, ClientSecret, and Host.
+    /// Checks provider for the correct Duo metadata: ClientId, ClientSecret, and Host. Does no validation on the data.
+    /// it is assumed to be correct. The only way to have the data written to the Database is after verification
+    /// occurs.
     /// </summary>
     /// <param name="provider">Host being checked for proper data</param>
     /// <returns>true if all three are present; false if one is missing or the host is incorrect</returns>
     bool HasProperDuoMetadata(TwoFactorProvider provider);
 
     /// <summary>
-    /// Generates a Duo.Client object for use with Duo SDK v4. This combines the health check and the client generation
+    /// Generates a Duo.Client object for use with Duo SDK v4. This combines the health check and the client generation.
+    /// This method is made public so that it is easier to test. If the method was private then there would not be an
+    /// easy way to mock the response. Since this makes a web request it is difficult to mock.
     /// </summary>
     /// <param name="provider">TwoFactorProvider Duo or OrganizationDuo</param>
     /// <returns>Duo.Client object or null</returns>
