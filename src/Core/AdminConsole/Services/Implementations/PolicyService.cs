@@ -34,7 +34,6 @@ public class PolicyService : IPolicyService
     private readonly ISavePolicyCommand _savePolicyCommand;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
 
     public PolicyService(
         IApplicationCacheService applicationCacheService,
@@ -49,8 +48,7 @@ public class PolicyService : IPolicyService
         IFeatureService featureService,
         ISavePolicyCommand savePolicyCommand,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
-        IOrganizationSponsorshipRepository organizationSponsorshipRepository)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _applicationCacheService = applicationCacheService;
         _eventService = eventService;
@@ -65,7 +63,6 @@ public class PolicyService : IPolicyService
         _savePolicyCommand = savePolicyCommand;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
     }
 
     public async Task SaveAsync(Policy policy, Guid? savingUserId)
