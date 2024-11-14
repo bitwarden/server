@@ -25,14 +25,14 @@ public static class Utilities
         Assert.Equal("Resource not found.", response.Message);
     }
 
-    public static void AssertUnauthorized(IResult result)
+    public static void AssertUnauthorized(IResult result, string message = "Unauthorized.")
     {
         Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
 
         var response = (JsonHttpResult<ErrorResponseModel>)result;
 
         Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
-        Assert.Equal("Unauthorized.", response.Value.Message);
+        Assert.Equal(message, response.Value.Message);
     }
 
     public static void ConfigureStableProviderAdminInputs<T>(

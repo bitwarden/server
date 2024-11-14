@@ -62,18 +62,25 @@ public class OrganizationBillingService(
             return null;
         }
 
+        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
+        var isManaged = organization.Status == OrganizationStatusType.Managed;
+
+        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+        {
+            return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
+                false, false);
+        }
+
         var customer = await subscriberService.GetCustomer(organization,
             new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
 
         var subscription = await subscriberService.GetSubscription(organization);
-
-        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
-        var isManaged = organization.Status == OrganizationStatusType.Managed;
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
         var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
+        var hasSubscription = true;
 
         return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid);
+            isSubscriptionUnpaid, hasSubscription);
     }
 
     public async Task UpdatePaymentMethod(
