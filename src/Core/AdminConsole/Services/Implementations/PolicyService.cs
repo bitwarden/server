@@ -70,7 +70,7 @@ public class PolicyService : IPolicyService
         _currentContext = currentContext;
     }
 
-    public async Task SaveAsync(Policy policy, Guid? savingUserId)
+    public async Task SaveAsync(Policy policy, Guid? savingUserId, EventSystemUser? eventSystemUser = null)
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm13322AddPolicyDefinitions))
         {
@@ -84,7 +84,7 @@ public class PolicyService : IPolicyService
                 Data = policy.Data,
                 PerformedBy = savingUserId.HasValue
                     ? new StandardUser(savingUserId.Value, await _currentContext.OrganizationOwner(policy.OrganizationId))
-                    : null
+                    : new SystemUser(eventSystemUser ?? EventSystemUser.Unknown)
             };
 
             await _savePolicyCommand.SaveAsync(policyUpdate);
