@@ -30,4 +30,3 @@ public class OrganizationSubscriptionDetailsResponseModel : IValidatableObject
         public int? ServiceAccounts { get; set; }
         public int? MaxAutoScaleServiceAccounts { get; set; }
     }
-
