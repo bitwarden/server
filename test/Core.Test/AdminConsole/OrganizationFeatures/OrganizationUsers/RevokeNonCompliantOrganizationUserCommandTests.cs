@@ -24,7 +24,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.RequestedByWasNotValid, result.ErrorMessages);
+        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorRequestedByWasNotValid, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
@@ -38,7 +38,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.CannotRevokeSelfMessage, result.ErrorMessages);
+        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorCannotRevokeSelf, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
@@ -54,7 +54,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.InvalidUsers, result.ErrorMessages);
+        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorInvalidUsers, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
@@ -74,7 +74,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.OrgMustHaveAtLeastOneOwner, result.ErrorMessages);
+        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorOrgMustHaveAtLeastOneOwner, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
@@ -95,7 +95,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.OnlyOwnersCanRevokeOtherOwners, result.ErrorMessages);
+        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorOnlyOwnersCanRevokeOtherOwners, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
@@ -116,7 +116,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains($"{RevokeNonCompliantOrganizationUserCommand.UserAlreadyRevoked} Id: {userToRevoke.Id}", result.ErrorMessages);
+        Assert.Contains($"{RevokeNonCompliantOrganizationUserCommand.ErrorUserAlreadyRevoked} Id: {userToRevoke.Id}", result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
