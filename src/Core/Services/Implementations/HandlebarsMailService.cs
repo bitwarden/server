@@ -7,6 +7,7 @@ using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Mail;
 using Bit.Core.Entities;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 using Bit.Core.Models.Mail.FamiliesForEnterprise;
 using Bit.Core.Models.Mail.Provider;
@@ -460,17 +461,20 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendVerifiedDomainUserEmailAsync(string email, Organization organization)
+    public async Task SendVerifiedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList)
     {
-        var message = CreateDefaultMessage($"Your Bitwarden account is claimed by {organization.DisplayName()}", email);
+        await EnqueueMailAsync(emailList.EmailList.Select(email =>
+            CreateMessage(email, emailList.Organization)));
+        return;
 
-        var model = new VerifiedDomainUserNotificationViewModel
-        {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false)
-        };
-        await AddMessageContentAsync(message, "AdminConsole.VerifiedDomainUserNotification", model);
-        message.Category = "VerifiedDomainUserNotification";
-        await _mailDeliveryService.SendEmailAsync(message);
+        MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
+            new(CreateDefaultMessage($"Your Bitwarden account is claimed by {org.DisplayName()}", emailAddress),
+                "AdminConsole.VerifiedDomainUserNotification",
+                new VerifiedDomainUserNotificationViewModel
+                {
+                    TitleFirst = $"Hey {emailAddress}, here is a heads up on your claimed account:",
+                    OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
+                });
     }
 
     public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)

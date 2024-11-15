@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Models.Mail;
 
-public class VerifiedDomainUserNotificationViewModel : BaseMailModel
+public class VerifiedDomainUserNotificationViewModel : BaseTitleContactUsMailModel
 {
     public string OrganizationName { get; init; }
 }

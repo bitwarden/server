@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -148,6 +149,6 @@ public class VerifyOrganizationDomainCommand(
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
-        await Task.WhenAll(userEmails.Select(email => mailService.SendVerifiedDomainUserEmailAsync(email, organization)));
+        await mailService.SendVerifiedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(userEmails, organization));
     }
 }
