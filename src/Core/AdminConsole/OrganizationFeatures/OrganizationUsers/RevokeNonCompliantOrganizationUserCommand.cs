@@ -14,12 +14,12 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     IHasConfirmedOwnersExceptQuery confirmedOwnersExceptQuery,
     TimeProvider timeProvider) : IRevokeNonCompliantOrganizationUserCommand
 {
-    public const string CannotRevokeSelfMessage = "You cannot revoke yourself.";
-    public const string OnlyOwnersCanRevokeOtherOwners = "Only owners can revoke other owners.";
-    public const string UserAlreadyRevoked = "User is already revoked.";
-    public const string OrgMustHaveAtLeastOneOwner = "Organization must have at least one confirmed owner.";
-    public const string InvalidUsers = "Invalid users.";
-    public const string RequestedByWasNotValid = "Action was performed by an unexpected type.";
+    public const string ErrorCannotRevokeSelf = "You cannot revoke yourself.";
+    public const string ErrorOnlyOwnersCanRevokeOtherOwners = "Only owners can revoke other owners.";
+    public const string ErrorUserAlreadyRevoked = "User is already revoked.";
+    public const string ErrorOrgMustHaveAtLeastOneOwner = "Organization must have at least one confirmed owner.";
+    public const string ErrorInvalidUsers = "Invalid users.";
+    public const string ErrorRequestedByWasNotValid = "Action was performed by an unexpected type.";
 
     public async Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsers request)
     {
