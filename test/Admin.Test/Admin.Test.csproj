@@ -4,6 +4,7 @@
     <RootNamespace>Admin.Test</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="bunit" Version="1.36.0" />
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

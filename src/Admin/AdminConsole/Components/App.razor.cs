@@ -1,7 +1,8 @@
-﻿using Bit.Admin.Enums;
+﻿using Bit.Admin.Components.Navigation;
+using Bit.Admin.Enums;
 using Microsoft.AspNetCore.Components;
 
-namespace Bit.Admin.AdminConsole;
+namespace Bit.Admin.AdminConsole.Components;
 
 public partial class App : ComponentBase
 {
@@ -17,8 +18,7 @@ public partial class App : ComponentBase
         var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
         var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
         var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
-        var canManageStripeSubscriptions =
-            AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
+        var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
         var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
         var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 

@@ -49,3 +49,11 @@ h3 {
 .form-check-input {
     margin-top: .45rem;
 }
+
+input.invalid {
+    border-color: $danger;
+}
+
+.validation-message {
+  color: $danger;
+}
