@@ -10,6 +10,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
+    <PackageReference Include="NSubstitute" Version="5.1.0" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio"
       Version="$(XUnitRunnerVisualStudioVersion)">
