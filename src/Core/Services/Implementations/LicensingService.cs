@@ -172,9 +172,8 @@ public class LicensingService : ILicensingService
 
         // Only check once per day
         var now = DateTime.UtcNow;
-        if (_userCheckCache.ContainsKey(user.Id))
+        if (_userCheckCache.TryGetValue(user.Id, out var lastCheck))
         {
-            var lastCheck = _userCheckCache[user.Id];
             if (lastCheck < now && now - lastCheck < TimeSpan.FromDays(1))
             {
                 return user.Premium;

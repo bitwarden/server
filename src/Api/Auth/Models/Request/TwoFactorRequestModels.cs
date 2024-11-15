@@ -25,7 +25,7 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.Authenticator))
+        else
         {
             providers.Remove(TwoFactorProviderType.Authenticator);
         }
@@ -67,7 +67,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.Duo))
+        else
         {
             providers.Remove(TwoFactorProviderType.Duo);
         }
@@ -98,7 +98,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.OrganizationDuo))
+        else
         {
             providers.Remove(TwoFactorProviderType.OrganizationDuo);
         }
@@ -172,7 +172,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.YubiKey))
+        else
         {
             providers.Remove(TwoFactorProviderType.YubiKey);
         }
@@ -255,7 +255,7 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
         }
-        else if (providers.ContainsKey(TwoFactorProviderType.Email))
+        else
         {
             providers.Remove(TwoFactorProviderType.Email);
         }
