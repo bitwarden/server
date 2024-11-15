@@ -1,4 +1,6 @@
-﻿using Bit.Core.Services;
+﻿using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -45,5 +47,14 @@ public class StripeController(
         var setupIntent = await stripeAdapter.SetupIntentCreate(options);
 
         return TypedResults.Ok(setupIntent.ClientSecret);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("~/tax/id-types")]
+    public IResult GetTaxIdTypes()
+    {
+        var response = TaxIdTypesResponse.From(StaticStore.SupportedTaxIdTypes);
+        return TypedResults.Ok(response);
     }
 }
