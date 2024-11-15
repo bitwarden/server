@@ -190,7 +190,7 @@ public class SingleOrgPolicyValidatorTests
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .DidNotReceive()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsers>());
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }
     // TODO feature flag is enabled and revoke returns errors, we throw
     // TODO feature flag is enabled and revoke returns no errors, no throw

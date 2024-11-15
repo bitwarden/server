@@ -5,5 +5,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interface
 
 public interface IRevokeNonCompliantOrganizationUserCommand
 {
-    Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsers request);
+    Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsersRequest request);
 }

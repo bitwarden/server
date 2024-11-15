@@ -97,7 +97,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
                 .ToList();
 
             var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsers(organizationId, revocableUsers, new StandardUser(savingUserId ?? Guid.Empty, isOwner)));
+                new RevokeOrganizationUsersRequest(organizationId, revocableUsers, new StandardUser(savingUserId ?? Guid.Empty, isOwner)));
 
             if (commandResult.HasErrors)
             {

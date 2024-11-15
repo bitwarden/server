@@ -21,7 +21,7 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     public const string ErrorInvalidUsers = "Invalid users.";
     public const string ErrorRequestedByWasNotValid = "Action was performed by an unexpected type.";
 
-    public async Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsers request)
+    public async Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsersRequest request)
     {
         var validationResult = await ValidateAsync(request);
 
@@ -57,7 +57,7 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
         OrganizationUserUserDetails organizationUser, EventSystemUser systemUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
         EventType.OrganizationUser_Revoked, systemUser, dateTimeOffset.UtcDateTime);
 
-    private async Task<CommandResult> ValidateAsync(RevokeOrganizationUsers request)
+    private async Task<CommandResult> ValidateAsync(RevokeOrganizationUsersRequest request)
     {
         if (!PerformedByIsAnExpectedType(request.ActionPerformedBy))
         {

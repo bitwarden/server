@@ -19,7 +19,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenUnrecognizedUserType_WhenAttemptingToRevoke_ThenErrorShouldBeReturned(
             Guid organizationId, SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
     {
-        var command = new RevokeOrganizationUsers(organizationId, [], new InvalidUser());
+        var command = new RevokeOrganizationUsersRequest(organizationId, [], new InvalidUser());
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
 
@@ -32,7 +32,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             Guid organizationId, OrganizationUserUserDetails revokingUser,
             SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
     {
-        var command = new RevokeOrganizationUsers(organizationId, revokingUser,
+        var command = new RevokeOrganizationUsersRequest(organizationId, revokingUser,
             new StandardUser(revokingUser?.UserId ?? Guid.NewGuid(), true));
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
@@ -48,7 +48,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
     {
         userFromAnotherOrg.OrganizationId = Guid.NewGuid();
 
-        var command = new RevokeOrganizationUsers(organizationId, userFromAnotherOrg,
+        var command = new RevokeOrganizationUsersRequest(organizationId, userFromAnotherOrg,
             new StandardUser(Guid.NewGuid(), true));
 
         var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
@@ -64,7 +64,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
     {
         userToRevoke.OrganizationId = organizationId;
 
-        var command = new RevokeOrganizationUsers(organizationId, userToRevoke,
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
             new StandardUser(Guid.NewGuid(), true));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -85,7 +85,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Type = OrganizationUserType.Owner;
 
-        var command = new RevokeOrganizationUsers(organizationId, userToRevoke,
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
             new StandardUser(Guid.NewGuid(), false));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -106,7 +106,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Status = OrganizationUserStatusType.Revoked;
 
-        var command = new RevokeOrganizationUsers(organizationId, userToRevoke,
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
             new StandardUser(Guid.NewGuid(), true));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -129,7 +129,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         revocableUsers[0].Type = OrganizationUserType.Owner;
         revocableUsers[1].Status = OrganizationUserStatusType.Revoked;
 
-        var command = new RevokeOrganizationUsers(organizationId, revocableUsers,
+        var command = new RevokeOrganizationUsersRequest(organizationId, revocableUsers,
             new StandardUser(Guid.NewGuid(), false));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
@@ -150,7 +150,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Type = OrganizationUserType.Admin;
 
-        var command = new RevokeOrganizationUsers(organizationId, userToRevoke,
+        var command = new RevokeOrganizationUsersRequest(organizationId, userToRevoke,
             new StandardUser(Guid.NewGuid(), false));
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()

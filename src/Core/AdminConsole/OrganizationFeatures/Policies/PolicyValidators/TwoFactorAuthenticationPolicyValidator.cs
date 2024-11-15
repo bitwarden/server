@@ -84,7 +84,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
             }
 
             var result = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsers(organizationId, revocableOrgUsers,
+                new RevokeOrganizationUsersRequest(organizationId, revocableOrgUsers,
                     new StandardUser(savingUserId ?? Guid.Empty,
                         await _currentContext.OrganizationOwner(organizationId))));
 

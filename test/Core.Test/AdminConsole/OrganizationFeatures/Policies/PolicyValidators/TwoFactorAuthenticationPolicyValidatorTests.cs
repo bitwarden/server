@@ -258,7 +258,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .DidNotReceive()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsers>());
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }
 
     [Theory, BitAutoData]
