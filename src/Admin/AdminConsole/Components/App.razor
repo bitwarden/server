@@ -64,7 +64,6 @@
 <main role="main" class="container">
     <Router AppAssembly="@typeof(Program).Assembly">
         <Found Context="routeData">
-            <!-- The 'Resource' property will be used in 'HasAppHandler' to obtain the 'app' route parameter -->
             <!-- If we implement new policies to protect resources, we should protect them with resource based uri and compare them with the user's claims. -->
             <AuthorizeRouteView RouteData="@routeData" Resource="@HttpContextAccessor.HttpContext">
                 <!-- When visiting a page that requires authorization, but the user isn't authorized, redirect to the login page -->
