@@ -22,6 +22,9 @@ public class VerifyOrganizationDomainCommand(
     IPolicyService policyService,
     IFeatureService featureService,
     ICurrentContext currentContext,
+    IMailService mailService,
+    IOrganizationUserRepository organizationUserRepository,
+    IOrganizationRepository organizationRepository,
     ILogger<VerifyOrganizationDomainCommand> logger)
     : IVerifyOrganizationDomainCommand
 {
@@ -50,7 +53,7 @@ public class VerifyOrganizationDomainCommand(
         return domainVerificationResult;
     }
 
-    public async Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
+    public async Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain) // need request object to hold who is doing the action
     {
         var actingUser = new SystemUser(EventSystemUser.DomainVerification);
 
@@ -109,7 +112,7 @@ public class VerifyOrganizationDomainCommand(
             {
                 domain.SetVerifiedDate();
 
-                await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+                await DomainVerificationSideEffectsAsync(domain.OrganizationId, actingUser);
             }
         }
         catch (Exception e)
@@ -121,7 +124,7 @@ public class VerifyOrganizationDomainCommand(
         return domain;
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
+    private async Task DomainVerificationSideEffectsAsync(Guid organizationId, IActingUser actingUser)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
@@ -130,5 +133,25 @@ public class VerifyOrganizationDomainCommand(
                 savingUserId: actingUser is StandardUser standardUser ? standardUser.UserId : null,
                 eventSystemUser: actingUser is SystemUser systemUser ? systemUser.SystemUserType : null);
         }
+    }
+
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
+        await policyService.SaveAsync(
+            new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true },
+            savingUserId: actingUser is StandardUser standardUser ? standardUser.UserId : null,
+            eventSystemUser: actingUser is SystemUser systemUser ? systemUser.SystemUserType : null);
+
+    private async Task SendVerifiedDomainUserEmailAsync(Guid organizationId)
+    {
+        var orgUsers = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
+        var orgUserUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+
+        var userEmails = orgUsers.Where(x => x.Status != OrganizationUserStatusType.Revoked)
+            .Select(y => orgUserUsers.FirstOrDefault(x => x.Id == y.Id)?.Email)
+            .Where(x => x is not null);
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        await Task.WhenAll(userEmails.Select(email => mailService.SendVerifiedDomainUserEmailAsync(email, organization)));
     }
 }

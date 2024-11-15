@@ -93,5 +93,6 @@ public interface IMailService
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
+    Task SendVerifiedDomainUserEmailAsync(string email, Organization organization);
 }
 

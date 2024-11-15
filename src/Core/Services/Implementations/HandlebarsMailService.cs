@@ -460,6 +460,19 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendVerifiedDomainUserEmailAsync(string email, Organization organization)
+    {
+        var message = CreateDefaultMessage($"Your Bitwarden account is claimed by {organization.DisplayName()}", email);
+
+        var model = new VerifiedDomainUserNotificationViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organization.DisplayName(), false)
+        };
+        await AddMessageContentAsync(message, "AdminConsole.VerifiedDomainUserNotification", model);
+        message.Category = "VerifiedDomainUserNotification";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
     {
         var message = CreateDefaultMessage($"New Device Logged In From {deviceType}", email);
