@@ -61,38 +61,38 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     {
         if (!PerformedByIsAnExpectedType(request.ActionPerformedBy))
         {
-            return new CommandResult([RequestedByWasNotValid]);
+            return new CommandResult([ErrorRequestedByWasNotValid]);
         }
 
         if (request.ActionPerformedBy is StandardUser loggableUser
             && request.OrganizationUsers.Any(x => x.UserId == loggableUser.UserId))
         {
-            return new CommandResult([CannotRevokeSelfMessage]);
+            return new CommandResult([ErrorCannotRevokeSelf]);
         }
 
         if (request.OrganizationUsers.Any(x => x.OrganizationId != request.OrganizationId))
         {
-            return new CommandResult([InvalidUsers]);
+            return new CommandResult([ErrorInvalidUsers]);
         }
 
         if (!await confirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                     request.OrganizationId,
                     request.OrganizationUsers.Select(x => x.Id)))
         {
-            return new CommandResult([OrgMustHaveAtLeastOneOwner]);
+            return new CommandResult([ErrorOrgMustHaveAtLeastOneOwner]);
         }
 
         return request.OrganizationUsers.Aggregate(new CommandResult(), (result, userToRevoke) =>
         {
             if (IsAlreadyRevoked(userToRevoke))
             {
-                result.ErrorMessages.Add($"{UserAlreadyRevoked} Id: {userToRevoke.Id}");
+                result.ErrorMessages.Add($"{ErrorUserAlreadyRevoked} Id: {userToRevoke.Id}");
                 return result;
             }
 
             if (NonOwnersCannotRevokeOwners(userToRevoke, request.ActionPerformedBy))
             {
-                result.ErrorMessages.Add($"{OnlyOwnersCanRevokeOtherOwners}");
+                result.ErrorMessages.Add($"{ErrorOnlyOwnersCanRevokeOtherOwners}");
                 return result;
             }
 
