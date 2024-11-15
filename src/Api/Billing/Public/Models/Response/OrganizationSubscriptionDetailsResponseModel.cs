@@ -14,19 +14,19 @@ public class OrganizationSubscriptionDetailsResponseModel : IValidatableObject
         }
 
         yield return ValidationResult.Success;
-        }
     }
-    public class PasswordManagerSubscriptionDetails
-    {
-        public int? Seats { get; set; }
-        public int? MaxAutoScaleSeats { get; set; }
-        public short? Storage { get; set; }
-    }
+}
+public class PasswordManagerSubscriptionDetails
+{
+    public int? Seats { get; set; }
+    public int? MaxAutoScaleSeats { get; set; }
+    public short? Storage { get; set; }
+}
 
-    public class SecretsManagerSubscriptionDetails
-    {
-        public int? Seats { get; set; }
-        public int? MaxAutoScaleSeats { get; set; }
-        public int? ServiceAccounts { get; set; }
-        public int? MaxAutoScaleServiceAccounts { get; set; }
-    }
+public class SecretsManagerSubscriptionDetails
+{
+    public int? Seats { get; set; }
+    public int? MaxAutoScaleSeats { get; set; }
+    public int? ServiceAccounts { get; set; }
+    public int? MaxAutoScaleServiceAccounts { get; set; }
+}
