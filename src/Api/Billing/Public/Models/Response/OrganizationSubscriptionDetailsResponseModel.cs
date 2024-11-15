@@ -1,6 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Models.Business;
 
 namespace Bit.Api.Billing.Public.Models;
 
@@ -18,7 +16,6 @@ public class OrganizationSubscriptionDetailsResponseModel : IValidatableObject
         yield return ValidationResult.Success;
         }
     }
-
     public class PasswordManagerSubscriptionDetails
     {
         public int? Seats { get; set; }
