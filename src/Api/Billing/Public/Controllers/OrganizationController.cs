@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Api.Billing.Public.Models;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -7,8 +8,6 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OrganizationSubscriptionUpdateRequestModel = Bit.Api.Billing.Public.Models.OrganizationSubscriptionUpdateRequestModel;
-
 namespace Bit.Api.Billing.Public.Controllers;
 
 [Route("public/organization")]
@@ -33,6 +32,42 @@ public class OrganizationController : Controller
         _organizationRepository = organizationRepository;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _logger = logger;
+    }
+
+    [HttpGet("subscription")]
+    [ProducesResponseType(typeof(OrganizationSubscriptionDetailsResponseModel), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.NotFound)]
+    public async Task<IActionResult> GetSubscriptionAsync()
+    {
+        try
+        {
+            var organizationId = _currentContext.OrganizationId.Value;
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+            var subscriptionDetails = new OrganizationSubscriptionDetailsResponseModel
+            {
+                PasswordManager = new PasswordManagerSubscriptionDetails
+                {
+                    Seats = organization.Seats,
+                    MaxAutoScaleSeats = organization.MaxAutoscaleSeats,
+                    Storage = organization.MaxStorageGb
+                },
+                SecretsManager = new SecretsManagerSubscriptionDetails
+                {
+                    Seats = organization.SmSeats,
+                    MaxAutoScaleSeats = organization.MaxAutoscaleSmSeats,
+                    ServiceAccounts = organization.SmServiceAccounts,
+                    MaxAutoScaleServiceAccounts = organization.MaxAutoscaleSmServiceAccounts
+                }
+            };
+
+            return Ok(subscriptionDetails);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error while retrieving the subscription details");
+            return StatusCode(500, new { Message = "An error occurred while retrieving the subscription details." });
+        }
     }
 
     /// <summary>
