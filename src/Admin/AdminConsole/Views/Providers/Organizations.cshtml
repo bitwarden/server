@@ -25,8 +25,8 @@
                             @if (Model.Provider.Type == ProviderType.Reseller)
                             {
                                 <div class="float-end text-nowrap">
-                                    <a asp-controller="Providers" asp-action="CreateOrganization" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
-                                    <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary">Add Existing Organization</a>
+                                    <a asp-controller="Providers" asp-action="CreateOrganization" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary text-decoration-none">New Organization</a>
+                                    <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary text-decoration-none">Add Existing Organization</a>
                                 </div>
                             }
                         </th>
