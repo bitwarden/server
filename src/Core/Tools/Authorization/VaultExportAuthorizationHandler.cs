@@ -16,10 +16,10 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
 
         var authorized = requirement switch
         {
-            not null when requirement.Name == nameof(VaultExportOperations.ExportAll) =>
-                CanExportAll(org),
-            not null when requirement.Name == nameof(VaultExportOperations.ExportPartial) =>
-                CanExportPartial(org),
+            not null when requirement.Name == nameof(VaultExportOperations.ExportWholeVault) =>
+                CanExportWholeVault(org),
+            not null when requirement.Name == nameof(VaultExportOperations.ExportManagedCollections) =>
+                CanExportManagedCollections(org),
             _ => false
         };
 
@@ -31,9 +31,9 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
         return Task.FromResult(0);
     }
 
-    private bool CanExportAll(CurrentContextOrganization organization) => organization is
+    private bool CanExportWholeVault(CurrentContextOrganization organization) => organization is
     { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
     { Type: OrganizationUserType.Custom, Permissions.AccessImportExport: true };
 
-    private bool CanExportPartial(CurrentContextOrganization organization) => organization is not null;
+    private bool CanExportManagedCollections(CurrentContextOrganization organization) => organization is not null;
 }

@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Test.AdminConsole.Helpers;
 using Bit.Core.Tools.Authorization;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -15,74 +16,80 @@ namespace Bit.Api.Test.Tools.Authorization;
 [SutProviderCustomize]
 public class VaultExportAuthorizationHandlerTests
 {
-    public static IEnumerable<CurrentContextOrganization[]> CanExportEntireVault => new[]
+    public static IEnumerable<object[]> CanExportWholeVault => new List<CurrentContextOrganization>
     {
-        new CurrentContextOrganization { Type = OrganizationUserType.Owner },
-        new CurrentContextOrganization { Type = OrganizationUserType.Admin },
-        new CurrentContextOrganization
+        new () { Type = OrganizationUserType.Owner },
+        new () { Type = OrganizationUserType.Admin },
+        new ()
         {
             Type = OrganizationUserType.Custom, Permissions = new Permissions { AccessImportExport = true }
         }
     }.Select(org => new[] { org });
 
     [Theory]
-    [BitMemberAutoData(nameof(CanExportEntireVault))]
+    [BitMemberAutoData(nameof(CanExportWholeVault))]
     public async Task ExportAll_PermittedRoles_Success(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
         SutProvider<VaultExportAuthorizationHandler> sutProvider)
     {
         org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportAll }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.True(authContext.HasSucceeded);
     }
 
-    public static IEnumerable<object[]> CannotExportEntireVault => new[]
+    public static IEnumerable<object[]> CannotExportWholeVault => new List<CurrentContextOrganization>
     {
-        new CurrentContextOrganization { Type = OrganizationUserType.User },
-        new CurrentContextOrganization
+        new () { Type = OrganizationUserType.User },
+        new ()
         {
-            Type = OrganizationUserType.Custom, Permissions = FlipPermissions(new Permissions { AccessImportExport = true })
+            Type = OrganizationUserType.Custom, Permissions = new Permissions { AccessImportExport = true }.Invert()
         }
     }.Select(org => new[] { org });
 
     [Theory]
-    [BitMemberAutoData(nameof(CannotExportEntireVault))]
+    [BitMemberAutoData(nameof(CannotExportWholeVault))]
     public async Task ExportAll_NotPermitted_Failure(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
         SutProvider<VaultExportAuthorizationHandler> sutProvider)
     {
         org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportAll }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.False(authContext.HasSucceeded);
     }
 
-    private static Permissions FlipPermissions(Permissions permissions)
+    public static IEnumerable<object[]> CanExportManagedCollections =>
+        AuthorizationHelpers.AllRoles().Select(o => new[] { o });
+
+    [Theory]
+    [BitMemberAutoData(nameof(CanExportManagedCollections))]
+    public async Task ExportManagedCollections_PermittedRoles_Success(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider)
     {
-        // Get all false boolean properties of input object
-        var inputsToFlip = permissions
-            .GetType()
-            .GetProperties()
-            .Where(p =>
-                p.PropertyType == typeof(bool) &&
-                (bool)p.GetValue(permissions, null)! == false)
-            .Select(p => p.Name);
+        org.Id = orgScope;
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var result = new Permissions();
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        await sutProvider.Sut.HandleAsync(authContext);
 
-        // Set these to true on the result object
-        result
-            .GetType()
-            .GetProperties()
-            .Where(p => inputsToFlip.Contains(p.Name))
-            .ToList()
-            .ForEach(p => p.SetValue(result, true));
+        Assert.True(authContext.HasSucceeded);
+    }
 
-        return result;
+    [Theory]
+    [BitAutoData([null])]
+    public async Task ExportManagedCollections_NotPermitted_Failure(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
+
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        Assert.False(authContext.HasSucceeded);
     }
 }
