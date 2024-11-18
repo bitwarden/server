@@ -55,8 +55,8 @@ public class OrganizationsController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IFeatureService _featureService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -82,8 +82,8 @@ public class OrganizationsController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IFeatureService featureService,
-        IProviderBillingService providerBillingService)
+        IProviderBillingService providerBillingService,
+        IFeatureService featureService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -108,8 +108,8 @@ public class OrganizationsController : Controller
         _serviceAccountRepository = serviceAccountRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _featureService = featureService;
         _providerBillingService = providerBillingService;
+        _featureService = featureService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -285,9 +285,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Index");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
@@ -477,12 +475,10 @@ public class OrganizationsController : Controller
         Organization organization,
         OrganizationEditModel update)
     {
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
         var scaleMSPOnClientOrganizationUpdate =
             _featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate);
 
-        if (!consolidatedBillingEnabled || !scaleMSPOnClientOrganizationUpdate)
+        if (!scaleMSPOnClientOrganizationUpdate)
         {
             return;
         }
