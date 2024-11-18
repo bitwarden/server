@@ -12,7 +12,6 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Authorization;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
-using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,7 +30,6 @@ public class OrganizationExportController : Controller
     private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
-    private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionRepository _collectionRepository;
 
     public OrganizationExportController(
@@ -43,7 +41,6 @@ public class OrganizationExportController : Controller
         IFeatureService featureService,
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
-        ICipherRepository cipherRepository,
         ICollectionRepository collectionRepository)
     {
         _currentContext = currentContext;
@@ -54,7 +51,6 @@ public class OrganizationExportController : Controller
         _featureService = featureService;
         _authorizationService = authorizationService;
         _organizationCiphersQuery = organizationCiphersQuery;
-        _cipherRepository = cipherRepository;
         _collectionRepository = collectionRepository;
     }
 
