@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -651,39 +652,58 @@ public class SubscriberService(
         ISubscriber subscriber,
         (long, long) microdeposits)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         var setupIntentId = await setupIntentCache.Get(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
             logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
-
             throw new BillingException();
         }
 
         var (amount1, amount2) = microdeposits;
 
-        await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId, new SetupIntentVerifyMicrodepositsOptions
+        try
         {
-            Amounts = [amount1, amount2]
-        });
+            await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,
+                new SetupIntentVerifyMicrodepositsOptions { Amounts = [amount1, amount2] });
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
+            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
 
-        await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId, new PaymentMethodAttachOptions
-        {
-            Customer = subscriber.GatewayCustomerId
-        });
+            await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+                new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-        await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
-            {
-                InvoiceSettings = new CustomerInvoiceSettingsOptions
+            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+                new CustomerUpdateOptions
                 {
-                    DefaultPaymentMethod = setupIntent.PaymentMethodId
-                }
-            });
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        DefaultPaymentMethod = setupIntent.PaymentMethodId
+                    }
+                });
+        }
+        catch (StripeException stripeException)
+        {
+            if (!string.IsNullOrEmpty(stripeException.StripeError?.Code))
+            {
+                var response = stripeException.StripeError.Code switch
+                {
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationAmountsInvalid =>
+                        "The two micro-deposit amounts you provided were invalid. Please try again or contact support.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationAmountsMismatch =>
+                        "The two micro-deposit amounts you provided did not match the amounts we sent. Please try again or contact support.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationAttemptsExceeded =>
+                        "You have reached the maximum number of attempts to verify your bank account. Please contact support.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationTimeout =>
+                        "Your bank account was not verified within the required time period. Please contact support.",
+                    _ => BillingException.DefaultMessage
+                };
+
+                throw new BadRequestException(response);
+            }
+
+            logger.LogError(stripeException, "Encountered an unhandled Stripe exception when trying to verify bank account for subscriber ({SubscriberID})", subscriber.Id);
+            throw new BillingException();
+        }
     }
 
     #region Shared Utilities
