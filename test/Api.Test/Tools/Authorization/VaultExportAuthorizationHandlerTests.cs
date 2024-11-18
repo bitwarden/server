@@ -15,7 +15,7 @@ namespace Bit.Api.Test.Tools.Authorization;
 [SutProviderCustomize]
 public class VaultExportAuthorizationHandlerTests
 {
-    public static IEnumerable<object[]> CanExportEntireVault => new[]
+    public static IEnumerable<CurrentContextOrganization[]> CanExportEntireVault => new[]
     {
         new CurrentContextOrganization { Type = OrganizationUserType.Owner },
         new CurrentContextOrganization { Type = OrganizationUserType.Admin },
@@ -23,7 +23,7 @@ public class VaultExportAuthorizationHandlerTests
         {
             Type = OrganizationUserType.Custom, Permissions = new Permissions { AccessImportExport = true }
         }
-    }.Select(org => new []{org});
+    }.Select(org => new[] { org });
 
     [Theory]
     [BitMemberAutoData(nameof(CanExportEntireVault))]
@@ -46,7 +46,7 @@ public class VaultExportAuthorizationHandlerTests
         {
             Type = OrganizationUserType.Custom, Permissions = FlipPermissions(new Permissions { AccessImportExport = true })
         }
-    }.Select(org => new []{org});
+    }.Select(org => new[] { org });
 
     [Theory]
     [BitMemberAutoData(nameof(CannotExportEntireVault))]

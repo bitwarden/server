@@ -1,5 +1,4 @@
-﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -33,8 +32,8 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
     }
 
     private bool CanExportAll(CurrentContextOrganization organization) => organization is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Type: OrganizationUserType.Custom, Permissions.AccessImportExport: true };
+    { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+    { Type: OrganizationUserType.Custom, Permissions.AccessImportExport: true };
 
     private bool CanExportPartial(CurrentContextOrganization organization) => organization is not null;
 }
