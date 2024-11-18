@@ -48,7 +48,7 @@
             </div>
         </div>
     </div>
-    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && Model.Provider.IsBillable())
+    @if (Model.Provider.IsBillable())
     {
         switch (Model.Provider.Type)
         {
@@ -65,40 +65,6 @@
                         <div class="mb-3">
                             <label asp-for="EnterpriseMonthlySeatMinimum" class="form-label"></label>
                             <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm">
-                        <div class="mb-3">
-                            <label asp-for="Gateway" class="form-label"></label>
-                                <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                                    <option value="">--</option>
-                                </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm">
-                        <div class="mb-3">
-                            <label asp-for="GatewayCustomerId" class="form-label"></label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" asp-for="GatewayCustomerId">
-                                <button class="btn btn-secondary" type="button" onclick="window.open('@Model.GatewayCustomerUrl', '_blank')">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm">
-                        <div class="mb-3">
-                            <label asp-for="GatewaySubscriptionId" class="form-label"></label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
-                                <button class="btn btn-secondary" type="button" onclick="window.open('@Model.GatewaySubscriptionUrl', '_blank')">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -135,6 +101,46 @@
                 break;
             }
         }
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <div class="form-group">
+                        <label asp-for="Gateway"></label>
+                        <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                            <option value="">--</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="GatewayCustomerId"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                        <div class="input-group-append">
+                            <a href="@Model.GatewayCustomerUrl" class="btn btn-secondary" target="_blank">
+                                <i class="fa fa-external-link"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="GatewaySubscriptionId"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                        <div class="input-group-append">
+                            <a href="@Model.GatewaySubscriptionUrl" class="btn btn-secondary" target="_blank">
+                                <i class="fa fa-external-link"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 </form>
 @await Html.PartialAsync("Organizations", Model)
