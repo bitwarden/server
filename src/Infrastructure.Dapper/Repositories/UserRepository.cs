@@ -174,12 +174,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     }
     public async Task DeleteManyAsync(IEnumerable<User> users)
     {
-        var list = users.Select(user => user.Id);
+        var ids = users.Select(user => user.Id);
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_DeleteById]",
-                new { Ids = list.ToGuidIdArrayTVP() },
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = JsonSerializer.Serialize(ids) },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 180);
         }

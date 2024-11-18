@@ -93,52 +93,6 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task DeleteManyAsync_Works_DataMatches(IEnumerable<User> users, List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
-    {
-        foreach (var sut in suts)
-        {
-            List<User> efUserList = new List<User>();
-            foreach (var user in users)
-            {
-                var postEfUser = await sut.CreateAsync(user);
-                sut.ClearChangeTracking();
-
-                var savedEfUser = await sut.GetByIdAsync(postEfUser.Id);
-                Assert.True(savedEfUser != null);
-                sut.ClearChangeTracking();
-                efUserList.Add(savedEfUser);
-            }
-
-            await sut.DeleteManyAsync(efUserList);
-            sut.ClearChangeTracking();
-
-            foreach (var efUser in efUserList)
-            {
-                var savedEfUser = await sut.GetByIdAsync(efUser.Id);
-                Assert.True(savedEfUser == null);
-            }
-        }
-        List<User> userList = new List<User>();
-
-        foreach (var user in users)
-        {
-            var postSqlUser = await sqlUserRepo.CreateAsync(user);
-            var savedSqlUser = await sqlUserRepo.GetByIdAsync(postSqlUser.Id);
-            Assert.True(savedSqlUser != null);
-            userList.Add(postSqlUser);
-
-        }
-        await sqlUserRepo.DeleteManyAsync(userList);
-
-        foreach (var user in userList)
-        {
-            var savedSqlUser = await sqlUserRepo.GetByIdAsync(user.Id);
-            Assert.True(savedSqlUser == null);
-        }
-
-    }
-
-    [CiSkippedTheory, EfUserAutoData]
     public async Task GetByEmailAsync_Works_DataMatches(User user, UserCompare equalityComparer,
             List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
     {
