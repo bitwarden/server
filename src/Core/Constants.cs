@@ -170,6 +170,7 @@ public static class FeatureFlagKeys
         {
             { DuoRedirect, "true" },
             { CipherKeyEncryption, "true" },
+            { LimitCollectionCreationDeletionSplit, "true" },
         };
     }
 }
