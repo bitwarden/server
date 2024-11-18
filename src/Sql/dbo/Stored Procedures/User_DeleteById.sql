@@ -1,5 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[User_DeleteByIds]
-    @Ids [dbo].[GuidIdArray]
+﻿CREATE PROCEDURE [dbo].[User_DeleteById]
+    @Id UNIQUEIDENTIFIER
 WITH RECOMPILE
 AS
 BEGIN
@@ -15,7 +15,7 @@ BEGIN
         FROM
             [dbo].[Cipher]
         WHERE
-            [UserId] IN (@Ids)
+            [UserId] = @Id
 
         SET @BatchSize = @@ROWCOUNT
 
@@ -29,28 +29,28 @@ BEGIN
     FROM
         [dbo].[WebAuthnCredential]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete folders
     DELETE
     FROM
         [dbo].[Folder]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete AuthRequest, must be before Device
     DELETE
     FROM
         [dbo].[AuthRequest]
     WHERE 
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete devices
     DELETE
     FROM
         [dbo].[Device]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete collection users
     DELETE
@@ -60,7 +60,7 @@ BEGIN
         INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = CU.[OrganizationUserId]
     WHERE
-        OU.[UserId] IN (@Ids)
+        OU.[UserId] = @Id
 
     -- Delete group users
     DELETE
@@ -70,7 +70,7 @@ BEGIN
         INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = GU.[OrganizationUserId]
     WHERE
-        OU.[UserId] IN (@Ids)
+        OU.[UserId] = @Id
 
     -- Delete AccessPolicy
     DELETE
@@ -80,28 +80,28 @@ BEGIN
         INNER JOIN
         [dbo].[OrganizationUser] OU ON OU.[Id] = AP.[OrganizationUserId]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete organization users
     DELETE
     FROM
         [dbo].[OrganizationUser]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete provider users
     DELETE
     FROM
         [dbo].[ProviderUser]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete SSO Users
     DELETE
     FROM
         [dbo].[SsoUser]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete Emergency Accesses
     DELETE
@@ -117,21 +117,21 @@ BEGIN
     FROM
         [dbo].[Send]
     WHERE 
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete Notification Status
     DELETE
     FROM
         [dbo].[NotificationStatus]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
 
     -- Delete Notification
     DELETE
     FROM
         [dbo].[Notification]
     WHERE
-        [UserId] IN (@Ids)
+        [UserId] = @Id
     
     -- Finally, delete the user
     DELETE
