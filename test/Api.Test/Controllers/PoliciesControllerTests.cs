@@ -28,10 +28,19 @@ public class PoliciesControllerTests
     [Theory]
     [BitAutoData]
     public async Task GetMasterPasswordPolicy_WhenCalled_ReturnsMasterPasswordPolicy(
-        SutProvider<PoliciesController> sutProvider, Guid orgId, Guid userId, OrganizationUser orgUser,
-        Policy policy, MasterPasswordPolicyData mpPolicyData)
+        SutProvider<PoliciesController> sutProvider,
+        Guid orgId, Guid userId,
+        OrganizationUser orgUser,
+        Policy policy,
+        MasterPasswordPolicyData mpPolicyData,
+        Organization organization)
     {
         // Arrange
+        organization.UsePolicies = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+
         sutProvider.GetDependency<IUserService>()
             .GetProperUserId(Arg.Any<ClaimsPrincipal>())
             .Returns((Guid?)userId);
@@ -137,21 +146,54 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetMasterPasswordPolicy_WhenUsePoliciesIsFalse_ThrowsNotFoundException(
+        SutProvider<PoliciesController> sutProvider,
+        Guid orgId)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
+
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetMasterPasswordPolicy_WhenOrgIsNull_ThrowsNotFoundException(
+        SutProvider<PoliciesController> sutProvider,
+        Guid orgId,
+        Organization organization)
+    {
+        // Arrange
+        organization.UsePolicies = false;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetMasterPasswordPolicy(orgId));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task Get_WhenUserCanManagePolicies_WithExistingType_ReturnsExistingPolicy(
         SutProvider<PoliciesController> sutProvider, Guid orgId, Policy policy, int type)
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
-        .ManagePolicies(orgId)
-        .Returns(true);
+            .ManagePolicies(orgId)
+            .Returns(true);
 
         policy.Type = (PolicyType)type;
         policy.Enabled = true;
         policy.Data = null;
 
         sutProvider.GetDependency<IPolicyRepository>()
-        .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
-        .Returns(policy);
+            .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
+            .Returns(policy);
 
         // Act
         var result = await sutProvider.Sut.Get(orgId, type);
@@ -171,12 +213,12 @@ public class PoliciesControllerTests
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
-        .ManagePolicies(orgId)
-        .Returns(true);
+            .ManagePolicies(orgId)
+            .Returns(true);
 
         sutProvider.GetDependency<IPolicyRepository>()
-        .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
-        .Returns((Policy)null);
+            .GetByOrganizationIdTypeAsync(orgId, (PolicyType)type)
+            .Returns((Policy)null);
 
         // Act
         var result = await sutProvider.Sut.Get(orgId, type);
@@ -194,11 +236,42 @@ public class PoliciesControllerTests
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>()
-        .ManagePolicies(orgId)
-        .Returns(false);
+            .ManagePolicies(orgId)
+            .Returns(false);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(orgId, type));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetByTokenAsync_WhenOrganizationUseUsePoliciesIsFalse_Jimmy(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, Guid organizationUserId, string token, string email,
+        Organization organization)
+    {
+        // Arrange
+        organization.UsePolicies = false;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(orgId).Returns(organization);
+
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetByToken(orgId, email, token, organizationUserId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetByTokenAsync_WhenOrganizationIsNull_ThrowsNotFoundException(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, Guid organizationUserId, string token, string email)
+    {
+        // Arrange
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(orgId).Returns((Organization)null);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetByToken(orgId, email, token, organizationUserId));
+    }
 }

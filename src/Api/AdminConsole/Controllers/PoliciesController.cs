@@ -27,19 +27,19 @@ namespace Bit.Api.AdminConsole.Controllers;
 [Authorize("Application")]
 public class PoliciesController : Controller
 {
+    private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
+    private readonly GlobalSettings _globalSettings;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IDataProtector _organizationServiceDataProtector;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
-    private readonly ICurrentContext _currentContext;
-    private readonly GlobalSettings _globalSettings;
-    private readonly IDataProtector _organizationServiceDataProtector;
-    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IFeatureService _featureService;
-    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
-    public PoliciesController(
-        IPolicyRepository policyRepository,
+    public PoliciesController(IPolicyRepository policyRepository,
         IPolicyService policyService,
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
@@ -48,7 +48,8 @@ public class PoliciesController : Controller
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        IOrganizationRepository organizationRepository)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
@@ -62,25 +63,18 @@ public class PoliciesController : Controller
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _organizationRepository = organizationRepository;
     }
 
     [HttpGet("{type}")]
     public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
     {
-        if (!await _currentContext.ManagePolicies(orgId))
-        {
-            throw new NotFoundException();
-        }
+        if (!await _currentContext.ManagePolicies(orgId)) throw new NotFoundException();
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
-        if (policy == null)
-        {
-            return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
-        }
+        if (policy == null) return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
 
         if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
-        {
             return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
-        }
 
         return new PolicyDetailResponseModel(policy);
     }
@@ -89,10 +83,7 @@ public class PoliciesController : Controller
     public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
     {
         var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
+        if (!await _currentContext.ManagePolicies(orgIdGuid)) throw new NotFoundException();
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
 
@@ -104,6 +95,10 @@ public class PoliciesController : Controller
     public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(Guid orgId, [FromQuery] string email,
         [FromQuery] string token, [FromQuery] Guid organizationUserId)
     {
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+
+        if (organization is not { UsePolicies: true }) throw new NotFoundException();
+
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, token, organizationUserId, email);
@@ -112,16 +107,10 @@ public class PoliciesController : Controller
             _organizationServiceDataProtector, token, email, organizationUserId, _globalSettings
         );
 
-        if (!tokenValid)
-        {
-            throw new NotFoundException();
-        }
+        if (!tokenValid) throw new NotFoundException();
 
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != orgId)
-        {
-            throw new NotFoundException();
-        }
+        if (orgUser == null || orgUser.OrganizationId != orgId) throw new NotFoundException();
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
         var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
@@ -135,20 +124,11 @@ public class PoliciesController : Controller
     public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] Guid userId)
     {
         var user = await _userService.GetUserByIdAsync(userId);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
+        if (user == null) throw new UnauthorizedAccessException();
         var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
-        if (orgUser == null)
-        {
-            throw new NotFoundException();
-        }
-        if (orgUser.Status != OrganizationUserStatusType.Invited)
-        {
-            throw new UnauthorizedAccessException();
-        }
+        if (orgUser == null) throw new NotFoundException();
+        if (orgUser.Status != OrganizationUserStatusType.Invited) throw new UnauthorizedAccessException();
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
         var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
@@ -158,21 +138,19 @@ public class PoliciesController : Controller
     [HttpGet("master-password")]
     public async Task<PolicyResponseModel> GetMasterPasswordPolicy(Guid orgId)
     {
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+
+        if (organization is not { UsePolicies: true }) throw new NotFoundException();
+
         var userId = _userService.GetProperUserId(User).Value;
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
 
-        if (orgUser == null)
-        {
-            throw new NotFoundException();
-        }
+        if (orgUser == null) throw new NotFoundException();
 
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.MasterPassword);
 
-        if (policy == null || !policy.Enabled)
-        {
-            throw new NotFoundException();
-        }
+        if (policy == null || !policy.Enabled) throw new NotFoundException();
 
         return new PolicyResponseModel(policy);
     }
@@ -181,19 +159,12 @@ public class PoliciesController : Controller
     public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody] PolicyRequestModel model)
     {
         var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
+        if (!await _currentContext.ManagePolicies(orgIdGuid)) throw new NotFoundException();
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(new Guid(orgId), (PolicyType)type);
         if (policy == null)
-        {
             policy = model.ToPolicy(orgIdGuid);
-        }
         else
-        {
             policy = model.ToPolicy(policy);
-        }
 
         var userId = _userService.GetProperUserId(User);
         await _policyService.SaveAsync(policy, userId);
