@@ -1,7 +1,9 @@
 ﻿using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -10,6 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +33,8 @@ public class SyncController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly ICurrentContext _currentContext;
+    private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
 
     public SyncController(
@@ -43,6 +48,7 @@ public class SyncController : Controller
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
+        ICurrentContext currentContext,
         IFeatureService featureService)
     {
         _userService = userService;
@@ -55,6 +61,7 @@ public class SyncController : Controller
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
+        _currentContext = currentContext;
         _featureService = featureService;
     }
 
@@ -77,7 +84,8 @@ public class SyncController : Controller
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
+        var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
+        var ciphers = FilterSSHKeys(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -100,5 +108,17 @@ public class SyncController : Controller
             organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
+    }
+
+    private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
+    {
+        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion)
+        {
+            return ciphers;
+        }
+        else
+        {
+            return ciphers.Where(c => c.Type != Core.Vault.Enums.CipherType.SSHKey).ToList();
+        }
     }
 }

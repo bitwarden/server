@@ -23,7 +23,6 @@ using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
@@ -32,6 +31,8 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Tools.ReportFeatures;
 
 
 #if !OSS
@@ -176,6 +177,7 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddReportingServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

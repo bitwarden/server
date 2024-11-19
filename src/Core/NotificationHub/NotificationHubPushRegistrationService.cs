@@ -4,7 +4,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.NotificationHub;
 
@@ -61,25 +60,10 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                await using (var serviceScope = _serviceProvider.CreateAsyncScope())
-                {
-                    var featureService = serviceScope.ServiceProvider.GetRequiredService<IFeatureService>();
-                    if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
-                    {
-                        payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
-                        messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                                          "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                        installation.Platform = NotificationPlatform.FcmV1;
-                    }
-                    else
-                    {
-                        payloadTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}";
-                        messageTemplate = "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                                          "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
-                        installation.Platform = NotificationPlatform.Fcm;
-                    }
-                }
-
+                payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
+                messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
+                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
                 payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +

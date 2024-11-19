@@ -9,12 +9,18 @@
 <h1>Add Existing Organization</h1>
 <div class="row mb-2">
     <div class="col">
-        <form class="form-inline mb-2" method="get" asp-route-id="@providerId">
-            <label class="sr-only" asp-for="OrganizationName"></label>
-            <input type="text" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationName)" asp-for="OrganizationName" name="name">
-            <label class="sr-only" asp-for="OrganizationOwnerEmail"></label>
-            <input type="email" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)" asp-for="OrganizationOwnerEmail" name="ownerEmail">
-            <button type="submit" class="btn btn-primary mb-2" title="Search" formmethod="get"><i class="fa fa-search"></i> Search</button>
+        <form class="row g-3 align-items-center mb-2" method="get" asp-route-id="@providerId">
+            <div class="col">
+                <label class="visually-hidden" asp-for="OrganizationName"></label>
+                <input type="text" class="form-control" placeholder="@Html.DisplayNameFor(m => m.OrganizationName)" asp-for="OrganizationName" name="name">
+            </div>
+            <div class="col">
+                <label class="visually-hidden" asp-for="OrganizationOwnerEmail"></label>
+                <input type="email" class="form-control" placeholder="@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)" asp-for="OrganizationOwnerEmail" name="ownerEmail">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary" title="Search" formmethod="get"><i class="fa fa-search"></i> Search</button>
+            </div>
         </form>
     </div>
 </div>

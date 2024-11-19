@@ -15,6 +15,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -444,13 +445,6 @@ public class OrganizationService : IOrganizationService
 
     public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
     {
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!consolidatedBillingEnabled)
-        {
-            throw new InvalidOperationException($"{nameof(SignupClientAsync)} is only for use within Consolidated Billing");
-        }
-
         var plan = StaticStore.GetPlan(signup.Plan);
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
@@ -1443,10 +1437,7 @@ public class OrganizationService : IOrganizationService
 
         if (provider is { Enabled: true })
         {
-            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-            if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
-                provider.Status == ProviderStatusType.Billable)
+            if (provider.IsBillable())
             {
                 return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
             }
