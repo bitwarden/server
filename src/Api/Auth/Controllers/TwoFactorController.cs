@@ -223,7 +223,7 @@ public class TwoFactorController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
-        if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientId, model.ClientSecret, model.Host))
+        if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientSecret, model.ClientId, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
