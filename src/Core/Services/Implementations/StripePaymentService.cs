@@ -1659,6 +1659,7 @@ public class StripePaymentService : IPaymentService
         return new TaxInfo
         {
             TaxIdNumber = taxId?.Value,
+            TaxIdType = taxId?.Type,
             BillingAddressLine1 = address?.Line1,
             BillingAddressLine2 = address?.Line2,
             BillingAddressCity = address?.City,
