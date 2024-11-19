@@ -1,6 +1,6 @@
 ﻿using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Billing.Services;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +10,8 @@ namespace Bit.Api.Billing.Controllers;
 
 [Authorize("Application")]
 public class StripeController(
-    IStripeAdapter stripeAdapter) : Controller
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : Controller
 {
     [HttpPost]
     [Route("~/setup-intent/bank-account")]
@@ -54,7 +55,7 @@ public class StripeController(
     [Route("~/tax/id-types")]
     public IResult GetTaxIdTypes()
     {
-        var response = TaxIdTypesResponse.From(StaticStore.SupportedTaxIdTypes);
+        var response = TaxIdTypesResponse.From(taxService.GetTaxIdTypes());
         return TypedResults.Ok(response);
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Billing.Models;
+﻿using System.Text.RegularExpressions;
+
+namespace Bit.Core.Billing.Models;
 
 public class TaxIdType
 {
@@ -11,6 +13,8 @@ public class TaxIdType
     /// The identifier in Stripe for the tax ID type.
     /// </summary>
     public string Code { get; set; }
+
+    public Regex ValidationExpression { get; set; }
 
     public string Description { get; set; }
 

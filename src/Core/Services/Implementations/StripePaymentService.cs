@@ -1694,14 +1694,42 @@ public class StripePaymentService : IPaymentService
                 {
                     await _stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
                 }
-                if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber) &&
-                    !string.IsNullOrWhiteSpace(taxInfo.TaxIdType))
+
+                if (taxInfo.TaxIdType == null)
                 {
-                    await _stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                    _logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                        taxInfo.BillingAddressCountry,
+                        taxInfo.TaxIdNumber);
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
+                }
+
+                if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber))
+                {
+                    try
                     {
-                        Type = taxInfo.TaxIdType,
-                        Value = taxInfo.TaxIdNumber,
-                    });
+                        await _stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
+                        });
+                    }
+                    catch (StripeException e)
+                    {
+                        switch (e.StripeError.Code)
+                        {
+                            case "tax_id_invalid":
+                                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                                    taxInfo.TaxIdNumber,
+                                    taxInfo.BillingAddressCountry);
+                                throw new BadRequestException("billingInvalidTaxIdError");
+                            default:
+                                _logger.LogError(e, "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                                    taxInfo.TaxIdNumber,
+                                    taxInfo.BillingAddressCountry,
+                                    customer.Id);
+                                throw new BadRequestException("billingTaxIdCreationError");
+                        }
+                    }
                 }
             }
         }

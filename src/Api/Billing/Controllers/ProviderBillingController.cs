@@ -120,6 +120,7 @@ public class ProviderBillingController(
             requestBody.Country,
             requestBody.PostalCode,
             requestBody.TaxId,
+            requestBody.TaxIdType,
             requestBody.Line1,
             requestBody.Line2,
             requestBody.City,

@@ -22,7 +22,8 @@ public class SubscriberService(
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
-    IStripeAdapter stripeAdapter) : ISubscriberService
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -616,16 +617,51 @@ public class SubscriberService(
                 await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
             }
 
-            var taxIdType = taxInformation.GetTaxIdType();
-
-            if (!string.IsNullOrWhiteSpace(taxInformation.TaxId) &&
-                !string.IsNullOrWhiteSpace(taxIdType))
+            if (string.IsNullOrWhiteSpace(taxInformation.TaxId))
             {
-                await stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                return;
+            }
+
+            string taxIdType;
+            if (string.IsNullOrWhiteSpace(taxInformation.TaxIdType))
+            {
+                taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
+                    taxInformation.TaxId);
+
+                if (taxIdType == null)
                 {
-                    Type = taxIdType,
-                    Value = taxInformation.TaxId,
-                });
+                    logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                        taxInformation.Country,
+                        taxInformation.TaxId);
+                    throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
+                }
+            }
+            else
+            {
+                taxIdType = taxInformation.TaxIdType;
+            }
+
+            try
+            {
+                await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                    new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
+            }
+            catch (StripeException e)
+            {
+                switch (e.StripeError.Code)
+                {
+                    case "tax_id_invalid":
+                        logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                            taxInformation.TaxId,
+                            taxInformation.Country);
+                        throw new Exceptions.BadRequestException("billingInvalidTaxIdError");
+                    default:
+                        logger.LogError(e, "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                            taxInformation.TaxId,
+                            taxInformation.Country,
+                            customer.Id);
+                        throw new Exceptions.BadRequestException("billingTaxIdCreationError");
+                }
             }
         }
 
@@ -756,6 +792,7 @@ public class SubscriberService(
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,
