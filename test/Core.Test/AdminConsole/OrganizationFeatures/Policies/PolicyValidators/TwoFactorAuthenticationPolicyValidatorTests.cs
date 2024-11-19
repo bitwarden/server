@@ -262,7 +262,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_GivenUpdateTo2faPolicy_WhenAccountProvisioningIsEnabled_ThenRevokeUserCommandShouldNotBeCalled(
+    public async Task OnSaveSideEffectsAsync_GivenUpdateTo2faPolicy_WhenAccountProvisioningIsEnabledAndUserDoesNotHaveMasterPassword_ThenNonCompliantMembersErrorMessageWillReturn(
         Organization organization,
         [PolicyUpdate(PolicyType.TwoFactorAuthentication)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.TwoFactorAuthentication, false)] Policy policy,
