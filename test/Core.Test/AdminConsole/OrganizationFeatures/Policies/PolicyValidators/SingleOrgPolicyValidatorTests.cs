@@ -192,7 +192,4 @@ public class SingleOrgPolicyValidatorTests
             .DidNotReceive()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }
-    // TODO feature flag is enabled and revoke returns errors, we throw
-    // TODO feature flag is enabled and revoke returns no errors, no throw
-    // TODO feature flag is disabled we don't call command
 }
