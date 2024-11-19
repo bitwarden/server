@@ -218,8 +218,6 @@ public class OrganizationsControllerTests : IDisposable
 
         _userService.VerifySecretAsync(user, requestModel.Secret).Returns(true);
 
-        _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
-
         _providerRepository.GetByOrganizationIdAsync(organization.Id).Returns(provider);
 
         await _sut.Delete(organizationId.ToString(), requestModel);

@@ -8,7 +8,6 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -87,54 +86,6 @@ public class ProviderEventServiceTests
 
         // Assert
         await _providerOrganizationRepository.DidNotReceiveWithAnyArgs().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
-    }
-
-    [Fact]
-    public async Task TryRecordInvoiceLineItems_InvoiceCreated_MisconfiguredProviderPlans_ThrowsException()
-    {
-        // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.InvoiceCreated);
-
-        const string subscriptionId = "sub_1";
-        var providerId = Guid.NewGuid();
-
-        var invoice = new Invoice
-        {
-            SubscriptionId = subscriptionId
-        };
-
-        _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
-
-        var subscription = new Subscription
-        {
-            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } }
-        };
-
-        _stripeFacade.GetSubscription(subscriptionId).Returns(subscription);
-
-        var providerPlans = new List<ProviderPlan>
-        {
-            new ()
-            {
-                Id = Guid.NewGuid(),
-                ProviderId = providerId,
-                PlanType = PlanType.TeamsMonthly,
-                AllocatedSeats = 0,
-                PurchasedSeats = 0,
-                SeatMinimum = 100
-            }
-        };
-
-        _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
-
-        // Act
-        var function = async () => await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
-
-        // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage("Cannot record invoice line items for Provider with missing or misconfigured provider plans");
     }
 
     [Fact]

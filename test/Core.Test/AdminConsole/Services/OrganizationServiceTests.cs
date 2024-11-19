@@ -420,8 +420,6 @@ public class OrganizationServiceTests
         OrganizationSignup signup,
         SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
-
         signup.Plan = PlanType.TeamsMonthly;
 
         var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
