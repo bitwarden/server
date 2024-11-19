@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -10,7 +9,6 @@ using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
 
@@ -21,35 +19,28 @@ public class CreateProviderCommand : ICreateProviderCommand
     private readonly IProviderService _providerService;
     private readonly IUserRepository _userRepository;
     private readonly IProviderPlanRepository _providerPlanRepository;
-    private readonly IFeatureService _featureService;
 
     public CreateProviderCommand(
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderService providerService,
         IUserRepository userRepository,
-        IProviderPlanRepository providerPlanRepository,
-        IFeatureService featureService)
+        IProviderPlanRepository providerPlanRepository)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerService = providerService;
         _userRepository = userRepository;
         _providerPlanRepository = providerPlanRepository;
-        _featureService = featureService;
     }
 
     public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
     {
         var providerId = await CreateProviderAsync(provider, ownerEmail);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled)
-        {
-            await CreateProviderPlanAsync(providerId, PlanType.TeamsMonthly, teamsMinimumSeats);
-            await CreateProviderPlanAsync(providerId, PlanType.EnterpriseMonthly, enterpriseMinimumSeats);
-        }
+        await Task.WhenAll(
+            CreateProviderPlanAsync(providerId, PlanType.TeamsMonthly, teamsMinimumSeats),
+            CreateProviderPlanAsync(providerId, PlanType.EnterpriseMonthly, enterpriseMinimumSeats));
     }
 
     public async Task CreateResellerAsync(Provider provider)
@@ -61,12 +52,7 @@ public class CreateProviderCommand : ICreateProviderCommand
     {
         var providerId = await CreateProviderAsync(provider, ownerEmail);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled)
-        {
-            await CreateProviderPlanAsync(providerId, plan, minimumSeats);
-        }
+        await CreateProviderPlanAsync(providerId, plan, minimumSeats);
     }
 
     private async Task<Guid> CreateProviderAsync(Provider provider, string ownerEmail)
@@ -77,12 +63,7 @@ public class CreateProviderCommand : ICreateProviderCommand
             throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
         }
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled)
-        {
-            provider.Gateway = GatewayType.Stripe;
-        }
+        provider.Gateway = GatewayType.Stripe;
 
         await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Pending);
 
