@@ -85,6 +85,23 @@ public class PoliciesController : Controller
         return new PolicyDetailResponseModel(policy);
     }
 
+    [HttpGet("{type}/policy-status")]
+    public async Task<bool> GetPolicyStatusAsync(Guid orgId, int type)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
+
+        var isPolicyEnabled = policy?.Enabled ?? false;
+
+        return isPolicyEnabled;
+    }
+
+
     [HttpGet("")]
     public async Task<ListResponseModel<PolicyResponseModel>> Get(string orgId)
     {
