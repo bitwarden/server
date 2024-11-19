@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
@@ -9,6 +8,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -53,6 +53,8 @@ public class OrganizationUsersController : Controller
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
+    private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IFeatureService _featureService;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -73,7 +75,9 @@ public class OrganizationUsersController : Controller
         IOrganizationUserUserDetailsQuery organizationUserUserDetailsQuery,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand)
+        IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand,
+        IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -94,29 +98,34 @@ public class OrganizationUsersController : Controller
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
+        _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
+    public async Task<OrganizationUserDetailsResponseModel> Get(Guid id, bool includeGroups = false)
     {
-        var organizationUser = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(new Guid(id));
-        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
+        var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
+        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.OrganizationId))
         {
             throw new NotFoundException();
         }
 
-        var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+        var managedByOrganization = await GetManagedByOrganizationStatusAsync(
+            organizationUser.OrganizationId,
+            [organizationUser.Id]);
+
+        var response = new OrganizationUserDetailsResponseModel(organizationUser, managedByOrganization[organizationUser.Id], collections);
 
         if (includeGroups)
         {
-            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Item1.Id);
+            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Id);
         }
 
         return response;
     }
 
     [HttpGet("mini-details")]
-    [RequireFeature(FeatureFlagKeys.Pm3478RefactorOrganizationUserApi)]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
@@ -150,11 +159,13 @@ public class OrganizationUsersController : Controller
             }
         );
         var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(organizationUsers);
+        var organizationUsersManagementStatus = await GetManagedByOrganizationStatusAsync(orgId, organizationUsers.Select(o => o.Id));
         var responses = organizationUsers
             .Select(o =>
             {
                 var userTwoFactorEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(u => u.user.Id == o.Id).twoFactorIsEnabled;
-                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled);
+                var managedByOrganization = organizationUsersManagementStatus[o.Id];
+                var orgUser = new OrganizationUserUserDetailsResponseModel(o, userTwoFactorEnabled, managedByOrganization);
 
                 return orgUser;
             });
@@ -534,7 +545,7 @@ public class OrganizationUsersController : Controller
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
-    public async Task DeleteAccount(Guid orgId, Guid id, [FromBody] SecretVerificationRequestModel model)
+    public async Task DeleteAccount(Guid orgId, Guid id)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -545,12 +556,6 @@ public class OrganizationUsersController : Controller
         if (currentUser == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
@@ -559,7 +564,7 @@ public class OrganizationUsersController : Controller
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("delete-account")]
     [HttpPost("delete-account")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] SecureOrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -570,12 +575,6 @@ public class OrganizationUsersController : Controller
         if (currentUser == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
@@ -681,5 +680,16 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private async Task<IDictionary<Guid, bool>> GetManagedByOrganizationStatusAsync(Guid orgId, IEnumerable<Guid> userIds)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            return userIds.ToDictionary(kvp => kvp, kvp => false);
+        }
+
+        var usersOrganizationManagementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
+        return usersOrganizationManagementStatus;
     }
 }

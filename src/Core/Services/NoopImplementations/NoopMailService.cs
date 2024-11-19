@@ -94,6 +94,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendPasswordlessSignInAsync(string returnUrl, string token, string email)
     {
         return Task.FromResult(0);
@@ -291,5 +296,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
     public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
+
+    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
+        string organizationId,
+        string organizationName)
+    {
+        return Task.FromResult(0);
+    }
 }
 

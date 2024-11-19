@@ -18,6 +18,7 @@ public interface IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products);
     Task SendVerifyDeleteEmailAsync(string email, Guid userId, string token);
+    Task SendCannotDeleteManagedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string token);
@@ -88,5 +89,7 @@ public interface IMailService
     Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token);
     Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token);
     Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent);
+    Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+        string organizationName);
 }
 
