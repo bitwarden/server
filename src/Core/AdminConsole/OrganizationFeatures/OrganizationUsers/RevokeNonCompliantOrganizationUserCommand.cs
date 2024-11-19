@@ -30,28 +30,29 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             return validationResult;
         }
 
-        await organizationUserRepository.SetOrganizationUsersStatusAsync(request.OrganizationUsers.Select(x => x.Id),
-            OrganizationUserStatusType.Revoked);
+        await organizationUserRepository.RevokeOrganizationUserAsync(request.OrganizationUsers.Select(x => x.Id));
 
-        if (request.ActionPerformedBy.GetType() == typeof(StandardUser))
+        var now = timeProvider.GetUtcNow();
+
+        switch (request.ActionPerformedBy)
         {
-            await eventService.LogOrganizationUserEventsAsync(
-                request.OrganizationUsers.Select(x => GetRevokedUserEventTuple(x, timeProvider.GetUtcNow())));
-        }
-        else if (request.ActionPerformedBy is SystemUser { SystemUserType: not null } loggableSystem)
-        {
-            await eventService.LogOrganizationUserEventsAsync(
-                request.OrganizationUsers.Select(x =>
-                    GetRevokedUserEventBySystemUserTuple(x, loggableSystem.SystemUserType.Value,
-                        timeProvider.GetUtcNow())));
+            case StandardUser:
+                await eventService.LogOrganizationUserEventsAsync(
+                    request.OrganizationUsers.Select(x => GetRevokedUserEventTuple(x, now)));
+                break;
+            case SystemUser { SystemUserType: not null } loggableSystem:
+                await eventService.LogOrganizationUserEventsAsync(
+                    request.OrganizationUsers.Select(x =>
+                        GetRevokedUserEventBySystemUserTuple(x, loggableSystem.SystemUserType.Value, now)));
+                break;
         }
 
         return validationResult;
     }
 
     private static (OrganizationUserUserDetails organizationUser, EventType eventType, DateTime? time) GetRevokedUserEventTuple(
-        OrganizationUserUserDetails organizationUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
-        EventType.OrganizationUser_Revoked, dateTimeOffset.UtcDateTime);
+        OrganizationUserUserDetails organizationUser, DateTimeOffset dateTimeOffset) =>
+        new(organizationUser, EventType.OrganizationUser_Revoked, dateTimeOffset.UtcDateTime);
 
     private static (OrganizationUserUserDetails organizationUser, EventType eventType, EventSystemUser eventSystemUser, DateTime? time) GetRevokedUserEventBySystemUserTuple(
         OrganizationUserUserDetails organizationUser, EventSystemUser systemUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
@@ -61,25 +62,25 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     {
         if (!PerformedByIsAnExpectedType(request.ActionPerformedBy))
         {
-            return new CommandResult([ErrorRequestedByWasNotValid]);
+            return new CommandResult(ErrorRequestedByWasNotValid);
         }
 
-        if (request.ActionPerformedBy is StandardUser loggableUser
-            && request.OrganizationUsers.Any(x => x.UserId == loggableUser.UserId))
+        if (request.ActionPerformedBy is StandardUser user
+            && request.OrganizationUsers.Any(x => x.UserId == user.UserId))
         {
-            return new CommandResult([ErrorCannotRevokeSelf]);
+            return new CommandResult(ErrorCannotRevokeSelf);
         }
 
         if (request.OrganizationUsers.Any(x => x.OrganizationId != request.OrganizationId))
         {
-            return new CommandResult([ErrorInvalidUsers]);
+            return new CommandResult(ErrorInvalidUsers);
         }
 
         if (!await confirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                     request.OrganizationId,
                     request.OrganizationUsers.Select(x => x.Id)))
         {
-            return new CommandResult([ErrorOrgMustHaveAtLeastOneOwner]);
+            return new CommandResult(ErrorOrgMustHaveAtLeastOneOwner);
         }
 
         return request.OrganizationUsers.Aggregate(new CommandResult(), (result, userToRevoke) =>
@@ -107,9 +108,5 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
 
     private static bool NonOwnersCannotRevokeOwners(OrganizationUserUserDetails organizationUser,
         IActingUser actingUser) =>
-        actingUser is StandardUser { IsOrganizationOwner: false } && organizationUser.Type == OrganizationUserType.Owner;
-
-    private static bool IsActingUserAllowedToRevokeOwner(OrganizationUserUserDetails organizationUser,
-        StandardUser requestingOrganizationUser) => organizationUser is { Type: OrganizationUserType.Owner }
-                                                    && requestingOrganizationUser.IsOrganizationOwner;
+        actingUser is StandardUser { IsOrganizationOwnerOrProvider: false } && organizationUser.Type == OrganizationUserType.Owner;
 }

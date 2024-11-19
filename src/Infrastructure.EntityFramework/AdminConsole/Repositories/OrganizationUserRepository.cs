@@ -722,13 +722,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task SetOrganizationUsersStatusAsync(IEnumerable<Guid> userIds, OrganizationUserStatusType status)
+    public async Task RevokeOrganizationUserAsync(IEnumerable<Guid> userIds)
     {
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
 
         await dbContext.OrganizationUsers.Where(x => userIds.Contains(x.OrganizationId))
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, status));
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(userIds);
     }
 }

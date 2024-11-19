@@ -59,5 +59,5 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
 
-    Task SetOrganizationUsersStatusAsync(IEnumerable<Guid> userIds, OrganizationUserStatusType status);
+    Task RevokeOrganizationUserAsync(IEnumerable<Guid> userIds);
 }

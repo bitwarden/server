@@ -56,8 +56,56 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     {
         if (currentPolicy is not { Enabled: true } && policyUpdate is { Enabled: true })
         {
-            await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId);
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+            {
+                var currentUser = _currentContext.UserId ?? Guid.Empty;
+                var isOwnerOrProvider = await _currentContext.OrganizationOwner(policyUpdate.OrganizationId);
+                await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider));
+            }
+            else
+            {
+                await RemoveNonCompliantUsersAsync(policyUpdate.OrganizationId);
+            }
         }
+    }
+
+    private async Task RevokeNonCompliantUsersAsync(Guid organizationId, IActingUser performedBy)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+
+        var currentActiveRevocableOrganizationUsers =
+            (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
+            .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
+                         ou.Status != OrganizationUserStatusType.Revoked &&
+                         ou.Type != OrganizationUserType.Owner &&
+                         ou.Type != OrganizationUserType.Admin &&
+                         performedBy is StandardUser stdUser &&
+                         stdUser.UserId != ou.UserId)
+            .ToList();
+
+        if (currentActiveRevocableOrganizationUsers.Count == 0)
+        {
+            return;
+        }
+
+        var organizationUsersTwoFactorEnabled =
+            await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(currentActiveRevocableOrganizationUsers);
+
+        if (DoMembersNotHaveAPasswordWithTwoFactorAuthenticationEnabled(currentActiveRevocableOrganizationUsers, organizationUsersTwoFactorEnabled))
+        {
+            throw new BadRequestException(NonCompliantMembersWillLoseAccess);
+        }
+
+        var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+            new RevokeOrganizationUsersRequest(organizationId, currentActiveRevocableOrganizationUsers, performedBy));
+
+        if (commandResult.HasErrors)
+        {
+            throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
+        }
+
+        await Task.WhenAll(currentActiveRevocableOrganizationUsers.Select(x =>
+            _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
     }
 
     private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
@@ -68,7 +116,8 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
 
         // this can get moved into the private method after AccountDeprovisiong flag check is removed.
-        var organizationUsersTwoFactorEnabled = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers)).ToList();
+        var organizationUsersTwoFactorEnabled =
+            (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(orgUsers)).ToList();
 
         var revocableOrgUsers = orgUsers.Where(ou =>
                 ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
@@ -76,46 +125,23 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
                 ou.UserId != savingUserId)
             .ToList();
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
+        foreach (var orgUser in revocableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
         {
-            if (DoMembersNotHaveAPasswordWithTwoFactorAuthenticationEnabled(revocableOrgUsers, organizationUsersTwoFactorEnabled))
+            var userTwoFactorEnabled = organizationUsersTwoFactorEnabled
+                .FirstOrDefault(u => u.user.Id == orgUser.Id).twoFactorIsEnabled;
+            if (!userTwoFactorEnabled)
             {
-                throw new BadRequestException(NonCompliantMembersWillLoseAccess);
-            }
-
-            var result = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-                new RevokeOrganizationUsersRequest(organizationId, revocableOrgUsers,
-                    new StandardUser(savingUserId ?? Guid.Empty,
-                        await _currentContext.OrganizationOwner(organizationId))));
-
-            if (result.HasErrors)
-            {
-                throw new BadRequestException(string.Join(", ", result.ErrorMessages));
-            }
-
-            await Task.WhenAll(revocableOrgUsers.Select(x =>
-                _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(org!.DisplayName(), x.Email)));
-        }
-        else
-        {
-            // Reorder by HasMasterPassword to prioritize checking users without a master if they have 2FA enabled
-            foreach (var orgUser in revocableOrgUsers.OrderBy(ou => ou.HasMasterPassword))
-            {
-                var userTwoFactorEnabled = organizationUsersTwoFactorEnabled
-                    .FirstOrDefault(u => u.user.Id == orgUser.Id).twoFactorIsEnabled;
-                if (!userTwoFactorEnabled)
+                if (!orgUser.HasMasterPassword)
                 {
-                    if (!orgUser.HasMasterPassword)
-                    {
-                        throw new BadRequestException(NonCompliantMembersWillLoseAccess);
-                    }
-
-                    await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
-                        savingUserId);
-
-                    await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                        org!.DisplayName(), orgUser.Email);
+                    throw new BadRequestException(NonCompliantMembersWillLoseAccess);
                 }
+
+                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id,
+                    savingUserId);
+
+                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                    org!.DisplayName(), orgUser.Email);
             }
         }
     }

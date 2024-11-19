@@ -558,13 +558,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task SetOrganizationUsersStatusAsync(IEnumerable<Guid> organizationUserIds, OrganizationUserStatusType status)
+    public async Task RevokeOrganizationUserAsync(IEnumerable<Guid> organizationUserIds)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
         await connection.ExecuteAsync(
             "[dbo].[OrganizationUser_SetStatusForUsersById]",
-            new { OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(), Status = status },
+            new { OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds), Status = OrganizationUserStatusType.Revoked },
             commandType: CommandType.StoredProcedure);
     }
 }

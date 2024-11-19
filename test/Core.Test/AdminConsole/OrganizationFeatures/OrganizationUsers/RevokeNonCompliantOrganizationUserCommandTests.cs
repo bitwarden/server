@@ -161,7 +161,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .SetOrganizationUsersStatusAsync(Arg.Any<IEnumerable<Guid>>(), OrganizationUserStatusType.Revoked);
+            .RevokeOrganizationUserAsync(Arg.Any<IEnumerable<Guid>>());
 
         Assert.True(result.Success);
     }
@@ -169,7 +169,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
     public class InvalidUser : IActingUser
     {
         public Guid? UserId => Guid.Empty;
-        public bool IsOrganizationOwner => false;
+        public bool IsOrganizationOwnerOrProvider => false;
         public EventSystemUser? SystemUserType => null;
     }
 }

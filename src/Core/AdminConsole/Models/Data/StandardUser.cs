@@ -7,10 +7,10 @@ public class StandardUser : IActingUser
     public StandardUser(Guid userId, bool isOrganizationOwner)
     {
         UserId = userId;
-        IsOrganizationOwner = isOrganizationOwner;
+        IsOrganizationOwnerOrProvider = isOrganizationOwner;
     }
 
     public Guid? UserId { get; }
-    public bool IsOrganizationOwner { get; }
+    public bool IsOrganizationOwnerOrProvider { get; }
     public EventSystemUser? SystemUserType => throw new Exception($"{nameof(StandardUser)} does not have a {nameof(SystemUserType)}");
 }

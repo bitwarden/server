@@ -5,6 +5,6 @@ namespace Bit.Core.AdminConsole.Models.Data;
 public interface IActingUser
 {
     Guid? UserId { get; }
-    bool IsOrganizationOwner { get; }
+    bool IsOrganizationOwnerOrProvider { get; }
     EventSystemUser? SystemUserType { get; }
 }
