@@ -99,7 +99,13 @@ public class HubHelpers
                 var syncNotification =
                     JsonSerializer.Deserialize<PushNotificationData<SyncNotificationPushNotification>>(
                         notificationJson, _deserializerOptions);
-                if (syncNotification.Payload.UserId.HasValue)
+                if (syncNotification.Payload.InstallationId.HasValue)
+                {
+                    await _hubContext.Clients.Group(NotificationsHub.GetInstallationGroup(
+                            syncNotification.Payload.InstallationId.Value, syncNotification.Payload.ClientType))
+                        .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
+                }
+                else if (syncNotification.Payload.UserId.HasValue)
                 {
                     if (syncNotification.Payload.ClientType == ClientType.All)
                     {

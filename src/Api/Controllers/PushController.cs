@@ -39,7 +39,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type);
+            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.InstallationId, model.OrganizationIds);
     }
 
     [HttpPost("delete")]
@@ -68,11 +68,18 @@ public class PushController : Controller
     }
 
     [HttpPost("send")]
-    public async Task PostSend([FromBody] PushSendRequestModel model)
+    public async Task PostSendAsync([FromBody] PushSendRequestModel model)
     {
         CheckUsage();
 
-        if (!string.IsNullOrWhiteSpace(model.UserId))
+        if (!string.IsNullOrWhiteSpace(model.InstallationId) && _currentContext.InstallationId.HasValue &&
+            _currentContext.InstallationId.Value.ToString() == model.InstallationId!)
+        {
+            await _pushNotificationService.SendPayloadToInstallationAsync(
+                _currentContext.InstallationId.Value.ToString(), model.Type, model.Payload, Prefix(model.Identifier),
+                Prefix(model.DeviceId), model.ClientType);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.UserId))
         {
             await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
                 model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
@@ -91,7 +98,7 @@ public class PushController : Controller
             return null;
         }
 
-        return $"{_currentContext.InstallationId.Value}_{value}";
+        return $"{_currentContext.InstallationId!.Value}_{value}";
     }
 
     private void CheckUsage()

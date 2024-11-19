@@ -8,7 +8,6 @@ namespace Bit.Core.Services;
 
 public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegistrationService
 {
-
     public RelayPushRegistrationService(
         IHttpClientFactory httpFactory,
         GlobalSettings globalSettings,
@@ -25,7 +24,7 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, string installationId, IEnumerable<string> organizationIds)
     {
         var requestModel = new PushRegistrationRequestModel
         {
@@ -33,7 +32,9 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             Identifier = identifier,
             PushToken = pushToken,
             Type = type,
-            UserId = userId
+            UserId = userId,
+            InstallationId = installationId,
+            OrganizationIds = organizationIds
         };
         await SendAsync(HttpMethod.Post, "push/register", requestModel);
     }

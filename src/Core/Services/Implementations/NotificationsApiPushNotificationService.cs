@@ -11,6 +11,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
+/// <summary>
+/// Sends non-mobile push notifications to the Azure Queue Api, later received by Notifications Api.
+/// Used by Cloud-Hosted environments.
+/// Received by AzureQueueHostedService message receiver in Notifications project.
+/// </summary>
 public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
 {
     private readonly GlobalSettings _globalSettings;
@@ -180,6 +185,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             Id = notification.Id,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = _globalSettings.Installation.Id,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
@@ -225,6 +231,11 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null) =>
+        // Noop
+        Task.CompletedTask;
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
         string deviceId = null, ClientType? clientType = null)

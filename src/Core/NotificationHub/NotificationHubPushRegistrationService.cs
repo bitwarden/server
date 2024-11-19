@@ -13,22 +13,19 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
-        IOrganizationUserRepository organizationUserRepository)
+        IServiceProvider serviceProvider)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _notificationHubPool = notificationHubPool;
         _serviceProvider = serviceProvider;
-        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, string installationId, IEnumerable<string> organizationIds)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -51,10 +48,15 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             installation.Tags.Add("deviceIdentifier:" + identifier);
         }
 
-        foreach (var organizationUserDetails in await _organizationUserRepository.GetManyDetailsByUserAsync(
-                     Guid.Parse(userId), OrganizationUserStatusType.Confirmed))
+        if (!string.IsNullOrWhiteSpace(installationId))
         {
-            installation.Tags.Add($"organizationId:{organizationUserDetails.OrganizationId}");
+            installation.Tags.Add($"installationId:{installationId}");
+        }
+
+        var organizationIdsList = organizationIds.ToList();
+        foreach (var organizationId in organizationIdsList)
+        {
+            installation.Tags.Add($"organizationId:{organizationId}");
         }
 
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
@@ -101,10 +103,12 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
         }
 
-        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType);
-        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType);
-        BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier, clientType);
+        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType,
+            installationId, organizationIdsList);
+        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType,
+            installationId, organizationIdsList);
+        BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate, userId,
+            identifier, clientType, installationId, organizationIdsList);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -114,7 +118,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier, ClientType clientType)
+        string userId, string identifier, ClientType clientType, string installationId, List<string> organizationIds)
     {
         if (templateBody == null)
         {
@@ -135,6 +139,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{identifier}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(installationId))
+        {
+            template.Tags.Add($"installationId:{installationId}");
+        }
+
+        foreach (var organizationId in organizationIds)
+        {
+            template.Tags.Add($"organizationId:{organizationId}");
         }
 
         installation.Templates.Add(fullTemplateId, template);

@@ -3,8 +3,10 @@ using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -15,15 +17,25 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class DeviceServiceTests
 {
-    [Fact]
-    public async Task DeviceSaveShouldUpdateRevisionDateAndPushRegistration()
+    [Theory]
+    [BitAutoData]
+    public async Task SaveAsync_IdProvided_UpdatedRevisionDateAndPushRegistration(Guid id, Guid userId,
+        Guid installationId, Guid organizationId1, Guid organizationId2,
+        OrganizationUserOrganizationDetails organizationUserOrganizationDetails1,
+        OrganizationUserOrganizationDetails organizationUserOrganizationDetails2)
     {
+        organizationUserOrganizationDetails1.OrganizationId = organizationId1;
+        organizationUserOrganizationDetails2.OrganizationId = organizationId2;
+
         var deviceRepo = Substitute.For<IDeviceRepository>();
         var pushRepo = Substitute.For<IPushRegistrationService>();
-        var deviceService = new DeviceService(deviceRepo, pushRepo);
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Id.Returns(installationId);
+        var organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+        organizationUserRepository.GetManyDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType?>())
+            .Returns([organizationUserOrganizationDetails1, organizationUserOrganizationDetails2]);
+        var deviceService = new DeviceService(deviceRepo, pushRepo, globalSettings, organizationUserRepository);
 
-        var id = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         var device = new Device
         {
             Id = id,
@@ -36,8 +48,55 @@ public class DeviceServiceTests
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-        await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-            userId.ToString(), "testid", DeviceType.Android);
+        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
+            userId.ToString(), "testid", DeviceType.Android, installationId.ToString(),
+            Arg.Do<IEnumerable<string>>(organizationIds =>
+            {
+                var organizationIdsList = organizationIds.ToList();
+                Assert.Equal(2, organizationIdsList.Count);
+                Assert.Contains(organizationId1.ToString(), organizationIdsList);
+                Assert.Contains(organizationId2.ToString(), organizationIdsList);
+            }));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SaveAsync_IdNotProvided_CreatedAndPushRegistration(Guid userId, Guid installationId,
+        Guid organizationId1, Guid organizationId2,
+        OrganizationUserOrganizationDetails organizationUserOrganizationDetails1,
+        OrganizationUserOrganizationDetails organizationUserOrganizationDetails2)
+    {
+        organizationUserOrganizationDetails1.OrganizationId = organizationId1;
+        organizationUserOrganizationDetails2.OrganizationId = organizationId2;
+
+        var deviceRepo = Substitute.For<IDeviceRepository>();
+        var pushRepo = Substitute.For<IPushRegistrationService>();
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Id.Returns(installationId);
+        var organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+        organizationUserRepository.GetManyDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType?>())
+            .Returns([organizationUserOrganizationDetails1, organizationUserOrganizationDetails2]);
+        var deviceService = new DeviceService(deviceRepo, pushRepo, globalSettings, organizationUserRepository);
+
+        var device = new Device
+        {
+            Name = "test device",
+            Type = DeviceType.Android,
+            UserId = userId,
+            PushToken = "testtoken",
+            Identifier = "testid"
+        };
+        await deviceService.SaveAsync(device);
+
+        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync("testtoken",
+            Arg.Do<string>(id => Guid.TryParse(id, out var _)), userId.ToString(), "testid", DeviceType.Android,
+            installationId.ToString(), Arg.Do<IEnumerable<string>>(organizationIds =>
+            {
+                var organizationIdsList = organizationIds.ToList();
+                Assert.Equal(2, organizationIdsList.Count);
+                Assert.Contains(organizationId1.ToString(), organizationIdsList);
+                Assert.Contains(organizationId2.ToString(), organizationIdsList);
+            }));
     }
 
     /// <summary>
@@ -61,12 +120,7 @@ public class DeviceServiceTests
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-                deviceThree,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo, deviceThree, });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -84,7 +138,8 @@ public class DeviceServiceTests
             },
         };
 
-        await sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel, alteredDeviceModels);
+        await sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel,
+            alteredDeviceModels);
 
         // Updating trust, "current" or "other" only needs to change the EncryptedPublicKey & EncryptedUserKey
         await sutProvider.GetDependency<IDeviceRepository>()
@@ -148,11 +203,7 @@ public class DeviceServiceTests
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo, });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -170,7 +221,8 @@ public class DeviceServiceTests
             },
         };
 
-        await sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel, alteredDeviceModels);
+        await sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel,
+            alteredDeviceModels);
 
         // Check that UpsertAsync was called for the trusted device
         await sutProvider.GetDependency<IDeviceRepository>()
@@ -202,11 +254,7 @@ public class DeviceServiceTests
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo, });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -236,11 +284,7 @@ public class DeviceServiceTests
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo, });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -259,6 +303,7 @@ public class DeviceServiceTests
         };
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel, alteredDeviceModels));
+            sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel,
+                alteredDeviceModels));
     }
 }

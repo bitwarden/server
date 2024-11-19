@@ -31,7 +31,7 @@ public class PushControllerTests
         }
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SendAsync(new PushSendRequestModel
+            sutProvider.Sut.PostSendAsync(new PushSendRequestModel
             {
                 Type = PushType.SyncNotification,
                 UserId = userId.ToString(),
@@ -57,7 +57,7 @@ public class PushControllerTests
         sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
         sutProvider.GetDependency<ICurrentContext>().InstallationId.Returns(installationId);
 
-        await sutProvider.Sut.SendAsync(new PushSendRequestModel
+        await sutProvider.Sut.PostSendAsync(new PushSendRequestModel
         {
             Type = PushType.SyncNotification,
             UserId = null,
@@ -93,7 +93,7 @@ public class PushControllerTests
         var expectedIdentifier = haveIdentifier ? $"{installationId}_{identifier}" : null;
         var expectedDeviceId = haveDeviceId ? $"{installationId}_{deviceId}" : null;
 
-        await sutProvider.Sut.SendAsync(new PushSendRequestModel
+        await sutProvider.Sut.PostSendAsync(new PushSendRequestModel
         {
             Type = PushType.SyncNotification,
             UserId = userId.ToString(),
@@ -128,7 +128,7 @@ public class PushControllerTests
         var expectedIdentifier = haveIdentifier ? $"{installationId}_{identifier}" : null;
         var expectedDeviceId = haveDeviceId ? $"{installationId}_{deviceId}" : null;
 
-        await sutProvider.Sut.SendAsync(new PushSendRequestModel
+        await sutProvider.Sut.PostSendAsync(new PushSendRequestModel
         {
             Type = PushType.SyncNotification,
             UserId = null,
