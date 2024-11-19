@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -32,6 +33,7 @@ public class StripePaymentService : IPaymentService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
+    private readonly ITaxService _taxService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -40,7 +42,8 @@ public class StripePaymentService : IPaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ITaxService taxService)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -49,6 +52,7 @@ public class StripePaymentService : IPaymentService
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
         _featureService = featureService;
+        _taxService = taxService;
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -112,6 +116,20 @@ public class StripePaymentService : IPaymentService
         Subscription subscription;
         try
         {
+            if (taxInfo.TaxIdNumber != null && taxInfo.TaxIdType == null)
+            {
+                taxInfo.TaxIdType = _taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
+                    taxInfo.TaxIdNumber);
+
+                if (taxInfo.TaxIdType == null)
+                {
+                    _logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                        taxInfo.BillingAddressCountry,
+                        taxInfo.TaxIdNumber);
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
+                }
+            }
+
             var customerCreateOptions = new CustomerCreateOptions
             {
                 Description = org.DisplayBusinessName(),
@@ -146,12 +164,9 @@ public class StripePaymentService : IPaymentService
                     City = taxInfo?.BillingAddressCity,
                     State = taxInfo?.BillingAddressState,
                 },
-                TaxIdData = taxInfo?.HasTaxId != true
-                    ? null
-                    :
-                    [
-                        new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber, }
-                    ],
+                TaxIdData = taxInfo.HasTaxId
+                    ? [new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }]
+                    : null
             };
 
             customerCreateOptions.AddExpand("tax");
