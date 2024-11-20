@@ -881,15 +881,6 @@ public class TaxService : ITaxService
         }
     ];
 
-    /// <summary>
-    /// Retrieves the Stripe tax code for a given country and tax ID.
-    /// </summary>
-    /// <param name="country"></param>
-    /// <param name="taxId"></param>
-    /// <returns>
-    /// Returns the Stripe tax code if the tax ID is valid for the country.
-    /// Returns null if the tax ID is invalid or the country is not supported.
-    /// </returns>
     public string? GetStripeTaxCode(string country, string taxId)
     {
         foreach (var taxIdType in _taxIdTypes.Where(x => x.Country == country))
@@ -903,5 +894,8 @@ public class TaxService : ITaxService
         return null;
     }
 
-    public IEnumerable<TaxIdType> GetTaxIdTypes() => _taxIdTypes;
+    public bool IsSupported(string country)
+    {
+        return _taxIdTypes.Any(x => x.Country == country);
+    }
 }
