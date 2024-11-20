@@ -7,6 +7,7 @@ namespace Bit.Core.Billing;
 public static class Utilities
 {
     public const string BraintreeCustomerIdKey = "btCustomerId";
+    public const string BraintreeCustomerIdOldKey = "btCustomerId_old";
 
     public static async Task<SubscriptionSuspension> GetSubscriptionSuspensionAsync(
         IStripeAdapter stripeAdapter,

@@ -5,21 +5,31 @@
 
 <h1>Organizations</h1>
 
-<form class="form-inline mb-2" method="get">
-    <label class="sr-only" asp-for="Name">Name</label>
-    <input type="text" class="form-control mb-2 mr-2" placeholder="Name" asp-for="Name" name="name">
-    <label class="sr-only" asp-for="UserEmail">User email</label>
-    <input type="text" class="form-control mb-2 mr-2" placeholder="User email" asp-for="UserEmail" name="userEmail">
+<form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get">
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="Name">Name</label>
+        <input type="text" class="form-control" placeholder="Name" asp-for="Name" name="name">
+    </div>
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="UserEmail">User email</label>
+        <input type="text" class="form-control" placeholder="User email" asp-for="UserEmail" name="userEmail">
+    </div>
     @if(!Model.SelfHosted)
     {
-        <label class="sr-only" asp-for="Paid">Customer</label>
-        <select class="form-control mb-2 mr-2" asp-for="Paid" name="paid">
-            <option asp-selected="!Model.Paid.HasValue" value="">-- Customer --</option>
-            <option asp-selected="Model.Paid.GetValueOrDefault(false)" value="true">Paid</option>
-            <option asp-selected="!Model.Paid.GetValueOrDefault(true)" value="false">Freeloader</option>
-        </select>
+        <div class="col-12">
+            <label class="visually-hidden" asp-for="Paid">Customer</label>
+            <select class="form-select" asp-for="Paid" name="paid">
+                <option asp-selected="!Model.Paid.HasValue" value="">-- Customer --</option>
+                <option asp-selected="Model.Paid.GetValueOrDefault(false)" value="true">Paid</option>
+                <option asp-selected="!Model.Paid.GetValueOrDefault(true)" value="false">Freeloader</option>
+            </select>
+        </div>
     }
-    <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary" title="Search">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </div>
 </form>
 
 <div class="table-responsive">
@@ -68,7 +78,7 @@
                                 }
                                 else
                                 {
-                                    <i class="fa fa-smile-o fa-lg fa-fw text-muted" title="Freeloader"></i>
+                                    <i class="fa fa-smile-o fa-lg fa-fw text-body-secondary" title="Freeloader"></i>
                                 }
                             }
                             @if(org.MaxStorageGb.HasValue && org.MaxStorageGb > 1)
@@ -78,7 +88,7 @@
                             }
                             else
                             {
-                                <i class="fa fa-plus-square-o fa-lg fa-fw text-muted"
+                                <i class="fa fa-plus-square-o fa-lg fa-fw text-body-secondary"
                                    title="No Additional Storage"></i>
                             }
                             @if(org.Enabled)
@@ -88,7 +98,7 @@
                             }
                             else
                             {
-                                <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Disabled"></i>
+                                <i class="fa fa-times-circle-o fa-lg fa-fw text-body-secondary" title="Disabled"></i>
                             }
                             @if(org.TwoFactorIsEnabled())
                             {
@@ -96,7 +106,7 @@
                             }
                             else
                             {
-                                <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
+                                <i class="fa fa-unlock fa-lg fa-fw text-body-secondary" title="2FA Not Enabled"></i>
                             }
                         </td>
                     </tr>
