@@ -11,6 +11,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -62,8 +63,11 @@ public class SingleOrgPolicyValidatorTests
         Assert.True(string.IsNullOrEmpty(result));
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task OnSaveSideEffectsAsync_RemovesNonCompliantUsers(
+        bool isAccountDeprovisioningEnabled,
         [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
@@ -117,19 +121,40 @@ public class SingleOrgPolicyValidatorTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
 
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(isAccountDeprovisioningEnabled);
+
+        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .Returns(new CommandResult());
+
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
-        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
-            .Received(1)
-            .RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),
-                "user3@example.com");
+        if (isAccountDeprovisioningEnabled)
+        {
+            await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+                .Received(1)
+                .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
+            await sutProvider.GetDependency<IMailService>()
+                .Received(1)
+                .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(),
+                    "user3@example.com");
+        }
+        else
+        {
+            await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+                .Received(1)
+                .RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
+            await sutProvider.GetDependency<IMailService>()
+                .Received(1)
+                .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),
+                    "user3@example.com");
+        }
+
     }
 
     [Theory, BitAutoData]
-    public async Task OnSaveSideEffectsAsync_GivenUpdatedSingleOrgPolicy_WhenAccountDeprovisioningIsDisabled_Then(
+    public async Task OnSaveSideEffectsAsync_WhenAccountDeprovisioningIsEnabled_ThenUsersAreRevoked(
         [PolicyUpdate(PolicyType.SingleOrg)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
@@ -184,12 +209,16 @@ public class SingleOrgPolicyValidatorTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(false);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+
+        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .DidNotReceive()
+            .Received()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }
 }

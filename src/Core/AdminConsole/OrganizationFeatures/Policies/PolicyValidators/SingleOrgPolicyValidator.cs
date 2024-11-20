@@ -128,11 +128,10 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             ou.Type != OrganizationUserType.Owner &&
             ou.Type != OrganizationUserType.Admin &&
             ou.UserId != savingUserId
-            ).ToList();
+        ).ToList();
 
         var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
-                removableOrgUsers.Select(ou => ou.UserId!.Value));
-
+            removableOrgUsers.Select(ou => ou.UserId!.Value));
         foreach (var orgUser in removableOrgUsers)
         {
             if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
