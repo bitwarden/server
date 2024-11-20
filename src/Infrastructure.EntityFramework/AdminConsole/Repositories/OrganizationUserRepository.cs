@@ -722,15 +722,15 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task RevokeOrganizationUserAsync(IEnumerable<Guid> userIds)
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
     {
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
 
-        await dbContext.OrganizationUsers.Where(x => userIds.Contains(x.OrganizationId))
+        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
 
-        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(userIds);
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
 }

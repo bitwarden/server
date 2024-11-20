@@ -558,7 +558,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task RevokeOrganizationUserAsync(IEnumerable<Guid> organizationUserIds)
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
