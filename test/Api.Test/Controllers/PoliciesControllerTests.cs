@@ -201,4 +201,85 @@ public class PoliciesControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(orgId, type));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task GetPolicyStatusAsync_UserUnauthorized_ThrowsUnauthorizedAccessException(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult<User>(null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.GetPolicyStatusAsync(orgId, type));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetPolicyStatusAsync_PolicyNotFound_ReturnsFalse(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type, User user)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(orgId, type)
+            .Returns(Task.FromResult<Policy>(null));
+
+        // Act
+        var result = await sutProvider.Sut.GetPolicyStatusAsync(orgId, type);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetPolicyStatusAsync_PolicyDisabled_ReturnsFalse(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type, User user, Policy policy)
+    {
+        // Arrange
+        policy.Enabled = false;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(orgId, type)
+            .Returns(policy);
+
+        // Act
+        var result = await sutProvider.Sut.GetPolicyStatusAsync(orgId, type);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetPolicyStatusAsync_PolicyEnabled_ReturnsTrue(
+        SutProvider<PoliciesController> sutProvider, Guid orgId, PolicyType type, User user, Policy policy)
+    {
+        // Arrange
+        policy.Enabled = true;
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(orgId, type)
+            .Returns(policy);
+
+        // Act
+        var result = await sutProvider.Sut.GetPolicyStatusAsync(orgId, type);
+
+        // Assert
+        Assert.True(result);
+    }
+
 }
