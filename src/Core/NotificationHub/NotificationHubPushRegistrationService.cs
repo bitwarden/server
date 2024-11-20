@@ -11,18 +11,15 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
         IOrganizationUserRepository organizationUserRepository)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _notificationHubPool = notificationHubPool;
-        _serviceProvider = serviceProvider;
         _organizationUserRepository = organizationUserRepository;
     }
 
