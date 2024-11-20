@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
