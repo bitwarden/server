@@ -1,7 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
+using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -1877,6 +1880,86 @@ public class StripePaymentService : IPaymentService
                 }
             default: return (null, null);
         }
+    }
+
+    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewInvoiceRequestBody parameters)
+    {
+        var pmStripePlan = await _stripeAdapter.PlanGetAsync("premium-annually");
+        var storageStripePlan = await _stripeAdapter.PlanGetAsync("storage-gb-annually");
+
+        var options = new InvoiceCreatePreviewOptions
+        {
+            AutomaticTax = new InvoiceAutomaticTaxOptions
+            {
+                Enabled = true,
+            },
+            Currency = "usd",
+            InvoiceItems = new List<InvoiceUpcomingInvoiceItemOptions>
+            {
+                new()
+                {
+                    Quantity = 1,
+                    PriceData = new InvoiceItemPriceDataOptions
+                    {
+                        Currency = "usd",
+                        UnitAmount = pmStripePlan.Amount,
+                        Product = pmStripePlan.ProductId
+                    }
+                },
+                new()
+                {
+                    Quantity = parameters.PasswordManager.AdditionalStorage,
+                    PriceData = new InvoiceItemPriceDataOptions
+                    {
+                        Currency = "usd",
+                        UnitAmount = storageStripePlan.Amount,
+                        Product = storageStripePlan.ProductId
+                    }
+                }
+            },
+            CustomerDetails = new InvoiceCustomerDetailsOptions
+            {
+                Address = new AddressOptions
+                {
+                    PostalCode = parameters.TaxInformation.PostalCode,
+                    Country = parameters.TaxInformation.Country,
+                }
+            },
+        };
+
+        if (parameters.TaxInformation.TaxId != null)
+        {
+            var taxIdType = _taxService.GetStripeTaxCode(
+                options.CustomerDetails.Address.Country,
+                parameters.TaxInformation.TaxId);
+
+            if (taxIdType != null)
+            {
+                options.CustomerDetails.TaxIds = [
+                    new InvoiceCustomerDetailsTaxIdOptions
+                    {
+                        Type = taxIdType,
+                        Value = parameters.TaxInformation.TaxId
+                    }
+                ];
+            }
+        }
+
+        var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
+
+        decimal effectiveTaxRate = 0;
+
+        if (invoice.Tax != null && invoice.TotalExcludingTax != null)
+        {
+            effectiveTaxRate = invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor();
+        }
+
+        var result = new PreviewInvoiceResponseModel(
+            effectiveTaxRate,
+            invoice.TotalExcludingTax.ToMajor() ?? 0,
+            invoice.Tax.ToMajor() ?? 0,
+            invoice.Total.ToMajor());
+        return result;
     }
 
     private PaymentMethod GetLatestCardPaymentMethod(string customerId)

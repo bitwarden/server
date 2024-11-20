@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -76,5 +77,13 @@ public class AccountsBillingController(
             startAfter);
 
         return TypedResults.Ok(transactions);
+    }
+
+    [HttpPost("preview-invoice"), AllowAnonymous]
+    public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewInvoiceRequestBody model)
+    {
+        var invoice = await paymentService.PreviewInvoiceAsync(model);
+
+        return TypedResults.Ok(invoice);
     }
 }

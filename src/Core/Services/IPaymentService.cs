@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
+using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -59,4 +61,5 @@ public interface IPaymentService
     Task<bool> RisksSubscriptionFailure(Organization organization);
     Task<bool> HasSecretsManagerStandalone(Organization organization);
     Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
+    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewInvoiceRequestBody parameters);
 }
