@@ -49,6 +49,7 @@ public abstract class MemberBaseModel
     /// <summary>
     /// The member's type (or role) within the organization.
     /// </summary>
+    [Required]
     [EnumDataType(typeof(OrganizationUserType))]
     public required OrganizationUserType? Type { get; set; }
     /// <summary>
