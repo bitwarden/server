@@ -1882,11 +1882,11 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewInvoiceRequestBody parameters)
+    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
+        PreviewInvoiceRequestBody parameters,
+        string gatewayCustomerId,
+        string gatewaySubscriptionId)
     {
-        var pmStripePlan = await _stripeAdapter.PlanGetAsync("premium-annually");
-        var storageStripePlan = await _stripeAdapter.PlanGetAsync("storage-gb-annually");
-
         var options = new InvoiceCreatePreviewOptions
         {
             AutomaticTax = new InvoiceAutomaticTaxOptions
@@ -1894,28 +1894,23 @@ public class StripePaymentService : IPaymentService
                 Enabled = true,
             },
             Currency = "usd",
-            InvoiceItems = new List<InvoiceUpcomingInvoiceItemOptions>
+            Discounts = new List<InvoiceDiscountOptions>(),
+            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
-                new()
-                {
-                    Quantity = 1,
-                    PriceData = new InvoiceItemPriceDataOptions
+                Items =
+                [
+                    new()
                     {
-                        Currency = "usd",
-                        UnitAmount = pmStripePlan.Amount,
-                        Product = pmStripePlan.ProductId
-                    }
-                },
-                new()
-                {
-                    Quantity = parameters.PasswordManager.AdditionalStorage,
-                    PriceData = new InvoiceItemPriceDataOptions
+                        Quantity = 1,
+                        Plan = "premium-annually"
+                    },
+
+                    new()
                     {
-                        Currency = "usd",
-                        UnitAmount = storageStripePlan.Amount,
-                        Product = storageStripePlan.ProductId
+                        Quantity = parameters.PasswordManager.AdditionalStorage,
+                        Plan = "storage-gb-annually"
                     }
-                }
+                ]
             },
             CustomerDetails = new InvoiceCustomerDetailsOptions
             {
@@ -1948,6 +1943,29 @@ public class StripePaymentService : IPaymentService
                     Value = parameters.TaxInformation.TaxId
                 }
             ];
+        }
+
+        if (gatewayCustomerId != null)
+        {
+            var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+
+            if (gatewayCustomer.Discount != null)
+            {
+                options.Discounts.Add(new InvoiceDiscountOptions
+                {
+                    Discount = gatewayCustomer.Discount.Id
+                });
+            }
+
+            var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
+
+            if (gatewaySubscription?.Discount != null)
+            {
+                options.Discounts.Add(new InvoiceDiscountOptions
+                {
+                    Discount = gatewaySubscription.Discount.Id
+                });
+            }
         }
 
         try

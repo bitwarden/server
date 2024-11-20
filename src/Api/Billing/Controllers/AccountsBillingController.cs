@@ -79,10 +79,16 @@ public class AccountsBillingController(
         return TypedResults.Ok(transactions);
     }
 
-    [HttpPost("preview-invoice"), AllowAnonymous]
+    [HttpPost("preview-invoice")]
     public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewInvoiceRequestBody model)
     {
-        var invoice = await paymentService.PreviewInvoiceAsync(model);
+        var user = await userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var invoice = await paymentService.PreviewInvoiceAsync(model, user.GatewayCustomerId, user.GatewaySubscriptionId);
 
         return TypedResults.Ok(invoice);
     }
