@@ -39,7 +39,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type);
+            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.OrganizationIds);
     }
 
     [HttpPost("delete")]

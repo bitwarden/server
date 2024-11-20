@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
@@ -10,13 +11,16 @@ public class DeviceService : IDeviceService
 {
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPushRegistrationService _pushRegistrationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public DeviceService(
         IDeviceRepository deviceRepository,
-        IPushRegistrationService pushRegistrationService)
+        IPushRegistrationService pushRegistrationService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _deviceRepository = deviceRepository;
         _pushRegistrationService = pushRegistrationService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task SaveAsync(Device device)
@@ -31,8 +35,13 @@ public class DeviceService : IDeviceService
             await _deviceRepository.ReplaceAsync(device);
         }
 
+        var organizationIdsString =
+            (await _organizationUserRepository.GetManyDetailsByUserAsync(device.UserId,
+                OrganizationUserStatusType.Confirmed))
+            .Select(ou => ou.OrganizationId.ToString());
+
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
+            device.UserId.ToString(), device.Identifier, device.Type, organizationIdsString);
     }
 
     public async Task ClearTokenAsync(Device device)
