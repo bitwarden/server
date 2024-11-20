@@ -1927,39 +1927,60 @@ public class StripePaymentService : IPaymentService
             },
         };
 
-        if (parameters.TaxInformation.TaxId != null)
+        if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
         {
             var taxIdType = _taxService.GetStripeTaxCode(
                 options.CustomerDetails.Address.Country,
                 parameters.TaxInformation.TaxId);
 
-            if (taxIdType != null)
+            if (taxIdType == null)
             {
-                options.CustomerDetails.TaxIds = [
-                    new InvoiceCustomerDetailsTaxIdOptions
-                    {
-                        Type = taxIdType,
-                        Value = parameters.TaxInformation.TaxId
-                    }
-                ];
+                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                    parameters.TaxInformation.TaxId,
+                    parameters.TaxInformation.Country);
+                throw new BadRequestException("billingPreviewInvalidTaxIdError");
+            }
+
+            options.CustomerDetails.TaxIds = [
+                new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = taxIdType,
+                    Value = parameters.TaxInformation.TaxId
+                }
+            ];
+        }
+
+        try
+        {
+            var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
+
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+                ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
+                : 0M;
+
+            var result = new PreviewInvoiceResponseModel(
+                effectiveTaxRate,
+                invoice.TotalExcludingTax.ToMajor() ?? 0,
+                invoice.Tax.ToMajor() ?? 0,
+                invoice.Total.ToMajor());
+            return result;
+        }
+        catch (StripeException e)
+        {
+            switch (e.StripeError.Code)
+            {
+                case "tax_id_invalid":
+                    _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                        parameters.TaxInformation.TaxId,
+                        parameters.TaxInformation.Country);
+                    throw new BadRequestException("billingPreviewInvalidTaxIdError");
+                default:
+                    _logger.LogError(e, "Unexpected error previewing invoice with tax ID '{TaxId}' in country '{Country}'.",
+                        parameters.TaxInformation.TaxId,
+                        parameters.TaxInformation.Country);
+                    throw new BadRequestException("billingPreviewInvoiceError");
             }
         }
-
-        var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
-
-        decimal effectiveTaxRate = 0;
-
-        if (invoice.Tax != null && invoice.TotalExcludingTax != null)
-        {
-            effectiveTaxRate = invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor();
-        }
-
-        var result = new PreviewInvoiceResponseModel(
-            effectiveTaxRate,
-            invoice.TotalExcludingTax.ToMajor() ?? 0,
-            invoice.Tax.ToMajor() ?? 0,
-            invoice.Total.ToMajor());
-        return result;
     }
 
     private PaymentMethod GetLatestCardPaymentMethod(string customerId)
