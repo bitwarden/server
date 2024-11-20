@@ -695,7 +695,7 @@ public class SubscriberService(
                 throw new BadRequestException(message);
             }
 
-            logger.LogError(stripeException,"An unhandled Stripe exception was thrown while verifying subscriber's ({SubscriberID}) bank account", subscriber.Id);
+            logger.LogError(stripeException, "An unhandled Stripe exception was thrown while verifying subscriber's ({SubscriberID}) bank account", subscriber.Id);
             throw new BillingException();
         }
     }
