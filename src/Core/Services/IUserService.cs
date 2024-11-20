@@ -8,6 +8,8 @@ using Bit.Core.Models.Business;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public interface IUserService
@@ -45,6 +47,7 @@ public interface IUserService
     Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
+    Task<IEnumerable<(Guid UserId, string? ErrorMessage)>> DeleteManyAsync(IEnumerable<User> users);
     Task SendDeleteConfirmationAsync(string email);
     Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
         PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,

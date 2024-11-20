@@ -167,7 +167,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_DeleteById]",
-                new { Ids = new List<Guid> { user.Id }.ToGuidIdArrayTVP() },
+                new { Id = user.Id },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 180);
         }

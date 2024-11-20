@@ -89,7 +89,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                     throw new NotFoundException("Member not found.");
                 }
 
-                await _userService.DeleteAsync(user);
                 results.Add((orgUserId, string.Empty));
             }
             catch (Exception ex)
@@ -98,6 +97,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
+        await _userService.DeleteManyAsync(users);
         await LogDeletedOrganizationUsersAsync(orgUsers, results);
 
         return results;
