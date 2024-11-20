@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Auth.Identity;
+namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public interface IOrganizationTwoFactorTokenProvider
 {

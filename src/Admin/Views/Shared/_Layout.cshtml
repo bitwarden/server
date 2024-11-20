@@ -37,12 +37,12 @@
             <a class="navbar-brand" asp-controller="Home" asp-action="Index">
                 <i class="fa fa-lg fa-fw fa-shield"></i> Admin
             </a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
                     aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarCollapse">
-                <ul class="navbar-nav mr-auto">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
                     @if (SignInManager.IsSignedIn(User))
                     {
                         @if (canViewUsers)
@@ -69,10 +69,10 @@
                             {
                                 <li class="nav-item dropdown" active-controller="tools">
                                     <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
-                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         Tools
                                     </a>
-                                    <div class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                    <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
                                         @if (canChargeBraintree)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
@@ -121,7 +121,7 @@
                                                 Migrate Providers
                                             </a>
                                         }
-                                    </div>
+                                    </ul>
                                 </li>
                             }
                         }

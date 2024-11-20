@@ -7,17 +7,17 @@
     ViewData["Title"] = "Create Multi-organization Enterprise Provider";
 }
 
-<h1>Create Multi-organization Enterprise Provider</h1>
+<h1 class="mb-4">Create Multi-organization Enterprise Provider</h1>
 <div>
-    <form class="form-group" method="post" asp-action="CreateMultiOrganizationEnterprise">
+    <form method="post" asp-action="CreateMultiOrganizationEnterprise">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
-        <div class="form-group">
-            <label asp-for="OwnerEmail"></label>
+        <div class="mb-3">
+            <label asp-for="OwnerEmail" class="form-label"></label>
             <input type="text" class="form-control" asp-for="OwnerEmail">
         </div>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
+                <div class="mb-3">
                     @{
                         var multiOrgPlans = new List<PlanType>
                         {
@@ -25,19 +25,19 @@
                             PlanType.EnterpriseMonthly
                         };
                     }
-                    <label asp-for="Plan"></label>
-                    <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                    <label asp-for="Plan" class="form-label"></label>
+                    <select class="form-select" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
                         <option value="">--</option>
                     </select>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="EnterpriseSeatMinimum"></label>
+                <div class="mb-3">
+                    <label asp-for="EnterpriseSeatMinimum" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="EnterpriseSeatMinimum">
                 </div>
             </div>
         </div>
-        <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
+        <button type="submit" class="btn btn-primary">Create Provider</button>
     </form>
 </div>
