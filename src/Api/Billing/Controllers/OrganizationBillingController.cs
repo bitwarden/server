@@ -21,8 +21,7 @@ public class OrganizationBillingController(
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
     ISubscriberService subscriberService,
-    IPaymentHistoryService paymentHistoryService,
-    ITaxService taxService) : BaseBillingController
+    IPaymentHistoryService paymentHistoryService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
@@ -267,8 +266,6 @@ public class OrganizationBillingController(
         {
             return Error.NotFound();
         }
-
-        requestBody.TaxIdType = taxService.GetStripeTaxCode(requestBody.Country, requestBody.TaxId);
 
         var taxInformation = requestBody.ToDomain();
 

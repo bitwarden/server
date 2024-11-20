@@ -622,8 +622,8 @@ public class SubscriberService(
                 return;
             }
 
-            string taxIdType;
-            if (string.IsNullOrWhiteSpace(taxInformation.TaxIdType))
+            var taxIdType = taxInformation.TaxIdType;
+            if (string.IsNullOrWhiteSpace(taxIdType))
             {
                 taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
                     taxInformation.TaxId);
@@ -635,10 +635,6 @@ public class SubscriberService(
                         taxInformation.TaxId);
                     throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
                 }
-            }
-            else
-            {
-                taxIdType = taxInformation.TaxIdType;
             }
 
             try
