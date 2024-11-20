@@ -1,8 +1,8 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -75,7 +75,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         providerOrganization.ProviderId = provider.Id;
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -98,7 +98,7 @@ public class RemoveOrganizationFromProviderCommandTests
         organization.GatewayCustomerId = null;
         organization.GatewaySubscriptionId = null;
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -141,7 +141,7 @@ public class RemoveOrganizationFromProviderCommandTests
     {
         providerOrganization.ProviderId = provider.Id;
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -153,9 +153,6 @@ public class RemoveOrganizationFromProviderCommandTests
             "a@example.com",
             "b@example.com"
         ]);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(false);
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
             .Returns(GetSubscription(organization.GatewaySubscriptionId));
@@ -173,7 +170,7 @@ public class RemoveOrganizationFromProviderCommandTests
                 options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
                 options.DaysUntilDue == 30));
 
-        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentMethod(organization);
+        await sutProvider.GetDependency<ISubscriberService>().Received(1).RemovePaymentSource(organization);
 
         await organizationRepository.Received(1).ReplaceAsync(Arg.Is<Organization>(org => org.BillingEmail == "a@example.com"));
 
@@ -208,7 +205,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
-        sutProvider.GetDependency<IOrganizationService>().HasConfirmedOwnersExceptAsync(
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 [],
                 includeProvider: false)
@@ -220,9 +217,6 @@ public class RemoveOrganizationFromProviderCommandTests
             "a@example.com",
             "b@example.com"
         ]);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 

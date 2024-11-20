@@ -1,4 +1,3 @@
----
 name: Release
 run-name: Release ${{ inputs.release_type }}
 
@@ -37,7 +36,7 @@ jobs:
           fi
 
       - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Check release version
         id: version
@@ -52,99 +51,6 @@ jobs:
         run: |
           BRANCH_NAME=$(basename ${{ github.ref }})
           echo "branch-name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-
-  release-docker:
-    name: Build Docker images
-    runs-on: ubuntu-22.04
-    needs: setup
-    env:
-      _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
-      _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - project_name: Admin
-          - project_name: Api
-          - project_name: Attachments
-          - project_name: Billing
-          - project_name: Events
-          - project_name: EventsProcessor
-          - project_name: Icons
-          - project_name: Identity
-          - project_name: MsSql
-          - project_name: MsSqlMigratorUtility
-          - project_name: Nginx
-          - project_name: Notifications
-          - project_name: Scim
-          - project_name: Server
-          - project_name: Setup
-          - project_name: Sso
-    steps:
-      - name: Print environment
-        env:
-          RELEASE_OPTION: ${{ inputs.release_type }}
-        run: |
-          whoami
-          docker --version
-          echo "GitHub ref: $GITHUB_REF"
-          echo "GitHub event: $GITHUB_EVENT"
-          echo "Github Release Option: $RELEASE_OPTION"
-
-      - name: Check out repo
-        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-
-      - name: Set up project name
-        id: setup
-        run: |
-          PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
-          echo "Matrix name: ${{ matrix.project_name }}"
-          echo "PROJECT_NAME: $PROJECT_NAME"
-          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
-
-      ########## ACR PROD ##########
-      - name: Log in to Azure - production subscription
-        uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Log in to Azure ACR
-        run: az acr login -n $_AZ_REGISTRY --only-show-errors
-
-      - name: Pull latest project image
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
-            docker pull $_AZ_REGISTRY/$PROJECT_NAME:latest
-          else
-            docker pull $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
-          fi
-
-      - name: Tag version and latest
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag $_AZ_REGISTRY/$PROJECT_NAME:latest $_AZ_REGISTRY/$PROJECT_NAME:dryrun
-          else
-            docker tag $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
-            docker tag $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $_AZ_REGISTRY/$PROJECT_NAME:latest
-          fi
-
-      - name: Push version and latest image
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          if [[ "${{ inputs.release_type }}" == "Dry Run" ]]; then
-            docker push $_AZ_REGISTRY/$PROJECT_NAME:dryrun
-          else
-            docker push $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
-            docker push $_AZ_REGISTRY/$PROJECT_NAME:latest
-          fi
-
-      - name: Log out of Docker
-        run: docker logout
 
   release:
     name: Create GitHub release

@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -49,7 +50,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
-
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly OrganizationsController _sut;
 
     public OrganizationsControllerTests()
@@ -72,6 +73,7 @@ public class OrganizationsControllerTests : IDisposable
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerBillingService = Substitute.For<IProviderBillingService>();
         _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
+        _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -91,7 +93,8 @@ public class OrganizationsControllerTests : IDisposable
             _pushNotificationService,
             _providerRepository,
             _providerBillingService,
-            _orgDeleteTokenDataFactory);
+            _orgDeleteTokenDataFactory,
+            _removeOrganizationUserCommand);
     }
 
     public void Dispose()
@@ -119,14 +122,44 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.Leave(orgId.ToString()));
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization> { null });
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
             exception.Message);
 
-        await _organizationService.DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
+    }
+
+    [Theory, AutoData]
+    public async Task OrganizationsController_UserCannotLeaveOrganizationThatManagesUser(
+        Guid orgId, User user)
+    {
+        var ssoConfig = new SsoConfig
+        {
+            Id = default,
+            Data = new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.KeyConnector
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = orgId,
+        };
+        var foundOrg = new Organization();
+        foundOrg.Id = orgId;
+
+        _currentContext.OrganizationUser(orgId).Returns(true);
+        _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization> { { foundOrg } });
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
+
+        Assert.Contains("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.",
+            exception.Message);
+
+        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
     }
 
     [Theory]
@@ -154,9 +187,12 @@ public class OrganizationsControllerTests : IDisposable
         _currentContext.OrganizationUser(orgId).Returns(true);
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization>());
 
-        await _organizationService.DeleteUserAsync(orgId, user.Id);
-        await _organizationService.Received(1).DeleteUserAsync(orgId, user.Id);
+        await _sut.Leave(orgId);
+
+        await _removeOrganizationUserCommand.Received(1).RemoveUserAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]
@@ -181,8 +217,6 @@ public class OrganizationsControllerTests : IDisposable
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
         _userService.VerifySecretAsync(user, requestModel.Secret).Returns(true);
-
-        _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
 
         _providerRepository.GetByOrganizationIdAsync(organization.Id).Returns(provider);
 

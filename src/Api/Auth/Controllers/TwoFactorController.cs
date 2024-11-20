@@ -3,17 +3,15 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Fido2NetLib;
@@ -30,38 +28,33 @@ public class TwoFactorController : Controller
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly GlobalSettings _globalSettings;
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
-    private readonly IFeatureService _featureService;
+    private readonly IDuoUniversalTokenService _duoUniversalTokenService;
     private readonly IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> _twoFactorAuthenticatorDataProtector;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _ssoEmailTwoFactorSessionDataProtector;
-    private readonly bool _TwoFactorAuthenticatorTokenFeatureFlagEnabled;
 
     public TwoFactorController(
         IUserService userService,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
-        GlobalSettings globalSettings,
         UserManager<User> userManager,
         ICurrentContext currentContext,
         IVerifyAuthRequestCommand verifyAuthRequestCommand,
-        IFeatureService featureService,
+        IDuoUniversalTokenService duoUniversalConfigService,
         IDataProtectorTokenFactory<TwoFactorAuthenticatorUserVerificationTokenable> twoFactorAuthenticatorDataProtector,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> ssoEmailTwoFactorSessionDataProtector)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
-        _globalSettings = globalSettings;
         _userManager = userManager;
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
-        _featureService = featureService;
+        _duoUniversalTokenService = duoUniversalConfigService;
         _twoFactorAuthenticatorDataProtector = twoFactorAuthenticatorDataProtector;
         _ssoEmailTwoFactorSessionDataProtector = ssoEmailTwoFactorSessionDataProtector;
-        _TwoFactorAuthenticatorTokenFeatureFlagEnabled = _featureService.IsEnabled(FeatureFlagKeys.AuthenticatorTwoFactorToken);
     }
 
     [HttpGet("")]
@@ -102,13 +95,10 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
         [FromBody] SecretVerificationRequestModel model)
     {
-        var user = _TwoFactorAuthenticatorTokenFeatureFlagEnabled ? await CheckAsync(model, false) : await CheckAsync(model, false, true);
+        var user = await CheckAsync(model, false);
         var response = new TwoFactorAuthenticatorResponseModel(user);
-        if (_TwoFactorAuthenticatorTokenFeatureFlagEnabled)
-        {
-            var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
-            response.UserVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
-        }
+        var tokenable = new TwoFactorAuthenticatorUserVerificationTokenable(user, response.Key);
+        response.UserVerificationToken = _twoFactorAuthenticatorDataProtector.Protect(tokenable);
         return response;
     }
 
@@ -117,20 +107,11 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorAuthenticatorResponseModel> PutAuthenticator(
         [FromBody] UpdateTwoFactorAuthenticatorRequestModel model)
     {
-        User user;
-        if (_TwoFactorAuthenticatorTokenFeatureFlagEnabled)
+        var user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
+        _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
+        if (!decryptedToken.TokenIsValid(user, model.Key))
         {
-            user = model.ToUser(await _userService.GetUserByPrincipalAsync(User));
-            _twoFactorAuthenticatorDataProtector.TryUnprotect(model.UserVerificationToken, out var decryptedToken);
-            if (!decryptedToken.TokenIsValid(user, model.Key))
-            {
-                throw new BadRequestException("UserVerificationToken", "User verification failed.");
-            }
-        }
-        else
-        {
-            user = await CheckAsync(model, false);
-            model.ToUser(user); // populates user obj with proper metadata for VerifyTwoFactorTokenAsync
+            throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
@@ -145,7 +126,6 @@ public class TwoFactorController : Controller
         return response;
     }
 
-    [RequireFeature(FeatureFlagKeys.AuthenticatorTwoFactorToken)]
     [HttpDelete("authenticator")]
     public async Task<TwoFactorProviderResponseModel> DisableAuthenticator(
     [FromBody] TwoFactorAuthenticatorDisableRequestModel model)
@@ -157,7 +137,7 @@ public class TwoFactorController : Controller
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
 
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
         return new TwoFactorProviderResponseModel(model.Type.Value, user);
     }
 
@@ -200,21 +180,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorDuoResponseModel> PutDuo([FromBody] UpdateTwoFactorDuoRequestModel model)
     {
         var user = await CheckAsync(model, true);
-        try
-        {
-            // for backwards compatibility - will be removed with PM-8107
-            DuoApi duoApi = null;
-            if (model.ClientId != null && model.ClientSecret != null)
-            {
-                duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
-            }
-            else
-            {
-                duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            }
-            await duoApi.JSONApiCall("GET", "/auth/v2/check");
-        }
-        catch (DuoException)
+        if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientSecret, model.ClientId, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -257,21 +223,7 @@ public class TwoFactorController : Controller
         }
 
         var organization = await _organizationRepository.GetByIdAsync(orgIdGuid) ?? throw new NotFoundException();
-        try
-        {
-            // for backwards compatibility - will be removed with PM-8107
-            DuoApi duoApi = null;
-            if (model.ClientId != null && model.ClientSecret != null)
-            {
-                duoApi = new DuoApi(model.ClientId, model.ClientSecret, model.Host);
-            }
-            else
-            {
-                duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            }
-            await duoApi.JSONApiCall("GET", "/auth/v2/check");
-        }
-        catch (DuoException)
+        if (!await _duoUniversalTokenService.ValidateDuoConfiguration(model.ClientSecret, model.ClientId, model.Host))
         {
             throw new BadRequestException(
                 "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
@@ -412,7 +364,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorProviderResponseModel> PutDisable([FromBody] TwoFactorProviderRequestModel model)
     {
         var user = await CheckAsync(model, false);
-        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value, _organizationService);
+        await _userService.DisableTwoFactorProviderAsync(user, model.Type.Value);
         var response = new TwoFactorProviderResponseModel(model.Type.Value, user);
         return response;
     }
@@ -453,8 +405,7 @@ public class TwoFactorController : Controller
     [AllowAnonymous]
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)
     {
-        if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
-                _organizationService))
+        if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "Invalid information. Try again.");

@@ -5,7 +5,6 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Models.Api;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -20,14 +19,13 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class ProviderBillingController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IProviderBillingService providerBillingService,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter,
-    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
+    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
@@ -63,7 +61,7 @@ public class ProviderBillingController(
 
         if (reportContent == null)
         {
-            return ServerErrorResponse("We had a problem generating your invoice CSV. Please contact support.");
+            return Error.ServerError("We had a problem generating your invoice CSV. Please contact support.");
         }
 
         return TypedResults.File(
@@ -94,7 +92,8 @@ public class ProviderBillingController(
             subscription,
             providerPlans,
             taxInformation,
-            subscriptionSuspension);
+            subscriptionSuspension,
+            provider);
 
         return TypedResults.Ok(response);
     }
@@ -113,8 +112,7 @@ public class ProviderBillingController(
 
         if (requestBody is not { Country: not null, PostalCode: not null })
         {
-            return TypedResults.BadRequest(
-                new ErrorResponseModel("Country and postal code are required to update your tax information."));
+            return Error.BadRequest("Country and postal code are required to update your tax information.");
         }
 
         var taxInformation = new TaxInformation(

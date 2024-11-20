@@ -1,12 +1,15 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -32,8 +35,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Organization not found", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -60,8 +61,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("cannot use policies", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -93,8 +92,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Single Sign-On Authentication policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -125,8 +122,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Maximum Vault Timeout policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -163,8 +158,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Key Connector is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -192,8 +185,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -226,7 +217,7 @@ public class PolicyServiceTests
 
         var utcNow = DateTime.UtcNow;
 
-        await sutProvider.Sut.SaveAsync(policy, Substitute.For<IUserService>(), Substitute.For<IOrganizationService>(), Guid.NewGuid());
+        await sutProvider.Sut.SaveAsync(policy, Guid.NewGuid());
 
         await sutProvider.GetDependency<IEventService>().Received()
             .LogPolicyEventAsync(policy, EventType.Policy_Updated);
@@ -256,8 +247,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -348,35 +337,39 @@ public class PolicyServiceTests
                 orgUserDetailAdmin
             });
 
-        var userService = Substitute.For<IUserService>();
-        var organizationService = Substitute.For<IOrganizationService>();
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
+            .Returns(new List<(OrganizationUserUserDetails user, bool hasTwoFactor)>()
+            {
+                (orgUserDetailUserInvited, false),
+                (orgUserDetailUserAcceptedWith2FA, true),
+                (orgUserDetailUserAcceptedWithout2FA, false),
+                (orgUserDetailAdmin, false),
+            });
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserInvited).Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWith2FA).Returns(true);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserAcceptedWithout2FA).Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin).Returns(false);
+        var removeOrganizationUserCommand = sutProvider.GetDependency<IRemoveOrganizationUserCommand>();
 
         var utcNow = DateTime.UtcNow;
 
         var savingUserId = Guid.NewGuid();
 
-        await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+        await sutProvider.Sut.SaveAsync(policy, savingUserId);
 
-        await organizationService.Received()
-            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWithout2FA.Id, savingUserId);
+        await removeOrganizationUserCommand.Received()
+            .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWithout2FA.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().Received()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserAcceptedWithout2FA.Email);
 
-        await organizationService.DidNotReceive()
-            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUserInvited.Id, savingUserId);
+        await removeOrganizationUserCommand.DidNotReceive()
+            .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserInvited.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserInvited.Email);
-        await organizationService.DidNotReceive()
-            .DeleteUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWith2FA.Id, savingUserId);
+        await removeOrganizationUserCommand.DidNotReceive()
+            .RemoveUserAsync(policy.OrganizationId, orgUserDetailUserAcceptedWith2FA.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailUserAcceptedWith2FA.Email);
-        await organizationService.DidNotReceive()
-            .DeleteUserAsync(policy.OrganizationId, orgUserDetailAdmin.Id, savingUserId);
+        await removeOrganizationUserCommand.DidNotReceive()
+            .RemoveUserAsync(policy.OrganizationId, orgUserDetailAdmin.Id, savingUserId);
         await sutProvider.GetDependency<IMailService>().DidNotReceive()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization.DisplayName(), orgUserDetailAdmin.Email);
 
@@ -456,22 +449,29 @@ public class PolicyServiceTests
                 orgUserDetailAdmin
             });
 
-        var userService = Substitute.For<IUserService>();
-        var organizationService = Substitute.For<IOrganizationService>();
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids =>
+                ids.Contains(orgUserDetailUserWith2FANoMP.UserId.Value)
+                && ids.Contains(orgUserDetailUserWithout2FA.UserId.Value)
+                && ids.Contains(orgUserDetailAdmin.UserId.Value)))
+            .Returns(new List<(Guid userId, bool hasTwoFactor)>()
+            {
+                (orgUserDetailUserWith2FANoMP.UserId.Value, true),
+                (orgUserDetailUserWithout2FA.UserId.Value, false),
+                (orgUserDetailAdmin.UserId.Value, false),
+            });
 
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserWith2FANoMP).Returns(true);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailUserWithout2FA).Returns(false);
-        userService.TwoFactorIsEnabledAsync(orgUserDetailAdmin).Returns(false);
+        var removeOrganizationUserCommand = sutProvider.GetDependency<IRemoveOrganizationUserCommand>();
 
         var savingUserId = Guid.NewGuid();
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId));
+            () => sutProvider.Sut.SaveAsync(policy, savingUserId));
 
         Assert.Contains("Policy could not be enabled. Non-compliant members will lose access to their accounts. Identify members without two-step login from the policies column in the members page.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
 
-        await organizationService.DidNotReceiveWithAnyArgs()
-            .DeleteUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
+        await removeOrganizationUserCommand.DidNotReceiveWithAnyArgs()
+            .RemoveUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
 
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs()
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(default, default);
@@ -526,17 +526,18 @@ public class PolicyServiceTests
                 orgUserDetail,
             });
 
-        var userService = Substitute.For<IUserService>();
-        var organizationService = Substitute.For<IOrganizationService>();
-
-        userService.TwoFactorIsEnabledAsync(orgUserDetail)
-            .Returns(false);
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUserDetail.UserId.Value)))
+            .Returns(new List<(Guid userId, bool hasTwoFactor)>()
+            {
+                (orgUserDetail.UserId.Value, false),
+            });
 
         var utcNow = DateTime.UtcNow;
 
         var savingUserId = Guid.NewGuid();
 
-        await sutProvider.Sut.SaveAsync(policy, userService, organizationService, savingUserId);
+        await sutProvider.Sut.SaveAsync(policy, savingUserId);
 
         await sutProvider.GetDependency<IEventService>().Received()
             .LogPolicyEventAsync(policy, EventType.Policy_Updated);
@@ -579,8 +580,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Trusted device encryption is on and requires this policy.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -616,8 +615,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Trusted device encryption is on and requires this policy.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -650,8 +647,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -684,8 +679,6 @@ public class PolicyServiceTests
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
-                Substitute.For<IUserService>(),
-                Substitute.For<IOrganizationService>(),
                 Guid.NewGuid()));
 
         Assert.Contains("Account recovery policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
@@ -822,5 +815,33 @@ public class PolicyServiceTests
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
             });
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_GivenOrganizationUsingPoliciesAndHasVerifiedDomains_WhenSingleOrgPolicyIsDisabled_ThenAnErrorShouldBeThrownOrganizationHasVerifiedDomains(
+        [AdminConsoleFixtures.Policy(PolicyType.SingleOrg)] Policy policy, Organization org, SutProvider<PolicyService> sutProvider)
+    {
+        org.Id = policy.OrganizationId;
+        org.UsePolicies = true;
+
+        policy.Enabled = false;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policy.OrganizationId)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationHasVerifiedDomainsQuery>()
+            .HasVerifiedDomainsAsync(org.Id)
+            .Returns(true);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy, null));
+
+        Assert.Equal("The Single organization policy is required for organizations that have enabled domain verification.", badRequestException.Message);
     }
 }

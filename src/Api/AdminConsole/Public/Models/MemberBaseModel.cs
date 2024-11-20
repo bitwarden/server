@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 #nullable enable
@@ -21,9 +20,8 @@ public abstract class MemberBaseModel
             throw new ArgumentNullException(nameof(user));
         }
 
-        Type = GetFlexibleCollectionsUserType(user.Type, user.GetPermissions());
+        Type = user.Type;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
         if (Type == OrganizationUserType.Custom)
         {
@@ -39,9 +37,8 @@ public abstract class MemberBaseModel
             throw new ArgumentNullException(nameof(user));
         }
 
-        Type = GetFlexibleCollectionsUserType(user.Type, user.GetPermissions());
+        Type = user.Type;
         ExternalId = user.ExternalId;
-        ResetPasswordEnrolled = user.ResetPasswordKey != null;
 
         if (Type == OrganizationUserType.Custom)
         {
@@ -61,43 +58,8 @@ public abstract class MemberBaseModel
     [StringLength(300)]
     public string? ExternalId { get; set; }
     /// <summary>
-    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
-    /// </summary>
-    public required bool ResetPasswordEnrolled { get; set; }
-    /// <summary>
     /// The member's custom permissions if the member has a Custom role. If not supplied, all custom permissions will
     /// default to false.
     /// </summary>
     public PermissionsModel? Permissions { get; set; }
-
-    // TODO: AC-2188 - Remove this method when the custom users with no other permissions than 'Edit/Delete Assigned Collections' are migrated
-    private OrganizationUserType GetFlexibleCollectionsUserType(OrganizationUserType type, Permissions? permissions)
-    {
-        // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-        if (type == OrganizationUserType.Custom)
-        {
-            Debug.Assert(permissions is not null, "Custom users are expected to have non-null permissions.");
-            if ((permissions.EditAssignedCollections || permissions.DeleteAssignedCollections) &&
-                permissions is
-                {
-                    AccessEventLogs: false,
-                    AccessImportExport: false,
-                    AccessReports: false,
-                    CreateNewCollections: false,
-                    EditAnyCollection: false,
-                    DeleteAnyCollection: false,
-                    ManageGroups: false,
-                    ManagePolicies: false,
-                    ManageSso: false,
-                    ManageUsers: false,
-                    ManageResetPassword: false,
-                    ManageScim: false
-                })
-            {
-                return OrganizationUserType.User;
-            }
-        }
-
-        return type;
-    }
 }

@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using Xunit;
 
+using static Bit.Api.Test.Billing.Utilities;
+
 namespace Bit.Api.Test.Billing.Controllers;
 
 [ControllerCustomize(typeof(OrganizationBillingController))]
@@ -27,7 +29,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -35,12 +37,12 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadataDTO)null);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadata)null);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory, BitAutoData]
@@ -48,17 +50,21 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadataDTO(true));
+            .Returns(new OrganizationMetadata(true, true, true, true, true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
         Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
 
-        var organizationMetadataResponse = ((Ok<OrganizationMetadataResponse>)result).Value;
+        var response = ((Ok<OrganizationMetadataResponse>)result).Value;
 
-        Assert.True(organizationMetadataResponse.IsOnSecretsManagerStandalone);
+        Assert.True(response.IsEligibleForSelfHost);
+        Assert.True(response.IsManaged);
+        Assert.True(response.IsOnSecretsManagerStandalone);
+        Assert.True(response.IsSubscriptionUnpaid);
+        Assert.True(response.HasSubscription);
     }
 
     [Theory, BitAutoData]
@@ -70,7 +76,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
-        Assert.IsType<UnauthorizedHttpResult>(result);
+        AssertUnauthorized(result);
     }
 
     [Theory, BitAutoData]
@@ -83,7 +89,7 @@ public class OrganizationBillingControllerTests
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
-        Assert.IsType<NotFound>(result);
+        AssertNotFound(result);
     }
 
     [Theory]

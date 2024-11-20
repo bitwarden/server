@@ -1,36 +1,18 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
-using Bit.Core.Models.Api;
 using Bit.Core.Services;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Billing.Controllers;
 
 public abstract class BaseProviderController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IProviderRepository providerRepository,
-    IUserService userService) : Controller
+    IUserService userService) : BaseBillingController
 {
     protected readonly IUserService UserService = userService;
-
-    protected static NotFound<ErrorResponseModel> NotFoundResponse() =>
-        TypedResults.NotFound(new ErrorResponseModel("Resource not found."));
-
-    protected static JsonHttpResult<ErrorResponseModel> ServerErrorResponse(string errorMessage) =>
-        TypedResults.Json(
-            new ErrorResponseModel(errorMessage),
-            statusCode: StatusCodes.Status500InternalServerError);
-
-    protected static JsonHttpResult<ErrorResponseModel> UnauthorizedResponse() =>
-        TypedResults.Json(
-            new ErrorResponseModel("Unauthorized."),
-            statusCode: StatusCodes.Status401Unauthorized);
 
     protected Task<(Provider, IResult)> TryGetBillableProviderForAdminOperation(
         Guid providerId) => TryGetBillableProviderAsync(providerId, currentContext.ProviderProviderAdmin);
@@ -42,15 +24,6 @@ public abstract class BaseProviderController(
         Guid providerId,
         Func<Guid, bool> checkAuthorization)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
-            logger.LogError(
-                "Cannot run Consolidated Billing operation for provider ({ProviderID}) while feature flag is disabled",
-                providerId);
-
-            return (null, NotFoundResponse());
-        }
-
         var provider = await providerRepository.GetByIdAsync(providerId);
 
         if (provider == null)
@@ -59,7 +32,7 @@ public abstract class BaseProviderController(
                 "Cannot find provider ({ProviderID}) for Consolidated Billing operation",
                 providerId);
 
-            return (null, NotFoundResponse());
+            return (null, Error.NotFound());
         }
 
         if (!checkAuthorization(providerId))
@@ -70,7 +43,7 @@ public abstract class BaseProviderController(
                 "User ({UserID}) is not authorized to perform Consolidated Billing operation for provider ({ProviderID})",
                 user?.Id, providerId);
 
-            return (null, UnauthorizedResponse());
+            return (null, Error.Unauthorized());
         }
 
         if (!provider.IsBillable())
@@ -79,7 +52,7 @@ public abstract class BaseProviderController(
                 "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is not billable",
                 providerId);
 
-            return (null, UnauthorizedResponse());
+            return (null, Error.Unauthorized());
         }
 
         if (provider.IsStripeEnabled())
@@ -91,6 +64,6 @@ public abstract class BaseProviderController(
             "Cannot run Consolidated Billing operation for provider ({ProviderID}) that is missing Stripe configuration",
             providerId);
 
-        return (null, ServerErrorResponse("Something went wrong with your request. Please contact support."));
+        return (null, Error.ServerError());
     }
 }

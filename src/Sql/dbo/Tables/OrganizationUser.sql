@@ -7,7 +7,6 @@
     [ResetPasswordKey]              VARCHAR (MAX)       NULL,
     [Status]                        SMALLINT            NOT NULL,
     [Type]                          TINYINT             NOT NULL,
-    [AccessAll]                     BIT                 NOT NULL,
     [ExternalId]                    NVARCHAR (300)      NULL,
     [CreationDate]                  DATETIME2 (7)       NOT NULL,
     [RevisionDate]                  DATETIME2 (7)       NOT NULL,
@@ -20,9 +19,8 @@
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatus]
-    ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC)
-    INCLUDE ([AccessAll]);
+CREATE NONCLUSTERED INDEX [IX_OrganizationUser_UserIdOrganizationIdStatusV2]
+    ON [dbo].[OrganizationUser]([UserId] ASC, [OrganizationId] ASC, [Status] ASC);
 
 
 GO

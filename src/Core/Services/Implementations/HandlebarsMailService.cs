@@ -63,7 +63,7 @@ public class HandlebarsMailService : IMailService
         {
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            WebVaultUrl = _globalSettings.BaseServiceUri.Vault,
             SiteName = _globalSettings.SiteName
         };
         await AddMessageContentAsync(message, "Auth.RegistrationVerifyEmail", model);
@@ -109,6 +109,19 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.VerifyDelete", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "VerifyDelete";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    {
+        var message = CreateDefaultMessage("Delete Your Account", email);
+        var model = new CannotDeleteManagedAccountViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteManagedAccount", model);
+        message.Category = "CannotDeleteManagedAccount";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -1079,6 +1092,22 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "InitiateDeleteOrganzation", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "InitiateDeleteOrganzation";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+        string organizationName)
+    {
+        var message = CreateDefaultMessage("Removal of Free Bitwarden Families plan", email);
+        var model = new FamiliesForEnterpriseRemoveOfferViewModel
+        {
+            SponsoredOrganizationId = organizationId,
+            SponsoringOrgName = CoreHelpers.SanitizeForEmail(organizationName),
+            OfferAcceptanceDate = offerAcceptanceDate,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+        };
+        await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);
+        message.Category = "FamiliesForEnterpriseRemovedFromFamilyUser";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

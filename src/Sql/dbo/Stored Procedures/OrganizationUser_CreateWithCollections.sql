@@ -6,7 +6,6 @@ CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
     @Key VARCHAR(MAX),
     @Status SMALLINT,
     @Type TINYINT,
-    @AccessAll BIT = 0,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
@@ -18,7 +17,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
+    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

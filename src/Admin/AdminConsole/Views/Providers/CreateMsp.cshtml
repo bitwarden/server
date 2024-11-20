@@ -1,0 +1,31 @@
+@model CreateMspProviderModel
+
+@{
+    ViewData["Title"] = "Create Managed Service Provider";
+}
+
+<h1>Create Managed Service Provider</h1>
+<div>
+    <form method="post" asp-action="CreateMsp">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+        <div class="mb-3">
+            <label asp-for="OwnerEmail" class="form-label"></label>
+            <input type="text" class="form-control" asp-for="OwnerEmail">
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="TeamsMonthlySeatMinimum" class="form-label"></label>
+                    <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="EnterpriseMonthlySeatMinimum" class="form-label"></label>
+                    <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
+    </form>
+</div>

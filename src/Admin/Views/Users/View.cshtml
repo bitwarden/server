@@ -1,13 +1,13 @@
 ﻿@model UserViewModel
 @{
-    ViewData["Title"] = "User: " + Model.User.Email;
+    ViewData["Title"] = "User: " + Model.Email;
 }
 
-<h1>User <small>@Model.User.Email</small></h1>
+<h1>User <small>@Model.Email</small></h1>
 
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
-<form asp-action="Delete" asp-route-id="@Model.User.Id"
+<form asp-action="Delete" asp-route-id="@Model.Id"
       onsubmit="return confirm('Are you sure you want to delete this user?')">
     <button class="btn btn-danger" type="submit">Delete</button>
 </form>

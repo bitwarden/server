@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Billing.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -36,26 +35,10 @@ public class ProviderBillingControllerTests
     #region GetInvoicesAsync & TryGetBillableProviderForAdminOperations
 
     [Theory, BitAutoData]
-    public async Task GetInvoicesAsync_FFDisabled_NotFound(
-        Guid providerId,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(false);
-
-        var result = await sutProvider.Sut.GetInvoicesAsync(providerId);
-
-        AssertNotFound(result);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetInvoicesAsync_NullProvider_NotFound(
         Guid providerId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).ReturnsNull();
 
         var result = await sutProvider.Sut.GetInvoicesAsync(providerId);
@@ -68,9 +51,6 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
         sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
@@ -86,9 +66,6 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         provider.Type = ProviderType.Reseller;
         provider.Status = ProviderStatusType.Created;
 
@@ -107,7 +84,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         var invoices = new List<Invoice>
         {
@@ -187,7 +164,7 @@ public class ProviderBillingControllerTests
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderBillingService>().GenerateClientInvoiceReport(invoiceId)
             .ReturnsNull();
@@ -208,7 +185,7 @@ public class ProviderBillingControllerTests
         string invoiceId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         var reportContent = "Report"u8.ToArray();
 
@@ -230,26 +207,10 @@ public class ProviderBillingControllerTests
     #region GetSubscriptionAsync & TryGetBillableProviderForServiceUserOperation
 
     [Theory, BitAutoData]
-    public async Task GetSubscriptionAsync_FFDisabled_NotFound(
-        Guid providerId,
-        SutProvider<ProviderBillingController> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(false);
-
-        var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
-
-        AssertNotFound(result);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetSubscriptionAsync_NullProvider_NotFound(
         Guid providerId,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(providerId).ReturnsNull();
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(providerId);
@@ -262,9 +223,6 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
         sutProvider.GetDependency<ICurrentContext>().ProviderUser(provider.Id)
@@ -280,9 +238,6 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         provider.Type = ProviderType.Reseller;
         provider.Status = ProviderStatusType.Created;
 
@@ -301,7 +256,7 @@ public class ProviderBillingControllerTests
         Provider provider,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableServiceUserInputs(provider, sutProvider);
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
@@ -432,7 +387,7 @@ public class ProviderBillingControllerTests
         TaxInformationRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         requestBody.Country = null;
 
@@ -451,7 +406,7 @@ public class ProviderBillingControllerTests
         TaxInformationRequestBody requestBody,
         SutProvider<ProviderBillingController> sutProvider)
     {
-        ConfigureStableAdminInputs(provider, sutProvider);
+        ConfigureStableProviderAdminInputs(provider, sutProvider);
 
         await sutProvider.Sut.UpdateTaxInformationAsync(provider.Id, requestBody);
 

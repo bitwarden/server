@@ -9,9 +9,11 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
@@ -88,8 +90,11 @@ public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityF
                     cfg.AddProfile<TaxRateMapperProfile>();
                     cfg.AddProfile<TransactionMapperProfile>();
                     cfg.AddProfile<UserMapperProfile>();
+                    cfg.AddProfile<PasswordHealthReportApplicationProfile>();
                 })
             .CreateMapper()));
+
+            fixture.Customize<ILogger<T>>(x => x.FromFactory(() => Substitute.For<ILogger<T>>()));
 
             var repo = fixture.Create<T>();
             list.Add(repo);
