@@ -3,12 +3,10 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.NotificationHub;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using Xunit;
 
@@ -38,16 +36,6 @@ public class NotificationHubPushRegistrationServiceTests
     public async void CreateOrUpdateRegistrationAsync_DeviceTypeAndroid_InstallationCreated(bool identifierNull,
         SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId, Guid userId, Guid? identifier)
     {
-        var featureService = Substitute.For<IFeatureService>();
-        featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration).Returns(true);
-        var serviceProvider = Substitute.For<IServiceProvider>();
-        serviceProvider.GetService(typeof(IFeatureService)).Returns(featureService);
-        var serviceScope = Substitute.For<IServiceScope>();
-        serviceScope.ServiceProvider.Returns(serviceProvider);
-        var serviceScopeFactory = Substitute.For<IServiceScopeFactory>();
-        serviceScopeFactory.CreateScope().Returns(serviceScope);
-        sutProvider.GetDependency<IServiceProvider>().GetService(typeof(IServiceScopeFactory))
-            .Returns(serviceScopeFactory);
         var notificationHubClient = Substitute.For<INotificationHubClient>();
         sutProvider.GetDependency<INotificationHubPool>().ClientFor(Arg.Any<Guid>()).Returns(notificationHubClient);
 
