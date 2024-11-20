@@ -107,7 +107,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
-    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
@@ -155,6 +154,7 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
     public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
+    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
 
     public static List<string> GetAllKeys()
     {

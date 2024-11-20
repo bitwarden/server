@@ -6,7 +6,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using OtpNet;
 
-namespace Bit.Core.Auth.Identity;
+namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 {
