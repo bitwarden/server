@@ -213,7 +213,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds);
         return new OkResult();
     }
 
