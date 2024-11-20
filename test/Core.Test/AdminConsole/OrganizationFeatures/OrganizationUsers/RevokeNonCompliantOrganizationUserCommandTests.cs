@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -164,6 +165,15 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             .RevokeManyByIdAsync(Arg.Any<IEnumerable<Guid>>());
 
         Assert.True(result.Success);
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventsAsync(
+                Arg.Is<IEnumerable<(OrganizationUserUserDetails organizationUser, EventType eventType, DateTime? time
+                    )>>(
+                    x => x.Any(y =>
+                        y.organizationUser.Id == userToRevoke.Id && y.eventType == EventType.OrganizationUser_Revoked)
+                ));
     }
 
     public class InvalidUser : IActingUser
