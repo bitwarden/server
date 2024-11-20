@@ -524,8 +524,9 @@ public class SubscriberService(
 
                     var metadata = customer.Metadata;
 
-                    if (metadata.ContainsKey(BraintreeCustomerIdKey))
+                    if (metadata.TryGetValue(BraintreeCustomerIdKey, out var value))
                     {
+                        metadata[BraintreeCustomerIdOldKey] = value;
                         metadata[BraintreeCustomerIdKey] = null;
                     }
 
