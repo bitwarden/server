@@ -768,8 +768,9 @@ public class SubscriberService(
     {
         var metadata = customer.Metadata ?? new Dictionary<string, string>();
 
-        if (metadata.ContainsKey(BraintreeCustomerIdKey))
+        if (metadata.TryGetValue(BraintreeCustomerIdKey, out var value))
         {
+            metadata[BraintreeCustomerIdOldKey] = value;
             metadata[BraintreeCustomerIdKey] = null;
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
