@@ -86,7 +86,7 @@ public class PoliciesController : Controller
     }
 
     [HttpGet("{type}/policy-status")]
-    public async Task<bool> GetPolicyStatusAsync(Guid orgId, int type)
+    public async Task<bool> GetPolicyStatusAsync(Guid orgId, PolicyType type)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -94,7 +94,7 @@ public class PoliciesController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, type);
 
         var isPolicyEnabled = policy?.Enabled ?? false;
 
