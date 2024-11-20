@@ -646,7 +646,7 @@ public class SubscriberService(
             {
                 switch (e.StripeError.Code)
                 {
-                    case "tax_id_invalid":
+                    case StripeConstants.ErrorCodes.TaxIdInvalid:
                         logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
                             taxInformation.TaxId,
                             taxInformation.Country);

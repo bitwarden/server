@@ -1736,7 +1736,7 @@ public class StripePaymentService : IPaymentService
                     {
                         switch (e.StripeError.Code)
                         {
-                            case "tax_id_invalid":
+                            case StripeConstants.ErrorCodes.TaxIdInvalid:
                                 _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
                                     taxInfo.TaxIdNumber,
                                     taxInfo.BillingAddressCountry);
@@ -1969,7 +1969,7 @@ public class StripePaymentService : IPaymentService
         {
             switch (e.StripeError.Code)
             {
-                case "tax_id_invalid":
+                case StripeConstants.ErrorCodes.TaxIdInvalid:
                     _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
                         parameters.TaxInformation.TaxId,
                         parameters.TaxInformation.Country);
