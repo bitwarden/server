@@ -118,7 +118,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             Type = OrganizationUserType.Custom,
             ExternalId = "myCustomUser",
             Collections = [],
-            Groups = [],
+            Groups = []
         };
 
         var response = await _client.PostAsync("/public/members", JsonContent.Create(request));
@@ -161,7 +161,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
                 AccessEventLogs = true
             },
             ExternalId = "example",
-            Collections = [],
+            Collections = []
         };
 
         var response = await _client.PutAsync($"/public/members/{orgUser.Id}", JsonContent.Create(request));
@@ -204,7 +204,7 @@ public class MembersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         {
             Type = OrganizationUserType.Custom,
             ExternalId = "example",
-            Collections = [],
+            Collections = []
         };
 
         var response = await _client.PutAsync($"/public/members/{orgUser.Id}", JsonContent.Create(request));
