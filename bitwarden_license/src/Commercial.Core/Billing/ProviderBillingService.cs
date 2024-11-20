@@ -2,17 +2,14 @@
 using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -27,7 +24,6 @@ using Stripe;
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
-    ICurrentContext currentContext,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -35,38 +31,76 @@ public class ProviderBillingService(
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
-    IProviderRepository providerRepository,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService) : IProviderBillingService
 {
-    public async Task AssignSeatsToClientOrganization(
-        Provider provider,
-        Organization organization,
-        int seats)
+    public async Task ChangePlan(ChangeProviderPlanCommand command)
     {
-        ArgumentNullException.ThrowIfNull(organization);
+        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
 
-        if (seats < 0)
+        if (plan == null)
         {
-            throw new BillingException(
-                "You cannot assign negative seats to a client.",
-                "MSP cannot assign negative seats to a client organization");
+            throw new BadRequestException("Provider plan not found.");
         }
 
-        if (seats == organization.Seats)
+        if (plan.PlanType == command.NewPlan)
         {
-            logger.LogWarning("Client organization ({ID}) already has {Seats} seats assigned to it", organization.Id, organization.Seats);
-
             return;
         }
 
-        var seatAdjustment = seats - (organization.Seats ?? 0);
+        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
 
-        await ScaleSeats(provider, organization.PlanType, seatAdjustment);
+        plan.PlanType = command.NewPlan;
+        await providerPlanRepository.ReplaceAsync(plan);
 
-        organization.Seats = seats;
+        Subscription subscription;
+        try
+        {
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+        }
+        catch (InvalidOperationException)
+        {
+            throw new ConflictException("Subscription not found.");
+        }
 
-        await organizationRepository.ReplaceAsync(organization);
+        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
+            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
+
+        var updateOptions = new SubscriptionUpdateOptions
+        {
+            Items =
+            [
+                new SubscriptionItemOptions
+                {
+                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
+                    Quantity = oldSubscriptionItem!.Quantity
+                },
+                new SubscriptionItemOptions
+                {
+                    Id = oldSubscriptionItem.Id,
+                    Deleted = true
+                }
+            ]
+        };
+
+        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
+
+        // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
+        // 1. Retrieve PlanType and PlanName for ProviderPlan
+        // 2. Assign PlanType & PlanName to Organization
+        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
+
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            var organization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            if (organization == null)
+            {
+                throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
+            }
+            organization.PlanType = command.NewPlan;
+            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
+            await organizationRepository.ReplaceAsync(organization);
+        }
     }
 
     public async Task CreateCustomerForClientOrganization(
@@ -171,65 +205,16 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
-    public async Task<int> GetAssignedSeatTotalForPlanOrThrow(
-        Guid providerId,
-        PlanType planType)
-    {
-        var provider = await providerRepository.GetByIdAsync(providerId);
-
-        if (provider == null)
-        {
-            logger.LogError(
-                "Could not find provider ({ID}) when retrieving assigned seat total",
-                providerId);
-
-            throw new BillingException();
-        }
-
-        if (provider.Type == ProviderType.Reseller)
-        {
-            logger.LogError("Assigned seats cannot be retrieved for reseller-type provider ({ID})", providerId);
-
-            throw new BillingException();
-        }
-
-        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
-
-        var plan = StaticStore.GetPlan(planType);
-
-        return providerOrganizations
-            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
-            .Sum(providerOrganization => providerOrganization.Seats ?? 0);
-    }
-
     public async Task ScaleSeats(
         Provider provider,
         PlanType planType,
         int seatAdjustment)
     {
-        ArgumentNullException.ThrowIfNull(provider);
+        var providerPlan = await GetProviderPlanAsync(provider, planType);
 
-        if (!provider.SupportsConsolidatedBilling())
-        {
-            logger.LogError("Provider ({ProviderID}) cannot scale their seats", provider.Id);
+        var seatMinimum = providerPlan.SeatMinimum ?? 0;
 
-            throw new BillingException();
-        }
-
-        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
-
-        var providerPlan = providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType);
-
-        if (providerPlan == null || !providerPlan.IsConfigured())
-        {
-            logger.LogError("Cannot scale provider ({ProviderID}) seats for plan type {PlanType} when their matching provider plan is not configured", provider.Id, planType);
-
-            throw new BillingException();
-        }
-
-        var seatMinimum = providerPlan.SeatMinimum.GetValueOrDefault(0);
-
-        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalForPlanOrThrow(provider.Id, planType);
+        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalAsync(provider, planType);
 
         var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
 
@@ -256,13 +241,6 @@ public class ProviderBillingService(
         else if (currentlyAssignedSeatTotal <= seatMinimum &&
                  newlyAssignedSeatTotal > seatMinimum)
         {
-            if (!currentContext.ProviderProviderAdmin(provider.Id))
-            {
-                logger.LogError("Service user for provider ({ProviderID}) cannot scale a provider's seat count over the seat minimum", provider.Id);
-
-                throw new BillingException();
-            }
-
             await update(
                 seatMinimum,
                 newlyAssignedSeatTotal);
@@ -289,6 +267,26 @@ public class ProviderBillingService(
                 currentlyAssignedSeatTotal,
                 seatMinimum);
         }
+    }
+
+    public async Task<bool> SeatAdjustmentResultsInPurchase(
+        Provider provider,
+        PlanType planType,
+        int seatAdjustment)
+    {
+        var providerPlan = await GetProviderPlanAsync(provider, planType);
+
+        var seatMinimum = providerPlan.SeatMinimum;
+
+        var currentlyAssignedSeatTotal = await GetAssignedSeatTotalAsync(provider, planType);
+
+        var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
+
+        return
+            // Below the limit to above the limit
+            (currentlyAssignedSeatTotal <= seatMinimum && newlyAssignedSeatTotal > seatMinimum) ||
+            // Above the limit to further above the limit
+            (currentlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > currentlyAssignedSeatTotal);
     }
 
     public async Task<Customer> SetupCustomer(
@@ -431,75 +429,6 @@ public class ProviderBillingService(
         }
     }
 
-    public async Task ChangePlan(ChangeProviderPlanCommand command)
-    {
-        var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
-
-        if (plan == null)
-        {
-            throw new BadRequestException("Provider plan not found.");
-        }
-
-        if (plan.PlanType == command.NewPlan)
-        {
-            return;
-        }
-
-        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
-
-        plan.PlanType = command.NewPlan;
-        await providerPlanRepository.ReplaceAsync(plan);
-
-        Subscription subscription;
-        try
-        {
-            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
-        }
-        catch (InvalidOperationException)
-        {
-            throw new ConflictException("Subscription not found.");
-        }
-
-        var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
-            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
-
-        var updateOptions = new SubscriptionUpdateOptions
-        {
-            Items =
-            [
-                new SubscriptionItemOptions
-                {
-                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
-                    Quantity = oldSubscriptionItem!.Quantity
-                },
-                new SubscriptionItemOptions
-                {
-                    Id = oldSubscriptionItem.Id,
-                    Deleted = true
-                }
-            ]
-        };
-
-        await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
-
-        // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
-        // 1. Retrieve PlanType and PlanName for ProviderPlan
-        // 2. Assign PlanType & PlanName to Organization
-        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
-
-        foreach (var providerOrganization in providerOrganizations)
-        {
-            var organization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
-            if (organization == null)
-            {
-                throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
-            }
-            organization.PlanType = command.NewPlan;
-            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
-            await organizationRepository.ReplaceAsync(organization);
-        }
-    }
-
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
     {
         if (command.Configuration.Any(x => x.SeatsMinimum < 0))
@@ -610,4 +539,32 @@ public class ProviderBillingService(
 
         await providerPlanRepository.ReplaceAsync(providerPlan);
     };
+
+    // TODO: Replace with SPROC
+    private async Task<int> GetAssignedSeatTotalAsync(Provider provider, PlanType planType)
+    {
+        var providerOrganizations =
+            await providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id);
+
+        var plan = StaticStore.GetPlan(planType);
+
+        return providerOrganizations
+            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
+            .Sum(providerOrganization => providerOrganization.Seats ?? 0);
+    }
+
+    // TODO: Replace with SPROC
+    private async Task<ProviderPlan> GetProviderPlanAsync(Provider provider, PlanType planType)
+    {
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
+
+        var providerPlan = providerPlans.FirstOrDefault(x => x.PlanType == planType);
+
+        if (providerPlan == null || !providerPlan.IsConfigured())
+        {
+            throw new BillingException(message: "Provider plan is missing or misconfigured");
+        }
+
+        return providerPlan;
+    }
 }

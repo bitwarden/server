@@ -70,6 +70,11 @@ jobs:
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
 
+      - name: Add MariaDB for unified
+        # Use a different port than MySQL
+        run: |
+          docker run --detach --name mariadb --env MARIADB_ROOT_PASSWORD=mariadb-password -p 4306:3306 mariadb:10
+
       # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
       - name: Sleep
         run: sleep 15s
@@ -102,6 +107,12 @@ jobs:
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
+      
+      - name: Migrate MariaDB
+        working-directory: "util/MySqlMigrations"
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
 
       - name: Migrate Postgres
         working-directory: "util/PostgresMigrations"
@@ -130,12 +141,19 @@ jobs:
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
+          # Unified MariaDB
+          BW_TEST_DATABASES__4__TYPE: "MySql"
+          BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
         run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
         shell: pwsh
 
       - name: Print MySQL Logs
         if: failure()
         run: 'docker logs $(docker ps --quiet --filter "name=mysql")'
+
+      - name: Print MariaDB Logs
+        if: failure()
+        run: 'docker logs $(docker ps --quiet --filter "name=mariadb")'
 
       - name: Print Postgres Logs
         if: failure()
