@@ -268,8 +268,6 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        requestBody.TaxIdType = taxService.GetStripeTaxCode(requestBody.Country, requestBody.TaxId);
-
         var taxInformation = requestBody.ToDomain();
 
         await subscriberService.UpdateTaxInformation(organization, taxInformation);
