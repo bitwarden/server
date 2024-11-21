@@ -17,4 +17,7 @@ public interface IRemoveOrganizationUserCommand
     /// </returns>
     Task<IEnumerable<(Guid OrganizationUserId, string ErrorMessage)>> RemoveUsersAsync(
         Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
+
+    Task<IEnumerable<(Guid OrganizationUserId, string ErrorMessage)>> RemoveUsersAsync(
+        Guid organizationId, IEnumerable<Guid> organizationUserIds, EventSystemUser eventSystemUser);
 }
