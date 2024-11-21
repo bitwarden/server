@@ -2,8 +2,8 @@
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.ReportFeatures.Interfaces;
+using Bit.Core.Tools.ReportFeatures.Requests;
 using Bit.Core.Tools.Repositories;
-using Bit.Core.Tools.Requests;
 
 namespace Bit.Core.Tools.ReportFeatures;
 
