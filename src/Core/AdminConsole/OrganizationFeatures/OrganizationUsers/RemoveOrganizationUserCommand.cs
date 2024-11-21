@@ -19,6 +19,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
     private readonly IFeatureService _featureService;
+    private readonly TimeProvider _timeProvider;
 
     public RemoveOrganizationUserCommand(
         IDeviceRepository deviceRepository,
@@ -29,7 +30,8 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        TimeProvider timeProvider)
     {
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -40,6 +42,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
         _featureService = featureService;
+        _timeProvider = timeProvider;
     }
 
     public async Task RemoveUserAsync(Guid organizationId, Guid userId)
@@ -77,7 +80,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     {
         var result = await RemoveUsersInternalAsync(organizationId, organizationUserIds, deletingUserId, null);
 
-        DateTime? eventDate = DateTime.UtcNow;
+        DateTime? eventDate = _timeProvider.GetUtcNow().UtcDateTime;
         if (result.Any(r => r.ErrorMessage == string.Empty))
         {
             await _eventService.LogOrganizationUserEventsAsync(
@@ -93,7 +96,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     {
         var result = await RemoveUsersInternalAsync(organizationId, organizationUserIds, null, eventSystemUser);
 
-        DateTime? eventDate = DateTime.UtcNow;
+        DateTime? eventDate = _timeProvider.GetUtcNow().UtcDateTime;
         if (result.Any(r => r.ErrorMessage == string.Empty))
         {
             await _eventService.LogOrganizationUserEventsAsync(
@@ -223,7 +226,6 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (organizationUserIdsToDelete.Any())
         {
-            DateTime? eventDate = DateTime.UtcNow;
             await _organizationUserRepository.DeleteManyAsync(organizationUserIdsToDelete);
             foreach (var orgUser in filteredUsers.Where(u => organizationUserIdsToDelete.Contains(u.Id) && u.UserId.HasValue))
             {
