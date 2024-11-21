@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Tools.Requests;
+﻿namespace Bit.Core.Tools.ReportFeatures.Requests;
 
 public class AddPasswordHealthReportApplicationRequest
 {
