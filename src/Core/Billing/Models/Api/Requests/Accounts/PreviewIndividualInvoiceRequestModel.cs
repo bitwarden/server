@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Billing.Models.Api.Requests.Accounts;
 
-public class PreviewInvoiceRequestBody
+public class PreviewIndividualInvoiceRequestBody
 {
     [Required]
     public PasswordManagerRequestModel PasswordManager { get; set; }

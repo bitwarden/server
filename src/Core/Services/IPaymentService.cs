@@ -61,5 +61,5 @@ public interface IPaymentService
     Task<bool> RisksSubscriptionFailure(Organization organization);
     Task<bool> HasSecretsManagerStandalone(Organization organization);
     Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
-    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
+    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewIndividualInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
 }

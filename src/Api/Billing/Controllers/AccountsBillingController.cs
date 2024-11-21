@@ -80,7 +80,7 @@ public class AccountsBillingController(
     }
 
     [HttpPost("preview-invoice")]
-    public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewInvoiceRequestBody model)
+    public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewIndividualInvoiceRequestBody model)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)

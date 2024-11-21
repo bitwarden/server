@@ -1883,7 +1883,7 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
-        PreviewInvoiceRequestBody parameters,
+        PreviewIndividualInvoiceRequestBody parameters,
         string gatewayCustomerId,
         string gatewaySubscriptionId)
     {
