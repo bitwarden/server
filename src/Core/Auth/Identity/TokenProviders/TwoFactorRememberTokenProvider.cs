@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Core.Auth.Identity;
+namespace Bit.Core.Auth.Identity.TokenProviders;
 
 public class TwoFactorRememberTokenProvider : DataProtectorTokenProvider<User>
 {
