@@ -37,6 +37,7 @@ public class OrganizationController : Controller
     }
 
     [HttpGet("subscription")]
+    [SelfHosted(NotSelfHostedOnly = true)]
     [ProducesResponseType(typeof(OrganizationSubscriptionDetailsResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> GetSubscriptionAsync()
