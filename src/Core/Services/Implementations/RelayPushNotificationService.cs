@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Entities;
+﻿#nullable enable
+using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
@@ -53,7 +54,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -189,7 +190,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
     }
 
-    public async Task PushSyncNotificationAsync(Notification notification)
+    public async Task PushSyncNotificationCreateAsync(Notification notification, NotificationStatus? notificationStatus)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -197,17 +198,44 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
-            RevisionDate = notification.RevisionDate
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus?.ReadDate,
+            DeletedDate = notificationStatus?.DeletedDate
         };
 
         if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationCreate, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationCreate, message,
+                true, notification.ClientType);
+        }
+    }
+
+    public async Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    {
+        var message = new SyncNotificationPushNotification
+        {
+            Id = notification.Id,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            ClientType = notification.ClientType,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus?.ReadDate,
+            DeletedDate = notificationStatus?.DeletedDate
+        };
+
+        if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationUpdate, message, true,
+                notification.ClientType);
+        }
+        else if (notification.OrganizationId.HasValue)
+        {
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationUpdate, message,
                 true, notification.ClientType);
         }
     }
@@ -245,7 +273,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
     {
         var currentContext =
-            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
         {
             var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
@@ -262,13 +290,13 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+        string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+        string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }

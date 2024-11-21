@@ -1,10 +1,12 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
@@ -50,7 +52,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -180,7 +182,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
     }
 
-    public async Task PushSyncNotificationAsync(Notification notification)
+    public async Task PushSyncNotificationCreateAsync(Notification notification, NotificationStatus? notificationStatus)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -188,17 +190,44 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
-            RevisionDate = notification.RevisionDate
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus?.ReadDate,
+            DeletedDate = notificationStatus?.DeletedDate
         };
 
         if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationCreate, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationCreate, message,
+                true, notification.ClientType);
+        }
+    }
+
+    public async Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    {
+        var message = new SyncNotificationPushNotification
+        {
+            Id = notification.Id,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            ClientType = notification.ClientType,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus?.ReadDate,
+            DeletedDate = notificationStatus?.DeletedDate
+        };
+
+        if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationUpdate, message, true,
+                notification.ClientType);
+        }
+        else if (notification.OrganizationId.HasValue)
+        {
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationUpdate, message,
                 true, notification.ClientType);
         }
     }
@@ -224,8 +253,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             GetContextIdentifier(excludeCurrentContext), clientType: clientType);
     }
 
-    public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier, clientType);
         await SendPayloadAsync(tag, type, payload);
@@ -235,8 +264,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
     }
 
-    public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier, clientType);
         await SendPayloadAsync(tag, type, payload);
@@ -246,7 +275,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
     }
 
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
@@ -254,11 +283,11 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
 
         var currentContext =
-            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
-    private string BuildTag(string tag, string identifier, ClientType? clientType)
+    private string BuildTag(string tag, string? identifier, ClientType? clientType)
     {
         if (!string.IsNullOrWhiteSpace(identifier))
         {

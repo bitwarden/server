@@ -14,17 +14,41 @@ namespace Bit.Core.Test.Services;
 public class MultiServicePushNotificationServiceTests
 {
     [Theory]
-    [BitAutoData]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     [NotificationCustomize]
-    public async Task PushSyncNotificationAsync_Notification_Sent(
-        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification)
+    [NotificationStatusCustomize]
+    public async Task PushSyncNotificationCreateAsync_Notification_Sent(bool notificationStatusNull,
+        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification,
+        NotificationStatus notificationStatus)
     {
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification,
+            notificationStatusNull ? null : notificationStatus);
 
+        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
         await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
             .First()
             .Received(1)
-            .PushSyncNotificationAsync(notification);
+            .PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+    }
+
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    [NotificationCustomize]
+    [NotificationStatusCustomize]
+    public async Task PushSyncNotificationUpdateAsync_Notification_Sent(bool notificationStatusNull,
+        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification,
+        NotificationStatus notificationStatus)
+    {
+        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification,
+            notificationStatusNull ? null : notificationStatus);
+
+        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
+        await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
+            .First()
+            .Received(1)
+            .PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
     }
 
     [Theory]

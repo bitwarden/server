@@ -26,5 +26,6 @@ public enum PushType : byte
 
     SyncOrganizations = 17,
 
-    SyncNotification = 18,
+    SyncNotificationCreate = 18,
+    SyncNotificationUpdate = 19
 }

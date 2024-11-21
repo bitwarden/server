@@ -22,22 +22,50 @@ namespace Bit.Core.Test.Services;
 public class AzureQueuePushNotificationServiceTests
 {
     [Theory]
-    [BitAutoData]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     [NotificationCustomize]
+    [NotificationStatusCustomize]
     [CurrentContextCustomize]
-    public async void PushSyncNotificationAsync_Notification_Sent(
+    public async Task PushSyncNotificationCreateAsync_Notification_Sent(bool notificationStatusNull,
         SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, NotificationStatus notificationStatus)
     {
+        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
         currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
             .GetService(Arg.Any<Type>()).Returns(currentContext);
 
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotification, message, new SyncNotificationEquals(notification),
+                MatchMessage(PushType.SyncNotificationCreate, message,
+                    new SyncNotificationEquals(notification, expectedNotificationStatus),
+                    deviceIdentifier.ToString())));
+    }
+
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    [NotificationCustomize]
+    [NotificationStatusCustomize]
+    [CurrentContextCustomize]
+    public async Task PushSyncNotificationUpdateAsync_Notification_Sent(bool notificationStatusNull,
+        SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
+        ICurrentContext currentContext, NotificationStatus notificationStatus)
+    {
+        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
+        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
+        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
+            .GetService(Arg.Any<Type>()).Returns(currentContext);
+
+        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+
+        await sutProvider.GetDependency<QueueClient>().Received(1)
+            .SendMessageAsync(Arg.Is<string>(message =>
+                MatchMessage(PushType.SyncNotificationUpdate, message,
+                    new SyncNotificationEquals(notification, expectedNotificationStatus),
                     deviceIdentifier.ToString())));
     }
 
@@ -52,7 +80,8 @@ public class AzureQueuePushNotificationServiceTests
                pushNotificationData.ContextId == contextId;
     }
 
-    private class SyncNotificationEquals(Notification notification) : IEquatable<SyncNotificationPushNotification>
+    private class SyncNotificationEquals(Notification notification, NotificationStatus? notificationStatus)
+        : IEquatable<SyncNotificationPushNotification>
     {
         public bool Equals(SyncNotificationPushNotification? other)
         {
@@ -61,7 +90,9 @@ public class AzureQueuePushNotificationServiceTests
                    other.UserId == notification.UserId &&
                    other.OrganizationId == notification.OrganizationId &&
                    other.ClientType == notification.ClientType &&
-                   other.RevisionDate == notification.RevisionDate;
+                   other.RevisionDate == notification.RevisionDate &&
+                   other.ReadDate == notificationStatus?.ReadDate &&
+                   other.DeletedDate == notificationStatus?.DeletedDate;
         }
     }
 }

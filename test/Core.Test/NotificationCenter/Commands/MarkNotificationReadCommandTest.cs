@@ -6,6 +6,7 @@ using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -63,6 +64,9 @@ public class MarkNotificationReadCommandTest
         Setup(sutProvider, notificationId, userId: null, notification, notificationStatus, true, true, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkReadAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushSyncNotificationCreateAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus?>());
     }
 
     [Theory]
@@ -74,6 +78,9 @@ public class MarkNotificationReadCommandTest
         Setup(sutProvider, notificationId, userId, notification: null, notificationStatus, true, true, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkReadAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushSyncNotificationCreateAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus?>());
     }
 
     [Theory]
@@ -86,6 +93,9 @@ public class MarkNotificationReadCommandTest
             true, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkReadAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushSyncNotificationCreateAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus?>());
     }
 
     [Theory]
@@ -98,6 +108,9 @@ public class MarkNotificationReadCommandTest
             authorizedCreate: false, true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkReadAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushSyncNotificationCreateAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus?>());
     }
 
     [Theory]
@@ -110,6 +123,9 @@ public class MarkNotificationReadCommandTest
             authorizedUpdate: false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.MarkReadAsync(notificationId));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(0)
+            .PushSyncNotificationCreateAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus?>());
     }
 
     [Theory]
@@ -119,13 +135,22 @@ public class MarkNotificationReadCommandTest
         Guid notificationId, Guid userId, Notification notification)
     {
         Setup(sutProvider, notificationId, userId, notification, notificationStatus: null, true, true, true);
+        var expectedNotificationStatus = new NotificationStatus
+        {
+            NotificationId = notificationId,
+            UserId = userId,
+            ReadDate = DateTime.UtcNow,
+            DeletedDate = null
+        };
 
         await sutProvider.Sut.MarkReadAsync(notificationId);
 
         await sutProvider.GetDependency<INotificationStatusRepository>().Received(1)
-            .CreateAsync(Arg.Is<NotificationStatus>(ns =>
-                ns.NotificationId == notificationId && ns.UserId == userId && !ns.DeletedDate.HasValue &&
-                ns.ReadDate.HasValue && DateTime.UtcNow - ns.ReadDate.Value < TimeSpan.FromMinutes(1)));
+            .CreateAsync(Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(expectedNotificationStatus, ns)));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncNotificationCreateAsync(notification,
+                Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(expectedNotificationStatus, ns)));
     }
 
     [Theory]
@@ -134,18 +159,27 @@ public class MarkNotificationReadCommandTest
         SutProvider<MarkNotificationReadCommand> sutProvider,
         Guid notificationId, Guid userId, Notification notification, NotificationStatus notificationStatus)
     {
-        var readDate = notificationStatus.ReadDate;
-
         Setup(sutProvider, notificationId, userId, notification, notificationStatus, true, true, true);
 
         await sutProvider.Sut.MarkReadAsync(notificationId);
 
         await sutProvider.GetDependency<INotificationStatusRepository>().Received(1)
-            .UpdateAsync(Arg.Is<NotificationStatus>(ns =>
-                ns.Equals(notificationStatus) &&
-                ns.NotificationId == notificationStatus.NotificationId && ns.UserId == notificationStatus.UserId &&
-                ns.DeletedDate == notificationStatus.DeletedDate && ns.ReadDate != readDate &&
-                ns.ReadDate.HasValue &&
-                DateTime.UtcNow - ns.ReadDate.Value < TimeSpan.FromMinutes(1)));
+            .UpdateAsync(Arg.Do<NotificationStatus>(ns => AssertNotificationStatus(notificationStatus, ns)));
+        await sutProvider.GetDependency<IPushNotificationService>()
+            .Received(1)
+            .PushSyncNotificationCreateAsync(notification,
+                Arg.Do<NotificationStatus?>(ns => AssertNotificationStatus(notificationStatus, ns)));
+    }
+
+    private static void AssertNotificationStatus(NotificationStatus expectedNotificationStatus,
+        NotificationStatus? actualNotificationStatus)
+    {
+        Assert.NotNull(actualNotificationStatus);
+        Assert.Equal(expectedNotificationStatus.NotificationId, actualNotificationStatus.NotificationId);
+        Assert.Equal(expectedNotificationStatus.UserId, actualNotificationStatus.UserId);
+        Assert.NotEqual(expectedNotificationStatus.ReadDate, actualNotificationStatus.ReadDate);
+        Assert.NotNull(actualNotificationStatus.ReadDate);
+        Assert.Equal(DateTime.UtcNow, actualNotificationStatus.ReadDate.Value, TimeSpan.FromMinutes(1));
+        Assert.Equal(expectedNotificationStatus.DeletedDate, actualNotificationStatus.DeletedDate);
     }
 }

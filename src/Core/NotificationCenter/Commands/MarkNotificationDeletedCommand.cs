@@ -5,6 +5,7 @@ using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
@@ -16,16 +17,19 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
     private readonly IAuthorizationService _authorizationService;
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationStatusRepository _notificationStatusRepository;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public MarkNotificationDeletedCommand(ICurrentContext currentContext,
         IAuthorizationService authorizationService,
         INotificationRepository notificationRepository,
-        INotificationStatusRepository notificationStatusRepository)
+        INotificationStatusRepository notificationStatusRepository,
+        IPushNotificationService pushNotificationService)
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
         _notificationRepository = notificationRepository;
         _notificationStatusRepository = notificationStatusRepository;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task MarkDeletedAsync(Guid notificationId)
@@ -59,7 +63,9 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
             await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notificationStatus,
                 NotificationStatusOperations.Create);
 
-            await _notificationStatusRepository.CreateAsync(notificationStatus);
+            var newNotificationStatus = await _notificationStatusRepository.CreateAsync(notificationStatus);
+
+            await _pushNotificationService.PushSyncNotificationCreateAsync(notification, newNotificationStatus);
         }
         else
         {
@@ -69,6 +75,8 @@ public class MarkNotificationDeletedCommand : IMarkNotificationDeletedCommand
             notificationStatus.DeletedDate = DateTime.UtcNow;
 
             await _notificationStatusRepository.UpdateAsync(notificationStatus);
+
+            await _pushNotificationService.PushSyncNotificationCreateAsync(notification, notificationStatus);
         }
     }
 }

@@ -89,7 +89,8 @@ public static class HubHelpers
                 await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
                     .SendAsync(_receiveMessageMethod, authRequestNotification, cancellationToken);
                 break;
-            case PushType.SyncNotification:
+            case PushType.SyncNotificationCreate:
+            case PushType.SyncNotificationUpdate:
                 var syncNotification =
                     JsonSerializer.Deserialize<PushNotificationData<SyncNotificationPushNotification>>(
                         notificationJson, _deserializerOptions);
