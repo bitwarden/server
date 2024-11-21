@@ -21,6 +21,13 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     private readonly IFeatureService _featureService;
     private readonly TimeProvider _timeProvider;
 
+    public const string UserNotFoundErrorMessage = "User not found.";
+    public const string UsersInvalidErrorMessage = "Users invalid.";
+    public const string RemoveYourselfErrorMessage = "You cannot remove yourself.";
+    public const string RemoveOwnerByNonOwnerErrorMessage = "Only owners can delete other owners.";
+    public const string RemoveLastConfirmedOwnerErrorMessage = "Organization must have at least one confirmed owner.";
+    public const string RemoveClaimedAccountErrorMessage = "Cannot remove member accounts claimed by the organization. To offboard a member, revoke or delete the account.";
+
     public RemoveOrganizationUserCommand(
         IDeviceRepository deviceRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -111,7 +118,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     {
         if (orgUser == null || orgUser.OrganizationId != organizationId)
         {
-            throw new NotFoundException("User not found.");
+            throw new NotFoundException(UserNotFoundErrorMessage);
         }
     }
 
@@ -119,28 +126,28 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     {
         if (deletingUserId.HasValue && orgUser.UserId == deletingUserId.Value)
         {
-            throw new BadRequestException("You cannot remove yourself.");
+            throw new BadRequestException(RemoveYourselfErrorMessage);
         }
 
         if (orgUser.Type == OrganizationUserType.Owner)
         {
             if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(orgUser.OrganizationId))
             {
-                throw new BadRequestException("Only owners can delete other owners.");
+                throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
             }
 
             if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, new[] { orgUser.Id }, includeProvider: true))
             {
-                throw new BadRequestException("Organization must have at least one confirmed owner.");
+                throw new BadRequestException(RemoveLastConfirmedOwnerErrorMessage);
             }
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && eventSystemUser == null)
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null)
         {
             var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, new[] { orgUser.Id });
             if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
             {
-                throw new BadRequestException("Managed members cannot be simply removed, their entire individual account must be deleted.");
+                throw new BadRequestException(RemoveClaimedAccountErrorMessage);
             }
         }
 
@@ -177,12 +184,12 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
 
         if (!filteredUsers.Any())
         {
-            throw new BadRequestException("Users invalid.");
+            throw new BadRequestException(UsersInvalidErrorMessage);
         }
 
         if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, organizationUsersId))
         {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
+            throw new BadRequestException(RemoveLastConfirmedOwnerErrorMessage);
         }
 
         var deletingUserIsOwner = false;
@@ -191,7 +198,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             deletingUserIsOwner = await _currentContext.OrganizationOwner(organizationId);
         }
 
-        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && eventSystemUser == null
+        var managementStatus = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && deletingUserId.HasValue && eventSystemUser == null
             ? await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, filteredUsers.Select(u => u.Id))
             : filteredUsers.ToDictionary(u => u.Id, u => false);
         var result = new List<(OrganizationUser OrganizationUser, string ErrorMessage)>();
@@ -202,17 +209,17 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             {
                 if (deletingUserId.HasValue && orgUser.UserId == deletingUserId)
                 {
-                    throw new BadRequestException("You cannot remove yourself.");
+                    throw new BadRequestException(RemoveYourselfErrorMessage);
                 }
 
                 if (orgUser.Type == OrganizationUserType.Owner && deletingUserId.HasValue && !deletingUserIsOwner)
                 {
-                    throw new BadRequestException("Only owners can delete other owners.");
+                    throw new BadRequestException(RemoveOwnerByNonOwnerErrorMessage);
                 }
 
                 if (managementStatus.TryGetValue(orgUser.Id, out var isManaged) && isManaged)
                 {
-                    throw new BadRequestException("Managed members cannot be simply removed, their entire individual account must be deleted.");
+                    throw new BadRequestException(RemoveClaimedAccountErrorMessage);
                 }
 
                 organizationUserIdsToDelete.Add(orgUser.Id);

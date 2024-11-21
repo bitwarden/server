@@ -112,7 +112,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.Id, null));
-        Assert.Contains("User not found.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.UserNotFoundErrorMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -127,7 +127,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, deletingUser.Id, deletingUser.UserId));
-        Assert.Contains("You cannot remove yourself.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveYourselfErrorMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -149,7 +149,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
-        Assert.Contains("Only owners can delete other owners.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveOwnerByNonOwnerErrorMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -177,7 +177,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, deletingUser.UserId));
-        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveLastConfirmedOwnerErrorMessage, exception.Message);
         await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .Received(1)
             .HasConfirmedOwnersExceptAsync(
@@ -205,7 +205,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(orgUser.OrganizationId, orgUser.Id, deletingUserId));
-        Assert.Contains("Managed members cannot be simply removed", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveClaimedAccountErrorMessage, exception.Message);
         await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
             .Received(1)
             .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
@@ -293,7 +293,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser));
-        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveLastConfirmedOwnerErrorMessage, exception.Message);
         await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .Received(1)
             .HasConfirmedOwnersExceptAsync(
@@ -344,7 +344,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.RemoveUserAsync(Guid.NewGuid(), organizationUser.UserId.Value));
-        Assert.Contains("User not found.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.UserNotFoundErrorMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -366,7 +366,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.UserId.Value));
-        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveLastConfirmedOwnerErrorMessage, exception.Message);
         await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .Received(1)
             .HasConfirmedOwnersExceptAsync(
@@ -457,7 +457,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId));
-        Assert.Contains("Users invalid.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.UsersInvalidErrorMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -478,7 +478,7 @@ public class RemoveOrganizationUserCommandTests
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
 
         // Assert
-        Assert.Contains("You cannot remove yourself.", result.First().ErrorMessage);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveYourselfErrorMessage, result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -504,15 +504,18 @@ public class RemoveOrganizationUserCommandTests
         var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
 
         // Assert
-        Assert.Contains("Only owners can delete other owners.", result.First().ErrorMessage);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveOwnerByNonOwnerErrorMessage, result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
     public async Task RemoveUsers_WithDeletingUserId_RemovingManagedUser_WithAccountDeprovisioningEnabled_ThrowsException(
         [OrganizationUser(status: OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser,
+        OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
         // Arrange
+        orgUser.OrganizationId = deletingUser.OrganizationId;
+
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(true);
@@ -530,16 +533,16 @@ public class RemoveOrganizationUserCommandTests
             .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
 
         // Act
-        var result = await sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
+        var result = await sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, deletingUser.UserId);
 
         // Assert
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
-            .DeleteAsync(default);
+            .DeleteManyAsync(default);
         await sutProvider.GetDependency<IEventService>()
             .DidNotReceiveWithAnyArgs()
-            .LogOrganizationUserEventAsync((OrganizationUser)default, EventType.OrganizationUser_Removed);
-        Assert.Contains("Managed members cannot be simply removed, their entire individual account must be deleted.", result.First().ErrorMessage);
+            .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser OrganizationUser, EventType EventType, DateTime? DateTime)>>());
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveClaimedAccountErrorMessage, result.First().ErrorMessage);
     }
 
     [Theory, BitAutoData]
@@ -561,7 +564,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, organizationUserIds, null));
-        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveLastConfirmedOwnerErrorMessage, exception.Message);
     }
 
     [Theory]
@@ -630,7 +633,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUsersAsync(Guid.NewGuid(), organizationUserIds, eventSystemUser));
-        Assert.Contains("Users invalid.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.UsersInvalidErrorMessage, exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -652,7 +655,7 @@ public class RemoveOrganizationUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RemoveUsersAsync(orgUser.OrganizationId, organizationUserIds, eventSystemUser));
-        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+        Assert.Contains(RemoveOrganizationUserCommand.RemoveLastConfirmedOwnerErrorMessage, exception.Message);
     }
 
     /// <summary>
