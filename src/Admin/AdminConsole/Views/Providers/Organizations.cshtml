@@ -24,9 +24,9 @@
                         <th>
                             @if (Model.Provider.Type == ProviderType.Reseller)
                             {
-                                <div class="float-right text-nowrap">
-                                    <a asp-controller="Providers" asp-action="CreateOrganization" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
-                                    <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary">Add Existing Organization</a>
+                                <div class="float-end text-nowrap">
+                                    <a asp-controller="Providers" asp-action="CreateOrganization" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary text-decoration-none">New Organization</a>
+                                    <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary text-decoration-none">Add Existing Organization</a>
                                 </div>
                             }
                         </th>
@@ -51,16 +51,16 @@
                                     @providerOrganization.Status
                                 </td>
                                 <td>
-                                    <div class="float-right">
+                                    <div class="float-end">
                                         @if (canUnlinkFromProvider)
                                         {
-                                            <a href="#" class="text-danger float-right" onclick="return unlinkProvider('@Model.Provider.Id', '@providerOrganization.Id');">
+                                            <a href="#" class="text-danger float-end" onclick="return unlinkProvider('@Model.Provider.Id', '@providerOrganization.Id');">
                                                 Unlink provider
                                             </a>
                                         }
                                         @if (providerOrganization.Status == OrganizationStatusType.Pending)
                                         {
-                                            <a href="#" class="float-right mr-3" onclick="return resendOwnerInvite('@providerOrganization.OrganizationId');">
+                                            <a href="#" class="float-end me-3" onclick="return resendOwnerInvite('@providerOrganization.OrganizationId');">
                                                 Resend invitation
                                             </a>
                                         }

@@ -26,8 +26,8 @@
         <h2>General</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Name"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Name"></label>
                     <input type="text" class="form-control" asp-for="Name" value="@Model.Name" required>
                 </div>
             </div>
@@ -37,17 +37,17 @@
         {
             <div class="row">
                 <div class="col-sm">
-                    <div class="form-group">
-                        <label>Client Owner Email</label>
+                    <div class="mb-3">
+                        <label class="form-label">Client Owner Email</label>
                         @if (!string.IsNullOrWhiteSpace(Model.Owners))
                         {
-                            <input type="text" class="form-control" asp-for="Owners" readonly="readonly">
+                            <input type="text" class="form-control" asp-for="Owners" readonly>
                         }
                         else
                         {
                             <input type="text" class="form-control" asp-for="Owners" required>
                         }
-                        <label class="form-check-label small text-muted align-top">This user should be independent of the Provider. If the Provider is disassociated with the organization, this user will maintain ownership of the organization.</label>
+                        <div class="form-text mt-0">This user should be independent of the Provider. If the Provider is disassociated with the organization, this user will maintain ownership of the organization.</div>
                     </div>
                 </div>
             </div>
@@ -66,8 +66,8 @@
         <h2>Plan</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="PlanType"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="PlanType"></label>
                     @{
                         var planTypes = Enum.GetValues<PlanType>()
                             .Where(p =>
@@ -83,12 +83,12 @@
                             })
                             .ToList();
                     }
-                    <select class="form-control" asp-for="PlanType" asp-items="planTypes" disabled='@(canEditPlan ? null : "disabled")'></select>
+                    <select class="form-select" asp-for="PlanType" asp-items="planTypes" disabled='@(canEditPlan ? null : "disabled")'></select>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Plan"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Plan"></label>
                     <input type="text" class="form-control" asp-for="Plan" required readonly='@(!canEditPlan)'>
                 </div>
             </div>
@@ -172,28 +172,28 @@
         <h2>Password Manager Configuration</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Seats"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Seats"></label>
                     <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxCollections"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="MaxCollections"></label>
                     <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxStorageGb"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="MaxStorageGb"></label>
                     <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col-4">
-                <div class="form-group">
-                    <label asp-for="MaxAutoscaleSeats"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="MaxAutoscaleSeats"></label>
                     <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
                 </div>
             </div>
@@ -202,32 +202,32 @@
 
     @if (canViewPlan)
     {
-        <div id="organization-secrets-configuration" hidden="@(!Model.UseSecretsManager)">
+        <div id="organization-secrets-configuration" @(Model.UseSecretsManager ? null : "lass='d-none'")>
             <h2>Secrets Manager Configuration</h2>
             <div class="row">
                 <div class="col-sm">
-                    <div class="form-group">
-                        <label asp-for="SmSeats"></label>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="SmSeats"></label>
                         <input type="number" class="form-control" asp-for="SmSeats" min="1" readonly='@(!canEditPlan)'>
                     </div>
                 </div>
                 <div class="col-sm">
-                    <div class="form-group">
-                        <label asp-for="MaxAutoscaleSmSeats"></label>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="MaxAutoscaleSmSeats"></label>
                         <input type="number" class="form-control" asp-for="MaxAutoscaleSmSeats" min="1" readonly='@(!canEditPlan)'>
                     </div>
                 </div>
                 <div class="col-sm">
-                    <div class="form-group">
-                        <label asp-for="SmServiceAccounts"></label>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="SmServiceAccounts"></label>
                         <input type="number" class="form-control" asp-for="SmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
                     </div>
                 </div>
             </div>
             <div class="row">
                 <div class="col-4">
-                    <div class="form-group">
-                        <label asp-for="MaxAutoscaleSmServiceAccounts"></label>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="MaxAutoscaleSmServiceAccounts"></label>
                         <input type="number" class="form-control" asp-for="MaxAutoscaleSmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
                     </div>
                 </div>
@@ -240,14 +240,14 @@
         <h2>Licensing</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="LicenseKey"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="LicenseKey"></label>
                     <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="ExpirationDate"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="ExpirationDate"></label>
                     <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)' step="1">
                 </div>
             </div>
@@ -259,52 +259,46 @@
         <h2>Billing</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="BillingEmail"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="BillingEmail"></label>
                     <input type="email" class="form-control" asp-for="BillingEmail" readonly="readonly">
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <div class="form-group">
-                        <label asp-for="Gateway"></label>
-                        <select class="form-control" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
-                                asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                            <option value="">--</option>
-                        </select>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="Gateway"></label>
+                    <select class="form-select" asp-for="Gateway" disabled="@(!canEditBilling)"
+                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                        <option value="">--</option>
+                    </select>
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="GatewayCustomerId"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="GatewayCustomerId"></label>
                     <div class="input-group">
                         <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
                         @if(canLaunchGateway)
                         {
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
                         }
                     </div>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="GatewaySubscriptionId"></label>
+                <div class="mb-3">
+                    <label class="form-label" asp-for="GatewaySubscriptionId"></label>
                     <div class="input-group">
                         <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
                         @if (canLaunchGateway)
                         {
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
+                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
                         }
                     </div>
                 </div>

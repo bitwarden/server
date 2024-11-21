@@ -103,19 +103,19 @@
 
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-    <div class="ml-auto d-flex">
+    <div class="ms-auto d-flex">
         @if (canInitiateTrial && Model.Provider is null)
         {
-            <button class="btn btn-secondary mr-2" type="button" id="teams-trial">
+            <button class="btn btn-secondary me-2" type="button" id="teams-trial">
                 Teams Trial
             </button>
-            <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
+            <button class="btn btn-secondary me-2" type="button" id="enterprise-trial">
                 Enterprise Trial
             </button>
         }
         @if (canUnlinkFromProvider && Model.Provider is not null)
         {
-            <button class="btn btn-outline-danger mr-2"
+            <button class="btn btn-outline-danger me-2"
                     onclick="return unlinkProvider('@Model.Organization.Id');">
                 Unlink provider
             </button>
@@ -124,7 +124,7 @@
         {
             <form asp-action="DeleteInitiation" asp-route-id="@Model.Organization.Id" id="initiate-delete-form">
                 <input type="hidden" name="AdminEmail" id="AdminEmail" />
-                <button class="btn btn-danger mr-2" type="submit">Request Delete</button>
+                <button class="btn btn-danger me-2" type="submit">Request Delete</button>
             </form>
             <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
                   onsubmit="return confirm('Are you sure you want to hard delete this organization?')">
