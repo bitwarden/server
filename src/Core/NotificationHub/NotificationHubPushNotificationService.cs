@@ -182,7 +182,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushSyncNotificationCreateAsync(Notification notification)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -190,9 +190,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
-            RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            RevisionDate = notification.RevisionDate
         };
 
         if (notification.UserId.HasValue)

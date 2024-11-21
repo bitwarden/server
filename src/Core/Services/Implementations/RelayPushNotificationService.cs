@@ -190,7 +190,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushSyncNotificationCreateAsync(Notification notification)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -198,9 +198,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
-            RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            RevisionDate = notification.RevisionDate
         };
 
         if (notification.UserId.HasValue)

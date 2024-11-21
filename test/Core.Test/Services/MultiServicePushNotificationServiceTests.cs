@@ -14,22 +14,17 @@ namespace Bit.Core.Test.Services;
 public class MultiServicePushNotificationServiceTests
 {
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize]
-    [NotificationStatusCustomize]
-    public async Task PushSyncNotificationCreateAsync_Notification_Sent(bool notificationStatusNull,
-        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification,
-        NotificationStatus notificationStatus)
+    public async Task PushSyncNotificationCreateAsync_Notification_Sent(
+        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification)
     {
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification,
-            notificationStatusNull ? null : notificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
         await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
             .First()
             .Received(1)
-            .PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+            .PushSyncNotificationCreateAsync(notification);
     }
 
     [Theory]

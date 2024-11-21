@@ -19,15 +19,12 @@ namespace Bit.Core.Test.NotificationHub;
 public class NotificationHubPushNotificationServiceTests
 {
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize]
-    public async Task PushSyncNotificationCreateAsync_Global_NotSent(bool notificationStatusNull,
-        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
-        NotificationStatus notificationStatus)
+    public async Task PushSyncNotificationCreateAsync_Global_NotSent(
+        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification,
-            notificationStatusNull ? null : notificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await sutProvider.GetDependency<INotificationHubPool>()
             .Received(0)
@@ -40,15 +37,12 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationCreateAsync_UserIdProvidedClientTypeAll_SentToUser(
-        bool organizationIdNull, bool notificationStatusNull,
-        SutProvider<NotificationHubPushNotificationService> sutProvider,
-        Notification notification, NotificationStatus notificationStatus)
+        bool organizationIdNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
+        Notification notification)
     {
         if (organizationIdNull)
         {
@@ -56,10 +50,9 @@ public class NotificationHubPushNotificationServiceTests
         }
 
         notification.ClientType = ClientType.All;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
             expectedSyncNotification,
@@ -70,26 +63,20 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationCreateAsync_UserIdProvidedOrganizationIdNullClientTypeNotAll_SentToUser(
-        bool notificationStatusNull, ClientType clientType,
-        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
-        NotificationStatus notificationStatus)
+        ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+        Notification notification)
     {
         notification.OrganizationId = null;
         notification.ClientType = clientType;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
             expectedSyncNotification,
@@ -100,25 +87,19 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationCreateAsync_UserIdProvidedOrganizationIdProvidedClientTypeNotAll_SentToUser(
-        bool notificationStatusNull, ClientType clientType,
-        SutProvider<NotificationHubPushNotificationService> sutProvider,
-        Notification notification, NotificationStatus notificationStatus)
+        ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+        Notification notification)
     {
         notification.ClientType = clientType;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
             expectedSyncNotification,
@@ -129,19 +110,16 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationCreateAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
-        bool notificationStatusNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
-        Notification notification, NotificationStatus notificationStatus)
+        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
         notification.UserId = null;
         notification.ClientType = ClientType.All;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
             expectedSyncNotification,
@@ -152,27 +130,21 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
     public async Task
         PushSyncNotificationCreateAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
-            bool notificationStatusNull, ClientType clientType,
-            SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
-            NotificationStatus notificationStatus)
+            ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+            Notification notification)
     {
         notification.UserId = null;
         notification.ClientType = clientType;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
             expectedSyncNotification,

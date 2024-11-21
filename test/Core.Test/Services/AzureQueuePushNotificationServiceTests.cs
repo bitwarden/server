@@ -22,26 +22,22 @@ namespace Bit.Core.Test.Services;
 public class AzureQueuePushNotificationServiceTests
 {
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize]
-    [NotificationStatusCustomize]
     [CurrentContextCustomize]
-    public async Task PushSyncNotificationCreateAsync_Notification_Sent(bool notificationStatusNull,
+    public async Task PushSyncNotificationCreateAsync_Notification_Sent(
         SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
-        ICurrentContext currentContext, NotificationStatus notificationStatus)
+        ICurrentContext currentContext)
     {
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
         currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
             .GetService(Arg.Any<Type>()).Returns(currentContext);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotificationCreate, message,
-                    new SyncNotificationEquals(notification, expectedNotificationStatus),
+                MatchMessage(PushType.SyncNotificationCreate, message, new SyncNotificationEquals(notification, null),
                     deviceIdentifier.ToString())));
     }
 

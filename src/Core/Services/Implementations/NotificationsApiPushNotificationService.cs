@@ -172,7 +172,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushSyncNotificationCreateAsync(Notification notification)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -180,9 +180,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
-            RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            RevisionDate = notification.RevisionDate
         };
 
         await SendMessageAsync(PushType.SyncNotificationCreate, message, true);

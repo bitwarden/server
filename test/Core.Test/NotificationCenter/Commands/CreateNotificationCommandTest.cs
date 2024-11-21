@@ -43,7 +43,7 @@ public class CreateNotificationCommandTest
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(notification));
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
-            .PushSyncNotificationCreateAsync(Arg.Any<Notification>(), Arg.Any<NotificationStatus?>());
+            .PushSyncNotificationCreateAsync(Arg.Any<Notification>());
     }
 
     [Theory]
@@ -61,6 +61,6 @@ public class CreateNotificationCommandTest
         Assert.Equal(notification.CreationDate, notification.RevisionDate);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncNotificationCreateAsync(newNotification, null);
+            .PushSyncNotificationCreateAsync(newNotification);
     }
 }
