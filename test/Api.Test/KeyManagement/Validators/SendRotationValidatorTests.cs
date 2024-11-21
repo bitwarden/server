@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models;
 using Bit.Api.Tools.Models.Request;
-using Bit.Api.Tools.Validators;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
@@ -14,7 +14,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Tools.Validators;
+namespace Bit.Api.Test.KeyManagement.Validators;
 
 [SutProviderCustomize]
 public class SendRotationValidatorTests

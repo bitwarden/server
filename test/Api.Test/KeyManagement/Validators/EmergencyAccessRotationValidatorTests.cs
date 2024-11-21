@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -10,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Auth.Validators;
+namespace Bit.Api.Test.KeyManagement.Validators;
 
 [SutProviderCustomize]
 public class EmergencyAccessRotationValidatorTests

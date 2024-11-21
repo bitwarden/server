@@ -5,7 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Api.Auth.Validators;
+namespace Bit.Api.KeyManagement.Validators;
 
 public class EmergencyAccessRotationValidator : IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
     IEnumerable<EmergencyAccess>>

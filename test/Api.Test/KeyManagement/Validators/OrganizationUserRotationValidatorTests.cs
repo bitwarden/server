@@ -1,5 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.AdminConsole.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -8,7 +8,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.AdminConsole.Validators;
+namespace Bit.Api.Test.KeyManagement.Validators;
 
 [SutProviderCustomize]
 public class OrganizationUserRotationValidatorTests
