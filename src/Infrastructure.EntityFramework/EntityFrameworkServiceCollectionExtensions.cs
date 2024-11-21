@@ -98,6 +98,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services
             .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
         services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
+        services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
 
         if (selfHosted)

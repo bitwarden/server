@@ -25,22 +25,22 @@ bf82d3cf-0e21-4f39-b81b-ef52b2fc6a3a
     </div>
     <form method="post" asp-controller="MigrateProviders" asp-action="Post" class="mt-2">
         <div asp-validation-summary="All" class="text-danger"></div>
-        <div class="form-group">
-            <label asp-for="ProviderIds"></label>
+        <div class="mb-3">
+            <label class="form-label" asp-for="ProviderIds"></label>
             <textarea rows="10" class="form-control" type="text" asp-for="ProviderIds"></textarea>
         </div>
-        <div class="form-group">
-            <input type="submit" value="Run" class="btn btn-primary mb-2"/>
+        <div class="mb-3">
+            <input type="submit" value="Run" class="btn btn-primary"/>
         </div>
     </form>
     <form method="get" asp-controller="MigrateProviders" asp-action="Results" class="mt-2">
         <div asp-validation-summary="All" class="text-danger"></div>
-        <div class="form-group">
-            <label asp-for="ProviderIds"></label>
+        <div class="mb-3">
+            <label class="form-label" asp-for="ProviderIds"></label>
             <textarea rows="10" class="form-control" type="text" asp-for="ProviderIds"></textarea>
         </div>
-        <div class="form-group">
-            <input type="submit" value="See Previous Results" class="btn btn-primary mb-2"/>
+        <div class="mb-3">
+            <input type="submit" value="See Previous Results" class="btn btn-primary"/>
         </div>
     </form>
 </section>

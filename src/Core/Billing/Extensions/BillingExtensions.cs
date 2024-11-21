@@ -11,10 +11,11 @@ namespace Bit.Core.Billing.Extensions;
 public static class BillingExtensions
 {
     public static bool IsBillable(this Provider provider) =>
-        provider.SupportsConsolidatedBilling() && provider.Status == ProviderStatusType.Billable;
-
-    public static bool SupportsConsolidatedBilling(this Provider provider)
-        => provider.Type.SupportsConsolidatedBilling();
+        provider is
+        {
+            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
+            Status: ProviderStatusType.Billable
+        };
 
     public static bool SupportsConsolidatedBilling(this ProviderType providerType)
         => providerType is ProviderType.Msp or ProviderType.MultiOrganizationEnterprise;
@@ -24,12 +25,15 @@ public static class BillingExtensions
         {
             Seats: not null,
             Status: OrganizationStatusType.Managed,
-            PlanType: PlanType.TeamsMonthly or PlanType.EnterpriseMonthly
+            PlanType: PlanType.TeamsMonthly or PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually
         };
 
     public static bool IsStripeEnabled(this ISubscriber subscriber)
-        => !string.IsNullOrEmpty(subscriber.GatewayCustomerId) &&
-           !string.IsNullOrEmpty(subscriber.GatewaySubscriptionId);
+        => subscriber is
+        {
+            GatewayCustomerId: not null and not "",
+            GatewaySubscriptionId: not null and not ""
+        };
 
     public static bool IsUnverifiedBankAccount(this SetupIntent setupIntent) =>
         setupIntent is
