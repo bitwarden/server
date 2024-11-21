@@ -32,8 +32,6 @@ using Microsoft.Extensions.Options;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-#nullable enable
-
 namespace Bit.Core.Services;
 
 public class UserService : UserManager<User>, IUserService, IDisposable
