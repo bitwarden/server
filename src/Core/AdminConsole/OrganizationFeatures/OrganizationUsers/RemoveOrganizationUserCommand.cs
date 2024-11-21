@@ -42,6 +42,16 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         _featureService = featureService;
     }
 
+    public async Task RemoveUserAsync(Guid organizationId, Guid userId)
+    {
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        ValidateDeleteUser(organizationId, organizationUser);
+
+        await RepositoryDeleteUserAsync(organizationUser, null, null);
+
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
+    }
+
     public async Task RemoveUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
@@ -60,16 +70,6 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         await RepositoryDeleteUserAsync(organizationUser, null, eventSystemUser);
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
-    }
-
-    public async Task RemoveUserAsync(Guid organizationId, Guid userId)
-    {
-        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
-        ValidateDeleteUser(organizationId, organizationUser);
-
-        await RepositoryDeleteUserAsync(organizationUser, null, null);
-
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
 
     public async Task<IEnumerable<(Guid OrganizationUserId, string ErrorMessage)>> RemoveUsersAsync(
