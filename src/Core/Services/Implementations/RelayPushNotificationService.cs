@@ -287,13 +287,13 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         }
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
