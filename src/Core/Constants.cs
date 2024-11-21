@@ -107,7 +107,6 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
-    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
@@ -124,8 +123,8 @@ public static class FeatureFlagKeys
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string SSHAgent = "ssh-agent";
+    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
-    public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
@@ -156,6 +155,7 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
     public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
+    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
 
     public static List<string> GetAllKeys()
     {

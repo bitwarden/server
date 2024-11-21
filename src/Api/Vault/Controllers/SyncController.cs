@@ -112,7 +112,7 @@ public class SyncController : Controller
 
     private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
     {
-        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion)
+        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion || _featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
         {
             return ciphers;
         }

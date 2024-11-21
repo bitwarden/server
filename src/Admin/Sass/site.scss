@@ -1,4 +1,7 @@
 ﻿@import "webfonts.scss";
+@import "bootstrap/scss/functions";
+@import "bootstrap/scss/variables";
+@import "bootstrap/scss/mixins";
 
 $primary: #175DDC;
 $primary-accent: #1252A3;
@@ -7,7 +10,8 @@ $info: #555555;
 $warning: #bf7e16;
 $danger: #dd4b39;
 
-$theme-colors: ( "primary-accent": $primary-accent );
+$theme-colors: map-merge($theme-colors, ("primary-accent": $primary-accent));
+
 $font-family-sans-serif: 'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 
 $h1-font-size: 2rem;
@@ -17,7 +21,7 @@ $h4-font-size: 1rem;
 $h5-font-size: 1rem;
 $h6-font-size: 1rem;
 
-@import "bootstrap/scss/bootstrap.scss";
+@import "bootstrap/scss/bootstrap";
 
 h1 {
     border-bottom: 1px solid $border-color;
@@ -48,4 +52,12 @@ h3 {
 
 .form-check-input {
     margin-top: .45rem;
+}
+
+a {
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
 }
