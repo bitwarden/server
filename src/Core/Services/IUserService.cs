@@ -8,8 +8,6 @@ using Bit.Core.Models.Business;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
-#nullable enable
-
 namespace Bit.Core.Services;
 
 public interface IUserService

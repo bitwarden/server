@@ -385,6 +385,9 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user.Id)))
             .Returns(new[] { user });
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+
         // Act
         var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, deletingUserId);
 
@@ -409,6 +412,9 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<OrganizationUser> { orgUser });
+
+        sutProvider.GetDependency<IFeatureService>()
+        .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
 
         // Act
         var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
@@ -443,6 +449,9 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         sutProvider.GetDependency<ICurrentContext>()
             .OrganizationOwner(orgUser.OrganizationId)
             .Returns(false);
+
+        sutProvider.GetDependency<IFeatureService>()
+        .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
 
         var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, deletingUserId);
 
@@ -480,6 +489,9 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .HasConfirmedOwnersExceptAsync(orgUser.OrganizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
             .Returns(false);
 
+        sutProvider.GetDependency<IFeatureService>()
+        .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+
         // Act
         var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, deletingUserId);
 
@@ -513,6 +525,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetUsersOrganizationManagementStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser.Id, false } });
 
+        sutProvider.GetDependency<IFeatureService>()
+                    .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         // Act
         var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
 
@@ -551,6 +565,9 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
             .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser3.Id, false } });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
 
         // Act
         var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUser1.Id, orgUser2.Id, orgUser3.Id }, null);
