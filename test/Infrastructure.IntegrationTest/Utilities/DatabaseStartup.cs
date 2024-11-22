@@ -8,6 +8,7 @@ using Bit.Infrastructure.IntegrationTest.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using Xunit.v3;
@@ -124,7 +125,7 @@ public class DatabaseStartup : ITestPipelineStartup
         var services = new ServiceCollection();
         services.AddLogging(builder =>
         {
-
+            builder.AddProvider(new XunitLoggerProvider(LogLevel.Information));
         });
 
         services.AddDataProtection();
