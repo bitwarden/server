@@ -84,14 +84,16 @@ public class UserRepositoryTests
         var notDeletedUser3 = await userRepository.GetByIdAsync(user3.Id);
 
         var orgUser1Deleted = await organizationUserRepository.GetByIdAsync(user1.Id);
-        var notDeletedOrgUser3 = await organizationUserRepository.GetByIdAsync(user3.Id);
+
+        var notDeletedOrgUsers = await organizationUserRepository.GetManyByUserAsync(user3.Id);
 
         Assert.Null(deletedUser1);
         Assert.Null(deletedUser2);
         Assert.NotNull(notDeletedUser3);
 
         Assert.Null(orgUser1Deleted);
-        Assert.NotNull(notDeletedOrgUser3);
+        Assert.NotNull(notDeletedOrgUsers);
+        Assert.True(notDeletedOrgUsers.Count > 0);
     }
 
 }
