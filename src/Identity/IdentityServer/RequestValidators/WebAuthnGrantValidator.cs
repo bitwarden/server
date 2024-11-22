@@ -91,10 +91,13 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         }
 
         var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
+        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
+        var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
+            KnownDevice = knownDevice != null,
+            Device = knownDevice ?? requestDevice,
         };
 
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);

@@ -75,11 +75,16 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         }
 
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+        // We want to keep this device around incase the device is new for the user
+        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
+        var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request),
+            KnownDevice = knownDevice != null,
+            Device = knownDevice ?? requestDevice,
         };
+
         string bypassToken = null;
         if (!validatorContext.KnownDevice &&
             _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
