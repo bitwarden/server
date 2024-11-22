@@ -207,7 +207,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy));
 
-        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccess, badRequestException.Message);
+        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccessMessage, badRequestException.Message);
 
         await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
             .RemoveUserAsync(organizationId: default, organizationUserId: default, deletingUserId: default);
@@ -300,7 +300,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy));
 
-        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccess, exception.Message);
+        Assert.Equal(TwoFactorAuthenticationPolicyValidator.NonCompliantMembersWillLoseAccessMessage, exception.Message);
     }
 
     [Theory, BitAutoData]

@@ -89,8 +89,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
                          ou.Status != OrganizationUserStatusType.Revoked &&
                          ou.Type != OrganizationUserType.Owner &&
                          ou.Type != OrganizationUserType.Admin &&
-                         performedBy is StandardUser stdUser &&
-                         stdUser.UserId != ou.UserId)
+                         !(performedBy is StandardUser stdUser && stdUser.UserId == ou.UserId))
             .ToList();
 
         if (currentActiveRevocableOrganizationUsers.Count == 0)

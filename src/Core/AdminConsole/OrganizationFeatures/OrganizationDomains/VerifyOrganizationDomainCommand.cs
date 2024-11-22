@@ -29,7 +29,14 @@ public class VerifyOrganizationDomainCommand(
 
     public async Task<OrganizationDomain> UserVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
     {
-        var actingUser = new StandardUser(currentContext.UserId ?? Guid.Empty, await currentContext.OrganizationOwner(organizationDomain.OrganizationId));
+        if (currentContext.UserId is null)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(UserVerifyOrganizationDomainAsync)} can only be called by a user. " +
+                $"Please call {nameof(SystemVerifyOrganizationDomainAsync)} for system users.");
+        }
+
+        var actingUser = new StandardUser(currentContext.UserId.Value, await currentContext.OrganizationOwner(organizationDomain.OrganizationId));
 
         var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain, actingUser);
 
