@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
