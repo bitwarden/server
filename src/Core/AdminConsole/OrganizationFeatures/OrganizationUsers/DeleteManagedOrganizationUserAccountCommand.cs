@@ -19,6 +19,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IFeatureService _featureService;
 
     public DeleteManagedOrganizationUserAccountCommand(
         IUserService userService,
@@ -27,7 +28,8 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         IOrganizationUserRepository organizationUserRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IFeatureService featureService)
     {
         _userService = userService;
         _eventService = eventService;
@@ -36,6 +38,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _userRepository = userRepository;
         _currentContext = currentContext;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _featureService = featureService;
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
@@ -71,6 +74,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
 
         var results = new List<(Guid OrganizationUserId, string? ErrorMessage)>();
+        var accountDeprovisioningEnabled = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning);
         foreach (var orgUserId in orgUserIds)
         {
             try
@@ -88,7 +92,10 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                 {
                     throw new NotFoundException("Member not found.");
                 }
-
+                if (!accountDeprovisioningEnabled)
+                {
+                    await _userService.DeleteAsync(user);
+                }
                 results.Add((orgUserId, string.Empty));
             }
             catch (Exception ex)
@@ -97,7 +104,10 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
-        await _userService.DeleteManyAsync(users);
+        if (accountDeprovisioningEnabled)
+        {
+            await _userService.DeleteManyAsync(users);
+        }
         await LogDeletedOrganizationUsersAsync(orgUsers, results);
 
         return results;

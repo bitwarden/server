@@ -235,7 +235,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteManyUsersAsync_WithValidUsers_DeletesUsersAndLogsEvents(
+    public async Task DeleteManyUsersAsync_WhenFeatureFlagEnabled_WithValidUsers_DeletesUsersAndLogsEvents(
         SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
@@ -257,6 +257,9 @@ public class DeleteManagedOrganizationUserAccountCommandTests
             .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser2.Id, true } });
 
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+
         // Act
         var userIds = new[] { orgUser1.Id, orgUser2.Id };
         var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, userIds, null);
@@ -267,6 +270,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyAsync(userIds);
         await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
                 events.Count(e => e.Item1.Id == orgUser1.Id && e.Item2 == EventType.OrganizationUser_Deleted) == 1
@@ -275,11 +279,59 @@ public class DeleteManagedOrganizationUserAccountCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteManyUsersAsync_WhenUserNotFound_ReturnsErrorMessage(
+    public async Task DeleteManyUsersAsync_WhenFeatureFlagDisabled_WithValidUsers_DeletesUsersAndLogsEvents(
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user1, User user2, Guid organizationId,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser2)
+    {
+        // Arrange
+        orgUser1.OrganizationId = orgUser2.OrganizationId = organizationId;
+        orgUser1.UserId = user1.Id;
+        orgUser2.UserId = user2.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationUser> { orgUser1, orgUser2 });
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(user1.Id) && ids.Contains(user2.Id)))
+            .Returns(new[] { user1, user2 });
+
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, true }, { orgUser2.Id, true } });
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(false);
+
+        // Act
+        var userIds = new[] { orgUser1.Id, orgUser2.Id };
+        var results = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, userIds, null);
+
+        // Assert
+        Assert.Equal(2, results.Count());
+        Assert.All(results, r => Assert.Empty(r.Item2));
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyAsync(userIds);
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
+        await sutProvider.GetDependency<IUserService>().Received(2).DeleteAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
+            Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                events.Count(e => e.Item1.Id == orgUser1.Id && e.Item2 == EventType.OrganizationUser_Deleted) == 1
+                && events.Count(e => e.Item1.Id == orgUser2.Id && e.Item2 == EventType.OrganizationUser_Deleted) == 1));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyUsersAsync_WhenFeatureFlagEnabled_WhenUserNotFound_ReturnsErrorMessage(
         SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
         Guid organizationId,
         Guid orgUserId)
     {
+        // Arrang
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+
         // Act
         var result = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUserId }, null);
 
@@ -287,6 +339,30 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.Single(result);
         Assert.Equal(orgUserId, result.First().Item1);
         Assert.Contains("Member not found.", result.First().Item2);
+        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
+        await sutProvider.GetDependency<IEventService>().Received(0)
+            .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyUsersAsync_WhenFeatureFlagDisabled_WhenUserNotFound_ReturnsErrorMessage(
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider,
+        Guid organizationId,
+        Guid orgUserId)
+    {
+        // Arrang
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(false);
+
+        // Act
+        var result = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUserId }, null);
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal(orgUserId, result.First().Item1);
+        Assert.Contains("Member not found.", result.First().Item2);
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
