@@ -1833,10 +1833,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
             .Returns(true);
 
+        var user = new User();
+        user.Email = "test@bitwarden.com";
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains(organizationUser.Email + " belongs to an organization that doesn't allow them to join multiple organizations", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com belongs to an organization that doesn't allow them to join multiple organizations", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
@@ -1864,10 +1868,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
+        var user = new User();
+        user.Email = "test@bitwarden.com";
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains(organizationUser.Email + " is not compliant with the two-step login policy", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com is not compliant with the two-step login policy", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
@@ -1922,10 +1930,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.SingleOrg, OrganizationUserStatus = OrganizationUserStatusType.Revoked }
             });
 
+        var user = new User();
+        user.Email = "test@bitwarden.com";
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains(organizationUser.Email + " is not compliant with the single organization policy", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com is not compliant with the single organization policy", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
@@ -1955,10 +1967,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
             .Returns(true);
 
+        var user = new User();
+        user.Email = "test@bitwarden.com";
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains(organizationUser.Email + " belongs to an organization that doesn't allow them to join multiple organizations", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com belongs to an organization that doesn't allow them to join multiple organizations", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
@@ -1994,10 +2010,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication, OrganizationUserStatus = OrganizationUserStatusType.Revoked }
             });
 
+        var user = new User();
+        user.Email = "test@bitwarden.com";
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains(organizationUser.Email + " is not compliant with the single organization and two-step login polciy", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com is not compliant with the single organization and two-step login polciy", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
@@ -2021,10 +2041,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
             .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
 
+        var user = new User();
+        user.Email = "test@bitwarden.com";
+        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains(organizationUser.Email + " is not compliant with the two-step login policy", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com is not compliant with the two-step login policy", exception.Message.ToLowerInvariant());
 
         await organizationUserRepository.DidNotReceiveWithAnyArgs().RestoreAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType>());
         await eventService.DidNotReceiveWithAnyArgs()
