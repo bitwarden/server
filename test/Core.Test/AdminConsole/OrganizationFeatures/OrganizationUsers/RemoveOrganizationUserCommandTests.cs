@@ -18,11 +18,8 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 [SutProviderCustomize]
 public class RemoveOrganizationUserCommandTests
 {
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [Theory, BitAutoData]
     public async Task RemoveUser_WithDeletingUserId_Success(
-        bool isAccountDeprovisioningEnabled,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser deletingUser,
         SutProvider<RemoveOrganizationUserCommand> sutProvider)
@@ -30,9 +27,6 @@ public class RemoveOrganizationUserCommandTests
         // Arrange
         organizationUser.OrganizationId = deletingUser.OrganizationId;
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(isAccountDeprovisioningEnabled);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -47,31 +41,57 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
 
         // Assert
+        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetUsersOrganizationManagementStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteAsync(organizationUser);
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
-
-        if (isAccountDeprovisioningEnabled)
-        {
-            await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-                .Received(1)
-                .GetUsersOrganizationManagementStatusAsync(
-                    organizationUser.OrganizationId,
-                    Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)));
-        }
-        else
-        {
-            await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-                .DidNotReceiveWithAnyArgs()
-                .GetUsersOrganizationManagementStatusAsync(default, default);
-        }
     }
 
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
+    public async Task RemoveUser_WithDeletingUserId_WithAccountDeprovisioningEnabled_Success(
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser deletingUser,
+        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        organizationUser.OrganizationId = deletingUser.OrganizationId;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(deletingUser.Id)
+            .Returns(deletingUser);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(deletingUser.OrganizationId)
+            .Returns(true);
+
+        // Act
+        await sutProvider.Sut.RemoveUserAsync(deletingUser.OrganizationId, organizationUser.Id, deletingUser.UserId);
+
+        // Assert
+        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .Received(1)
+            .GetUsersOrganizationManagementStatusAsync(
+                organizationUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.Id)));
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
+    }
+
+    [Theory, BitAutoData]
     public async Task RemoveUser_WithDeletingUserId_NotFound_ThrowsException(
         SutProvider<RemoveOrganizationUserCommand> sutProvider,
         Guid organizationId, Guid organizationUserId)
@@ -81,8 +101,7 @@ public class RemoveOrganizationUserCommandTests
             await sutProvider.Sut.RemoveUserAsync(organizationId, organizationUserId, null));
     }
 
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
     public async Task RemoveUser_WithDeletingUserId_MismatchingOrganizationId_ThrowsException(
         SutProvider<RemoveOrganizationUserCommand> sutProvider, Guid organizationId, Guid organizationUserId)
     {
@@ -211,19 +230,12 @@ public class RemoveOrganizationUserCommandTests
             .GetUsersOrganizationManagementStatusAsync(orgUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser.Id)));
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task RemoveUser_WithEventSystemUser_Success(bool isAccountDeprovisioningEnabled,
+    [Theory, BitAutoData]
+    public async Task RemoveUser_WithEventSystemUser_Success(
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
-        EventSystemUser eventSystemUser,
-        SutProvider<RemoveOrganizationUserCommand> sutProvider)
+        EventSystemUser eventSystemUser, SutProvider<RemoveOrganizationUserCommand> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(isAccountDeprovisioningEnabled);
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
@@ -232,15 +244,43 @@ public class RemoveOrganizationUserCommandTests
         await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
 
         // Assert
+        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetUsersOrganizationManagementStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteAsync(organizationUser);
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUser_WithEventSystemUser_WithAccountDeprovisioningEnabled_Success(
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser organizationUser,
+        EventSystemUser eventSystemUser, SutProvider<RemoveOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        // Act
+        await sutProvider.Sut.RemoveUserAsync(organizationUser.OrganizationId, organizationUser.Id, eventSystemUser);
+
+        // Assert
         await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
             .DidNotReceiveWithAnyArgs()
             .GetUsersOrganizationManagementStatusAsync(default, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteAsync(organizationUser);
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
 
     [Theory]
@@ -375,11 +415,8 @@ public class RemoveOrganizationUserCommandTests
                 Arg.Any<bool>());
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [Theory, BitAutoData]
     public async Task RemoveUsers_WithDeletingUserId_Success(
-        bool isAccountDeprovisioningEnabled,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1, OrganizationUser orgUser2)
     {
@@ -390,9 +427,6 @@ public class RemoveOrganizationUserCommandTests
         var organizationUsers = new[] { orgUser1, orgUser2 };
         var organizationUserIds = organizationUsers.Select(u => u.Id);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(isAccountDeprovisioningEnabled);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(default)
             .ReturnsForAnyArgs(organizationUsers);
@@ -417,6 +451,9 @@ public class RemoveOrganizationUserCommandTests
         // Assert
         Assert.Equal(2, result.Count());
         Assert.All(result, r => Assert.Empty(r.ErrorMessage));
+        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetUsersOrganizationManagementStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
@@ -427,20 +464,62 @@ public class RemoveOrganizationUserCommandTests
                     i.First().OrganizationUser.Id == orgUser1.Id
                     && i.Last().OrganizationUser.Id == orgUser2.Id
                     && i.All(u => u.DateTime == eventDate)));
-        if (isAccountDeprovisioningEnabled)
-        {
-            await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-                .Received(1)
-                .GetUsersOrganizationManagementStatusAsync(
-                    deletingUser.OrganizationId,
-                    Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
-        }
-        else
-        {
-            await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
-                .DidNotReceiveWithAnyArgs()
-                .GetUsersOrganizationManagementStatusAsync(default, default);
-        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUsers_WithDeletingUserId_WithAccountDeprovisioningEnabled_Success(
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser deletingUser,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1, OrganizationUser orgUser2)
+    {
+        // Arrange
+        var sutProvider = SutProviderFactory();
+        var eventDate = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime;
+        orgUser1.OrganizationId = orgUser2.OrganizationId = deletingUser.OrganizationId;
+        var organizationUsers = new[] { orgUser1, orgUser2 };
+        var organizationUserIds = organizationUsers.Select(u => u.Id);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(deletingUser.Id)
+            .Returns(deletingUser);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(deletingUser.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(deletingUser.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(
+                deletingUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)))
+            .Returns(new Dictionary<Guid, bool> { { orgUser1.Id, false }, { orgUser2.Id, false } });
+
+        // Act
+        var result = await sutProvider.Sut.RemoveUsersAsync(deletingUser.OrganizationId, organizationUserIds, deletingUser.UserId);
+
+        // Assert
+        Assert.Equal(2, result.Count());
+        Assert.All(result, r => Assert.Empty(r.ErrorMessage));
+        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .Received(1)
+            .GetUsersOrganizationManagementStatusAsync(
+                deletingUser.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventsAsync(
+                Arg.Is<IEnumerable<(OrganizationUser OrganizationUser, EventType EventType, DateTime? DateTime)>>(i =>
+                    i.First().OrganizationUser.Id == orgUser1.Id
+                    && i.Last().OrganizationUser.Id == orgUser2.Id
+                    && i.All(u => u.DateTime == eventDate)));
     }
 
     [Theory, BitAutoData]
@@ -567,11 +646,8 @@ public class RemoveOrganizationUserCommandTests
         Assert.Contains(RemoveOrganizationUserCommand.RemoveLastConfirmedOwnerErrorMessage, exception.Message);
     }
 
-    [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [Theory, BitAutoData]
     public async Task RemoveUsers_WithEventSystemUser_Success(
-        bool isAccountDeprovisioningEnabled,
         EventSystemUser eventSystemUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1,
         OrganizationUser orgUser2)
@@ -583,9 +659,6 @@ public class RemoveOrganizationUserCommandTests
         var organizationUsers = new[] { orgUser1, orgUser2 };
         var organizationUserIds = organizationUsers.Select(u => u.Id);
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            .Returns(isAccountDeprovisioningEnabled);
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAsync(default)
             .ReturnsForAnyArgs(organizationUsers);
@@ -599,6 +672,9 @@ public class RemoveOrganizationUserCommandTests
         // Assert
         Assert.Equal(2, result.Count());
         Assert.All(result, r => Assert.Empty(r.ErrorMessage));
+        await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetUsersOrganizationManagementStatusAsync(default, default);
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
@@ -606,15 +682,55 @@ public class RemoveOrganizationUserCommandTests
             .Received(1)
             .LogOrganizationUserEventsAsync(
                 Arg.Is<IEnumerable<(OrganizationUser OrganizationUser, EventType EventType, EventSystemUser EventSystemUser, DateTime? DateTime)>>(
-                    i =>
-                        i.First().OrganizationUser.Id == orgUser1.Id
+                    i => i.First().OrganizationUser.Id == orgUser1.Id
                         && i.Last().OrganizationUser.Id == orgUser2.Id
-                        && i.All(u =>
-                            u.EventSystemUser == eventSystemUser
+                        && i.All(u => u.EventSystemUser == eventSystemUser
                             && u.DateTime == eventDate)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveUsers_WithEventSystemUser_WithAccountDeprovisioningEnabled_Success(
+        EventSystemUser eventSystemUser,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser orgUser1,
+        OrganizationUser orgUser2)
+    {
+        // Arrange
+        var sutProvider = SutProviderFactory();
+        var eventDate = sutProvider.GetDependency<FakeTimeProvider>().GetUtcNow().UtcDateTime;
+        orgUser1.OrganizationId = orgUser2.OrganizationId;
+        var organizationUsers = new[] { orgUser1, orgUser2 };
+        var organizationUserIds = organizationUsers.Select(u => u.Id);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(default)
+            .ReturnsForAnyArgs(organizationUsers);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(orgUser1.OrganizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+
+        // Act
+        var result = await sutProvider.Sut.RemoveUsersAsync(orgUser1.OrganizationId, organizationUserIds, eventSystemUser);
+
+        // Assert
+        Assert.Equal(2, result.Count());
+        Assert.All(result, r => Assert.Empty(r.ErrorMessage));
         await sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
             .DidNotReceiveWithAnyArgs()
             .GetUsersOrganizationManagementStatusAsync(default, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(orgUser1.Id) && i.Contains(orgUser2.Id)));
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventsAsync(
+                Arg.Is<IEnumerable<(OrganizationUser OrganizationUser, EventType EventType, EventSystemUser EventSystemUser, DateTime? DateTime)>>(
+                    i => i.First().OrganizationUser.Id == orgUser1.Id
+                        && i.Last().OrganizationUser.Id == orgUser2.Id
+                        && i.All(u => u.EventSystemUser == eventSystemUser
+                            && u.DateTime == eventDate)));
     }
 
     [Theory, BitAutoData]
