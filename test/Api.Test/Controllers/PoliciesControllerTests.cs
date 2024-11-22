@@ -247,7 +247,7 @@ public class PoliciesControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task GetByToken_WhenOrganizationUseUsePoliciesIsFalse_Jimmy(
+    public async Task GetByToken_WhenOrganizationUseUsePoliciesIsFalse_ThrowsNotFoundException(
         SutProvider<PoliciesController> sutProvider, Guid orgId, Guid organizationUserId, string token, string email,
         Organization organization)
     {
