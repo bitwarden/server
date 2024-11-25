@@ -24,8 +24,8 @@ public interface IPushNotificationService
     Task PushSyncSendCreateAsync(Send send);
     Task PushSyncSendUpdateAsync(Send send);
     Task PushSyncSendDeleteAsync(Send send);
-    Task PushSyncNotificationCreateAsync(Notification notification);
-    Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus);
+    Task PushSyncNotificationAsync(Notification notification);
+    Task PushSyncNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus);
     Task PushAuthRequestAsync(AuthRequest authRequest);
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
 

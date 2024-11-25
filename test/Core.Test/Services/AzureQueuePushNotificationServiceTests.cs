@@ -25,7 +25,7 @@ public class AzureQueuePushNotificationServiceTests
     [BitAutoData]
     [NotificationCustomize]
     [CurrentContextCustomize]
-    public async Task PushSyncNotificationCreateAsync_Notification_Sent(
+    public async Task PushSyncNotificationAsync_Notification_Sent(
         SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
         ICurrentContext currentContext)
     {
@@ -33,35 +33,33 @@ public class AzureQueuePushNotificationServiceTests
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
             .GetService(Arg.Any<Type>()).Returns(currentContext);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotificationCreate, message, new SyncNotificationEquals(notification, null),
+                MatchMessage(PushType.SyncNotification, message, new SyncNotificationEquals(notification, null),
                     deviceIdentifier.ToString())));
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize]
     [NotificationStatusCustomize]
     [CurrentContextCustomize]
-    public async Task PushSyncNotificationUpdateAsync_Notification_Sent(bool notificationStatusNull,
+    public async Task PushSyncNotificationStatusAsync_Notification_Sent(
         SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
         ICurrentContext currentContext, NotificationStatus notificationStatus)
     {
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
         currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
             .GetService(Arg.Any<Type>()).Returns(currentContext);
 
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotificationUpdate, message,
-                    new SyncNotificationEquals(notification, expectedNotificationStatus),
+                MatchMessage(PushType.SyncNotificationStatus, message,
+                    new SyncNotificationEquals(notification, notificationStatus),
                     deviceIdentifier.ToString())));
     }
 

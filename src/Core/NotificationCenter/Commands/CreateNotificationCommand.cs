@@ -37,7 +37,7 @@ public class CreateNotificationCommand : ICreateNotificationCommand
 
         var newNotification = await _notificationRepository.CreateAsync(notification);
 
-        await _pushNotificationService.PushSyncNotificationCreateAsync(newNotification);
+        await _pushNotificationService.PushSyncNotificationAsync(newNotification);
 
         return newNotification;
     }

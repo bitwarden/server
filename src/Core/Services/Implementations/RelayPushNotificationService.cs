@@ -190,7 +190,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification)
+    public async Task PushSyncNotificationAsync(Notification notification)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -203,17 +203,17 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
         if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationCreate, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationCreate, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
                 true, notification.ClientType);
         }
     }
 
-    public async Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushSyncNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -222,18 +222,18 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
         };
 
         if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationUpdate, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationStatus, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationUpdate, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationStatus, message,
                 true, notification.ClientType);
         }
     }

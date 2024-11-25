@@ -16,34 +16,31 @@ public class MultiServicePushNotificationServiceTests
     [Theory]
     [BitAutoData]
     [NotificationCustomize]
-    public async Task PushSyncNotificationCreateAsync_Notification_Sent(
+    public async Task PushSyncNotificationAsync_Notification_Sent(
         SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification)
     {
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
         await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
             .First()
             .Received(1)
-            .PushSyncNotificationCreateAsync(notification);
+            .PushSyncNotificationAsync(notification);
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize]
     [NotificationStatusCustomize]
-    public async Task PushSyncNotificationUpdateAsync_Notification_Sent(bool notificationStatusNull,
+    public async Task PushSyncNotificationStatusAsync_Notification_Sent(
         SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification,
         NotificationStatus notificationStatus)
     {
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification,
-            notificationStatusNull ? null : notificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
         await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
             .First()
             .Received(1)
-            .PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+            .PushSyncNotificationStatusAsync(notification, notificationStatus);
     }
 
     [Theory]

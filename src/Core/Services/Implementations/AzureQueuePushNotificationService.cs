@@ -165,7 +165,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification)
+    public async Task PushSyncNotificationAsync(Notification notification)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -176,10 +176,10 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             RevisionDate = notification.RevisionDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationCreate, message, true);
+        await SendMessageAsync(PushType.SyncNotification, message, true);
     }
 
-    public async Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushSyncNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
         var message = new SyncNotificationPushNotification
         {
@@ -188,11 +188,11 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             OrganizationId = notification.OrganizationId,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationUpdate, message, true);
+        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)

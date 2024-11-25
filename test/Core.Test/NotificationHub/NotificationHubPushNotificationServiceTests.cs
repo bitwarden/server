@@ -21,10 +21,10 @@ public class NotificationHubPushNotificationServiceTests
     [Theory]
     [BitAutoData]
     [NotificationCustomize]
-    public async Task PushSyncNotificationCreateAsync_Global_NotSent(
+    public async Task PushSyncNotificationAsync_Global_NotSent(
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
         await sutProvider.GetDependency<INotificationHubPool>()
             .Received(0)
@@ -40,7 +40,7 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(false)]
     [BitAutoData(true)]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationCreateAsync_UserIdProvidedClientTypeAll_SentToUser(
+    public async Task PushSyncNotificationAsync_UserIdProvidedClientTypeAll_SentToUser(
         bool organizationIdNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification)
     {
@@ -52,9 +52,9 @@ public class NotificationHubPushNotificationServiceTests
         notification.ClientType = ClientType.All;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
             expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -68,7 +68,7 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(ClientType.Web)]
     [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationCreateAsync_UserIdProvidedOrganizationIdNullClientTypeNotAll_SentToUser(
+    public async Task PushSyncNotificationAsync_UserIdProvidedOrganizationIdNullClientTypeNotAll_SentToUser(
         ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification)
     {
@@ -76,9 +76,9 @@ public class NotificationHubPushNotificationServiceTests
         notification.ClientType = clientType;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
             expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -92,16 +92,16 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(ClientType.Web)]
     [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationCreateAsync_UserIdProvidedOrganizationIdProvidedClientTypeNotAll_SentToUser(
+    public async Task PushSyncNotificationAsync_UserIdProvidedOrganizationIdProvidedClientTypeNotAll_SentToUser(
         ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification)
     {
         notification.ClientType = clientType;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
             expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -112,16 +112,16 @@ public class NotificationHubPushNotificationServiceTests
     [Theory]
     [BitAutoData]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationCreateAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
+    public async Task PushSyncNotificationAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
         notification.UserId = null;
         notification.ClientType = ClientType.All;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
             expectedSyncNotification,
             $"(template:payload && organizationId:{notification.OrganizationId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -135,18 +135,17 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(ClientType.Web)]
     [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async Task
-        PushSyncNotificationCreateAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
-            ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
-            Notification notification)
+    public async Task PushSyncNotificationAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
+        ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+        Notification notification)
     {
         notification.UserId = null;
         notification.ClientType = clientType;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
 
-        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+        await sutProvider.Sut.PushSyncNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
             expectedSyncNotification,
             $"(template:payload && organizationId:{notification.OrganizationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -155,15 +154,13 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize]
-    public async Task PushSyncNotificationUpdateAsync_Global_NotSent(bool notificationStatusNull,
+    public async Task PushSyncNotificationStatusAsync_Global_NotSent(
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
         NotificationStatus notificationStatus)
     {
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification,
-            notificationStatusNull ? null : notificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
         await sutProvider.GetDependency<INotificationHubPool>()
             .Received(0)
@@ -176,14 +173,11 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationUpdateAsync_UserIdProvidedClientTypeAll_SentToUser(
-        bool organizationIdNull, bool notificationStatusNull,
-        SutProvider<NotificationHubPushNotificationService> sutProvider,
+    public async Task PushSyncNotificationStatusAsync_UserIdProvidedClientTypeAll_SentToUser(
+        bool organizationIdNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification, NotificationStatus notificationStatus)
     {
         if (organizationIdNull)
@@ -192,12 +186,11 @@ public class NotificationHubPushNotificationServiceTests
         }
 
         notification.ClientType = ClientType.All;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, notificationStatus);
 
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
             expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -206,28 +199,22 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationUpdateAsync_UserIdProvidedOrganizationIdNullClientTypeNotAll_SentToUser(
-        bool notificationStatusNull, ClientType clientType,
-        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
-        NotificationStatus notificationStatus)
+    public async Task PushSyncNotificationStatusAsync_UserIdProvidedOrganizationIdNullClientTypeNotAll_SentToUser(
+        ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+        Notification notification, NotificationStatus notificationStatus)
     {
         notification.OrganizationId = null;
         notification.ClientType = clientType;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, notificationStatus);
 
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
             expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -236,27 +223,21 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationUpdateAsync_UserIdProvidedOrganizationIdProvidedClientTypeNotAll_SentToUser(
-        bool notificationStatusNull, ClientType clientType,
-        SutProvider<NotificationHubPushNotificationService> sutProvider,
+    public async Task PushSyncNotificationStatusAsync_UserIdProvidedOrganizationIdProvidedClientTypeNotAll_SentToUser(
+        ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification, NotificationStatus notificationStatus)
     {
         notification.ClientType = clientType;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, notificationStatus);
 
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
             expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -265,21 +246,19 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
+    [BitAutoData]
     [NotificationCustomize(false)]
-    public async Task PushSyncNotificationUpdateAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
-        bool notificationStatusNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
-        Notification notification, NotificationStatus notificationStatus)
+    public async Task PushSyncNotificationStatusAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
+        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
+        NotificationStatus notificationStatus)
     {
         notification.UserId = null;
         notification.ClientType = ClientType.All;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, notificationStatus);
 
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
             expectedSyncNotification,
             $"(template:payload && organizationId:{notification.OrganizationId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -288,29 +267,23 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
     public async Task
-        PushSyncNotificationUpdateAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
-            bool notificationStatusNull, ClientType clientType,
-            SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
-            NotificationStatus notificationStatus)
+        PushSyncNotificationStatusAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
+            ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+            Notification notification, NotificationStatus notificationStatus)
     {
         notification.UserId = null;
         notification.ClientType = clientType;
-        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
-        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, notificationStatus);
 
-        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+        await sutProvider.Sut.PushSyncNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
             expectedSyncNotification,
             $"(template:payload && organizationId:{notification.OrganizationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()

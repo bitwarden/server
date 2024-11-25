@@ -146,15 +146,15 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task PushSyncNotificationCreateAsync(Notification notification)
+    public Task PushSyncNotificationAsync(Notification notification)
     {
-        PushToServices((s) => s.PushSyncNotificationCreateAsync(notification));
+        PushToServices((s) => s.PushSyncNotificationAsync(notification));
         return Task.CompletedTask;
     }
 
-    public Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public Task PushSyncNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
-        PushToServices((s) => s.PushSyncNotificationUpdateAsync(notification, notificationStatus));
+        PushToServices((s) => s.PushSyncNotificationStatusAsync(notification, notificationStatus));
         return Task.CompletedTask;
     }
 
