@@ -1,9 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
+using Bit.Core.Billing.Models.Api.Requests.Organizations;
 using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Services;
@@ -1921,6 +1923,161 @@ public class StripePaymentService : IPaymentService
                 }
             },
         };
+
+        if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
+        {
+            var taxIdType = _taxService.GetStripeTaxCode(
+                options.CustomerDetails.Address.Country,
+                parameters.TaxInformation.TaxId);
+
+            if (taxIdType == null)
+            {
+                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                    parameters.TaxInformation.TaxId,
+                    parameters.TaxInformation.Country);
+                throw new BadRequestException("billingPreviewInvalidTaxIdError");
+            }
+
+            options.CustomerDetails.TaxIds = [
+                new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = taxIdType,
+                    Value = parameters.TaxInformation.TaxId
+                }
+            ];
+        }
+
+        if (gatewayCustomerId != null)
+        {
+            var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+
+            if (gatewayCustomer.Discount != null)
+            {
+                options.Discounts.Add(new InvoiceDiscountOptions
+                {
+                    Discount = gatewayCustomer.Discount.Id
+                });
+            }
+
+            var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
+
+            if (gatewaySubscription?.Discount != null)
+            {
+                options.Discounts.Add(new InvoiceDiscountOptions
+                {
+                    Discount = gatewaySubscription.Discount.Id
+                });
+            }
+        }
+
+        try
+        {
+            var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
+
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+                ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
+                : 0M;
+
+            var result = new PreviewInvoiceResponseModel(
+                effectiveTaxRate,
+                invoice.TotalExcludingTax.ToMajor() ?? 0,
+                invoice.Tax.ToMajor() ?? 0,
+                invoice.Total.ToMajor());
+            return result;
+        }
+        catch (StripeException e)
+        {
+            switch (e.StripeError.Code)
+            {
+                case StripeConstants.ErrorCodes.TaxIdInvalid:
+                    _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                        parameters.TaxInformation.TaxId,
+                        parameters.TaxInformation.Country);
+                    throw new BadRequestException("billingPreviewInvalidTaxIdError");
+                default:
+                    _logger.LogError(e, "Unexpected error previewing invoice with tax ID '{TaxId}' in country '{Country}'.",
+                        parameters.TaxInformation.TaxId,
+                        parameters.TaxInformation.Country);
+                    throw new BadRequestException("billingPreviewInvoiceError");
+            }
+        }
+    }
+
+    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
+        PreviewOrganizationInvoiceRequestBody parameters,
+        string gatewayCustomerId,
+        string gatewaySubscriptionId)
+    {
+        var plan = Utilities.StaticStore.GetPlan(parameters.PasswordManager.Plan);
+
+        var options = new InvoiceCreatePreviewOptions
+        {
+            AutomaticTax = new InvoiceAutomaticTaxOptions
+            {
+                Enabled = true,
+            },
+            Currency = "usd",
+            Discounts = new List<InvoiceDiscountOptions>(),
+            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                Items =
+                [
+                    new()
+                    {
+                        Quantity = parameters.PasswordManager.AdditionalStorage,
+                        Plan = plan.PasswordManager.StripeStoragePlanId
+                    }
+                ]
+            },
+            CustomerDetails = new InvoiceCustomerDetailsOptions
+            {
+                Address = new AddressOptions
+                {
+                    PostalCode = parameters.TaxInformation.PostalCode,
+                    Country = parameters.TaxInformation.Country,
+                }
+            },
+        };
+
+        switch (plan.ProductTier)
+        {
+            case ProductTierType.Families:
+                options.SubscriptionDetails.Items.Add(
+                    new()
+                    {
+                        Quantity = 1,
+                        Plan = plan.PasswordManager.StripePlanId
+                    }
+                );
+                break;
+            case ProductTierType.Teams:
+            case ProductTierType.TeamsStarter:
+            case ProductTierType.Enterprise:
+                options.SubscriptionDetails.Items.Add(
+                    new()
+                    {
+                        Quantity = parameters.PasswordManager.Seats,
+                        Plan = plan.PasswordManager.StripeSeatPlanId
+                    }
+                );
+                break;
+        }
+
+        if (plan.SupportsSecretsManager)
+        {
+            options.SubscriptionDetails.Items.AddRange([
+                new()
+                {
+                    Quantity = parameters.SecretsManager?.Seats ?? 0,
+                    Plan = plan.SecretsManager.StripeSeatPlanId
+                },
+                new()
+                {
+                    Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
+                    Plan = plan.SecretsManager.StripeServiceAccountPlanId
+                }
+            ]);
+        }
 
         if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
         {
