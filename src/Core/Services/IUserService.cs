@@ -45,7 +45,9 @@ public interface IUserService
     Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
+#nullable enable
     Task<IEnumerable<(Guid UserId, string? ErrorMessage)>> DeleteManyAsync(IEnumerable<User> users);
+#nullable disable
     Task SendDeleteConfirmationAsync(string email);
     Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,
         PaymentMethodType paymentMethodType, short additionalStorageGb, UserLicense license,

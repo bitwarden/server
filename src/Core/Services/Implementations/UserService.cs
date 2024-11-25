@@ -243,11 +243,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
+#nullable enable
     public async Task<IEnumerable<(Guid UserId, string? ErrorMessage)>> DeleteManyAsync(IEnumerable<User> users)
     {
         var results = await ValidateDeleteUsersAsync(users.ToList());
 
-        await _userRepository.DeleteManyAsync(users);
+        var usersToDelete = users.Where(user => results.Select(r => r.UserId == user.Id && string.IsNullOrEmpty(r.ErrorMessage)).Count() > 1);
+
+        await _userRepository.DeleteManyAsync(usersToDelete);
         foreach (var user in users)
         {
             await _referenceEventService.RaiseEventAsync(
@@ -257,6 +260,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         return results;
     }
+#nullable disable
 
     public async Task<IdentityResult> DeleteAsync(User user, string token)
     {
@@ -268,6 +272,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return await DeleteAsync(user);
     }
 
+#nullable enable
     private async Task<IEnumerable<(Guid UserId, string? ErrorMessage)>> ValidateDeleteUsersAsync(List<User> users)
     {
         var userResult = new List<(Guid UserId, string? ErrorMessage)>();
@@ -322,6 +327,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         return userResult;
     }
+#nullable disable
 
     public async Task SendDeleteConfirmationAsync(string email)
     {
