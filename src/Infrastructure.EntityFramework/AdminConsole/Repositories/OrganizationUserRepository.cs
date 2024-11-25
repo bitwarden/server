@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -248,7 +248,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -265,7 +265,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 HidePasswords = cu.HidePasswords,
                 Manage = cu.Manage
             }).ToListAsync();
-            return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(organizationUserUserDetails, collections);
+            return (organizationUserUserDetails, collections);
         }
     }
 

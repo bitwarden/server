@@ -4,11 +4,13 @@ using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -24,6 +26,7 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
@@ -32,6 +35,7 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault;
@@ -102,18 +106,20 @@ public static class ServiceCollectionExtensions
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
+        services.AddPolicyServices();
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();
-        services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
+        services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
+        services.AddReportingServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -263,20 +269,35 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
-        if (globalSettings.SelfHosted &&
-            CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-            globalSettings.Installation?.Id != null &&
-            CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+        if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
+                globalSettings.Installation?.Id != null &&
+                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
+                services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
+            }
+            else
+            {
+                services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            }
+
+            if (CoreHelpers.SettingHasValue(globalSettings.InternalIdentityKey) &&
+                CoreHelpers.SettingHasValue(globalSettings.BaseServiceUri.InternalNotifications))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
+            }
         }
         else if (!globalSettings.SelfHosted)
         {
+            services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
-        }
-        else
-        {
-            services.AddSingleton<IPushRegistrationService, NoopPushRegistrationService>();
+            services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
+            {
+                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
+            }
         }
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Mail.ConnectionString))
@@ -369,8 +390,7 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.AddScoped<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
-        services.AddScoped<ITemporaryDuoWebV4SDKService, TemporaryDuoWebV4SDKService>();
+        services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
@@ -411,7 +431,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
-            .AddTokenProvider<DuoWebTokenProvider>(
+            .AddTokenProvider<DuoUniversalTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
             .AddTokenProvider<TwoFactorRememberTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))

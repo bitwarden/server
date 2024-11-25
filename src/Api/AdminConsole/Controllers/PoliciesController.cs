@@ -1,7 +1,11 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response.Helpers;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Api.Response;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -25,28 +29,29 @@ public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IFeatureService featureService,
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
         _userService = userService;
         _currentContext = currentContext;
@@ -55,23 +60,29 @@ public class PoliciesController : Controller
             "OrganizationServiceDataProtector");
 
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _featureService = featureService;
+        _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
     }
 
     [HttpGet("{type}")]
-    public async Task<PolicyResponseModel> Get(string orgId, int type)
+    public async Task<PolicyDetailResponseModel> Get(Guid orgId, int type)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgIdGuid, (PolicyType)type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, (PolicyType)type);
         if (policy == null)
         {
-            throw new NotFoundException();
+            return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
         }
 
-        return new PolicyResponseModel(policy);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
+        {
+            return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
+        }
+
+        return new PolicyDetailResponseModel(policy);
     }
 
     [HttpGet("")]
@@ -84,8 +95,8 @@ public class PoliciesController : Controller
         }
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
-        var responses = policies.Select(p => new PolicyResponseModel(p));
-        return new ListResponseModel<PolicyResponseModel>(responses);
+
+        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
     }
 
     [AllowAnonymous]
@@ -185,7 +196,7 @@ public class PoliciesController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _policyService.SaveAsync(policy, _organizationService, userId);
+        await _policyService.SaveAsync(policy, userId);
         return new PolicyResponseModel(policy);
     }
 }
