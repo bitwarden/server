@@ -74,7 +74,7 @@ public class VaultExportAuthorizationHandlerTests
         org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportManagedCollections }, user, orgScope);
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.True(authContext.HasSucceeded);
@@ -87,7 +87,7 @@ public class VaultExportAuthorizationHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportManagedCollections }, user, orgScope);
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.False(authContext.HasSucceeded);
