@@ -54,6 +54,11 @@ public class OrganizationLicense : ILicense
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
 
+        // Deprecated. Left for backwards compatibility with old license versions.
+        LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
+        AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
+        //
+
         if (subscriptionInfo?.Subscription == null)
         {
             if (org.PlanType == PlanType.Custom && org.ExpirationDate.HasValue)
