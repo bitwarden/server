@@ -8,7 +8,6 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -101,24 +100,16 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner.");
         }
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
+        if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
         {
-            provider.Status = ProviderStatusType.Created;
-            await _providerRepository.UpsertAsync(provider);
+            throw new BadRequestException("Both address and postal code are required to set up your provider.");
         }
-        else
-        {
-            if (taxInfo == null || string.IsNullOrEmpty(taxInfo.BillingAddressCountry) || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
-            {
-                throw new BadRequestException("Both address and postal code are required to set up your provider.");
-            }
-            var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
-            provider.GatewayCustomerId = customer.Id;
-            var subscription = await _providerBillingService.SetupSubscription(provider);
-            provider.GatewaySubscriptionId = subscription.Id;
-            provider.Status = ProviderStatusType.Billable;
-            await _providerRepository.UpsertAsync(provider);
-        }
+        var customer = await _providerBillingService.SetupCustomer(provider, taxInfo);
+        provider.GatewayCustomerId = customer.Id;
+        var subscription = await _providerBillingService.SetupSubscription(provider);
+        provider.GatewaySubscriptionId = subscription.Id;
+        provider.Status = ProviderStatusType.Billable;
+        await _providerRepository.UpsertAsync(provider);
 
         providerUser.Key = key;
         await _providerUserRepository.ReplaceAsync(providerUser);
@@ -545,13 +536,9 @@ public class ProviderService : IProviderService
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && provider.IsBillable();
+        ThrowOnInvalidPlanType(provider.Type, organizationSignup.Plan);
 
-        ThrowOnInvalidPlanType(provider.Type, organizationSignup.Plan, consolidatedBillingEnabled);
-
-        var (organization, _, defaultCollection) = consolidatedBillingEnabled
-            ? await _organizationService.SignupClientAsync(organizationSignup)
-            : await _organizationService.SignUpAsync(organizationSignup);
+        var (organization, _, defaultCollection) = await _organizationService.SignupClientAsync(organizationSignup);
 
         var providerOrganization = new ProviderOrganization
         {
@@ -687,27 +674,24 @@ public class ProviderService : IProviderService
         return confirmedOwnersIds.Except(providerUserIds).Any();
     }
 
-    private void ThrowOnInvalidPlanType(ProviderType providerType, PlanType requestedType, bool consolidatedBillingEnabled = false)
+    private void ThrowOnInvalidPlanType(ProviderType providerType, PlanType requestedType)
     {
-        if (consolidatedBillingEnabled)
+        switch (providerType)
         {
-            switch (providerType)
-            {
-                case ProviderType.Msp:
-                    if (requestedType is not (PlanType.TeamsMonthly or PlanType.EnterpriseMonthly))
-                    {
-                        throw new BadRequestException($"Managed Service Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
-                    }
-                    break;
-                case ProviderType.MultiOrganizationEnterprise:
-                    if (requestedType is not (PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually))
-                    {
-                        throw new BadRequestException($"Multi-organization Enterprise Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
-                    }
-                    break;
-                default:
-                    throw new BadRequestException($"Unsupported provider type {providerType}.");
-            }
+            case ProviderType.Msp:
+                if (requestedType is not (PlanType.TeamsMonthly or PlanType.EnterpriseMonthly))
+                {
+                    throw new BadRequestException($"Managed Service Providers cannot manage organizations with the plan type {requestedType}. Only Teams (Monthly) and Enterprise (Monthly) are allowed.");
+                }
+                break;
+            case ProviderType.MultiOrganizationEnterprise:
+                if (requestedType is not (PlanType.EnterpriseMonthly or PlanType.EnterpriseAnnually))
+                {
+                    throw new BadRequestException($"Multi-organization Enterprise Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
+                }
+                break;
+            default:
+                throw new BadRequestException($"Unsupported provider type {providerType}.");
         }
 
         if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
