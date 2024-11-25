@@ -104,6 +104,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
                 LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems
+                UseRiskInsights = e.UseRiskInsights
             }).ToListAsync();
         }
     }
