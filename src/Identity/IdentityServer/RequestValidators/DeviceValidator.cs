@@ -123,16 +123,17 @@ public class DeviceValidator(
         {
             // verify the NewDeviceOtp
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
-            if(!otpValid)
+            if(otpValid)
             {
                 await _deviceService.SaveAsync(device);
+                return (true, null);
             }
             return (false, "invalid otp");
         }
 
         // if a user has no devices they are assumed to be newly registered user which does not require new device verification
         var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-        if (device == null)
+        if (devices.Count == 0)
         {
             await _deviceService.SaveAsync(device);
             return (true, null);

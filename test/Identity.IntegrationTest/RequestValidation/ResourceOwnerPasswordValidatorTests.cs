@@ -226,7 +226,7 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         // Stub DeviceValidator
         factory.SubstituteService<IDeviceValidator>(sub =>
         {
-            sub.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            sub.SaveRequestingDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                 .Returns(null as Device);
         });
 
