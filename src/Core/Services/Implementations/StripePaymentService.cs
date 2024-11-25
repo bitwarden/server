@@ -1,8 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
+using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -32,6 +36,7 @@ public class StripePaymentService : IPaymentService
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
+    private readonly ITaxService _taxService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -40,7 +45,8 @@ public class StripePaymentService : IPaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ITaxService taxService)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -49,6 +55,7 @@ public class StripePaymentService : IPaymentService
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
         _featureService = featureService;
+        _taxService = taxService;
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -112,6 +119,20 @@ public class StripePaymentService : IPaymentService
         Subscription subscription;
         try
         {
+            if (taxInfo.TaxIdNumber != null && taxInfo.TaxIdType == null)
+            {
+                taxInfo.TaxIdType = _taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
+                    taxInfo.TaxIdNumber);
+
+                if (taxInfo.TaxIdType == null)
+                {
+                    _logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                        taxInfo.BillingAddressCountry,
+                        taxInfo.TaxIdNumber);
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
+                }
+            }
+
             var customerCreateOptions = new CustomerCreateOptions
             {
                 Description = org.DisplayBusinessName(),
@@ -146,12 +167,9 @@ public class StripePaymentService : IPaymentService
                     City = taxInfo?.BillingAddressCity,
                     State = taxInfo?.BillingAddressState,
                 },
-                TaxIdData = taxInfo?.HasTaxId != true
-                    ? null
-                    :
-                    [
-                        new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber, }
-                    ],
+                TaxIdData = taxInfo.HasTaxId
+                    ? [new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }]
+                    : null
             };
 
             customerCreateOptions.AddExpand("tax");
@@ -1659,6 +1677,7 @@ public class StripePaymentService : IPaymentService
         return new TaxInfo
         {
             TaxIdNumber = taxId?.Value,
+            TaxIdType = taxId?.Type,
             BillingAddressLine1 = address?.Line1,
             BillingAddressLine2 = address?.Line2,
             BillingAddressCity = address?.City,
@@ -1694,14 +1713,42 @@ public class StripePaymentService : IPaymentService
                 {
                     await _stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
                 }
-                if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber) &&
-                    !string.IsNullOrWhiteSpace(taxInfo.TaxIdType))
+
+                if (taxInfo.TaxIdType == null)
                 {
-                    await _stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                    _logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                        taxInfo.BillingAddressCountry,
+                        taxInfo.TaxIdNumber);
+                    throw new BadRequestException("billingTaxIdTypeInferenceError");
+                }
+
+                if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber))
+                {
+                    try
                     {
-                        Type = taxInfo.TaxIdType,
-                        Value = taxInfo.TaxIdNumber,
-                    });
+                        await _stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
+                        });
+                    }
+                    catch (StripeException e)
+                    {
+                        switch (e.StripeError.Code)
+                        {
+                            case StripeConstants.ErrorCodes.TaxIdInvalid:
+                                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                                    taxInfo.TaxIdNumber,
+                                    taxInfo.BillingAddressCountry);
+                                throw new BadRequestException("billingInvalidTaxIdError");
+                            default:
+                                _logger.LogError(e, "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                                    taxInfo.TaxIdNumber,
+                                    taxInfo.BillingAddressCountry,
+                                    customer.Id);
+                                throw new BadRequestException("billingTaxIdCreationError");
+                        }
+                    }
                 }
             }
         }
@@ -1832,6 +1879,125 @@ public class StripePaymentService : IPaymentService
                     return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
                 }
             default: return (null, null);
+        }
+    }
+
+    public async Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(
+        PreviewIndividualInvoiceRequestBody parameters,
+        string gatewayCustomerId,
+        string gatewaySubscriptionId)
+    {
+        var options = new InvoiceCreatePreviewOptions
+        {
+            AutomaticTax = new InvoiceAutomaticTaxOptions
+            {
+                Enabled = true,
+            },
+            Currency = "usd",
+            Discounts = new List<InvoiceDiscountOptions>(),
+            SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
+            {
+                Items =
+                [
+                    new()
+                    {
+                        Quantity = 1,
+                        Plan = "premium-annually"
+                    },
+
+                    new()
+                    {
+                        Quantity = parameters.PasswordManager.AdditionalStorage,
+                        Plan = "storage-gb-annually"
+                    }
+                ]
+            },
+            CustomerDetails = new InvoiceCustomerDetailsOptions
+            {
+                Address = new AddressOptions
+                {
+                    PostalCode = parameters.TaxInformation.PostalCode,
+                    Country = parameters.TaxInformation.Country,
+                }
+            },
+        };
+
+        if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
+        {
+            var taxIdType = _taxService.GetStripeTaxCode(
+                options.CustomerDetails.Address.Country,
+                parameters.TaxInformation.TaxId);
+
+            if (taxIdType == null)
+            {
+                _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                    parameters.TaxInformation.TaxId,
+                    parameters.TaxInformation.Country);
+                throw new BadRequestException("billingPreviewInvalidTaxIdError");
+            }
+
+            options.CustomerDetails.TaxIds = [
+                new InvoiceCustomerDetailsTaxIdOptions
+                {
+                    Type = taxIdType,
+                    Value = parameters.TaxInformation.TaxId
+                }
+            ];
+        }
+
+        if (gatewayCustomerId != null)
+        {
+            var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
+
+            if (gatewayCustomer.Discount != null)
+            {
+                options.Discounts.Add(new InvoiceDiscountOptions
+                {
+                    Discount = gatewayCustomer.Discount.Id
+                });
+            }
+
+            var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
+
+            if (gatewaySubscription?.Discount != null)
+            {
+                options.Discounts.Add(new InvoiceDiscountOptions
+                {
+                    Discount = gatewaySubscription.Discount.Id
+                });
+            }
+        }
+
+        try
+        {
+            var invoice = await _stripeAdapter.InvoiceCreatePreviewAsync(options);
+
+            var effectiveTaxRate = invoice.Tax != null && invoice.TotalExcludingTax != null
+                ? invoice.Tax.Value.ToMajor() / invoice.TotalExcludingTax.Value.ToMajor()
+                : 0M;
+
+            var result = new PreviewInvoiceResponseModel(
+                effectiveTaxRate,
+                invoice.TotalExcludingTax.ToMajor() ?? 0,
+                invoice.Tax.ToMajor() ?? 0,
+                invoice.Total.ToMajor());
+            return result;
+        }
+        catch (StripeException e)
+        {
+            switch (e.StripeError.Code)
+            {
+                case StripeConstants.ErrorCodes.TaxIdInvalid:
+                    _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                        parameters.TaxInformation.TaxId,
+                        parameters.TaxInformation.Country);
+                    throw new BadRequestException("billingPreviewInvalidTaxIdError");
+                default:
+                    _logger.LogError(e, "Unexpected error previewing invoice with tax ID '{TaxId}' in country '{Country}'.",
+                        parameters.TaxInformation.TaxId,
+                        parameters.TaxInformation.Country);
+                    throw new BadRequestException("billingPreviewInvoiceError");
+            }
         }
     }
 

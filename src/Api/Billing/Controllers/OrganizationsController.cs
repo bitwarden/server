@@ -311,17 +311,16 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        var taxInfo = new TaxInfo
-        {
-            TaxIdNumber = model.TaxId,
-            BillingAddressLine1 = model.Line1,
-            BillingAddressLine2 = model.Line2,
-            BillingAddressCity = model.City,
-            BillingAddressState = model.State,
-            BillingAddressPostalCode = model.PostalCode,
-            BillingAddressCountry = model.Country,
-        };
-        await paymentService.SaveTaxInfoAsync(organization, taxInfo);
+        var taxInfo = new TaxInformation(
+            model.Country,
+            model.PostalCode,
+            model.TaxId,
+            model.TaxIdType,
+            model.Line1,
+            model.Line2,
+            model.City,
+            model.State);
+        await subscriberService.UpdateTaxInformation(organization, taxInfo);
     }
 
     /// <summary>
