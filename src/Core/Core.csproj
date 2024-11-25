@@ -36,7 +36,7 @@
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
     <PackageReference Include="MailKit" Version="4.8.0" />    
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.45.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.6.1" />
