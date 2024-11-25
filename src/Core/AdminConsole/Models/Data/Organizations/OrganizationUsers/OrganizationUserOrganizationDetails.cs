@@ -59,4 +59,5 @@ public class OrganizationUserOrganizationDetails
     // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }
