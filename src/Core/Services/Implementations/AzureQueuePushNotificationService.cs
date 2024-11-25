@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -18,13 +19,16 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 {
     private readonly QueueClient _queueClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IGlobalSettings _globalSettings;
 
     public AzureQueuePushNotificationService(
         [FromKeyedServices("notifications")] QueueClient queueClient,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IGlobalSettings globalSettings)
     {
         _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;
+        _globalSettings = globalSettings;
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -172,6 +176,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             Id = notification.Id,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
@@ -186,6 +191,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             Id = notification.Id,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate,
             ReadDate = notificationStatus?.ReadDate,
@@ -229,6 +235,11 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) =>
+        // Noop
+        Task.CompletedTask;
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)

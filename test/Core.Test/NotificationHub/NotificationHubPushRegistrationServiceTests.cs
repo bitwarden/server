@@ -14,15 +14,13 @@ namespace Bit.Core.Test.NotificationHub;
 public class NotificationHubPushRegistrationServiceTests
 {
     [Theory]
-    [BitAutoData([null])]
-    [BitAutoData("")]
-    [BitAutoData(" ")]
+    [RepeatingPatternBitAutoData([null, "", " "])]
     public async Task CreateOrUpdateRegistrationAsync_PushTokenNullOrEmpty_InstallationNotCreated(string? pushToken,
         SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId, Guid userId, Guid identifier,
-        Guid organizationId)
+        Guid organizationId, Guid installationId)
     {
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
-            identifier.ToString(), DeviceType.Android, [organizationId.ToString()]);
+            identifier.ToString(), DeviceType.Android, [organizationId.ToString()], installationId.ToString());
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(0)
@@ -30,13 +28,11 @@ public class NotificationHubPushRegistrationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [RepeatingPatternBitAutoData([false, true], [false, true], [false, true])]
     public async Task CreateOrUpdateRegistrationAsync_DeviceTypeAndroid_InstallationCreated(bool identifierNull,
-        bool partOfOrganizationId, SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId,
-        Guid userId, Guid? identifier, Guid organizationId)
+        bool partOfOrganizationId, bool installationIdNull,
+        SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId, Guid userId, Guid? identifier,
+        Guid organizationId, Guid installationId)
     {
         var notificationHubClient = Substitute.For<INotificationHubClient>();
         sutProvider.GetDependency<INotificationHubPool>().ClientFor(Arg.Any<Guid>()).Returns(notificationHubClient);
@@ -45,7 +41,8 @@ public class NotificationHubPushRegistrationServiceTests
 
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
             identifierNull ? null : identifier.ToString(), DeviceType.Android,
-            partOfOrganizationId ? [organizationId.ToString()] : []);
+            partOfOrganizationId ? [organizationId.ToString()] : [],
+            installationIdNull ? null : installationId.ToString());
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -60,6 +57,7 @@ public class NotificationHubPushRegistrationServiceTests
                 installation.Tags.Contains("clientType:Mobile") &&
                 (identifierNull || installation.Tags.Contains($"deviceIdentifier:{identifier}")) &&
                 (!partOfOrganizationId || installation.Tags.Contains($"organizationId:{organizationId}")) &&
+                (installationIdNull || installation.Tags.Contains($"installationId:{installationId}")) &&
                 installation.Templates.Count == 3));
         await notificationHubClient
             .Received(1)
@@ -73,6 +71,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:payload_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
         await notificationHubClient
             .Received(1)
@@ -86,6 +85,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:message_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
         await notificationHubClient
             .Received(1)
@@ -99,17 +99,16 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:badgeMessage_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [RepeatingPatternBitAutoData([false, true], [false, true], [false, true])]
     public async Task CreateOrUpdateRegistrationAsync_DeviceTypeIOS_InstallationCreated(bool identifierNull,
-        bool partOfOrganizationId, SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId,
-        Guid userId, Guid identifier, Guid organizationId)
+        bool partOfOrganizationId, bool installationIdNull,
+        SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId, Guid userId, Guid identifier,
+        Guid organizationId, Guid installationId)
     {
         var notificationHubClient = Substitute.For<INotificationHubClient>();
         sutProvider.GetDependency<INotificationHubPool>().ClientFor(Arg.Any<Guid>()).Returns(notificationHubClient);
@@ -118,7 +117,8 @@ public class NotificationHubPushRegistrationServiceTests
 
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
             identifierNull ? null : identifier.ToString(), DeviceType.iOS,
-            partOfOrganizationId ? [organizationId.ToString()] : []);
+            partOfOrganizationId ? [organizationId.ToString()] : [],
+            installationIdNull ? null : installationId.ToString());
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -133,6 +133,7 @@ public class NotificationHubPushRegistrationServiceTests
                 installation.Tags.Contains("clientType:Mobile") &&
                 (identifierNull || installation.Tags.Contains($"deviceIdentifier:{identifier}")) &&
                 (!partOfOrganizationId || installation.Tags.Contains($"organizationId:{organizationId}")) &&
+                (installationIdNull || installation.Tags.Contains($"installationId:{installationId}")) &&
                 installation.Templates.Count == 3));
         await notificationHubClient
             .Received(1)
@@ -146,6 +147,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:payload_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
         await notificationHubClient
             .Received(1)
@@ -159,6 +161,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:message_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
         await notificationHubClient
             .Received(1)
@@ -172,17 +175,16 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:badgeMessage_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [RepeatingPatternBitAutoData([false, true], [false, true], [false, true])]
     public async Task CreateOrUpdateRegistrationAsync_DeviceTypeAndroidAmazon_InstallationCreated(bool identifierNull,
-        bool partOfOrganizationId, SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId,
-        Guid userId, Guid identifier, Guid organizationId)
+        bool partOfOrganizationId, bool installationIdNull,
+        SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId,
+        Guid userId, Guid identifier, Guid organizationId, Guid installationId)
     {
         var notificationHubClient = Substitute.For<INotificationHubClient>();
         sutProvider.GetDependency<INotificationHubPool>().ClientFor(Arg.Any<Guid>()).Returns(notificationHubClient);
@@ -191,7 +193,8 @@ public class NotificationHubPushRegistrationServiceTests
 
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
             identifierNull ? null : identifier.ToString(), DeviceType.AndroidAmazon,
-            partOfOrganizationId ? [organizationId.ToString()] : []);
+            partOfOrganizationId ? [organizationId.ToString()] : [],
+            installationIdNull ? null : installationId.ToString());
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -206,6 +209,7 @@ public class NotificationHubPushRegistrationServiceTests
                 installation.Tags.Contains("clientType:Mobile") &&
                 (identifierNull || installation.Tags.Contains($"deviceIdentifier:{identifier}")) &&
                 (!partOfOrganizationId || installation.Tags.Contains($"organizationId:{organizationId}")) &&
+                (installationIdNull || installation.Tags.Contains($"installationId:{installationId}")) &&
                 installation.Templates.Count == 3));
         await notificationHubClient
             .Received(1)
@@ -219,6 +223,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:payload_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
         await notificationHubClient
             .Received(1)
@@ -232,6 +237,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:message_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
         await notificationHubClient
             .Received(1)
@@ -245,6 +251,7 @@ public class NotificationHubPushRegistrationServiceTests
                     "clientType:Mobile",
                     identifierNull ? null : $"template:badgeMessage_deviceIdentifier:{identifier}",
                     partOfOrganizationId ? $"organizationId:{organizationId}" : null,
+                    installationIdNull ? null : $"installationId:{installationId}",
                 })));
     }
 
@@ -254,7 +261,7 @@ public class NotificationHubPushRegistrationServiceTests
     [BitAutoData(DeviceType.MacOsDesktop)]
     public async Task CreateOrUpdateRegistrationAsync_DeviceTypeNotMobile_InstallationCreated(DeviceType deviceType,
         SutProvider<NotificationHubPushRegistrationService> sutProvider, Guid deviceId, Guid userId, Guid identifier,
-        Guid organizationId)
+        Guid organizationId, Guid installationId)
     {
         var notificationHubClient = Substitute.For<INotificationHubClient>();
         sutProvider.GetDependency<INotificationHubPool>().ClientFor(Arg.Any<Guid>()).Returns(notificationHubClient);
@@ -262,7 +269,7 @@ public class NotificationHubPushRegistrationServiceTests
         var pushToken = "test push token";
 
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
-            identifier.ToString(), deviceType, [organizationId.ToString()]);
+            identifier.ToString(), deviceType, [organizationId.ToString()], installationId.ToString());
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -276,6 +283,7 @@ public class NotificationHubPushRegistrationServiceTests
                 installation.Tags.Contains($"clientType:{DeviceTypes.ToClientType(deviceType)}") &&
                 installation.Tags.Contains($"deviceIdentifier:{identifier}") &&
                 installation.Tags.Contains($"organizationId:{organizationId}") &&
+                installation.Tags.Contains($"installationId:{installationId}") &&
                 installation.Templates.Count == 0));
     }
 

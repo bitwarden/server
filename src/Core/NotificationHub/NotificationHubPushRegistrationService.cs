@@ -21,7 +21,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type, IEnumerable<string> organizationIds)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds, string installationId)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -50,13 +50,18 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             installation.Tags.Add($"organizationId:{organizationId}");
         }
 
+        if (!string.IsNullOrWhiteSpace(installationId))
+        {
+            installation.Tags.Add($"installationId:{installationId}");
+        }
+
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
         switch (type)
         {
             case DeviceType.Android:
                 payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
                 messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                                  "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
                 installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
@@ -80,11 +85,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
 
         BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType,
-            organizationIdsList);
+            organizationIdsList, installationId);
         BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType,
-            organizationIdsList);
+            organizationIdsList, installationId);
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier, clientType, organizationIdsList);
+            userId, identifier, clientType, organizationIdsList, installationId);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -94,7 +99,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier, ClientType clientType, List<string> organizationIds)
+        string userId, string identifier, ClientType clientType, List<string> organizationIds, string installationId)
     {
         if (templateBody == null)
         {
@@ -120,6 +125,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         foreach (var organizationId in organizationIds)
         {
             template.Tags.Add($"organizationId:{organizationId}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(installationId))
+        {
+            template.Tags.Add($"installationId:{installationId}");
         }
 
         installation.Templates.Add(fullTemplateId, template);

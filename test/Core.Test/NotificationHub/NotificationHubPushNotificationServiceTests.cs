@@ -6,6 +6,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationHub;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -21,9 +22,11 @@ public class NotificationHubPushNotificationServiceTests
     [Theory]
     [BitAutoData]
     [NotificationCustomize]
-    public async Task PushSyncNotificationCreateAsync_Global_NotSent(
+    public async Task PushSyncNotificationCreateAsync_GlobalInstallationIdDefault_NotSent(
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
+        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = default;
+
         await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
 
         await sutProvider.GetDependency<INotificationHubPool>()
@@ -31,6 +34,53 @@ public class NotificationHubPushNotificationServiceTests
             .AllClients
             .Received(0)
             .SendTemplateNotificationAsync(Arg.Any<IDictionary<string, string>>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    [NotificationCustomize]
+    public async Task PushSyncNotificationCreateAsync_GlobalInstallationIdSetClientTypeAll_SentToInstallationId(
+        SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification, Guid installationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
+        notification.ClientType = ClientType.All;
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
+        expectedSyncNotification.InstallationId = installationId;
+
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+            expectedSyncNotification,
+            $"(template:payload && installationId:{installationId})");
+        await sutProvider.GetDependency<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Theory]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Web)]
+    [BitAutoData(ClientType.Mobile)]
+    [NotificationCustomize]
+    public async Task
+        PushSyncNotificationCreateAsync_GlobalInstallationIdSetClientTypeNotAll_SentToInstallationIdAndClientType(
+            ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
+            Notification notification, Guid installationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
+        notification.ClientType = clientType;
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, null);
+        expectedSyncNotification.InstallationId = installationId;
+
+        await sutProvider.Sut.PushSyncNotificationCreateAsync(notification);
+
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationCreate,
+            expectedSyncNotification,
+            $"(template:payload && installationId:{installationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
             .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
@@ -158,10 +208,12 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(false)]
     [BitAutoData(true)]
     [NotificationCustomize]
-    public async Task PushSyncNotificationUpdateAsync_Global_NotSent(bool notificationStatusNull,
+    public async Task PushSyncNotificationUpdateAsync_GlobalInstallationIdDefault_NotSent(bool notificationStatusNull,
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification,
         NotificationStatus notificationStatus)
     {
+        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = default;
+
         await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification,
             notificationStatusNull ? null : notificationStatus);
 
@@ -176,10 +228,59 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    [NotificationCustomize]
+    public async Task PushSyncNotificationUpdateAsync_GlobalInstallationIdSetClientTypeAll_SentToInstallationId(
+        bool notificationStatusNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
+        Notification notification, NotificationStatus notificationStatus, Guid installationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
+        notification.ClientType = ClientType.All;
+
+        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        expectedSyncNotification.InstallationId = installationId;
+
+        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+            expectedSyncNotification,
+            $"(template:payload && installationId:{installationId})");
+        await sutProvider.GetDependency<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Theory]
+    [RepeatingPatternBitAutoData([false, true],
+        [ClientType.Browser, ClientType.Desktop, ClientType.Web, ClientType.Mobile])]
+    [NotificationCustomize]
+    public async Task
+        PushSyncNotificationUpdateAsync_GlobalInstallationIdSetClientTypeNotAll_SentToInstallationIdAndClientType(
+            bool notificationStatusNull, ClientType clientType,
+            SutProvider<NotificationHubPushNotificationService> sutProvider,
+            Notification notification, NotificationStatus notificationStatus, Guid installationId)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
+        notification.ClientType = clientType;
+
+        var expectedNotificationStatus = notificationStatusNull ? null : notificationStatus;
+        var expectedSyncNotification = ToSyncNotificationPushNotification(notification, expectedNotificationStatus);
+        expectedSyncNotification.InstallationId = installationId;
+
+        await sutProvider.Sut.PushSyncNotificationUpdateAsync(notification, expectedNotificationStatus);
+
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationUpdate,
+            expectedSyncNotification,
+            $"(template:payload && installationId:{installationId} && clientType:{clientType})");
+        await sutProvider.GetDependency<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Theory]
+    [RepeatingPatternBitAutoData([false, true], [false, true])]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationUpdateAsync_UserIdProvidedClientTypeAll_SentToUser(
         bool organizationIdNull, bool notificationStatusNull,
@@ -206,14 +307,8 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [RepeatingPatternBitAutoData([false, true],
+        [ClientType.Browser, ClientType.Desktop, ClientType.Web, ClientType.Mobile])]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationUpdateAsync_UserIdProvidedOrganizationIdNullClientTypeNotAll_SentToUser(
         bool notificationStatusNull, ClientType clientType,
@@ -236,14 +331,8 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [RepeatingPatternBitAutoData([false, true],
+        [ClientType.Browser, ClientType.Desktop, ClientType.Web, ClientType.Mobile])]
     [NotificationCustomize(false)]
     public async Task PushSyncNotificationUpdateAsync_UserIdProvidedOrganizationIdProvidedClientTypeNotAll_SentToUser(
         bool notificationStatusNull, ClientType clientType,
@@ -288,14 +377,8 @@ public class NotificationHubPushNotificationServiceTests
     }
 
     [Theory]
-    [BitAutoData(false, ClientType.Browser)]
-    [BitAutoData(false, ClientType.Desktop)]
-    [BitAutoData(false, ClientType.Web)]
-    [BitAutoData(false, ClientType.Mobile)]
-    [BitAutoData(true, ClientType.Browser)]
-    [BitAutoData(true, ClientType.Desktop)]
-    [BitAutoData(true, ClientType.Web)]
-    [BitAutoData(true, ClientType.Mobile)]
+    [RepeatingPatternBitAutoData([false, true],
+        [ClientType.Browser, ClientType.Desktop, ClientType.Web, ClientType.Mobile])]
     [NotificationCustomize(false)]
     public async Task
         PushSyncNotificationUpdateAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
@@ -385,6 +468,42 @@ public class NotificationHubPushNotificationServiceTests
 
         await AssertSendTemplateNotificationAsync(sutProvider, pushType, payload,
             $"(template:payload && organizationId:{organizationId} && !deviceIdentifier:{identifier} && clientType:{clientType})");
+        await sutProvider.GetDependency<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Theory]
+    [BitAutoData([null])]
+    [BitAutoData(ClientType.All)]
+    public async Task SendPayloadToInstallationAsync_ClientTypeNullOrAll_SentToInstallation(ClientType? clientType,
+        SutProvider<NotificationHubPushNotificationService> sutProvider, Guid installationId, PushType pushType,
+        string payload, string identifier)
+    {
+        await sutProvider.Sut.SendPayloadToInstallationAsync(installationId.ToString(), pushType, payload, identifier,
+            null, clientType);
+
+        await AssertSendTemplateNotificationAsync(sutProvider, pushType, payload,
+            $"(template:payload && installationId:{installationId} && !deviceIdentifier:{identifier})");
+        await sutProvider.GetDependency<IInstallationDeviceRepository>()
+            .Received(0)
+            .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
+    }
+
+    [Theory]
+    [BitAutoData(ClientType.Browser)]
+    [BitAutoData(ClientType.Desktop)]
+    [BitAutoData(ClientType.Mobile)]
+    [BitAutoData(ClientType.Web)]
+    public async Task SendPayloadToInstallationAsync_ClientTypeExplicit_SentToInstallationAndClientType(
+        ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider, Guid installationId,
+        PushType pushType, string payload, string identifier)
+    {
+        await sutProvider.Sut.SendPayloadToInstallationAsync(installationId.ToString(), pushType, payload, identifier,
+            null, clientType);
+
+        await AssertSendTemplateNotificationAsync(sutProvider, pushType, payload,
+            $"(template:payload && installationId:{installationId} && !deviceIdentifier:{identifier} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
             .UpsertAsync(Arg.Any<InstallationDeviceEntity>());

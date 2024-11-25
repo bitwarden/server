@@ -272,9 +272,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
         {
+            if (globalSettings.Installation.Id == default)
+            {
+                throw new InvalidOperationException("Installation Id must be set for self-hosted installations.");
+            }
+
             if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-                globalSettings.Installation?.Id != null &&
-                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+                CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
             {
                 services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
@@ -290,7 +294,7 @@ public static class ServiceCollectionExtensions
                 services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
             }
         }
-        else if (!globalSettings.SelfHosted)
+        else
         {
             services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();

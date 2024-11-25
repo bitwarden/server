@@ -51,6 +51,7 @@ public class SyncNotificationPushNotification
     public Guid Id { get; set; }
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
+    public Guid? InstallationId { get; set; }
     public ClientType ClientType { get; set; }
     public DateTime RevisionDate { get; set; }
     public DateTime? ReadDate { get; set; }

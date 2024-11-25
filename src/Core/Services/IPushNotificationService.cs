@@ -29,6 +29,9 @@ public interface IPushNotificationService
     Task PushAuthRequestAsync(AuthRequest authRequest);
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
 
+    Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null);
+
     Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null);
 

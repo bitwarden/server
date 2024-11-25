@@ -15,9 +15,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
+/// <summary>
+/// Sends mobile push notifications to the Bitwarden Cloud API, then relayed to Azure Notification Hub.
+/// Used by Self-Hosted environments.
+/// Received by PushController endpoint in Api project.
+/// </summary>
 public class RelayPushNotificationService : BaseIdentityClientService, IPushNotificationService
 {
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IGlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public RelayPushNotificationService(
@@ -36,6 +42,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             logger)
     {
         _deviceRepository = deviceRepository;
+        _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -197,18 +204,25 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             Id = notification.Id,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate
         };
 
-        if (notification.UserId.HasValue)
+        if (notification.Global)
+        {
+            await SendPayloadToInstallationAsync(PushType.SyncNotificationCreate, message, true,
+                notification.ClientType);
+        }
+        else if (notification.UserId.HasValue)
         {
             await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationCreate, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationCreate, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationCreate,
+                message,
                 true, notification.ClientType);
         }
     }
@@ -220,22 +234,43 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             Id = notification.Id,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             ClientType = notification.ClientType,
             RevisionDate = notification.RevisionDate,
             ReadDate = notificationStatus?.ReadDate,
             DeletedDate = notificationStatus?.DeletedDate
         };
 
-        if (notification.UserId.HasValue)
+        if (notification.Global)
+        {
+            await SendPayloadToInstallationAsync(PushType.SyncNotificationUpdate, message, true,
+                notification.ClientType);
+        }
+        else if (notification.UserId.HasValue)
         {
             await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationUpdate, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationUpdate, message,
-                true, notification.ClientType);
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationUpdate,
+                message, true, notification.ClientType);
         }
+    }
+
+    private async Task SendPayloadToInstallationAsync(PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
+    {
+        var request = new PushSendRequestModel
+        {
+            InstallationId = _globalSettings.Installation.Id.ToString(),
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
+
+        await AddCurrentContextAsync(request, excludeCurrentContext);
+        await SendAsync(HttpMethod.Post, "push/send", request);
     }
 
     private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
@@ -286,6 +321,10 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             }
         }
     }
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) =>
+        throw new NotImplementedException();
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
