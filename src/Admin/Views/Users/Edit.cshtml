@@ -115,8 +115,8 @@
         <h2>Premium</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxStorageGb"></label>
+                <div class="mb-3">
+                    <label asp-for="MaxStorageGb" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPremium)'>
                 </div>
             </div>
@@ -131,14 +131,14 @@
         <h2>Licensing</h2>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="LicenseKey"></label>
+                <div class="mb-3">
+                    <label asp-for="LicenseKey" class="form-label"></label>
                     <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="PremiumExpirationDate"></label>
+                <div class="mb-3">
+                    <label asp-for="PremiumExpirationDate" class="form-label"></label>
                     <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
@@ -149,44 +149,38 @@
     <h2>Billing</h2>
     <div class="row">
         <div class="col-md">
-            <div class="form-group">
-                <div class="form-group">
-                    <label asp-for="Gateway"></label>
-                    <select class="form-control" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
-                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                        <option value="">--</option>
-                    </select>
-                </div>
+            <div class="mb-3">
+                <label asp-for="Gateway" class="form-label"></label>
+                <select class="form-select" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
+                        asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                    <option value="">--</option>
+                </select>
             </div>
         </div>
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="GatewayCustomerId"></label>
+            <div class="mb-3">
+                <label asp-for="GatewayCustomerId" class="form-label"></label>
                 <div class="input-group">
                     <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
                     @if (canLaunchGateway)
                     {
-                        <div class="input-group-append">
-                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                                <i class="fa fa-external-link"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                            <i class="fa fa-external-link"></i>
+                        </button>
                     }
                 </div>
             </div>
         </div>
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="GatewaySubscriptionId"></label>
+            <div class="mb-3">
+                <label asp-for="GatewaySubscriptionId" class="form-label"></label>
                 <div class="input-group">
                     <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
                     @if (canLaunchGateway)
                     {
-                        <div class="input-group-append">
-                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                                <i class="fa fa-external-link"></i>
-                            </button>
-                        </div>
+                        <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                            <i class="fa fa-external-link"></i>
+                        </button>
                     }
                 </div>
             </div>
@@ -196,10 +190,10 @@
 </form>
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-    <div class="ml-auto d-flex">
+    <div class="ms-auto d-flex">
         @if (canUpgradePremium)
         {
-            <button class="btn btn-secondary mr-2" type="button" id="upgrade-premium">
+            <button class="btn btn-secondary me-2" type="button" id="upgrade-premium">
                 Upgrade Premium
             </button>
         }
