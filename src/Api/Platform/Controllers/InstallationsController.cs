@@ -6,7 +6,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Platform.Controllers;
 
 [Route("installations")]
 [SelfHosted(NotSelfHostedOnly = true)]
