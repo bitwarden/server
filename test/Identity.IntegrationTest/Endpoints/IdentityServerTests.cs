@@ -3,6 +3,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
@@ -513,6 +514,32 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var errorBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var error = AssertHelper.AssertJsonProperty(errorBody.RootElement, "error", JsonValueKind.String).GetString();
         Assert.Equal("invalid_client", error);
+    }
+
+    [Fact]
+    public void EncodedNameGetsDecoded()
+    {
+        RegisterRequestModel model = new RegisterRequestModel
+        {
+            Name = "Windm&#252;ller"
+        };
+
+        User user = model.ToUser();
+
+        Assert.Equal("Windmüller", user.Name);
+    }
+
+    [Fact]
+    public void DecodedNameStaysTheSame()
+    {
+        RegisterRequestModel model = new RegisterRequestModel
+        {
+            Name = "Windmüller"
+        };
+
+        User user = model.ToUser();
+
+        Assert.Equal("Windmüller", user.Name);
     }
 
     /// <inheritdoc cref="TokenEndpoint_GrantTypeClientCredentials_AsOrganization_NoIdPart_Fails"/>

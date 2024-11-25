@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api;
@@ -37,7 +38,7 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
         var user = new User
         {
-            Name = Name,
+            Name = WebUtility.HtmlDecode(Name),
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
             Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
