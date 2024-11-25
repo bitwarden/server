@@ -9,18 +9,11 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 public class Organization : Core.AdminConsole.Entities.Organization
 {
-    // Deprecated by https://bitwarden.atlassian.net/browse/PM-10863. This
-    // was replaced with `LimitCollectionCreation` and
+    // Shadow property. To be removed by
+    // https://bitwarden.atlassian.net/browse/PM-10863.
+    // This was replaced with `LimitCollectionCreation` and
     // `LimitCollectionDeletion`.
-    public bool LimitCollectionCreationDeletion
-    {
-        get => LimitCollectionCreation || LimitCollectionDeletion;
-        set
-        {
-            LimitCollectionCreation = value;
-            LimitCollectionDeletion = value;
-        }
-    }
+    public bool LimitCollectionCreationDeletion { get; set; }
     public virtual ICollection<Cipher> Ciphers { get; set; }
     public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
     public virtual ICollection<Group> Groups { get; set; }
