@@ -2093,7 +2093,7 @@ public class StripePaymentService : IPaymentService
                 _logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
                     parameters.TaxInformation.TaxId,
                     parameters.TaxInformation.Country);
-                throw new BadRequestException("billingPreviewInvalidTaxIdError");
+                throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
             options.CustomerDetails.TaxIds = [
