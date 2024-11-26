@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Authorization;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
 using Bit.SharedWeb.Swagger;
@@ -99,5 +100,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, BulkCollectionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, VaultExportAuthorizationHandler>();
     }
 }
