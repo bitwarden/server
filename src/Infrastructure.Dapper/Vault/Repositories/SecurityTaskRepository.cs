@@ -40,7 +40,7 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
 
         var results = await connection.QueryAsync<SecurityTask>(
             $"[{Schema}].[SecurityTask_ReadByUserIdStatus]",
-            new {UserId = userId, Statuses = statusTable.AsTableValuedParameter("dbo.SecurityTaskStatusArray")},
+            new {UserId = userId, Status = statusTable.AsTableValuedParameter("dbo.SecurityTaskStatusArray")},
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();
