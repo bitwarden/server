@@ -21,7 +21,7 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
             _ => false
         };
 
-        if (requirement is not null && authorized)
+        if (authorized)
         {
             context.Succeed(requirement);
         }
