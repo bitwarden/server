@@ -57,7 +57,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
         ValidateDeleteUser(organizationId, organizationUser);
 
-        await RepositoryDeleteUserAsync(organizationUser, null, null);
+        await RepositoryDeleteUserAsync(organizationUser, deletingUserId: null, eventSystemUser: null);
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
@@ -67,7 +67,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         ValidateDeleteUser(organizationId, organizationUser);
 
-        await RepositoryDeleteUserAsync(organizationUser, deletingUserId, null);
+        await RepositoryDeleteUserAsync(organizationUser, deletingUserId, eventSystemUser: null);
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed);
     }
@@ -77,7 +77,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         ValidateDeleteUser(organizationId, organizationUser);
 
-        await RepositoryDeleteUserAsync(organizationUser, null, eventSystemUser);
+        await RepositoryDeleteUserAsync(organizationUser, deletingUserId: null, eventSystemUser);
 
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Removed, eventSystemUser);
     }
@@ -85,7 +85,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     public async Task<IEnumerable<(Guid OrganizationUserId, string ErrorMessage)>> RemoveUsersAsync(
         Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? deletingUserId)
     {
-        var result = await RemoveUsersInternalAsync(organizationId, organizationUserIds, deletingUserId, null);
+        var result = await RemoveUsersInternalAsync(organizationId, organizationUserIds, deletingUserId, eventSystemUser: null);
 
         DateTime? eventDate = _timeProvider.GetUtcNow().UtcDateTime;
         if (result.Any(r => r.ErrorMessage == string.Empty))
@@ -101,7 +101,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
     public async Task<IEnumerable<(Guid OrganizationUserId, string ErrorMessage)>> RemoveUsersAsync(
         Guid organizationId, IEnumerable<Guid> organizationUserIds, EventSystemUser eventSystemUser)
     {
-        var result = await RemoveUsersInternalAsync(organizationId, organizationUserIds, null, eventSystemUser);
+        var result = await RemoveUsersInternalAsync(organizationId, organizationUserIds, deletingUserId: null, eventSystemUser);
 
         DateTime? eventDate = _timeProvider.GetUtcNow().UtcDateTime;
         if (result.Any(r => r.ErrorMessage == string.Empty))
