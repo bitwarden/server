@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Bit.Core.Tools.Authorization;
+namespace Bit.Api.Tools.Authorization;
 
 public class VaultExportOperationRequirement : OperationAuthorizationRequirement;
 

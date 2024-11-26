@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Tools.Authorization;
 using Bit.Api.Tools.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
@@ -9,7 +10,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Authorization;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Services;

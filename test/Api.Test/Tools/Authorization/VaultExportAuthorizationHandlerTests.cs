@@ -1,10 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Api.Tools.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AdminConsole.Helpers;
-using Bit.Core.Tools.Authorization;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;

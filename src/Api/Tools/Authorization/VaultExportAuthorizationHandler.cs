@@ -3,7 +3,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.Tools.Authorization;
+namespace Bit.Api.Tools.Authorization;
 
 public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
     : AuthorizationHandler<VaultExportOperationRequirement, OrganizationScope>
