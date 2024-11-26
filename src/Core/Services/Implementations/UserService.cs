@@ -223,24 +223,64 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public override async Task<IdentityResult> DeleteAsync(User user)
     {
-        var userList = await ValidateDeleteUsersAsync(new List<User> { user });
-        var results = userList.ToList()[0].ErrorMessage;
-
-        if (results == string.Empty || results == null)
+        // Check if user is the only owner of any organizations.
+        var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+        if (onlyOwnerCount > 0)
         {
-            await _userRepository.DeleteAsync(user);
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
-            await _pushService.PushLogOutAsync(user.Id);
-            return IdentityResult.Success;
+            var deletedOrg = false;
+            var orgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
+                OrganizationUserStatusType.Confirmed);
+            if (orgs.Count == 1)
+            {
+                var org = await _organizationRepository.GetByIdAsync(orgs.First().OrganizationId);
+                if (org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
+                {
+                    var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
+                    if (orgCount <= 1)
+                    {
+                        await _organizationRepository.DeleteAsync(org);
+                        deletedOrg = true;
+                    }
+                }
+            }
+
+            if (!deletedOrg)
+            {
+                return IdentityResult.Failed(new IdentityError
+                {
+                    Description = "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.",
+                });
+            }
         }
-        else
+
+        var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
+        if (onlyOwnerProviderCount > 0)
         {
             return IdentityResult.Failed(new IdentityError
             {
-                Description = results
+                Description = "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.",
+
+
+
+
+
             });
         }
+
+        if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
+        {
+            try
+            {
+                await CancelPremiumAsync(user);
+            }
+            catch (GatewayException) { }
+        }
+
+        await _userRepository.DeleteAsync(user);
+        await _referenceEventService.RaiseEventAsync(
+            new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
+        await _pushService.PushLogOutAsync(user.Id);
+        return IdentityResult.Success;
     }
 
 #nullable enable
