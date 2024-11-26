@@ -6,7 +6,9 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -42,7 +44,8 @@ public class OrganizationsController(
     IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
     IReferenceEventService referenceEventService,
-    ISubscriberService subscriberService)
+    ISubscriberService subscriberService,
+    IOrganizationInstallationRepository organizationInstallationRepository)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -96,6 +99,8 @@ public class OrganizationsController(
         {
             throw new NotFoundException();
         }
+
+        await SaveOrganizationInstallationAsync(id, installationId);
 
         return license;
     }
@@ -365,5 +370,24 @@ public class OrganizationsController(
         await organizationService.UpdateSubscription(id, model.SeatAdjustment, null);
 
         return await organizationRepository.GetByIdAsync(id);
+    }
+
+    private async Task SaveOrganizationInstallationAsync(Guid organizationId, Guid installationId)
+    {
+        var organizationInstallation =
+            await organizationInstallationRepository.GetByInstallationIdAsync(installationId);
+
+        if (organizationInstallation == null)
+        {
+            await organizationInstallationRepository.CreateAsync(new OrganizationInstallation
+            {
+                OrganizationId = organizationId, InstallationId = installationId
+            });
+        }
+        else if (organizationInstallation.OrganizationId == organizationId)
+        {
+            organizationInstallation.RevisionDate = DateTime.UtcNow;
+            await organizationInstallationRepository.ReplaceAsync(organizationInstallation);
+        }
     }
 }
