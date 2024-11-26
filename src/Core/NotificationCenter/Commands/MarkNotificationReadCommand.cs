@@ -65,7 +65,7 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
 
             var newNotificationStatus = await _notificationStatusRepository.CreateAsync(notificationStatus);
 
-            await _pushNotificationService.PushSyncNotificationStatusAsync(notification, newNotificationStatus);
+            await _pushNotificationService.PushNotificationStatusAsync(notification, newNotificationStatus);
         }
         else
         {
@@ -76,7 +76,7 @@ public class MarkNotificationReadCommand : IMarkNotificationReadCommand
 
             await _notificationStatusRepository.UpdateAsync(notificationStatus);
 
-            await _pushNotificationService.PushSyncNotificationStatusAsync(notification, notificationStatus);
+            await _pushNotificationService.PushNotificationStatusAsync(notification, notificationStatus);
         }
     }
 }

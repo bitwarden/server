@@ -182,14 +182,19 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
     }
 
-    public async Task PushSyncNotificationAsync(Notification notification)
+    public async Task PushNotificationAsync(Notification notification)
     {
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
@@ -205,14 +210,19 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
     }
 
-    public async Task PushSyncNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate,
             ReadDate = notificationStatus.ReadDate,
             DeletedDate = notificationStatus.DeletedDate

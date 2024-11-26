@@ -48,6 +48,6 @@ public class UpdateNotificationCommand : IUpdateNotificationCommand
 
         await _notificationRepository.ReplaceAsync(notification);
 
-        await _pushNotificationService.PushSyncNotificationAsync(notification);
+        await _pushNotificationService.PushNotificationAsync(notification);
     }
 }
