@@ -1,5 +1,5 @@
     /* Introduce new column 'UseRiskInsights' not nullable with default of 0  */
-    ALTER TABLE [dbo].[Organization] ADD [UseRiskInsights] bit NOT NULL default 0
+    ALTER TABLE [dbo].[Organization] ADD [UseRiskInsights] bit NOT NULL CONSTRAINT [DF_Organization_UseRiskInsights] default (0)
     GO
 
     /* Add UseRiskInsights as a column to Organization_create */
