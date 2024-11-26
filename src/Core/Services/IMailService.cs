@@ -35,6 +35,8 @@ public interface IMailService
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);
     Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
     Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
+    Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email);
+    Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
     Task SendInvoiceUpcoming(
         string email,
