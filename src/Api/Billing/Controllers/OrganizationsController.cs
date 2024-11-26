@@ -381,7 +381,8 @@ public class OrganizationsController(
         {
             await organizationInstallationRepository.CreateAsync(new OrganizationInstallation
             {
-                OrganizationId = organizationId, InstallationId = installationId
+                OrganizationId = organizationId,
+                InstallationId = installationId
             });
         }
         else if (organizationInstallation.OrganizationId == organizationId)
