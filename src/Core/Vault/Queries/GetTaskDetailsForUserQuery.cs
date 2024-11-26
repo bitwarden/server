@@ -1,9 +1,13 @@
 ﻿using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Queries;
 
-public class GetTaskDetailsForUserQuery : IGetTaskDetailsForUserQuery
+public class GetTaskDetailsForUserQuery(ISecurityTaskRepository securityTaskRepository) : IGetTaskDetailsForUserQuery
 {
-    public async Task<IEnumerable<SecurityTask>> GetTaskDetailsForUserAsync(Guid userId, IEnumerable<SecurityTaskStatus> status = null) => throw new NotImplementedException();
+    /// <inheritdoc />
+    public async Task<IEnumerable<SecurityTask>> GetTaskDetailsForUserAsync(Guid userId,
+        IEnumerable<SecurityTaskStatus> status = null)
+        => await securityTaskRepository.GetManyByUserIdStatusAsync(userId, status);
 }
