@@ -10,7 +10,7 @@ namespace Bit.Api.Vault.Controllers;
 
 [Route("tasks")]
 [Authorize("Application")]
-public class SecurityTaskController :  Controller
+public class SecurityTaskController : Controller
 {
     private readonly IUserService _userService;
     private readonly IGetTaskDetailsForUserQuery _getTaskDetailsForUserQuery;

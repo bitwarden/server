@@ -163,10 +163,10 @@ public class SecurityTaskRepositoryTests
             Name = "Test Collection",
         });
 
-        var cipher1 = new Cipher {Type = CipherType.Login, OrganizationId = organization.Id, Data = "",};
+        var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
         await cipherRepository.CreateAsync(cipher1, [collection.Id]);
 
-        var cipher2 = new Cipher {Type = CipherType.Login, OrganizationId = organization.Id, Data = "",};
+        var cipher2 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
         await cipherRepository.CreateAsync(cipher2, [collection.Id]);
 
         var task1 = await securityTaskRepository.CreateAsync(new SecurityTask
