@@ -58,6 +58,6 @@ public class CreateNotificationCommandTest
         Assert.Equal(notification.CreationDate, notification.RevisionDate);
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1)
-            .PushSyncNotificationAsync(newNotification);
+            .PushNotificationAsync(newNotification);
     }
 }

@@ -23,7 +23,7 @@ public interface IPushNotificationService
     Task PushSyncSendCreateAsync(Send send);
     Task PushSyncSendUpdateAsync(Send send);
     Task PushSyncSendDeleteAsync(Send send);
-    Task PushSyncNotificationAsync(Notification notification);
+    Task PushNotificationAsync(Notification notification);
     Task PushAuthRequestAsync(AuthRequest authRequest);
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
 

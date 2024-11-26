@@ -25,7 +25,7 @@ public class AzureQueuePushNotificationServiceTests
     [BitAutoData]
     [NotificationCustomize]
     [CurrentContextCustomize]
-    public async void PushSyncNotificationAsync_Notification_Sent(
+    public async void PushNotificationAsync_Notification_Sent(
         SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
         ICurrentContext currentContext)
     {
@@ -33,7 +33,7 @@ public class AzureQueuePushNotificationServiceTests
         sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
             .GetService(Arg.Any<Type>()).Returns(currentContext);
 
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
@@ -44,23 +44,29 @@ public class AzureQueuePushNotificationServiceTests
     private static bool MatchMessage<T>(PushType pushType, string message, IEquatable<T> expectedPayloadEquatable,
         string contextId)
     {
-        var pushNotificationData =
-            JsonSerializer.Deserialize<PushNotificationData<T>>(message);
+        var pushNotificationData = JsonSerializer.Deserialize<PushNotificationData<T>>(message);
         return pushNotificationData != null &&
                pushNotificationData.Type == pushType &&
                expectedPayloadEquatable.Equals(pushNotificationData.Payload) &&
                pushNotificationData.ContextId == contextId;
     }
 
-    private class SyncNotificationEquals(Notification notification) : IEquatable<SyncNotificationPushNotification>
+    private class SyncNotificationEquals(Notification notification) : IEquatable<NotificationPushNotification>
     {
-        public bool Equals(SyncNotificationPushNotification? other)
+        public bool Equals(NotificationPushNotification? other)
         {
             return other != null &&
                    other.Id == notification.Id &&
-                   other.UserId == notification.UserId &&
-                   other.OrganizationId == notification.OrganizationId &&
+                   other.Priority == notification.Priority &&
+                   other.Global == notification.Global &&
                    other.ClientType == notification.ClientType &&
+                   other.UserId.HasValue == notification.UserId.HasValue &&
+                   other.UserId == notification.UserId &&
+                   other.OrganizationId.HasValue == notification.OrganizationId.HasValue &&
+                   other.OrganizationId == notification.OrganizationId &&
+                   other.Title == notification.Title &&
+                   other.Body == notification.Body &&
+                   other.CreationDate == notification.CreationDate &&
                    other.RevisionDate == notification.RevisionDate;
         }
     }
