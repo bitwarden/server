@@ -21,6 +21,11 @@ public class SecurityTaskController : Controller
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
     }
 
+    /// <summary>
+    /// Retrieves security tasks for the current user.
+    /// </summary>
+    /// <param name="status">Optional filter for task status. If not provided returns tasks of all statuses.</param>
+    /// <returns>A list response model containing the security tasks for the user.</returns>
     [HttpGet("")]
     public async Task<ListResponseModel<SecurityTasksResponseModel>> Get([FromQuery] IEnumerable<SecurityTaskStatus> status = null)
     {
