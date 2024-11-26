@@ -313,8 +313,8 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.All(results, r => Assert.Empty(r.Item2));
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyAsync(userIds);
-        await sutProvider.GetDependency<IUserService>().Received(0).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
-        await sutProvider.GetDependency<IUserService>().Received(2).DeleteAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Is<IEnumerable<User>>(list => list.Count() == 2));
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
                 events.Count(e => e.Item1.Id == orgUser1.Id && e.Item2 == EventType.OrganizationUser_Deleted) == 1
@@ -351,10 +351,11 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Guid organizationId,
         Guid orgUserId)
     {
-        // Arrang
+        // Arrange
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(false);
 
+        var usersToDelete = new List<User>();
         // Act
         var result = await sutProvider.Sut.DeleteManyUsersAsync(organizationId, new[] { orgUserId }, null);
 
@@ -362,7 +363,7 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.Single(result);
         Assert.Equal(orgUserId, result.First().Item1);
         Assert.Contains("Member not found.", result.First().Item2);
-        await sutProvider.GetDependency<IUserService>().Received(0).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
+        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Is<IEnumerable<User>>(list => list.Count() == 0));
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
