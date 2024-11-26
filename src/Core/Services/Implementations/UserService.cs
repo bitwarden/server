@@ -259,7 +259,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return IdentityResult.Failed(new IdentityError
             {
                 Description = "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.",
-
             });
         }
 
@@ -287,7 +286,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var usersToDelete = users.Where(user => results.Select(r => r.UserId == user.Id && string.IsNullOrEmpty(r.ErrorMessage)).Count() > 1);
 
         await _userRepository.DeleteManyAsync(usersToDelete);
-        foreach (var user in users)
+        foreach (var user in usersToDelete)
         {
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));

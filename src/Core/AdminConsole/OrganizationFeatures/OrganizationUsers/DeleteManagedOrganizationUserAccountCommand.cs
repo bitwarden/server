@@ -74,7 +74,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
 
         var results = new List<(Guid OrganizationUserId, string? ErrorMessage)>();
-        var accountDeprovisioningEnabled = _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning);
         foreach (var orgUserId in orgUserIds)
         {
             try
@@ -92,10 +91,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                 {
                     throw new NotFoundException("Member not found.");
                 }
-                if (!accountDeprovisioningEnabled)
-                {
-                    await _userService.DeleteAsync(user);
-                }
                 results.Add((orgUserId, string.Empty));
             }
             catch (Exception ex)
@@ -104,10 +99,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
-        if (accountDeprovisioningEnabled)
-        {
-            await _userService.DeleteManyAsync(users);
-        }
+        await _userService.DeleteManyAsync(users);
         await LogDeletedOrganizationUsersAsync(orgUsers, results);
 
         return results;
