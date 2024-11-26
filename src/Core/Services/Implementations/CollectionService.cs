@@ -96,6 +96,7 @@ public class CollectionService : ICollectionService
         await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
     }
 
+    [Obsolete("Scheduled for deletion; use the CollectionRepository instead with additional authorization logic.")]
     public async Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId)
     {
         if (

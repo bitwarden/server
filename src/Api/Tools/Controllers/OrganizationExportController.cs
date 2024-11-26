@@ -92,31 +92,14 @@ public class OrganizationExportController : Controller
     {
         var canExportAll = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
             VaultExportOperations.ExportWholeVault);
-        if (canExportAll.Succeeded)
+        if (!canExportAll.Succeeded)
         {
-            var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
-            var allCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
-            return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections, _globalSettings));
+            throw new NotFoundException();
         }
 
-        var canExportManaged = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),
-            VaultExportOperations.ExportManagedCollections);
-        if (canExportManaged.Succeeded)
-        {
-            var userId = _userService.GetProperUserId(User)!.Value;
-
-            var allCollections = await _collectionRepository.GetManyByUserIdAsync(userId);
-            var managedCollections = allCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
-
-            var managedCollectionIds = managedCollections.Select(c => c.Id).ToHashSet();
-            var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
-            var managedCiphers = allOrganizationCiphers.Where(c => c.CollectionIds.Intersect(managedCollectionIds).Any());
-
-            return Ok(new OrganizationExportResponseModel(managedCiphers, managedCollections, _globalSettings));
-        }
-
-        // Unauthorized
-        throw new NotFoundException();
+        var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
+        var allCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+        return Ok(new OrganizationExportResponseModel(allOrganizationCiphers, allCollections, _globalSettings));
     }
 
     private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)

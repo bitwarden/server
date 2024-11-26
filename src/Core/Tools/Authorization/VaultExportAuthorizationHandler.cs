@@ -18,8 +18,6 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
         {
             not null when requirement.Name == nameof(VaultExportOperations.ExportWholeVault) =>
                 CanExportWholeVault(org),
-            not null when requirement.Name == nameof(VaultExportOperations.ExportManagedCollections) =>
-                CanExportManagedCollections(org),
             _ => false
         };
 
@@ -34,6 +32,4 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
     private bool CanExportWholeVault(CurrentContextOrganization organization) => organization is
     { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
     { Type: OrganizationUserType.Custom, Permissions.AccessImportExport: true };
-
-    private bool CanExportManagedCollections(CurrentContextOrganization organization) => organization is not null;
 }
