@@ -260,10 +260,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             {
                 Description = "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.",
 
-
-
-
-
             });
         }
 
