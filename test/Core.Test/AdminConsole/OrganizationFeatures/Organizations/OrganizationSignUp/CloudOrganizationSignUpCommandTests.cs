@@ -1,5 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -52,8 +52,8 @@ public class CloudICloudOrganizationSignUpCommandTests
                 referenceEvent.Type == ReferenceEventType.Signup &&
                 referenceEvent.PlanName == plan.Name &&
                 referenceEvent.PlanType == plan.Type &&
-                referenceEvent.Seats == result.Organization.Seats &&
-                referenceEvent.Storage == result.Organization.MaxStorageGb));
+                referenceEvent.Seats == signup.AdditionalSeats + plan.PasswordManager.BaseSeats &&
+                referenceEvent.Storage == ));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
 
         Assert.NotNull(result.Organization);

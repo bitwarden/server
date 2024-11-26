@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

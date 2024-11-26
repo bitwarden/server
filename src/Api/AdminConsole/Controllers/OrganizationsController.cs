@@ -13,7 +13,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -177,7 +177,9 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+
+        var organization = await _organizationRepository.GetByIdAsync(result.OrganizationId);
+        return new OrganizationResponseModel(organization);
     }
 
     [HttpPost("create-without-payment")]
@@ -192,7 +194,9 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+
+        var organization = await _organizationRepository.GetByIdAsync(result.OrganizationId);
+        return new OrganizationResponseModel(organization);
     }
 
     [HttpPut("{id}")]

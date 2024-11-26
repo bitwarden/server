@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Mappings;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand.Validation;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -18,16 +20,11 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
-
-public record SignUpOrganizationResponse(
-    Organization Organization,
-    OrganizationUser OrganizationUser,
-    Collection DefaultCollection);
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand;
 
 public interface ICloudOrganizationSignUpCommand
 {
-    Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup);
+    Task<SignUpOrganizationResponse_vNext> SignUpOrganizationAsync(OrganizationSignup signup);
 }
 
 public class CloudOrganizationSignUpCommand(
@@ -44,21 +41,26 @@ public class CloudOrganizationSignUpCommand(
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
-    IDeviceRepository deviceRepository) : ICloudOrganizationSignUpCommand
+    IDeviceRepository deviceRepository,
+    OrgSignUpPasswordManagerValidation signUpValidation
+    ) : ICloudOrganizationSignUpCommand
 {
-    public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
+    public async Task<SignUpOrganizationResponse_vNext> SignUpOrganizationAsync(OrganizationSignup signup)
     {
         var plan = StaticStore.GetPlan(signup.Plan);
 
-        ValidatePasswordManagerPlan(plan, signup);
+        if (signUpValidation.Validate(signup.WithPlan()) is InvalidResult<OrgSignUpWithPlan> invalidResult)
+        {
+            return new SignUpOrganizationResponse_vNext(invalidResult.ErrorMessages);
+        }
 
         if (signup.UseSecretsManager)
         {
             if (signup.IsFromProvider)
             {
-                throw new BadRequestException(
-                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
+                return new SignUpOrganizationResponse_vNext("Organizations with a Managed Service Provider do not support Secrets Manager.");
             }
+
             ValidateSecretsManagerPlan(plan, signup);
         }
 
@@ -77,8 +79,10 @@ public class CloudOrganizationSignUpCommand(
             PlanType = plan!.Type,
             Seats = (short)(plan.PasswordManager.BaseSeats + signup.AdditionalSeats),
             MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = !plan.PasswordManager.BaseStorageGb.HasValue ?
-                (short?)null : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
+            MaxStorageGb =
+                !plan.PasswordManager.BaseStorageGb.HasValue
+                    ? (short?)null
+                    : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
@@ -119,7 +123,7 @@ public class CloudOrganizationSignUpCommand(
                 await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
             if (adminCount > 0)
             {
-                throw new BadRequestException("You can only be an admin of one free organization.");
+                return new SignUpOrganizationResponse_vNext("You can only be an admin of one free organization.");
             }
         }
         else if (plan.Type != PlanType.Free)
@@ -135,7 +139,8 @@ public class CloudOrganizationSignUpCommand(
                 {
                     await paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                         signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider,
+                        signup.AdditionalSmSeats.GetValueOrDefault(),
                         signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
                 }
                 else
@@ -144,7 +149,6 @@ public class CloudOrganizationSignUpCommand(
                         signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
                         signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
                 }
-
             }
         }
 
@@ -161,49 +165,8 @@ public class CloudOrganizationSignUpCommand(
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
 
-        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser, returnValue.defaultCollection);
-    }
-
-    public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)
-    {
-        ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
-
-        if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
-        {
-            throw new BadRequestException($"You do not have any Password Manager seats!");
-        }
-
-        if (upgrade.AdditionalSeats < 0)
-        {
-            throw new BadRequestException($"You can't subtract Password Manager seats!");
-        }
-
-        if (!plan.PasswordManager.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
-        {
-            throw new BadRequestException("Plan does not allow additional storage.");
-        }
-
-        if (upgrade.AdditionalStorageGb < 0)
-        {
-            throw new BadRequestException("You can't subtract storage!");
-        }
-
-        if (!plan.PasswordManager.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
-        {
-            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
-        }
-
-        if (!plan.PasswordManager.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
-        {
-            throw new BadRequestException("Plan does not allow additional users.");
-        }
-
-        if (plan.PasswordManager.HasAdditionalSeatsOption && plan.PasswordManager.MaxAdditionalSeats.HasValue &&
-            upgrade.AdditionalSeats > plan.PasswordManager.MaxAdditionalSeats.Value)
-        {
-            throw new BadRequestException($"Selected plan allows a maximum of " +
-                                          $"{plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-        }
+        return new SignUpOrganizationResponse_vNext(returnValue.organization.Id, returnValue.organization.DisplayName(), returnValue.organizationUser.Id,
+            returnValue.defaultCollection.Id);
     }
 
     public void ValidateSecretsManagerPlan(Plan plan, OrganizationUpgrade upgrade)
@@ -226,7 +189,7 @@ public class CloudOrganizationSignUpCommand(
         }
 
         if ((plan.ProductTier == ProductTierType.TeamsStarter &&
-            upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
+             upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
             (plan.ProductTier != ProductTierType.TeamsStarter &&
              upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
@@ -277,8 +240,9 @@ public class CloudOrganizationSignUpCommand(
         }
     }
 
-    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(Organization organization,
-    Guid ownerId, string ownerKey, string collectionName, bool withPayment)
+    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)>
+        SignUpAsync(Organization organization,
+            Guid ownerId, string ownerKey, string collectionName, bool withPayment)
     {
         try
         {
@@ -333,7 +297,12 @@ public class CloudOrganizationSignUpCommand(
                 if (orgUser != null)
                 {
                     defaultOwnerAccess =
-                        [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+                    [
+                        new CollectionAccessSelection
+                        {
+                            Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+                        }
+                    ];
                 }
 
                 await collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);
