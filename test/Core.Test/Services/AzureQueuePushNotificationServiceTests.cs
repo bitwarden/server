@@ -39,7 +39,7 @@ public class AzureQueuePushNotificationServiceTests
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotification, message,
+                MatchMessage(PushType.Notification, message,
                     new NotificationPushNotificationEquals(notification, null, installationId),
                     deviceIdentifier.ToString())));
     }
@@ -61,7 +61,7 @@ public class AzureQueuePushNotificationServiceTests
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotification, message,
+                MatchMessage(PushType.Notification, message,
                     new NotificationPushNotificationEquals(notification, null, null),
                     deviceIdentifier.ToString())));
     }
@@ -84,7 +84,7 @@ public class AzureQueuePushNotificationServiceTests
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotificationStatus, message,
+                MatchMessage(PushType.NotificationStatus, message,
                     new NotificationPushNotificationEquals(notification, notificationStatus, installationId),
                     deviceIdentifier.ToString())));
     }
@@ -107,7 +107,7 @@ public class AzureQueuePushNotificationServiceTests
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotificationStatus, message,
+                MatchMessage(PushType.NotificationStatus, message,
                     new NotificationPushNotificationEquals(notification, notificationStatus, null),
                     deviceIdentifier.ToString())));
     }

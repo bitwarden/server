@@ -216,17 +216,17 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
         if (notification.Global)
         {
-            await SendPayloadToInstallationAsync(PushType.SyncNotification, message, true,
+            await SendPayloadToInstallationAsync(PushType.Notification, message, true,
                 notification.ClientType);
         }
         else if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.Notification, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.Notification, message,
                 true, notification.ClientType);
         }
     }
@@ -252,17 +252,17 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
         if (notification.Global)
         {
-            await SendPayloadToInstallationAsync(PushType.SyncNotificationStatus, message, true,
+            await SendPayloadToInstallationAsync(PushType.NotificationStatus, message, true,
                 notification.ClientType);
         }
         else if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationStatus, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.NotificationStatus, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationStatus,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.NotificationStatus,
                 message, true, notification.ClientType);
         }
     }

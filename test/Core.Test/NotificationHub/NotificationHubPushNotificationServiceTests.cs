@@ -47,12 +47,12 @@ public class NotificationHubPushNotificationServiceTests
     {
         sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
         notification.ClientType = ClientType.All;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, installationId);
+        var expectedNotification = ToNotificationPushNotification(notification, null, installationId);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload && installationId:{installationId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -71,12 +71,12 @@ public class NotificationHubPushNotificationServiceTests
     {
         sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
         notification.ClientType = clientType;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, installationId);
+        var expectedNotification = ToNotificationPushNotification(notification, null, installationId);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload && installationId:{installationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -97,12 +97,12 @@ public class NotificationHubPushNotificationServiceTests
         }
 
         notification.ClientType = ClientType.All;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, null);
+        var expectedNotification = ToNotificationPushNotification(notification, null, null);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload_userId:{notification.UserId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -121,12 +121,12 @@ public class NotificationHubPushNotificationServiceTests
     {
         notification.OrganizationId = null;
         notification.ClientType = clientType;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, null);
+        var expectedNotification = ToNotificationPushNotification(notification, null, null);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -144,12 +144,12 @@ public class NotificationHubPushNotificationServiceTests
         Notification notification)
     {
         notification.ClientType = clientType;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, null);
+        var expectedNotification = ToNotificationPushNotification(notification, null, null);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -164,12 +164,12 @@ public class NotificationHubPushNotificationServiceTests
     {
         notification.UserId = null;
         notification.ClientType = ClientType.All;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, null);
+        var expectedNotification = ToNotificationPushNotification(notification, null, null);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload && organizationId:{notification.OrganizationId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -188,12 +188,12 @@ public class NotificationHubPushNotificationServiceTests
     {
         notification.UserId = null;
         notification.ClientType = clientType;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, null, null);
+        var expectedNotification = ToNotificationPushNotification(notification, null, null);
 
         await sutProvider.Sut.PushNotificationAsync(notification);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.Notification,
+            expectedNotification,
             $"(template:payload && organizationId:{notification.OrganizationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -231,12 +231,12 @@ public class NotificationHubPushNotificationServiceTests
         sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
         notification.ClientType = ClientType.All;
 
-        var expectedSyncNotification = ToNotificationPushNotification(notification, notificationStatus, installationId);
+        var expectedNotification = ToNotificationPushNotification(notification, notificationStatus, installationId);
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
+            expectedNotification,
             $"(template:payload && installationId:{installationId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -257,12 +257,12 @@ public class NotificationHubPushNotificationServiceTests
         sutProvider.GetDependency<IGlobalSettings>().Installation.Id = installationId;
         notification.ClientType = clientType;
 
-        var expectedSyncNotification = ToNotificationPushNotification(notification, notificationStatus, installationId);
+        var expectedNotification = ToNotificationPushNotification(notification, notificationStatus, installationId);
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
+            expectedNotification,
             $"(template:payload && installationId:{installationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -283,12 +283,12 @@ public class NotificationHubPushNotificationServiceTests
         }
 
         notification.ClientType = ClientType.All;
-        var expectedSyncNotification = ToNotificationPushNotification(notification, notificationStatus, null);
+        var expectedNotification = ToNotificationPushNotification(notification, notificationStatus, null);
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
-            expectedSyncNotification,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
+            expectedNotification,
             $"(template:payload_userId:{notification.UserId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
             .Received(0)
@@ -311,7 +311,7 @@ public class NotificationHubPushNotificationServiceTests
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
             expectedNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -334,7 +334,7 @@ public class NotificationHubPushNotificationServiceTests
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
             expectedNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -355,7 +355,7 @@ public class NotificationHubPushNotificationServiceTests
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
             expectedNotification,
             $"(template:payload && organizationId:{notification.OrganizationId})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()
@@ -380,7 +380,7 @@ public class NotificationHubPushNotificationServiceTests
 
         await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
 
-        await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotificationStatus,
+        await AssertSendTemplateNotificationAsync(sutProvider, PushType.NotificationStatus,
             expectedNotification,
             $"(template:payload && organizationId:{notification.OrganizationId} && clientType:{clientType})");
         await sutProvider.GetDependency<IInstallationDeviceRepository>()

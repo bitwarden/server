@@ -186,7 +186,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             RevisionDate = notification.RevisionDate
         };
 
-        await SendMessageAsync(PushType.SyncNotification, message, true);
+        await SendMessageAsync(PushType.Notification, message, true);
     }
 
     public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
@@ -208,7 +208,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             DeletedDate = notificationStatus.DeletedDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
+        await SendMessageAsync(PushType.NotificationStatus, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)
