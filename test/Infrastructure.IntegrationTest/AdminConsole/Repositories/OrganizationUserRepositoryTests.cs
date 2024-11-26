@@ -258,6 +258,7 @@ public class OrganizationUserRepositoryTests
         // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         Assert.Equal(organization.LimitCollectionCreationDeletion, result.LimitCollectionCreationDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
     }
 
     [DatabaseTheory, DatabaseData]

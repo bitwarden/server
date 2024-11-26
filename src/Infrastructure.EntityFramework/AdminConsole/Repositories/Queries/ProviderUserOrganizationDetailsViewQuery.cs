@@ -49,6 +49,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
             LimitCollectionCreationDeletion = x.o.LimitCollectionCreationDeletion,
             AllowAdminAccessToAllCollectionItems = x.o.AllowAdminAccessToAllCollectionItems,
+            UseRiskInsights = x.o.UseRiskInsights,
         });
     }
 }
