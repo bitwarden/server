@@ -169,36 +169,46 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification)
+    public async Task PushNotificationAsync(Notification notification)
     {
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationCreate, message, true);
+        await SendMessageAsync(PushType.SyncNotification, message, true);
     }
 
-    public async Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationUpdate, message, true);
+        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)

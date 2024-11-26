@@ -191,73 +191,81 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
     }
 
-    public async Task PushSyncNotificationCreateAsync(Notification notification)
+    public async Task PushNotificationAsync(Notification notification)
     {
         Guid? installationId = notification.Global && _globalSettings.Installation.Id != default
             ? _globalSettings.Installation.Id
             : null;
 
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = installationId,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
         if (notification.Global && installationId.HasValue)
         {
-            await SendPayloadToInstallationAsync(installationId.Value, PushType.SyncNotificationCreate, message, true,
+            await SendPayloadToInstallationAsync(installationId.Value, PushType.SyncNotification, message, true,
                 notification.ClientType);
         }
         else if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationCreate, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationCreate,
-                message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
                 true, notification.ClientType);
         }
     }
 
-    public async Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus)
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
         Guid? installationId = notification.Global && _globalSettings.Installation.Id != default
             ? _globalSettings.Installation.Id
             : null;
 
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
             InstallationId = installationId,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate,
-            ReadDate = notificationStatus?.ReadDate,
-            DeletedDate = notificationStatus?.DeletedDate
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
         };
 
         if (notification.Global && installationId.HasValue)
         {
-            await SendPayloadToInstallationAsync(installationId.Value, PushType.SyncNotificationUpdate, message, true,
+            await SendPayloadToInstallationAsync(installationId.Value, PushType.SyncNotificationStatus, message, true,
                 notification.ClientType);
         }
         else if (notification.UserId.HasValue)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationUpdate, message, true,
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationStatus, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationUpdate,
-                message,
-                true, notification.ClientType);
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationStatus,
+                message, true, notification.ClientType);
         }
     }
 

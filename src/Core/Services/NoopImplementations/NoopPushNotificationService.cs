@@ -109,8 +109,7 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task PushSyncNotificationCreateAsync(Notification notification) => Task.CompletedTask;
+    public Task PushNotificationAsync(Notification notification) => Task.CompletedTask;
 
-    public Task PushSyncNotificationUpdateAsync(Notification notification, NotificationStatus? notificationStatus) =>
-        Task.CompletedTask;
+    public Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus) => Task.CompletedTask;
 }

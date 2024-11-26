@@ -33,7 +33,7 @@ public class PushControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SendAsync(new PushSendRequestModel
             {
-                Type = PushType.SyncNotificationCreate,
+                Type = PushType.SyncNotification,
                 UserId = userId.ToString(),
                 OrganizationId = organizationId.ToString(),
                 InstallationId = installationId.ToString(),
@@ -63,7 +63,7 @@ public class PushControllerTests
 
         await sutProvider.Sut.SendAsync(new PushSendRequestModel
         {
-            Type = PushType.SyncNotificationCreate,
+            Type = PushType.SyncNotification,
             UserId = null,
             OrganizationId = null,
             InstallationId = null,
@@ -96,7 +96,7 @@ public class PushControllerTests
 
         await sutProvider.Sut.SendAsync(new PushSendRequestModel
         {
-            Type = PushType.SyncNotificationCreate,
+            Type = PushType.SyncNotification,
             UserId = userId.ToString(),
             OrganizationId = haveOrganizationId ? Guid.NewGuid().ToString() : null,
             InstallationId = null,
@@ -107,7 +107,7 @@ public class PushControllerTests
         });
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .SendPayloadToUserAsync(expectedUserId, PushType.SyncNotificationCreate, "test-payload", expectedIdentifier,
+            .SendPayloadToUserAsync(expectedUserId, PushType.SyncNotification, "test-payload", expectedIdentifier,
                 expectedDeviceId, ClientType.All);
         await sutProvider.GetDependency<IPushNotificationService>().Received(0)
             .SendPayloadToOrganizationAsync(Arg.Any<string>(), Arg.Any<PushType>(), Arg.Any<object>(),
@@ -132,7 +132,7 @@ public class PushControllerTests
 
         await sutProvider.Sut.SendAsync(new PushSendRequestModel
         {
-            Type = PushType.SyncNotificationCreate,
+            Type = PushType.SyncNotification,
             UserId = null,
             OrganizationId = organizationId.ToString(),
             InstallationId = null,
@@ -143,7 +143,7 @@ public class PushControllerTests
         });
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .SendPayloadToOrganizationAsync(expectedOrganizationId, PushType.SyncNotificationCreate, "test-payload",
+            .SendPayloadToOrganizationAsync(expectedOrganizationId, PushType.SyncNotification, "test-payload",
                 expectedIdentifier, expectedDeviceId, ClientType.All);
         await sutProvider.GetDependency<IPushNotificationService>().Received(0)
             .SendPayloadToUserAsync(Arg.Any<string>(), Arg.Any<PushType>(), Arg.Any<object>(), Arg.Any<string>(),
@@ -166,7 +166,7 @@ public class PushControllerTests
 
         await sutProvider.Sut.SendAsync(new PushSendRequestModel
         {
-            Type = PushType.SyncNotificationCreate,
+            Type = PushType.SyncNotification,
             UserId = null,
             OrganizationId = null,
             InstallationId = installationId.ToString(),
@@ -177,7 +177,7 @@ public class PushControllerTests
         });
 
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
-            .SendPayloadToInstallationAsync(installationId.ToString(), PushType.SyncNotificationCreate, "test-payload",
+            .SendPayloadToInstallationAsync(installationId.ToString(), PushType.SyncNotification, "test-payload",
                 expectedIdentifier, expectedDeviceId, ClientType.All);
         await sutProvider.GetDependency<IPushNotificationService>().Received(0)
             .SendPayloadToOrganizationAsync(Arg.Any<string>(), Arg.Any<PushType>(), Arg.Any<object>(),
@@ -198,7 +198,7 @@ public class PushControllerTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SendAsync(new PushSendRequestModel
             {
-                Type = PushType.SyncNotificationCreate,
+                Type = PushType.SyncNotification,
                 UserId = null,
                 OrganizationId = null,
                 InstallationId = Guid.NewGuid().ToString(),
