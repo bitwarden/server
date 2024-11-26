@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Enums;
 
 namespace Bit.Core.Models;
 
@@ -45,14 +46,21 @@ public class SyncSendPushNotification
     public DateTime RevisionDate { get; set; }
 }
 
-public class SyncNotificationPushNotification
+#nullable enable
+public class NotificationPushNotification
 {
     public Guid Id { get; set; }
+    public Priority Priority { get; set; }
+    public bool Global { get; set; }
+    public ClientType ClientType { get; set; }
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
-    public ClientType ClientType { get; set; }
+    public string? Title { get; set; }
+    public string? Body { get; set; }
+    public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
 }
+#nullable disable
 
 public class AuthRequestPushNotification
 {
