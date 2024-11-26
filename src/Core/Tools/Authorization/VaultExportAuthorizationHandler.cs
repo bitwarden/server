@@ -8,7 +8,6 @@ namespace Bit.Core.Tools.Authorization;
 public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
     : AuthorizationHandler<VaultExportOperationRequirement, OrganizationScope>
 {
-
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
         VaultExportOperationRequirement requirement, OrganizationScope organizationScope)
     {
