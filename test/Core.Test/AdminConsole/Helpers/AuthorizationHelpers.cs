@@ -33,4 +33,18 @@ public static class AuthorizationHelpers
 
         return result;
     }
+
+    /// <summary>
+    /// Returns a sequence of all possible roles and permissions represented as CurrentContextOrganization objects.
+    /// Used largely for authorization testing.
+    /// </summary>
+    /// <returns></returns>
+    public static IEnumerable<CurrentContextOrganization> AllRoles() => new List<CurrentContextOrganization>
+    {
+        new () { Type = OrganizationUserType.Owner },
+        new () { Type = OrganizationUserType.Admin },
+        new () { Type = OrganizationUserType.Custom, Permissions = new Permissions() },
+        new () { Type = OrganizationUserType.Custom, Permissions = new Permissions().Invert() },
+        new () { Type = OrganizationUserType.User },
+    };
 }
