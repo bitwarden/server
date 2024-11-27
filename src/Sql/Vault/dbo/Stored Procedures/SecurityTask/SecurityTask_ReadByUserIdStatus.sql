@@ -39,7 +39,7 @@ BEGIN
                 C.[Id] IS NOT NULL
                 AND (
                     CU.[ReadOnly] = 0
-                    OR CG.[Manage] = 0
+                    OR CG.[ReadOnly] = 0
                 )
             )
         )
