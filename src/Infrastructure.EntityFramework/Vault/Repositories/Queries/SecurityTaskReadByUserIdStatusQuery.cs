@@ -9,9 +9,9 @@ namespace Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 public class SecurityTaskReadByUserIdStatusQuery : IQuery<SecurityTask>
 {
     private readonly Guid _userId;
-    private readonly IEnumerable<SecurityTaskStatus> _status;
+    private readonly SecurityTaskStatus? _status;
 
-    public SecurityTaskReadByUserIdStatusQuery(Guid userId, IEnumerable<SecurityTaskStatus> status = null)
+    public SecurityTaskReadByUserIdStatusQuery(Guid userId, SecurityTaskStatus? status)
     {
         _userId = userId;
         _status = status;
@@ -58,27 +58,33 @@ public class SecurityTaskReadByUserIdStatusQuery : IQuery<SecurityTask>
                             st.CipherId == null ||
                             (
                                 c != null &&
-                                cc != null &&
                                 (
-                                    (cu != null && cu.Manage) || (cg != null && cg.Manage)
+                                    (cu != null && !cu.ReadOnly) || (cg != null && !cg.ReadOnly && cu == null)
                                 )
                             )
                         ) &&
-                        (
-                            _status == null || !_status.Any() || _status.Contains(st.Status)
-                        )
-                    orderby st.CreationDate descending
+                        (_status == null || st.Status == _status)
+                    group st by new
+                    {
+                        st.Id,
+                        st.OrganizationId,
+                        st.CipherId,
+                        st.Type,
+                        st.Status,
+                        st.CreationDate,
+                        st.RevisionDate
+                    } into g
                     select new SecurityTask
                     {
-                        Id = st.Id,
-                        OrganizationId = st.OrganizationId,
-                        CipherId = st.CipherId,
-                        Type = st.Type,
-                        Status = st.Status,
-                        CreationDate = st.CreationDate,
-                        RevisionDate = st.RevisionDate
+                        Id = g.Key.Id,
+                        OrganizationId = g.Key.OrganizationId,
+                        CipherId = g.Key.CipherId,
+                        Type = g.Key.Type,
+                        Status = g.Key.Status,
+                        CreationDate = g.Key.CreationDate,
+                        RevisionDate = g.Key.RevisionDate
                     };
 
-        return query;
+        return query.OrderByDescending(st => st.CreationDate);
     }
 }
