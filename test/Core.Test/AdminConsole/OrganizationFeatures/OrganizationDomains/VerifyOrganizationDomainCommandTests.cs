@@ -311,7 +311,7 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IMailService>().Received().SendVerifiedDomainUserEmailAsync(
+        await sutProvider.GetDependency<IMailService>().Received().SendClaimedDomainUserEmailAsync(
             Arg.Is<ManagedUserDomainClaimedEmails>(x =>
                 x.EmailList.Count(e => e.EndsWith(domain.DomainName)) == mockedUsers.Count &&
                 x.Organization.Id == organization.Id));

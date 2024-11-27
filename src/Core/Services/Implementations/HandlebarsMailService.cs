@@ -461,7 +461,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendVerifiedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList)
+    public async Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList)
     {
         await EnqueueMailAsync(emailList.EmailList.Select(email =>
             CreateMessage(email, emailList.Organization)));
@@ -469,8 +469,8 @@ public class HandlebarsMailService : IMailService
 
         MailQueueMessage CreateMessage(string emailAddress, Organization org) =>
             new(CreateDefaultMessage($"Your Bitwarden account is claimed by {org.DisplayName()}", emailAddress),
-                "AdminConsole.VerifiedDomainUserNotification",
-                new VerifiedDomainUserNotificationViewModel
+                "AdminConsole.DomainClaimedByOrganization",
+                new ClaimedDomainUserNotificationViewModel
                 {
                     TitleFirst = $"Hey {emailAddress}, here is a heads up on your claimed account:",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)

@@ -310,6 +310,6 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
-    public Task SendVerifiedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
+    public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
 }
 
