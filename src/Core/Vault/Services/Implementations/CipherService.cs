@@ -955,7 +955,6 @@ public class CipherService : ICipherService
         return restoringCiphers;
     }
 
-    [Obsolete("Scheduled for deletion; use OrganizationCiphersQuery instead with additional authorization logic.")]
     public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationCiphers(Guid userId, Guid organizationId)
     {
         if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId) && !await _currentContext.AccessImportExport(organizationId))

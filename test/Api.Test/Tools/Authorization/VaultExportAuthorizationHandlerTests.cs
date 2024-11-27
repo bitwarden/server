@@ -46,23 +46,48 @@ public class VaultExportAuthorizationHandlerTests
         new ()
         {
             Type = OrganizationUserType.Custom, Permissions = new Permissions { AccessImportExport = true }.Invert()
-        },
-        null    // not a member
+        }
     }.Select(org => new[] { org });
 
     [Theory]
     [BitMemberAutoData(nameof(CannotExportWholeVault))]
-    public async Task ExportAll_NotPermitted_Failure(CurrentContextOrganization? org, OrganizationScope orgScope, ClaimsPrincipal user,
+    public async Task ExportAll_NotPermitted_Failure(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
         SutProvider<VaultExportAuthorizationHandler> sutProvider)
     {
-        if (org is not null)
-        {
-            org.Id = orgScope;
-        }
-
+        org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
         var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        Assert.False(authContext.HasSucceeded);
+    }
+
+    public static IEnumerable<object[]> CanExportManagedCollections =>
+        AuthorizationHelpers.AllRoles().Select(o => new[] { o });
+
+    [Theory]
+    [BitMemberAutoData(nameof(CanExportManagedCollections))]
+    public async Task ExportManagedCollections_PermittedRoles_Success(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    {
+        org.Id = orgScope;
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
+
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportManagedCollections }, user, orgScope);
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        Assert.True(authContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData([null])]
+    public async Task ExportManagedCollections_NotPermitted_Failure(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
+
+        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportManagedCollections }, user, orgScope);
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.False(authContext.HasSucceeded);
