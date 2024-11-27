@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_SetStatusForUsersById]
+CREATE OR ALTER PROCEDURE[dbo].[OrganizationUser_SetStatusForUsersById]
     @OrganizationUserIds AS NVARCHAR(MAX),
     @Status SMALLINT
 AS
