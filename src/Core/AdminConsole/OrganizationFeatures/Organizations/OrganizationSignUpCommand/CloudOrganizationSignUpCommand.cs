@@ -42,80 +42,35 @@ public class CloudOrganizationSignUpCommand(
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
     IDeviceRepository deviceRepository,
-    OrgSignUpPasswordManagerValidation signUpValidation
+    OrgSignUpPasswordManagerValidation signUpValidation,
+    TimeProvider timeProvider
     ) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse_vNext> SignUpOrganizationAsync(OrganizationSignup signup)
     {
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var request = signup.WithPlan();
 
-        if (signUpValidation.Validate(signup.WithPlan()) is InvalidResult<OrgSignUpWithPlan> invalidResult)
+        if (signUpValidation.Validate(request) is InvalidResult<OrgSignUpWithPlan> invalidResult)
         {
             return new SignUpOrganizationResponse_vNext(invalidResult.ErrorMessages);
         }
 
-        if (signup.UseSecretsManager)
+        if (request.Signup.UseSecretsManager)
         {
-            if (signup.IsFromProvider)
+            if (request.Signup.IsFromProvider)
             {
                 return new SignUpOrganizationResponse_vNext("Organizations with a Managed Service Provider do not support Secrets Manager.");
             }
 
-            ValidateSecretsManagerPlan(plan, signup);
+            ValidateSecretsManagerPlan(request.Plan, request.Signup);
         }
 
-        if (!signup.IsFromProvider)
+        if (!request.Signup.IsFromProvider)
         {
-            await ValidateSignUpPoliciesAsync(signup.Owner.Id);
+            await ValidateSignUpPoliciesAsync(request.Signup.Owner.Id);
         }
 
-        var organization = new Organization
-        {
-            // Pre-generate the org id so that we can save it with the Stripe subscription
-            Id = CoreHelpers.GenerateComb(),
-            Name = signup.Name,
-            BillingEmail = signup.BillingEmail,
-            BusinessName = signup.BusinessName,
-            PlanType = plan!.Type,
-            Seats = (short)(plan.PasswordManager.BaseSeats + signup.AdditionalSeats),
-            MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb =
-                !plan.PasswordManager.BaseStorageGb.HasValue
-                    ? (short?)null
-                    : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
-            UsePolicies = plan.HasPolicies,
-            UseSso = plan.HasSso,
-            UseGroups = plan.HasGroups,
-            UseEvents = plan.HasEvents,
-            UseDirectory = plan.HasDirectory,
-            UseTotp = plan.HasTotp,
-            Use2fa = plan.Has2fa,
-            UseApi = plan.HasApi,
-            UseResetPassword = plan.HasResetPassword,
-            SelfHost = plan.HasSelfHost,
-            UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
-            UseCustomPermissions = plan.HasCustomPermissions,
-            UseScim = plan.HasScim,
-            Plan = plan.Name,
-            Gateway = null,
-            ReferenceData = signup.Owner.ReferenceData,
-            Enabled = true,
-            LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-            Status = OrganizationStatusType.Created,
-            UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager
-        };
-
-        if (signup.UseSecretsManager)
-        {
-            organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount +
-                                             signup.AdditionalServiceAccounts.GetValueOrDefault();
-        }
+        var organization = request.ToEntity(timeProvider.GetUtcNow());
 
         if (plan.Type == PlanType.Free && !signup.IsFromProvider)
         {
@@ -300,7 +255,10 @@ public class CloudOrganizationSignUpCommand(
                     [
                         new CollectionAccessSelection
                         {
-                            Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true
+                            Id = orgUser.Id,
+                            HidePasswords = false,
+                            ReadOnly = false,
+                            Manage = true
                         }
                     ];
                 }
