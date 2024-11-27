@@ -17,7 +17,7 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
 
     /// <inheritdoc />
     public async Task<ICollection<Core.Vault.Entities.SecurityTask>> GetManyByUserIdStatusAsync(Guid userId,
-        IEnumerable<SecurityTaskStatus> status = null)
+        SecurityTaskStatus? status = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

@@ -8,6 +8,6 @@ public class GetTaskDetailsForUserQuery(ISecurityTaskRepository securityTaskRepo
 {
     /// <inheritdoc />
     public async Task<IEnumerable<SecurityTask>> GetTaskDetailsForUserAsync(Guid userId,
-        IEnumerable<SecurityTaskStatus> status = null)
+        SecurityTaskStatus? status = null)
         => await securityTaskRepository.GetManyByUserIdStatusAsync(userId, status);
 }

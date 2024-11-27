@@ -23,24 +23,13 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
 
     /// <inheritdoc />
     public async Task<ICollection<SecurityTask>> GetManyByUserIdStatusAsync(Guid userId,
-        IEnumerable<SecurityTaskStatus> status = null)
+        SecurityTaskStatus? status = null)
     {
-        var statusTable = new DataTable();
-        statusTable.Columns.Add("Vaule", typeof(byte));
-
-        if (status != null)
-        {
-            foreach (var s in status)
-            {
-                statusTable.Rows.Add(s);
-            }
-        }
-
         await using var connection = new SqlConnection(ConnectionString);
 
         var results = await connection.QueryAsync<SecurityTask>(
             $"[{Schema}].[SecurityTask_ReadByUserIdStatus]",
-            new { UserId = userId, Status = statusTable.AsTableValuedParameter("dbo.SecurityTaskStatusArray") },
+            new { UserId = userId, Status = status },
             commandType: CommandType.StoredProcedure);
 
         return results.ToList();

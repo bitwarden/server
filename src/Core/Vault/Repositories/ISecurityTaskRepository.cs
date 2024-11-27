@@ -12,5 +12,5 @@ public interface ISecurityTaskRepository : IRepository<SecurityTask, Guid>
     /// <param name="userId">The Id of the user retrieving tasks</param>
     /// <param name="status">Optional filter for task status. If not provided, returns tasks of all statuses</param>
     /// <returns></returns>
-    Task<ICollection<SecurityTask>> GetManyByUserIdStatusAsync(Guid userId, IEnumerable<SecurityTaskStatus> status = null);
+    Task<ICollection<SecurityTask>> GetManyByUserIdStatusAsync(Guid userId, SecurityTaskStatus? status = null);
 }
