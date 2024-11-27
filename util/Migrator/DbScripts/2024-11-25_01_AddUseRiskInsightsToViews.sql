@@ -132,3 +132,11 @@
             EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
         END
     GO
+
+    --Manually refresh [dbo].[OrganizationView]
+    IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
+        BEGIN
+            EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationView]';
+        END
+    GO
+    
