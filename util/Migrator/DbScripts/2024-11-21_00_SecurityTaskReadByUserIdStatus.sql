@@ -1,30 +1,20 @@
 -- Security Task Read By UserId Status
-
--- Create SecurityTaskStatusArray Type
-IF NOT EXISTS (
-    SELECT
-        *
-    FROM
-        sys.types
-    WHERE
-        [Name] = 'SecurityTaskStatusArray' AND
-        is_user_defined = 1
-)
-CREATE TYPE [dbo].[SecurityTaskStatusArray] AS TABLE (
-    [Value] TINYINT NOT NULL
-);
-GO
-
 -- Stored Procedure: ReadByUserIdStatus
 CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
-    @Status AS [dbo].[SecurityTaskStatusArray] READONLY
+    @Status TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
     SELECT
-        ST.*
+        ST.Id,
+        ST.OrganizationId,
+        ST.CipherId,
+        ST.Type,
+        ST.Status,
+        ST.CreationDate,
+        ST.RevisionDate
     FROM
         [dbo].[SecurityTaskView] ST
     INNER JOIN
@@ -50,15 +40,20 @@ BEGIN
             OR (
                 C.[Id] IS NOT NULL
                 AND (
-                    CU.[Manage] = 1
-                    OR CG.[Manage] = 1
+                    CU.[ReadOnly] = 0
+                    OR CG.[ReadOnly] = 0
                 )
             )
         )
-        AND (
-            NOT EXISTS (SELECT 1 FROM @Status)
-            OR ST.[Status] IN (SELECT [Value] FROM @Status)
-        )
+        AND ST.[Status] = COALESCE(@Status, ST.[Status])
+    GROUP BY
+        ST.Id,
+        ST.OrganizationId,
+        ST.CipherId,
+        ST.Type,
+        ST.Status,
+        ST.CreationDate,
+        ST.RevisionDate
     ORDER BY ST.[CreationDate] DESC
 END
 GO
