@@ -160,11 +160,17 @@ public class SecurityTaskRepositoryTests
         var collection = await collectionRepository.CreateAsync(new Collection
         {
             OrganizationId = organization.Id,
-            Name = "Test Collection",
+            Name = "Test Collection 1",
+        });
+
+        var collection2 = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Test Collection 2",
         });
 
         var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
-        await cipherRepository.CreateAsync(cipher1, [collection.Id]);
+        await cipherRepository.CreateAsync(cipher1, [collection.Id, collection2.Id]);
 
         var cipher2 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
         await cipherRepository.CreateAsync(cipher2, [collection.Id]);
@@ -200,16 +206,19 @@ public class SecurityTaskRepositoryTests
             });
 
         var allTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id);
+        Assert.Equal(3, allTasks.Count);
         Assert.Contains(task1, allTasks, new SecurityTaskComparer());
         Assert.Contains(task2, allTasks, new SecurityTaskComparer());
         Assert.Contains(task3, allTasks, new SecurityTaskComparer());
 
-        var pendingTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id, [SecurityTaskStatus.Pending]);
+        var pendingTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id, SecurityTaskStatus.Pending);
+        Assert.Equal(2, pendingTasks.Count);
         Assert.Contains(task1, pendingTasks, new SecurityTaskComparer());
         Assert.Contains(task3, pendingTasks, new SecurityTaskComparer());
         Assert.DoesNotContain(task2, pendingTasks, new SecurityTaskComparer());
 
-        var completedTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id, [SecurityTaskStatus.Completed]);
+        var completedTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id, SecurityTaskStatus.Completed);
+        Assert.Single(completedTasks);
         Assert.Contains(task2, completedTasks, new SecurityTaskComparer());
         Assert.DoesNotContain(task1, completedTasks, new SecurityTaskComparer());
         Assert.DoesNotContain(task3, completedTasks, new SecurityTaskComparer());
