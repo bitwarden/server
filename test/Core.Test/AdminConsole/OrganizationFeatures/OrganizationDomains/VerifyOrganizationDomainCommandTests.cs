@@ -6,6 +6,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -264,5 +266,54 @@ public class VerifyOrganizationDomainCommandTests
         await sutProvider.GetDependency<IPolicyService>()
             .DidNotReceive()
             .SaveAsync(Arg.Any<Policy>(), null);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UserVerifyOrganizationDomainAsync_GivenOrganizationDomainWithAccountDeprovisioningEnabled_WhenDomainIsVerified_ThenEmailShouldBeSentToUsersWhoBelongToTheDomain(
+        ICollection<OrganizationUserUserDetails> organizationUsers,
+        OrganizationDomain domain,
+        Organization organization,
+        SutProvider<VerifyOrganizationDomainCommand> sutProvider)
+    {
+        foreach (var organizationUser in organizationUsers)
+        {
+            organizationUser.Email = $"{organizationUser.Name}@{domain.DomainName}";
+        }
+
+        var mockedUsers = organizationUsers
+            .Where(x => x.Status != OrganizationUserStatusType.Invited &&
+                        x.Status != OrganizationUserStatusType.Revoked).ToList();
+
+        organization.Id = domain.OrganizationId;
+
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetClaimedDomainsByDomainNameAsync(domain.DomainName)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(domain.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IDnsResolverService>()
+            .ResolveAsync(domain.DomainName, domain.Txt)
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByOrganizationAsync(domain.OrganizationId)
+            .Returns(mockedUsers);
+
+        _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
+
+        await sutProvider.GetDependency<IMailService>().Received().SendVerifiedDomainUserEmailAsync(
+            Arg.Is<ManagedUserDomainClaimedEmails>(x =>
+                x.EmailList.Count(e => e.EndsWith(domain.DomainName)) == mockedUsers.Count &&
+                x.Organization.Id == organization.Id));
     }
 }
