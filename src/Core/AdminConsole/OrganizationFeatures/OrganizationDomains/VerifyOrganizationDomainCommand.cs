@@ -111,7 +111,7 @@ public class VerifyOrganizationDomainCommand(
             {
                 domain.SetVerifiedDate();
 
-                await DomainVerificationSideEffectsAsync(domain.OrganizationId, actingUser);
+                await DomainVerificationSideEffectsAsync(domain, actingUser);
             }
         }
         catch (Exception e)
@@ -123,12 +123,12 @@ public class VerifyOrganizationDomainCommand(
         return domain;
     }
 
-    private async Task DomainVerificationSideEffectsAsync(Guid organizationId, IActingUser actingUser)
+    private async Task DomainVerificationSideEffectsAsync(OrganizationDomain domain, IActingUser actingUser)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            await EnableSingleOrganizationPolicyAsync(organizationId, actingUser);
-            await SendVerifiedDomainUserEmailAsync(organizationId);
+            await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+            await SendVerifiedDomainUserEmailAsync(domain);
         }
     }
 
@@ -138,17 +138,18 @@ public class VerifyOrganizationDomainCommand(
             savingUserId: actingUser is StandardUser standardUser ? standardUser.UserId : null,
             eventSystemUser: actingUser is SystemUser systemUser ? systemUser.SystemUserType : null);
 
-    private async Task SendVerifiedDomainUserEmailAsync(Guid organizationId)
+    private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {
-        var orgUsers = await organizationUserRepository.GetManyByOrganizationWithClaimedDomainsAsync(organizationId);
-        var orgUserUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var orgUserUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(domain.OrganizationId);
 
-        var userEmails = orgUsers.Where(x => x.Status != OrganizationUserStatusType.Revoked)
-            .Select(y => orgUserUsers.FirstOrDefault(x => x.Id == y.Id)?.Email)
-            .Where(x => x is not null);
+        var domainUserEmails = orgUserUsers
+            .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
+                         ou.Status != OrganizationUserStatusType.Revoked &&
+                         ou.Status != OrganizationUserStatusType.Invited)
+            .Select(ou => ou.Email);
 
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
+        var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendVerifiedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(userEmails, organization));
+        await mailService.SendVerifiedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(domainUserEmails, organization));
     }
 }
