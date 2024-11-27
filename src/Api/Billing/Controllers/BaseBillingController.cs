@@ -22,9 +22,9 @@ public abstract class BaseBillingController : Controller
                 new ErrorResponseModel(message),
                 statusCode: StatusCodes.Status500InternalServerError);
 
-        public static JsonHttpResult<ErrorResponseModel> Unauthorized() =>
+        public static JsonHttpResult<ErrorResponseModel> Unauthorized(string message = "Unauthorized.") =>
             TypedResults.Json(
-                new ErrorResponseModel("Unauthorized."),
+                new ErrorResponseModel(message),
                 statusCode: StatusCodes.Status401Unauthorized);
     }
 }

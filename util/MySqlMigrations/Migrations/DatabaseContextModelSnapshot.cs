@@ -1887,6 +1887,34 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("ServiceAccount", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Tools.Models.PasswordHealthReportApplication", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Uri")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("PasswordHealthReportApplication", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1959,6 +1987,41 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Folder", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CipherId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.HasKey("Id")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.HasIndex("CipherId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.ToTable("SecurityTask", (string)null);
                 });
 
             modelBuilder.Entity("ProjectSecret", b =>
@@ -2578,6 +2641,17 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Tools.Models.PasswordHealthReportApplication", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
@@ -2602,6 +2676,23 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", "Cipher")
+                        .WithMany()
+                        .HasForeignKey("CipherId");
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Cipher");
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("ProjectSecret", b =>

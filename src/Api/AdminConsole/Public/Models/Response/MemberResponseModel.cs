@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Entities;
@@ -16,6 +17,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     [JsonConstructor]
     public MemberResponseModel() { }
 
+    [SetsRequiredMembers]
     public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
         if (user == null)
@@ -28,8 +30,10 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Email = user.Email;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
+        ResetPasswordEnrolled = user.ResetPasswordKey != null;
     }
 
+    [SetsRequiredMembers]
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
         IEnumerable<CollectionAccessSelection> collections) : base(user)
     {
@@ -45,6 +49,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         TwoFactorEnabled = twoFactorEnabled;
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
+        ResetPasswordEnrolled = user.ResetPasswordKey != null;
     }
 
     /// <summary>
@@ -93,4 +98,10 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// The associated collections that this member can access.
     /// </summary>
     public IEnumerable<AssociationWithPermissionsResponseModel> Collections { get; set; }
+
+    /// <summary>
+    /// Returns <c>true</c> if the member has enrolled in Password Reset assistance within the organization
+    /// </summary>
+    [Required]
+    public bool ResetPasswordEnrolled { get; }
 }

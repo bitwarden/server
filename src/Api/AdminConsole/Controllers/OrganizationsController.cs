@@ -289,9 +289,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
@@ -322,8 +320,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Invalid token.");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
             if (provider.IsBillable())
@@ -357,7 +354,7 @@ public class OrganizationsController : Controller
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
             var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.ProductTier != ProductTierType.Enterprise)
+            if (plan.ProductTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
             {
                 throw new NotFoundException();
             }

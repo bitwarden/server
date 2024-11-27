@@ -8,13 +8,10 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
-using Bit.Api.AdminConsole.Validators;
 using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
-using Bit.Api.Tools.Validators;
 using Bit.Api.Vault.Models.Request;
-using Bit.Api.Vault.Validators;
 using Bit.Core.Auth.Entities;
 using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
@@ -23,7 +20,6 @@ using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
@@ -32,6 +28,8 @@ using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Tools.ReportFeatures;
 
 
 #if !OSS
@@ -176,6 +174,7 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddReportingServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
