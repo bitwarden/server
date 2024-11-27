@@ -25,8 +25,7 @@ public class HandlebarsMailService : IMailService
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
-    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache =
-        new Dictionary<string, HandlebarsTemplate<object, object>>();
+    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
 
@@ -295,6 +294,20 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email)
+    {
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicyTwoFactorViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForTwoFactorPolicy", model);
+        message.Category = "OrganizationUserRevokedForTwoFactorPolicy";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendWelcomeEmailAsync(User user)
     {
         var message = CreateDefaultMessage("Welcome to Bitwarden!", user.Email);
@@ -493,6 +506,20 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicySingleOrg", model);
         message.Category = "OrganizationUserRemovedForPolicySingleOrg";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email)
+    {
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicySingleOrgViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForSingleOrgPolicy", model);
+        message.Category = "OrganizationUserRevokedForSingleOrgPolicy";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
