@@ -15,9 +15,9 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
 
         var authorized = requirement switch
         {
-            not null when requirement.Name == nameof(VaultExportOperations.ExportWholeVault) =>
+            not null when requirement == VaultExportOperations.ExportWholeVault =>
                 CanExportWholeVault(org),
-            not null when requirement.Name == nameof(VaultExportOperations.ExportManagedCollections) =>
+            not null when requirement== VaultExportOperations.ExportManagedCollections =>
                 CanExportManagedCollections(org),
             _ => false
         };
