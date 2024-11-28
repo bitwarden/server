@@ -1691,7 +1691,10 @@ public class StripePaymentService : IPaymentService
 
     public async Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo)
     {
-        if (string.IsNullOrWhiteSpace(subscriber?.GatewayCustomerId) || subscriber.IsUser()) return;
+        if (string.IsNullOrWhiteSpace(subscriber?.GatewayCustomerId) || subscriber.IsUser())
+        {
+            return;
+        }
 
         var customer = await _stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
             new CustomerUpdateOptions
@@ -1708,7 +1711,10 @@ public class StripePaymentService : IPaymentService
                 Expand = ["tax_ids"]
             });
 
-        if (customer == null) return;
+        if (customer == null)
+        {
+            return;
+        }
 
         var taxId = customer.TaxIds?.FirstOrDefault();
 
@@ -1717,7 +1723,10 @@ public class StripePaymentService : IPaymentService
             await _stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
         }
 
-        if (string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber)) return;
+        if (string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber))
+        {
+            return;
+        }
 
         var taxIdType = taxInfo.TaxIdType;
 
