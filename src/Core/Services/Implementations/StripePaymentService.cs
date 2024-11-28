@@ -1970,14 +1970,17 @@ public class StripePaymentService : IPaymentService
                 });
             }
 
-            var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
-
-            if (gatewaySubscription?.Discount != null)
+            if (gatewaySubscriptionId != null)
             {
-                options.Discounts.Add(new InvoiceDiscountOptions
+                var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
+
+                if (gatewaySubscription?.Discount != null)
                 {
-                    Discount = gatewaySubscription.Discount.Id
-                });
+                    options.Discounts.Add(new InvoiceDiscountOptions
+                    {
+                        Discount = gatewaySubscription.Discount.Id
+                    });
+                }
             }
         }
 
