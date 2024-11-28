@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
@@ -2051,28 +2050,25 @@ public class StripePaymentService : IPaymentService
             },
         };
 
-        switch (plan.ProductTier)
+        if (plan.PasswordManager.HasAdditionalSeatsOption)
         {
-            case ProductTierType.Families:
-                options.SubscriptionDetails.Items.Add(
-                    new()
-                    {
-                        Quantity = 1,
-                        Plan = plan.PasswordManager.StripePlanId
-                    }
-                );
-                break;
-            case ProductTierType.Teams:
-            case ProductTierType.TeamsStarter:
-            case ProductTierType.Enterprise:
-                options.SubscriptionDetails.Items.Add(
-                    new()
-                    {
-                        Quantity = parameters.PasswordManager.Seats,
-                        Plan = plan.PasswordManager.StripeSeatPlanId
-                    }
-                );
-                break;
+            options.SubscriptionDetails.Items.Add(
+                new()
+                {
+                    Quantity = parameters.PasswordManager.Seats,
+                    Plan = plan.PasswordManager.StripeSeatPlanId
+                }
+            );
+        }
+        else
+        {
+            options.SubscriptionDetails.Items.Add(
+                new()
+                {
+                    Quantity = 1,
+                    Plan = plan.PasswordManager.StripePlanId
+                }
+            );
         }
 
         if (plan.SupportsSecretsManager)
