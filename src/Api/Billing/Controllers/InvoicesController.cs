@@ -26,6 +26,7 @@ public class InvoicesController : BaseBillingController
             {
                 return Error.Unauthorized();
             }
+
             organization = await organizationRepository.GetByIdAsync(model.OrganizationId.Value);
             if (organization == null)
             {
@@ -33,27 +34,9 @@ public class InvoicesController : BaseBillingController
             }
         }
 
-        var invoice = await paymentService.PreviewInvoiceAsync(model, organization?.GatewayCustomerId, organization?.GatewaySubscriptionId);
+        var invoice = await paymentService.PreviewInvoiceAsync(model, organization?.GatewayCustomerId,
+            organization?.GatewaySubscriptionId);
 
         return TypedResults.Ok(invoice);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
