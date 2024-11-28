@@ -17,7 +17,7 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
         {
             not null when requirement == VaultExportOperations.ExportWholeVault =>
                 CanExportWholeVault(org),
-            not null when requirement== VaultExportOperations.ExportManagedCollections =>
+            not null when requirement == VaultExportOperations.ExportManagedCollections =>
                 CanExportManagedCollections(org),
             _ => false
         };

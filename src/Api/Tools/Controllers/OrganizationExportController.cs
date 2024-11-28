@@ -105,14 +105,12 @@ public class OrganizationExportController : Controller
         {
             var userId = _userService.GetProperUserId(User)!.Value;
 
-            var allCollections = await _collectionRepository.GetManyByUserIdAsync(userId);
-            var managedCollections = allCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
+            var allUserCollections = await _collectionRepository.GetManyByUserIdAsync(userId);
+            var managedOrgCollections = allUserCollections.Where(c => c.OrganizationId == organizationId && c.Manage).ToList();
+            var managedCiphers =
+                await _organizationCiphersQuery.GetOrganizationCiphersByCollectionIds(organizationId, managedOrgCollections.Select(c => c.Id));
 
-            var managedCollectionIds = managedCollections.Select(c => c.Id).ToHashSet();
-            var allOrganizationCiphers = await _organizationCiphersQuery.GetAllOrganizationCiphers(organizationId);
-            var managedCiphers = allOrganizationCiphers.Where(c => c.CollectionIds.Intersect(managedCollectionIds).Any());
-
-            return Ok(new OrganizationExportResponseModel(managedCiphers, managedCollections, _globalSettings));
+            return Ok(new OrganizationExportResponseModel(managedCiphers, managedOrgCollections, _globalSettings));
         }
 
         // Unauthorized
