@@ -8,5 +8,5 @@ public class CommandResult(IEnumerable<string> errors)
     public bool HasErrors => ErrorMessages.Count > 0;
     public List<string> ErrorMessages { get; } = errors.ToList();
 
-    public CommandResult() : this(new List<string>()) { }
+    public CommandResult() : this(Array.Empty<string>()) { }
 }
