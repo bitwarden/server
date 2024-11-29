@@ -13,7 +13,7 @@ namespace Bit.Api.AdminConsole.Public.Models.Response;
 public class PolicyResponseModel : PolicyBaseModel, IResponseModel
 {
     [JsonConstructor]
-    public PolicyResponseModel() {}
+    public PolicyResponseModel() { }
 
     public PolicyResponseModel(Policy policy)
     {

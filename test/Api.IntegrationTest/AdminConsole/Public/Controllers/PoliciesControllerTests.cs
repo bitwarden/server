@@ -1,20 +1,15 @@
 ﻿using System.Net;
 using System.Text.Json;
-using Bit.Api.AdminConsole.Public.Models;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -109,7 +104,9 @@ public class PoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var policyType = PolicyType.MasterPassword;
         var existingPolicy = new Policy
         {
-            OrganizationId = _organization.Id, Enabled = true, Type = policyType
+            OrganizationId = _organization.Id,
+            Enabled = true,
+            Type = policyType
         };
         existingPolicy.SetDataModel(new MasterPasswordPolicyData
         {
