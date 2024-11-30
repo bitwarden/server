@@ -69,4 +69,27 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             return Mapper.Map<List<Core.Entities.Device>>(devices);
         }
     }
+
+    public async Task<ICollection<Core.Entities.Device>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            // This is getting closer, need to keep work-shopping it.
+            var query = from device in dbContext.Devices
+                        join authRequest in dbContext.AuthRequests
+                            on device.UserId equals authRequest.UserId
+                            into deviceRequests
+                        where device.UserId == userId && device.Active == true
+                        select new
+                        {
+                            AuthRequestId = from authRequest in deviceRequests select authRequest.Id,
+                            AuthCreationDate = from authRequest in deviceRequests select authRequest.CreationDate,
+                        };
+
+            var devices = await query.ToListAsync();
+            return Mapper.Map<List<Core.Entities.Device>>(devices);
+        }
+    }
 }

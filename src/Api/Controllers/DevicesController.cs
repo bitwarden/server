@@ -6,10 +6,10 @@ using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +25,7 @@ public class DevicesController : Controller
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IGlobalSettings _globalSettings;
     private readonly ILogger<DevicesController> _logger;
 
     public DevicesController(
@@ -33,6 +34,7 @@ public class DevicesController : Controller
         IUserService userService,
         IUserRepository userRepository,
         ICurrentContext currentContext,
+        IGlobalSettings globalSettings,
         ILogger<DevicesController> logger)
     {
         _deviceRepository = deviceRepository;
@@ -40,6 +42,7 @@ public class DevicesController : Controller
         _userService = userService;
         _userRepository = userRepository;
         _currentContext = currentContext;
+        _globalSettings = globalSettings;
         _logger = logger;
     }
 
@@ -69,13 +72,16 @@ public class DevicesController : Controller
         return response;
     }
 
+    // working here
     [HttpGet("")]
-    public async Task<ListResponseModel<DeviceResponseModel>> Get()
+    public async Task<ListResponseModel<DeviceAuthRequestResponseModel>> Get()
     {
-        ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
-        var responses = devices.Select(d => new DeviceResponseModel(d));
-        return new ListResponseModel<DeviceResponseModel>(responses);
+        var expirationMinutes = _globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        var devices = await _deviceRepository.GetManyByUserIdWithDeviceAuth(_userService.GetProperUserId(User).Value, (int)expirationMinutes);
+        var responses = devices.Select(d => new DeviceAuthRequestResponseModel(d));
+        return new ListResponseModel<DeviceAuthRequestResponseModel>(responses);
     }
+    // end working here
 
     [HttpPost("")]
     public async Task<DeviceResponseModel> Post([FromBody] DeviceRequestModel model)

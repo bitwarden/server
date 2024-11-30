@@ -76,6 +76,23 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         }
     }
 
+    public async Task<ICollection<Device>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Device>(
+                $"[{Schema}].[{Table}_ReadActiveWithPendingAuthRequestsByUserId]",
+                new
+                {
+                    UserId = userId,
+                    ExpirationMinutes = expirationMinutes
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task ClearPushTokenAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
