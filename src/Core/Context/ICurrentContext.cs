@@ -29,11 +29,12 @@ public interface ICurrentContext
     int? BotScore { get; set; }
     string ClientId { get; set; }
     Version ClientVersion { get; set; }
+    bool ClientVersionIsPrerelease { get; set; }
+
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 
     Task SetContextAsync(ClaimsPrincipal user);
-
 
     Task<bool> OrganizationUser(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);

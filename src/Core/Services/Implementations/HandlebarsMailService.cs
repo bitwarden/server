@@ -25,8 +25,7 @@ public class HandlebarsMailService : IMailService
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
     private readonly IMailEnqueuingService _mailEnqueuingService;
-    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache =
-        new Dictionary<string, HandlebarsTemplate<object, object>>();
+    private readonly Dictionary<string, HandlebarsTemplate<object, object>> _templateCache = new();
 
     private bool _registeredHelpersAndPartials = false;
 
@@ -109,6 +108,19 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "Auth.VerifyDelete", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "VerifyDelete";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendCannotDeleteManagedAccountEmailAsync(string email)
+    {
+        var message = CreateDefaultMessage("Delete Your Account", email);
+        var model = new CannotDeleteManagedAccountViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName,
+        };
+        await AddMessageContentAsync(message, "AdminConsole.CannotDeleteManagedAccount", model);
+        message.Category = "CannotDeleteManagedAccount";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -279,6 +291,20 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicyTwoStep", model);
         message.Category = "OrganizationUserRemovedForPolicyTwoStep";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email)
+    {
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicyTwoFactorViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForTwoFactorPolicy", model);
+        message.Category = "OrganizationUserRevokedForTwoFactorPolicy";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -480,6 +506,20 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "OrganizationUserRemovedForPolicySingleOrg", model);
         message.Category = "OrganizationUserRemovedForPolicySingleOrg";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email)
+    {
+        var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
+        var model = new OrganizationUserRevokedForPolicySingleOrgViewModel
+        {
+            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            SiteName = _globalSettings.SiteName
+        };
+        await AddMessageContentAsync(message, "AdminConsole.OrganizationUserRevokedForSingleOrgPolicy", model);
+        message.Category = "OrganizationUserRevokedForSingleOrgPolicy";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
@@ -1079,6 +1119,22 @@ public class HandlebarsMailService : IMailService
         await AddMessageContentAsync(message, "InitiateDeleteOrganzation", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "InitiateDeleteOrganzation";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
+        string organizationName)
+    {
+        var message = CreateDefaultMessage("Removal of Free Bitwarden Families plan", email);
+        var model = new FamiliesForEnterpriseRemoveOfferViewModel
+        {
+            SponsoredOrganizationId = organizationId,
+            SponsoringOrgName = CoreHelpers.SanitizeForEmail(organizationName),
+            OfferAcceptanceDate = offerAcceptanceDate,
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash
+        };
+        await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);
+        message.Category = "FamiliesForEnterpriseRemovedFromFamilyUser";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

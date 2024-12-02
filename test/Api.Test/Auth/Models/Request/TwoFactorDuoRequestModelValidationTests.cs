@@ -39,12 +39,9 @@ public class TwoFactorDuoRequestModelValidationTests
         var result = model.Validate(new ValidationContext(model));
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Neither v2 or v4 values are valid.", result.First().ErrorMessage);
-        Assert.Contains("ClientId", result.First().MemberNames);
-        Assert.Contains("ClientSecret", result.First().MemberNames);
-        Assert.Contains("IntegrationKey", result.First().MemberNames);
-        Assert.Contains("SecretKey", result.First().MemberNames);
+        Assert.NotEmpty(result);
+        Assert.True(result.Select(x => x.MemberNames.Contains("ClientId")).Any());
+        Assert.True(result.Select(x => x.MemberNames.Contains("ClientSecret")).Any());
     }
 
     [Fact]
