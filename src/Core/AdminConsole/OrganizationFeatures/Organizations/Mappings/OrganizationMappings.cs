@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand.Validation;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
@@ -10,6 +11,12 @@ public static class OrganizationMappings
 {
     public static OrgSignUpWithPlan WithPlan(this OrganizationSignup signup) =>
         new(signup, StaticStore.GetPlan(signup.Plan));
+
+    public static InvalidResult<OrgSignUpWithPlan> ToInvalidResult(this OrgSignUpWithPlan signUpWithPlan, string message) =>
+        new(signUpWithPlan, message);
+
+    public static InvalidResult<OrgSignUpWithPlan> ToValidResult(this OrgSignUpWithPlan signUpWithPlan) =>
+        new(signUpWithPlan);
 
     public static Organization ToEntity(this OrgSignUpWithPlan signup, DateTimeOffset utcNow) => new()
     {

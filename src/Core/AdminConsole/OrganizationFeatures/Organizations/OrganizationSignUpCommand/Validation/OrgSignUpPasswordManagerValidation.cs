@@ -2,8 +2,8 @@
 
 public class OrgSignUpPasswordManagerValidation(PlanValidation planValidation) : IValidation<OrgSignUpWithPlan>
 {
-    public IValidationResult<OrgSignUpWithPlan> Validate(OrgSignUpWithPlan signUpWithPlan)
+    public IValidationResult<OrgSignUpWithPlan> Validate(OrgSignUpWithPlan request)
     {
-        return planValidation.Validate(signUpWithPlan);
+        return planValidation.Validate(request);
     }
 }

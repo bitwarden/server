@@ -12,7 +12,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -55,16 +54,6 @@ public class CloudOrganizationSignUpCommand(
             return new SignUpOrganizationResponse_vNext(invalidResult.ErrorMessages);
         }
 
-        if (request.Signup.UseSecretsManager)
-        {
-            if (request.Signup.IsFromProvider)
-            {
-                return new SignUpOrganizationResponse_vNext("Organizations with a Managed Service Provider do not support Secrets Manager.");
-            }
-
-            ValidateSecretsManagerPlan(request.Plan, request.Signup);
-        }
-
         if (!request.Signup.IsFromProvider)
         {
             await ValidateSignUpPoliciesAsync(request.Signup.Owner.Id);
@@ -72,7 +61,7 @@ public class CloudOrganizationSignUpCommand(
 
         var organization = request.ToEntity(timeProvider.GetUtcNow());
 
-        if (plan.Type == PlanType.Free && !signup.IsFromProvider)
+        if (request.Plan.Type == PlanType.Free && !signup.IsFromProvider)
         {
             var adminCount =
                 await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -81,7 +70,7 @@ public class CloudOrganizationSignUpCommand(
                 return new SignUpOrganizationResponse_vNext("You can only be an admin of one free organization.");
             }
         }
-        else if (plan.Type != PlanType.Free)
+        else if (request.Plan.Type != PlanType.Free)
         {
             if (featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
             {
@@ -93,14 +82,14 @@ public class CloudOrganizationSignUpCommand(
                 if (signup.PaymentMethodType != null)
                 {
                     await paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                        signup.PaymentToken, request.Plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                         signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider,
                         signup.AdditionalSmSeats.GetValueOrDefault(),
                         signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
                 }
                 else
                 {
-                    await paymentService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
+                    await paymentService.PurchaseOrganizationNoPaymentMethod(organization, request.Plan, signup.AdditionalSeats,
                         signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
                         signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
                 }
@@ -112,8 +101,8 @@ public class CloudOrganizationSignUpCommand(
         await referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.Signup, organization, currentContext)
             {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
+                PlanName = request.Plan.Name,
+                PlanType = request.Plan.Type,
                 Seats = returnValue.Item1.Seats,
                 SignupInitiationPath = signup.InitiationPath,
                 Storage = returnValue.Item1.MaxStorageGb,
@@ -122,67 +111,6 @@ public class CloudOrganizationSignUpCommand(
 
         return new SignUpOrganizationResponse_vNext(returnValue.organization.Id, returnValue.organization.DisplayName(), returnValue.organizationUser.Id,
             returnValue.defaultCollection.Id);
-    }
-
-    public void ValidateSecretsManagerPlan(Plan plan, OrganizationUpgrade upgrade)
-    {
-        if (plan.SupportsSecretsManager == false)
-        {
-            throw new BadRequestException("Invalid Secrets Manager plan selected.");
-        }
-
-        ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
-
-        if (plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats <= 0)
-        {
-            throw new BadRequestException($"You do not have any Secrets Manager seats!");
-        }
-
-        if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
-        {
-            throw new BadRequestException("Plan does not allow additional Machine Accounts.");
-        }
-
-        if ((plan.ProductTier == ProductTierType.TeamsStarter &&
-             upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
-            (plan.ProductTier != ProductTierType.TeamsStarter &&
-             upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
-        {
-            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
-        }
-
-        if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
-        {
-            throw new BadRequestException("You can't subtract Machine Accounts!");
-        }
-
-        switch (plan.SecretsManager.HasAdditionalSeatsOption)
-        {
-            case false when upgrade.AdditionalSmSeats > 0:
-                throw new BadRequestException("Plan does not allow additional users.");
-            case true when plan.SecretsManager.MaxAdditionalSeats.HasValue &&
-                           upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                                              $"{plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-        }
-    }
-
-    private static void ValidatePlan(Plan plan, int additionalSeats, string productType)
-    {
-        if (plan is null)
-        {
-            throw new BadRequestException($"{productType} Plan was null.");
-        }
-
-        if (plan.Disabled)
-        {
-            throw new BadRequestException($"{productType} Plan not found.");
-        }
-
-        if (additionalSeats < 0)
-        {
-            throw new BadRequestException($"You can't subtract {productType} seats!");
-        }
     }
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
