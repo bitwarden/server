@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
-using Bit.Core.Platform;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;

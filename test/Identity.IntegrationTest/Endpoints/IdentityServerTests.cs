@@ -4,7 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Platform;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Models.Request.Accounts;

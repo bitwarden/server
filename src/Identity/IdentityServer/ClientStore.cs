@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;

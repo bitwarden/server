@@ -2,7 +2,7 @@
 using AutoFixture.Kernel;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using C = Bit.Core.Platform;
+using C = Bit.Core.Platform.Installations;
 using Ef = Bit.Infrastructure.EntityFramework.Platform;
 
 namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;

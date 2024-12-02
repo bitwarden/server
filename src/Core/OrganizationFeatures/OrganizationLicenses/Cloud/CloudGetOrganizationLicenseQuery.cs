@@ -2,7 +2,7 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
-using Bit.Core.Repositories;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationLicenses;

@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Xunit;
-using C = Bit.Core.Platform;
+using C = Bit.Core.Platform.Installations;
 using D = Bit.Infrastructure.Dapper.Platform;
 using Ef = Bit.Infrastructure.EntityFramework.Platform;
 

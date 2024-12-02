@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Bit.Core.Platform;
+using Bit.Core.Platform.Installations;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Platform;
 
