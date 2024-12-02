@@ -2076,18 +2076,23 @@ public class StripePaymentService : IPaymentService
 
         if (plan.SupportsSecretsManager)
         {
-            options.SubscriptionDetails.Items.AddRange([
-                new()
+            if (plan.SecretsManager.HasAdditionalSeatsOption)
+            {
+                options.SubscriptionDetails.Items.Add(new()
                 {
                     Quantity = parameters.SecretsManager?.Seats ?? 0,
                     Plan = plan.SecretsManager.StripeSeatPlanId
-                },
-                new()
+                });
+            }
+
+            if (plan.SecretsManager.HasAdditionalServiceAccountOption)
+            {
+                options.SubscriptionDetails.Items.Add(new()
                 {
                     Quantity = parameters.SecretsManager?.AdditionalMachineAccounts ?? 0,
                     Plan = plan.SecretsManager.StripeServiceAccountPlanId
-                }
-            ]);
+                });
+            }
         }
 
         if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
