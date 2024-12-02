@@ -40,6 +40,7 @@ public class CollectionsReadByOrganizationIdUserIdQuery : IQuery<Collection>
                     from cg in cg_g.DefaultIfEmpty()
                     where o.Id == _organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
                           && (!cu.ReadOnly || !cg.ReadOnly)
+                          && (!cu.HidePasswords || !cg.HidePasswords)
                     select c;
 
         return query;
