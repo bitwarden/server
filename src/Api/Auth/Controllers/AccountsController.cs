@@ -12,6 +12,9 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -72,6 +75,7 @@ public class AccountsController : Controller
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
 
     public AccountsController(
@@ -96,7 +100,8 @@ public class AccountsController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
+        IPolicyRequirementQuery policyRequirementQuery
         )
     {
         _globalSettings = globalSettings;
@@ -119,6 +124,7 @@ public class AccountsController : Controller
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
         _webauthnKeyValidator = webAuthnKeyValidator;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
 
@@ -296,7 +302,9 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user);
+            var policyData = _policyRequirementQuery.IsEnabled
+                ? await _policyRequirementQuery.GetAsync<MasterPasswordPolicyRequirement>(user.Id)
+                : await _policyService.GetMasterPasswordPolicyForUserAsync(user);
 
             return new MasterPasswordPolicyResponseModel(policyData);
         }

@@ -3,6 +3,9 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
+/// <summary>
+/// Represents the business rules of a specified <see cref="PolicyType"/> and how they should be enforced against a user.
+/// </summary>
 public interface IPolicyRequirement;
 
 /// <summary>
@@ -18,8 +21,7 @@ public interface IPolicyRequirementFactory<out T> where T : IPolicyRequirement
     PolicyType Type { get; }
 
     /// <summary>
-    /// A reducer that takes an input of policy details and returns a single IPolicyRequirement which summarizes the
-    /// restrictions that should be enforced against the user. This is used by domain code to enforce the policy.
+    /// A reducer that takes an input of policy details and returns a single IPolicyRequirement.
     /// </summary>
     /// <param name="userPolicyDetails">A DTO representing an organization user and the relevant policy for that organization.</param>
     T CreateRequirement(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails);
