@@ -1,9 +1,9 @@
 ﻿using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Entities;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using C = Bit.Core.Platform;
+using Ef = Bit.Infrastructure.EntityFramework.Platform;
 
 namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 
@@ -17,13 +17,13 @@ internal class InstallationBuilder : ISpecimenBuilder
         }
 
         var type = request as Type;
-        if (type == null || type != typeof(Installation))
+        if (type == null || type != typeof(C.Installation))
         {
             return new NoSpecimen();
         }
 
         var fixture = new Fixture();
-        var obj = fixture.WithAutoNSubstitutions().Create<Installation>();
+        var obj = fixture.WithAutoNSubstitutions().Create<C.Installation>();
         return obj;
     }
 }
@@ -35,7 +35,7 @@ internal class EfInstallation : ICustomization
         fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
         fixture.Customizations.Add(new GlobalSettingsBuilder());
         fixture.Customizations.Add(new InstallationBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<InstallationRepository>());
+        fixture.Customizations.Add(new EfRepositoryListBuilder<Ef.InstallationRepository>());
     }
 }
 
