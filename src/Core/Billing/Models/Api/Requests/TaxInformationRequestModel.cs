@@ -10,5 +10,5 @@ public class TaxInformationRequestModel
     [Required]
     public string PostalCode { get; set; }
 
-    public string? TaxId { get; set; }
+    public string TaxId { get; set; }
 }
