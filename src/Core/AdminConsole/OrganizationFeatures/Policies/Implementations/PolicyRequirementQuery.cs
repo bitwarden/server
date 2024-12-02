@@ -11,9 +11,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 public class PolicyRequirementQuery(
     IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> policyRequirementFactories,
     IOrganizationUserRepository organizationUserRepository,
-    IApplicationCacheService applicationCacheService
+    IApplicationCacheService applicationCacheService,
+    IFeatureService featureService
     ) : IPolicyRequirementQuery
 {
+    public bool IsEnabled => featureService.IsEnabled(FeatureFlagKeys.Pm14439AddPolicyRequirements);
+
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
     {
         var definition = (IPolicyRequirementFactory<T>?)policyRequirementFactories
