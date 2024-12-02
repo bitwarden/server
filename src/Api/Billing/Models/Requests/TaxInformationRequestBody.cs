@@ -10,7 +10,7 @@ public class TaxInformationRequestBody
     [Required]
     public string PostalCode { get; set; }
     public string TaxId { get; set; }
-    public string? TaxIdType { get; set; }
+    public string TaxIdType { get; set; }
     public string Line1 { get; set; }
     public string Line2 { get; set; }
     public string City { get; set; }

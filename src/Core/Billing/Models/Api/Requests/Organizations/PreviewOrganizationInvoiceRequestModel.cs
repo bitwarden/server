@@ -5,12 +5,12 @@ namespace Bit.Core.Billing.Models.Api.Requests.Organizations;
 
 public class PreviewOrganizationInvoiceRequestBody
 {
-    public Guid? OrganizationId { get; set; }
+    public Guid OrganizationId { get; set; }
 
     [Required]
     public PasswordManagerRequestModel PasswordManager { get; set; }
 
-    public SecretsManagerRequestModel? SecretsManager { get; set; }
+    public SecretsManagerRequestModel SecretsManager { get; set; }
 
     [Required]
     public TaxInformationRequestModel TaxInformation { get; set; }

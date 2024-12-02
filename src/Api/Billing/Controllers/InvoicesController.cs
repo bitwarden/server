@@ -19,15 +19,15 @@ public class InvoicesController : BaseBillingController
         [FromServices] IOrganizationRepository organizationRepository,
         [FromServices] IPaymentService paymentService)
     {
-        Organization? organization = null;
-        if (model.OrganizationId.HasValue)
+        Organization organization = null;
+        if (model.OrganizationId != default)
         {
-            if (!await currentContext.EditPaymentMethods(model.OrganizationId.Value))
+            if (!await currentContext.EditPaymentMethods(model.OrganizationId))
             {
                 return Error.Unauthorized();
             }
 
-            organization = await organizationRepository.GetByIdAsync(model.OrganizationId.Value);
+            organization = await organizationRepository.GetByIdAsync(model.OrganizationId);
             if (organization == null)
             {
                 return Error.NotFound();
