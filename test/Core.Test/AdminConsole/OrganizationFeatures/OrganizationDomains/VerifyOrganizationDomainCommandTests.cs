@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -28,7 +29,12 @@ public class VerifyOrganizationDomainCommandTests
             DomainName = "Test Domain",
             Txt = "btw+test18383838383"
         };
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
         expected.SetVerifiedDate();
+
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetByIdAsync(id)
             .Returns(expected);
@@ -53,6 +59,10 @@ public class VerifyOrganizationDomainCommandTests
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetByIdAsync(id)
             .Returns(expected);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(expected.DomainName)
             .Returns(new List<OrganizationDomain> { expected });
@@ -77,9 +87,14 @@ public class VerifyOrganizationDomainCommandTests
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetByIdAsync(id)
             .Returns(expected);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(expected.DomainName)
             .Returns(new List<OrganizationDomain>());
+
         sutProvider.GetDependency<IDnsResolverService>()
             .ResolveAsync(expected.DomainName, Arg.Any<string>())
             .Returns(true);
@@ -107,9 +122,14 @@ public class VerifyOrganizationDomainCommandTests
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetByIdAsync(id)
             .Returns(expected);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(expected.DomainName)
             .Returns(new List<OrganizationDomain>());
+
         sutProvider.GetDependency<IDnsResolverService>()
             .ResolveAsync(expected.DomainName, Arg.Any<string>())
             .Returns(false);
@@ -143,7 +163,7 @@ public class VerifyOrganizationDomainCommandTests
 
     [Theory, BitAutoData]
     public async Task UserVerifyOrganizationDomainAsync_GivenOrganizationDomainWithAccountDeprovisioningEnabled_WhenDomainIsVerified_ThenSingleOrgPolicyShouldBeEnabled(
-        OrganizationDomain domain, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
+        OrganizationDomain domain, Guid userId, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(domain.DomainName)
@@ -157,11 +177,14 @@ public class VerifyOrganizationDomainCommandTests
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(true);
 
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(userId);
+
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
         await sutProvider.GetDependency<IPolicyService>()
             .Received(1)
-            .SaveAsync(Arg.Is<Policy>(x => x.Type == PolicyType.SingleOrg && x.OrganizationId == domain.OrganizationId && x.Enabled), null);
+            .SaveAsync(Arg.Is<Policy>(x => x.Type == PolicyType.SingleOrg && x.OrganizationId == domain.OrganizationId && x.Enabled), userId);
     }
 
     [Theory, BitAutoData]
@@ -176,6 +199,9 @@ public class VerifyOrganizationDomainCommandTests
             .ResolveAsync(domain.DomainName, domain.Txt)
             .Returns(true);
 
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
+
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(false);
@@ -189,7 +215,7 @@ public class VerifyOrganizationDomainCommandTests
 
     [Theory, BitAutoData]
     public async Task UserVerifyOrganizationDomainAsync_GivenOrganizationDomainWithAccountDeprovisioningEnabled_WhenDomainIsNotVerified_ThenSingleOrgPolicyShouldNotBeEnabled(
-    OrganizationDomain domain, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
+        OrganizationDomain domain, SutProvider<VerifyOrganizationDomainCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(domain.DomainName)
@@ -198,6 +224,9 @@ public class VerifyOrganizationDomainCommandTests
         sutProvider.GetDependency<IDnsResolverService>()
             .ResolveAsync(domain.DomainName, domain.Txt)
             .Returns(false);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
@@ -222,6 +251,9 @@ public class VerifyOrganizationDomainCommandTests
         sutProvider.GetDependency<IDnsResolverService>()
             .ResolveAsync(domain.DomainName, domain.Txt)
             .Returns(false);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId.Returns(Guid.NewGuid());
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
