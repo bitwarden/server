@@ -1,24 +1,23 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Test.AutoFixture.Attributes;
+﻿using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
-using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using C = Bit.Core.Platform;
+using D = Bit.Infrastructure.Dapper.Platform;
+using Ef = Bit.Infrastructure.EntityFramework.Platform;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
+namespace Bit.Infrastructure.EFIntegration.Test.Platform;
 
 public class InstallationRepositoryTests
 {
     [CiSkippedTheory, EfInstallationAutoData]
     public async Task CreateAsync_Works_DataMatches(
-        Installation installation,
+        C.Installation installation,
         InstallationCompare equalityComparer,
-        List<EfRepo.InstallationRepository> suts,
-        SqlRepo.InstallationRepository sqlInstallationRepo
+        List<Ef.InstallationRepository> suts,
+        D.InstallationRepository sqlInstallationRepo
         )
     {
-        var savedInstallations = new List<Installation>();
+        var savedInstallations = new List<C.Installation>();
         foreach (var sut in suts)
         {
             var postEfInstallation = await sut.CreateAsync(installation);

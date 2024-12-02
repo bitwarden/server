@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Bit.Core.Entities;
+using Bit.Core.Platform;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
+namespace Bit.Infrastructure.EFIntegration.Test.Platform;
 
 public class InstallationCompare : IEqualityComparer<Installation>
 {

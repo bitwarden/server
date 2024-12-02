@@ -71,6 +71,7 @@ src/Admin/Views/Tools @bitwarden/team-billing-dev
 .github/workflows/repository-management.yml @bitwarden/team-platform-dev
 .github/workflows/test-database.yml @bitwarden/team-platform-dev
 .github/workflows/test.yml @bitwarden/team-platform-dev
+**/*Platform* @bitwarden/team-platform-dev
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json

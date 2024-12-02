@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Platform;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Models.Request.Accounts;
@@ -462,7 +463,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_InstallationExists_Succeeds(Bit.Core.Entities.Installation installation)
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_InstallationExists_Succeeds(Installation installation)
     {
         var installationRepo = _factory.Services.GetRequiredService<IInstallationRepository>();
         installation = await installationRepo.CreateAsync(installation);
