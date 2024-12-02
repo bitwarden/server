@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-class SingleOrganizationIPolicyRequirementFactory : IPolicyRequirementFactory<SingleOrganizationPolicyRequirement>
+class SingleOrganizationPolicyRequirementFactory : IPolicyRequirementFactory<SingleOrganizationPolicyRequirement>
 {
     public PolicyType Type => PolicyType.SingleOrg;
 

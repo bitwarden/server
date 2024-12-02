@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-class TwoFactorIPolicyRequirementFactory : IPolicyRequirementFactory<TwoFactorPolicyRequirement>
+class TwoFactorPolicyRequirementFactory : IPolicyRequirementFactory<TwoFactorPolicyRequirement>
 {
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
 

@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public record DisableSendIPolicyRequirementFactory : IPolicyRequirementFactory<DisableSendPolicyRequirement>
+public record DisableSendPolicyRequirementFactory : IPolicyRequirementFactory<DisableSendPolicyRequirement>
 {
     public PolicyType Type => PolicyType.DisableSend;
 

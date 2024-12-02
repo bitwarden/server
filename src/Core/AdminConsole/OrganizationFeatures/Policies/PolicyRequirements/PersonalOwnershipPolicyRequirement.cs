@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public record PersonalOwnershipIPolicyRequirementFactory : IPolicyRequirementFactory<PersonalOwnershipPolicyRequirement>
+public record PersonalOwnershipPolicyRequirementFactory : IPolicyRequirementFactory<PersonalOwnershipPolicyRequirement>
 {
     public PolicyType Type => PolicyType.PersonalOwnership;
 
