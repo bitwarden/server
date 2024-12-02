@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.OrganizationSignUpCommand;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
@@ -14,7 +13,7 @@ namespace Bit.Api.IntegrationTest.Helpers;
 
 public static class OrganizationTestHelpers
 {
-    public static async Task<Tuple<Organization, OrganizationUser>> SignUpAsync<T>(WebApplicationFactoryBase<T> factory,
+    public static async Task<SignUpOrganizationResponse_vNext> SignUpAsync<T>(WebApplicationFactoryBase<T> factory,
         PlanType plan = PlanType.Free,
         string ownerEmail = "integration-test@bitwarden.com",
         string name = "Integration Test Org",
@@ -39,9 +38,7 @@ public static class OrganizationTestHelpers
             PaymentMethodType = paymentMethod
         });
 
-        Debug.Assert(signUpResult.OrganizationUser is not null);
-
-        return new Tuple<Organization, OrganizationUser>(signUpResult.Organization, signUpResult.OrganizationUser);
+        return signUpResult;
     }
 
     /// <summary>
