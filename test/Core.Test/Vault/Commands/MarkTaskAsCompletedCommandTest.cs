@@ -62,7 +62,7 @@ public class MarkTaskAsCompletedCommandTest
         Guid taskId,
         SecurityTask securityTask)
     {
-        Setup(sutProvider, taskId, securityTask, Guid.NewGuid(), false);
+        Setup(sutProvider, taskId, securityTask, Guid.NewGuid());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CompleteAsync(taskId));
     }
