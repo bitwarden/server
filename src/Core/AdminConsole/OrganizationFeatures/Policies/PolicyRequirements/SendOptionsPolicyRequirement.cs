@@ -6,11 +6,11 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public record SendOptionsPolicyRequirementDefinition : IPolicyRequirementDefinition<SendOptionsPolicyRequirement>
+public record SendOptionsIPolicyRequirementFactory : IPolicyRequirementFactory<SendOptionsPolicyRequirement>
 {
     public PolicyType Type => PolicyType.SendOptions;
 
-    public SendOptionsPolicyRequirement Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
+    public SendOptionsPolicyRequirement CreateRequirement(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
         userPolicyDetails
             .Select(up => up.GetDataModel<SendOptionsPolicyData>())
             .Aggregate(
@@ -20,7 +20,7 @@ public record SendOptionsPolicyRequirementDefinition : IPolicyRequirementDefinit
                     DisableHideEmail = result.DisableHideEmail || current.DisableHideEmail
                 });
 
-    public bool FilterPredicate(OrganizationUserPolicyDetails userPolicyDetails) =>
+    public bool EnforcePolicy(OrganizationUserPolicyDetails userPolicyDetails) =>
         userPolicyDetails.OrganizationUserStatus > OrganizationUserStatusType.Invited;
 }
 

@@ -5,14 +5,14 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-class TwoFactorPolicyRequirementDefinition : IPolicyRequirementDefinition<TwoFactorPolicyRequirement>
+class TwoFactorIPolicyRequirementFactory : IPolicyRequirementFactory<TwoFactorPolicyRequirement>
 {
     public PolicyType Type => PolicyType.TwoFactorAuthentication;
 
-    public TwoFactorPolicyRequirement Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
+    public TwoFactorPolicyRequirement CreateRequirement(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails) =>
         new(userPolicyDetails.Select(up => (up.OrganizationId, up.OrganizationUserStatus)));
 
-    public bool FilterPredicate(OrganizationUserPolicyDetails userPolicyDetails) =>
+    public bool EnforcePolicy(OrganizationUserPolicyDetails userPolicyDetails) =>
         // Note: we include the invited status so that we can enforce this before joining an org
         !userPolicyDetails.IsAdminType();
 }

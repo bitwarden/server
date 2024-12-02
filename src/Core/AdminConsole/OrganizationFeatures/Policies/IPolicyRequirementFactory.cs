@@ -5,10 +5,15 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public interface IPolicyRequirement;
 
-public interface IPolicyRequirementDefinition<T> where T : IPolicyRequirement
+/// <summary>
+/// An interface that defines how a set of organization policies are transformed to a single <see cref="IPolicyRequirement"/>.
+/// This must be implemented for any <see cref="PolicyType"/> that is enforced on the server.
+/// </summary>
+/// <typeparam name="T">The <see cref="IPolicyRequirement"/> that the class produces.</typeparam>
+public interface IPolicyRequirementFactory<out T> where T : IPolicyRequirement
 {
     /// <summary>
-    /// The PolicyType that this requirement applies to.
+    /// The PolicyType that this class applies to.
     /// </summary>
     PolicyType Type { get; }
 
@@ -17,8 +22,7 @@ public interface IPolicyRequirementDefinition<T> where T : IPolicyRequirement
     /// restrictions that should be enforced against the user. This is used by domain code to enforce the policy.
     /// </summary>
     /// <param name="userPolicyDetails">A DTO representing an organization user and the relevant policy for that organization.</param>
-    /// <returns></returns>
-    T Reduce(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails);
+    T CreateRequirement(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails);
 
     /// <summary>
     /// A predicate that returns true if the policy should be enforced against the user, false otherwise.
@@ -29,8 +33,8 @@ public interface IPolicyRequirementDefinition<T> where T : IPolicyRequirement
     /// or against users with a certain status (e.g. invited or revoked users). This is your responsibility to define.
     /// </remarks>
     /// <param name="userPolicyDetails">A DTO representing an organization user and the relevant policy for that organization.</param>
-    /// <returns>A boolean used to filter a sequence of policies.</returns>
-    bool FilterPredicate(OrganizationUserPolicyDetails userPolicyDetails);
+    /// <returns>True if the policy should be enforced against the user or false otherwise.</returns>
+    bool EnforcePolicy(OrganizationUserPolicyDetails userPolicyDetails);
 }
 
 
