@@ -11,7 +11,7 @@ public interface ITaxService
     /// Returns the Stripe tax code if the tax ID is valid for the country.
     /// Returns null if the tax ID is invalid or the country is not supported.
     /// </returns>
-    string? GetStripeTaxCode(string country, string taxId);
+    string GetStripeTaxCode(string country, string taxId);
 
     /// <summary>
     /// Returns true or false whether charging or storing tax is supported for the given country.

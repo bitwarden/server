@@ -123,7 +123,7 @@ public class PremiumUserBillingService(
             }
         };
 
-        if (customerSetup.TaxInformation.TaxId != null)
+        if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
         {
             var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
                 customerSetup.TaxInformation.TaxId);

@@ -5,8 +5,8 @@ namespace Bit.Core.Billing.Models;
 public record TaxInformation(
     string Country,
     string PostalCode,
-    string? TaxId,
-    string? TaxIdType,
+    string TaxId,
+    string TaxIdType,
     string Line1,
     string Line2,
     string City,

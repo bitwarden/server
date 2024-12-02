@@ -881,7 +881,7 @@ public class TaxService : ITaxService
         }
     ];
 
-    public string? GetStripeTaxCode(string country, string taxId)
+    public string GetStripeTaxCode(string country, string taxId)
     {
         foreach (var taxIdType in _taxIdTypes.Where(x => x.Country == country))
         {
