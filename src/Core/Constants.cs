@@ -129,7 +129,6 @@ public static class FeatureFlagKeys
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
-    public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
     public const string NativeCarouselFlow = "native-carousel-flow";
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
@@ -156,6 +155,7 @@ public static class FeatureFlagKeys
     public const string SecurityTasks = "security-tasks";
     public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
     public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
 
     public static List<string> GetAllKeys()
     {
