@@ -269,7 +269,6 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.All(results, r => Assert.Empty(r.Item2));
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyAsync(userIds);
-        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
@@ -313,7 +312,6 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.All(results, r => Assert.Empty(r.Item2));
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetManyAsync(userIds);
-        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Is<IEnumerable<User>>(list => list.Count() == 2));
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
@@ -339,7 +337,6 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.Single(result);
         Assert.Equal(orgUserId, result.First().Item1);
         Assert.Contains("Member not found.", result.First().Item2);
-        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -363,7 +360,6 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.Single(result);
         Assert.Equal(orgUserId, result.First().Item1);
         Assert.Contains("Member not found.", result.First().Item2);
-        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Is<IEnumerable<User>>(list => list.Count() == 0));
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
@@ -579,7 +575,6 @@ public class DeleteManagedOrganizationUserAccountCommandTests
         Assert.Equal("You cannot delete a member with Invited status.", results.First(r => r.Item1 == orgUser2.Id).Item2);
         Assert.Equal("Member is not managed by the organization.", results.First(r => r.Item1 == orgUser3.Id).Item2);
 
-        await sutProvider.GetDependency<IUserService>().Received(1).DeleteManyAsync(Arg.Any<IEnumerable<User>>());
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(
             Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
             events.Count(e => e.Item1.Id == orgUser1.Id && e.Item2 == EventType.OrganizationUser_Deleted) == 1));

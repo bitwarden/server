@@ -278,25 +278,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
-#nullable enable
-    public async Task<IEnumerable<(Guid UserId, string? ErrorMessage)>> DeleteManyAsync(IEnumerable<User> users)
-    {
-        var results = await ValidateDeleteUsersAsync(users.ToList());
-
-        var usersToDelete = users.Where(user => results.Select(r => r.UserId == user.Id && string.IsNullOrEmpty(r.ErrorMessage)).Count() > 1);
-
-        await _userRepository.DeleteManyAsync(usersToDelete);
-        foreach (var user in usersToDelete)
-        {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
-            await _pushService.PushLogOutAsync(user.Id);
-        }
-
-        return results;
-    }
-#nullable disable
-
     public async Task<IdentityResult> DeleteAsync(User user, string token)
     {
         if (!(await VerifyUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount", token)))
@@ -306,63 +287,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         return await DeleteAsync(user);
     }
-
-#nullable enable
-    private async Task<IEnumerable<(Guid UserId, string? ErrorMessage)>> ValidateDeleteUsersAsync(List<User> users)
-    {
-        var userResult = new List<(Guid UserId, string? ErrorMessage)>();
-
-        foreach (var user in users)
-        {
-            // Check if user is the only owner of any organizations.
-            var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
-            if (onlyOwnerCount > 0)
-            {
-                var deletedOrg = false;
-                var orgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
-                    OrganizationUserStatusType.Confirmed);
-                if (orgs.Count == 1)
-                {
-                    var org = await _organizationRepository.GetByIdAsync(orgs.First().OrganizationId);
-                    if (org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
-                    {
-                        var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
-                        if (orgCount <= 1)
-                        {
-                            await _organizationRepository.DeleteAsync(org);
-                            deletedOrg = true;
-                        }
-                    }
-                }
-
-                if (!deletedOrg)
-                {
-                    userResult.Add((user.Id, "Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user."));
-                    continue;
-                }
-            }
-
-            var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
-            if (onlyOwnerProviderCount > 0)
-            {
-                userResult.Add((user.Id, "Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user."));
-                continue;
-            }
-
-            if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
-            {
-                try
-                {
-                    await CancelPremiumAsync(user);
-                }
-                catch (GatewayException) { }
-            }
-
-            userResult.Add((user.Id, string.Empty));
-        }
-        return userResult;
-    }
-#nullable disable
 
     public async Task SendDeleteConfirmationAsync(string email)
     {
