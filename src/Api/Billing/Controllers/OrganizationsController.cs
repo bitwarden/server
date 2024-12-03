@@ -167,13 +167,18 @@ public class OrganizationsController(
 
     [HttpPost("{id:guid}/subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
+
         await organizationService.UpdateSubscription(id, model.SeatAdjustment, model.MaxAutoscaleSeats);
+
+        var userId = userService.GetProperUserId(User)!.Value;
+
+        return await GetProfileOrganizationResponseModelAsync(id, userId);
     }
 
     [HttpPost("{id:guid}/subscribe-secrets-manager")]
@@ -198,13 +203,7 @@ public class OrganizationsController(
 
         await TryGrantOwnerAccessToSecretsManagerAsync(organization.Id, userId);
 
-        var organizationDetails = await organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
-            OrganizationUserStatusType.Confirmed);
-
-        var organizationManagingActiveUser = await userService.GetOrganizationsManagingUserAsync(userId);
-        var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
-
-        return new ProfileOrganizationResponseModel(organizationDetails, organizationIdsManagingActiveUser);
+        return await GetProfileOrganizationResponseModelAsync(organization.Id, userId);
     }
 
     [HttpPost("{id:guid}/seat")]
@@ -365,5 +364,20 @@ public class OrganizationsController(
         await organizationService.UpdateSubscription(id, model.SeatAdjustment, null);
 
         return await organizationRepository.GetByIdAsync(id);
+    }
+
+    private async Task<ProfileOrganizationResponseModel> GetProfileOrganizationResponseModelAsync(
+        Guid organizationId,
+        Guid userId)
+    {
+        var organizationUserDetails = await organizationUserRepository.GetDetailsByUserAsync(
+            userId,
+            organizationId,
+            OrganizationUserStatusType.Confirmed);
+
+        var organizationIdsManagingActiveUser = (await userService.GetOrganizationsManagingUserAsync(userId))
+            .Select(o => o.Id);
+
+        return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsManagingActiveUser);
     }
 }
