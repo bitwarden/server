@@ -198,7 +198,6 @@ public class DeviceValidatorTests
     [Theory]
     [BitAutoData]
     public async void GetKnownDeviceAsync_DeviceNull_ReturnsFalse(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user)
     {
         // Arrange

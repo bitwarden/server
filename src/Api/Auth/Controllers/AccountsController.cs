@@ -961,20 +961,6 @@ public class AccountsController : Controller
         }
     }
 
-    [RequireFeature("new-device-verification")]
-    [AllowAnonymous]
-    [HttpPost("request-device-verification-otp")]
-    public async Task SendDeviceVerificationEmailOTP(SecretVerificationRequestModel model){
-        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
-        if (!await _userService.VerifySecretAsync(user, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
-        }
-
-        await _userService.SendOTPAsync(user);
-    }
-
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
     {
         var organizationManagingUser = await _userService.GetOrganizationsManagingUserAsync(userId);

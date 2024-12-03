@@ -128,11 +128,11 @@ public class DeviceValidator(
 
         // parse request for NewDeviceOtp to validate
         var newDeviceOtp = request.Raw["NewDeviceOtp"]?.ToString();
-        if(!string.IsNullOrEmpty(newDeviceOtp))
+        if (!string.IsNullOrEmpty(newDeviceOtp))
         {
             // verify the NewDeviceOtp
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
-            if(otpValid)
+            if (otpValid)
             {
                 // associate the device with the user
                 device.UserId = user.Id;

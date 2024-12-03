@@ -11,7 +11,7 @@ public class CustomValidatorRequestContext
     /// KnownDevice is set in the child classes of the BaseRequestValidator using the DeviceValidator.KnownDeviceAsync method.
     /// Except in the CustomTokenRequestValidator, where it is hardcoded to true.
     /// </summary>
-    public bool KnownDevice { get; set;}
+    public bool KnownDevice { get; set; }
     /// <summary>
     /// This is the device that the user is using to authenticate. It can be either known or unknown.
     /// We set it here sicne the ResourceOwnerPasswordValidator needs the device to know if CAPTCHA is required.

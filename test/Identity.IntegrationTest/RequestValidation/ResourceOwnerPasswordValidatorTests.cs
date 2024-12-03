@@ -1,19 +1,15 @@
 ﻿using System.Text.Json;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;

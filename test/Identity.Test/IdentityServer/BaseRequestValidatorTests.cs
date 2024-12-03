@@ -176,7 +176,6 @@ public class BaseRequestValidatorTests
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
 
-
     /* Logic path
      * ValidateAsync -> getDeviceFromRequest -> device null -> error result
      */
@@ -200,6 +199,218 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         Assert.Equal("No device information provided.", errorResponse.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DeviceNull_RequestingDeviceIsKnown_ShouldSucceed(
+        Device device,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        requestContext.Device = null;
+        requestContext.KnownDevice = true;
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        AddValidDeviceToRequest(tokenRequest);
+        _deviceValidator.GetKnownDeviceAsync(Arg.Any<User>(), Arg.Any<Device>())
+                             .Returns(device);
+        _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+                            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DeviceNull_IsNewDeviceRequest_DeviceIsValidated_ShouldSucceed(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        // 2 -> to be new device otp request with valid device in request
+        context.CustomValidatorRequestContext.Device = null;
+        AddValidDeviceToRequest(context.ValidatedTokenRequest);
+        context.ValidatedTokenRequest.Raw["NewDeviceOtp"] = "123456";
+        // 3 -> will result to false with no extra configuration
+        // 4 -> set two factor to be false
+        _twoFactorAuthenticationValidator
+                .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+                .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
+        // 5 -> set up new device otp to pass
+        requestContext.KnownDevice = false;
+        _globalSettings.EnableNewDeviceVerification = true;
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
+            .Returns(true);
+        tokenRequest.GrantType = "password";
+        _deviceValidator.HandleNewDeviceVerificationAsync(Arg.Any<User>(), Arg.Any<ValidatedRequest>())
+                         .Returns(Task.FromResult((true, "not important")));
+        // 6 -> not legacy user
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        // this check proves that we save a db trip
+        await _deviceValidator.Received(0).GetKnownDeviceAsync(Arg.Any<User>(), Arg.Any<Device>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_DeviceNull_IsNewDeviceRequest_DeviceNotValidated_ShouldFail(
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        // 2 -> to be new device otp request with valid device in request
+        context.CustomValidatorRequestContext.Device = null;
+        AddValidDeviceToRequest(context.ValidatedTokenRequest);
+        context.ValidatedTokenRequest.Raw["NewDeviceOtp"] = "123456";
+        // 3 -> will result to false with no extra configuration
+        // 4 -> set two factor to be false
+        _twoFactorAuthenticationValidator
+                .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+                .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
+        // 5 -> set up new device otp to fail
+        requestContext.KnownDevice = false;
+        _globalSettings.EnableNewDeviceVerification = true;
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
+            .Returns(true);
+        tokenRequest.GrantType = "password";
+        _deviceValidator.HandleNewDeviceVerificationAsync(Arg.Any<User>(), Arg.Any<ValidatedRequest>())
+                         .Returns(Task.FromResult((false, "Invalid Otp")));
+        // 6 -> not legacy user
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.True(context.GrantResult.IsError);
+        // this check proves that we save a db trip
+        await _deviceValidator.Received(0).GetKnownDeviceAsync(Arg.Any<User>(), Arg.Any<Device>());
+    }
+
+    [Theory]
+    [BitAutoData("client_credential")]
+    [BitAutoData("authorization_code")]
+    [BitAutoData("webauthn")]
+    public async Task ValidateAsync_GrantTypeNotPassword_DeviceNotKnown_ShouldSaveDevice_ShouldSucceed(
+        string grantType,
+        Device device,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        // 2 -> to be new device otp request with valid device in request
+        context.CustomValidatorRequestContext.Device = null;
+        AddValidDeviceToRequest(context.ValidatedTokenRequest);
+        // 3 -> will result to false with no extra configuration
+        // 4 -> set two factor to be false
+        _twoFactorAuthenticationValidator
+                .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+                .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
+        // 5 -> set to bypass new device verification based on grant type
+        requestContext.KnownDevice = false;
+        _globalSettings.EnableNewDeviceVerification = true;
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
+            .Returns(true);
+        tokenRequest.GrantType = grantType;
+        _deviceValidator.SaveRequestingDeviceAsync(Arg.Any<User>(), Arg.Any<Device>())
+            .Returns(device);
+        // 6 -> not legacy user
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        // verify code path did not try to handle new device verification
+        await _deviceValidator.Received(0)
+            .HandleNewDeviceVerificationAsync(Arg.Any<User>(), Arg.Any<ValidatedRequest>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    [Obsolete("backwards compatability")]
+    public async Task ValidateAsync_NewDeviceVerificationOff_DeviceNotKnown_ShouldSaveDevice_ShouldSucceed(
+    string grantType,
+    Device device,
+    [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+    CustomValidatorRequestContext requestContext,
+    GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        // 1 -> to pass
+        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
+        _sut.isValid = true;
+
+        // 2 -> to be new device otp request with valid device in request
+        context.CustomValidatorRequestContext.Device = null;
+        AddValidDeviceToRequest(context.ValidatedTokenRequest);
+        // 3 -> will result to false with no extra configuration
+        // 4 -> set two factor to be false
+        _twoFactorAuthenticationValidator
+                .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
+                .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
+        // 5 -> set to not require new device verification
+        requestContext.KnownDevice = false;
+        _globalSettings.EnableNewDeviceVerification = false;
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
+            .Returns(false);
+        tokenRequest.GrantType = grantType;
+        _deviceValidator.SaveRequestingDeviceAsync(Arg.Any<User>(), tokenRequest)
+            .Returns(device);
+        // 6 -> not legacy user
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError);
+        // verify code path did not try to handle new device verification
+        await _deviceValidator.Received(0)
+            .HandleNewDeviceVerificationAsync(Arg.Any<User>(), Arg.Any<ValidatedRequest>());
+        // Verify code path did not try to save using new method
+        await _deviceValidator.Received(0)
+            .SaveRequestingDeviceAsync(Arg.Any<User>(), Arg.Any<Device>());
     }
 
     /* Logic path
@@ -364,5 +575,14 @@ public class BaseRequestValidatorTests
             Substitute.For<IdentityErrorDescriber>(),
             Substitute.For<IServiceProvider>(),
             Substitute.For<ILogger<UserManager<User>>>());
+    }
+
+    private ValidatedTokenRequest AddValidDeviceToRequest(ValidatedTokenRequest request)
+    {
+        request.Raw["DeviceIdentifier"] = "DeviceIdentifier";
+        request.Raw["DeviceType"] = "Android"; // must be valid device type
+        request.Raw["DeviceName"] = "DeviceName";
+        request.Raw["DevicePushToken"] = "DevicePushToken";
+        return request;
     }
 }
