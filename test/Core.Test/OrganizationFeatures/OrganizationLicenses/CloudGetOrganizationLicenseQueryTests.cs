@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,11 +11,9 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Microsoft.AspNetCore.Routing.Constraints;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Stripe;
-using Stripe.Tax;
 using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationLicenses;
