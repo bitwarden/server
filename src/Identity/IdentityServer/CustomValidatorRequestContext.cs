@@ -14,6 +14,8 @@ public class CustomValidatorRequestContext
     public bool KnownDevice { get; set;}
     /// <summary>
     /// This is the device that the user is using to authenticate. It can be either known or unknown.
+    /// We set it here sicne the ResourceOwnerPasswordValidator needs the device to know if CAPTCHA is required.
+    /// The option to set it here saves a trip to the database.
     /// </summary>
     public Device Device { get; set; }
     public CaptchaResponse CaptchaResponse { get; set; }

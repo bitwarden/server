@@ -92,8 +92,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         await ValidateAsync(context, context.Result.ValidatedRequest,
             new CustomValidatorRequestContext
             {
-                KnownDevice = true,
-                Device = DeviceValidator.GetDeviceFromRequest(context.Result.ValidatedRequest)
+                KnownDevice = true
             });
     }
 

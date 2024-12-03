@@ -79,6 +79,7 @@ public class DeviceValidator(
         {
             return null;
         }
+
         return await _deviceRepository.GetByIdentifierAsync(device.Identifier, user.Id);
     }
 
@@ -106,17 +107,25 @@ public class DeviceValidator(
         };
     }
 
+    /// <summary>
+    /// Checks request for the NewDeviceOtp field to determine if a new device verification is required.
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    public static bool NewDeviceOtpRequest(ValidatedRequest request)
+    {
+        return !string.IsNullOrEmpty(request.Raw["NewDeviceOtp"]?.ToString());
+    }
+
     [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     public async Task<(bool, string)> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
     {
         var device = GetDeviceFromRequest(request);
         if (device == null || user == null)
         {
-            return (false, null);
+            return (false, "invalid user or device");
         }
 
-        // associate the device with the user
-        device.UserId = user.Id;
         // parse request for NewDeviceOtp to validate
         var newDeviceOtp = request.Raw["NewDeviceOtp"]?.ToString();
         if(!string.IsNullOrEmpty(newDeviceOtp))
@@ -125,6 +134,8 @@ public class DeviceValidator(
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
             if(otpValid)
             {
+                // associate the device with the user
+                device.UserId = user.Id;
                 await _deviceService.SaveAsync(device);
                 return (true, null);
             }

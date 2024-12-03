@@ -77,7 +77,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. we need to check if the user is a bot and if their MP hash is correct
+        // 1. we need to check if the user is a bot and if their master password hash is correct
         var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
@@ -100,11 +100,25 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // 2. Check for null device in request
-        var device = DeviceValidator.GetDeviceFromRequest(request);
+        var device = validatorContext.Device;
         if (device == null)
         {
-            await BuildErrorResultAsync("No device information provided.", false, context, user);
-            return;
+            var requestDevice = DeviceValidator.GetDeviceFromRequest(request);
+            if (requestDevice == null)
+            {
+                await BuildErrorResultAsync("No device information provided.", false, context, user);
+                return;
+            }
+            // check request for new device otp before making the long trip to the database
+            if (DeviceValidator.NewDeviceOtpRequest(request))
+            {
+                device = requestDevice;
+            }
+            else
+            {
+                // set device to the the KnownDevice if it exists otherwise set it to the device in the request
+                device = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice) ?? requestDevice;
+            }
         }
 
         // 3. Does this user belong to an organization that requires SSO
@@ -116,6 +130,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
                 });
+            return;
         }
 
         // 4. Check if 2FA is required
@@ -181,7 +196,8 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // 5. Check if the user is logging in from a new device
-        if(!validatorContext.KnownDevice){
+        if (!validatorContext.KnownDevice)
+        {
             if (FeatureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
                 && _globalSettings.EnableNewDeviceVerification)
             {
@@ -191,7 +207,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     // We only want to return early if the device is invalid or there is an error
                     var (deviceValidated, errorMessage) = await _deviceValidator.HandleNewDeviceVerificationAsync(user, request);
-                    if(!deviceValidated)
+                    if (!deviceValidated)
                     {
                         await BuildErrorResultAsync(errorMessage, false, context, user);
                         return;
@@ -209,7 +225,7 @@ public abstract class BaseRequestValidator<T> where T : class
             }
         }
 
-        // Force legacy users to the web for migration
+        // 6. Force legacy users to the web for migration
         if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
         {
             if (UserService.IsLegacyUser(user) && request.ClientId != "web")
@@ -313,7 +329,7 @@ public abstract class BaseRequestValidator<T> where T : class
     {
         if (grantType == "authorization_code" || grantType == "client_credentials")
         {
-            // Already using SSO to authorize, or login via api key to skip SSO requirement
+            // Already using SSO to authenticate, or logging-in via api key to skip SSO requirement
             // allow to authenticate successfully
             return false;
         }
@@ -326,7 +342,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
-        // Default - continue validation process
+        // Default - SSO is not required
         return false;
     }
 

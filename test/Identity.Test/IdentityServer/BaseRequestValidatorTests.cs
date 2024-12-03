@@ -22,7 +22,6 @@ using NSubstitute;
 using Xunit;
 using AuthFixtures = Bit.Identity.Test.AutoFixture;
 
-
 namespace Bit.Identity.Test.IdentityServer;
 
 public class BaseRequestValidatorTests
@@ -82,10 +81,10 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-    ValidateAsync -> _Logger.LogInformation
-                 |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-                                          |-> SetErrorResult
-    */
+     * ValidateAsync -> _Logger.LogInformation
+     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
+     *                                     |-> SetErrorResult
+     */
     [Theory, BitAutoData]
     public async Task ValidateAsync_IsBot_UserNotNull_ShouldBuildErrorResult_ShouldLogFailedLoginEvent(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
@@ -112,11 +111,11 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-    ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
-                 |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-                            (self hosted) |-> _logger.LogWarning()
-                                          |-> SetErrorResult
-    */
+     * ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
+     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
+     *                       (self hosted) |-> _logger.LogWarning()
+     *                                     |-> SetErrorResult
+     */
     [Theory, BitAutoData]
     public async Task ValidateAsync_ContextNotValid_SelfHosted_ShouldBuildErrorResult_ShouldLogWarning(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
@@ -140,10 +139,10 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-    ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
-                 |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
-                                          |-> SetErrorResult
-    */
+     * ValidateAsync -> UpdateFailedAuthDetailsAsync -> _mailService.SendFailedLoginAttemptsEmailAsync
+     *            |-> BuildErrorResultAsync -> _eventService.LogUserEventAsync
+     *                                     |-> SetErrorResult
+     */
     [Theory, BitAutoData]
     public async Task ValidateAsync_ContextNotValid_MaxAttemptLogin_ShouldSendEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
@@ -179,24 +178,19 @@ public class BaseRequestValidatorTests
 
 
     /* Logic path
-    ValidateAsync -> IsValidAuthTypeAsync -> SaveDeviceAsync -> BuildErrorResult
-    */
+     * ValidateAsync -> getDeviceFromRequest -> device null -> error result
+     */
     [Theory, BitAutoData]
-    public async Task ValidateAsync_AuthCodeGrantType_DeviceNull_ShouldError(
+    public async Task ValidateAsync_DeviceNull_ShouldError(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult)
     {
         // Arrange
+        requestContext.Device = null;
         var context = CreateContext(tokenRequest, requestContext, grantResult);
-        _twoFactorAuthenticationValidator
-            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, default)));
-
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
-
-        context.ValidatedTokenRequest.GrantType = "authorization_code";
 
         // Act
         await _sut.ValidateAsync(context);
@@ -209,8 +203,8 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-    ValidateAsync -> IsValidAuthTypeAsync -> SaveDeviceAsync -> BuildSuccessResultAsync
-    */
+     * ValidateAsync -> IsValidAuthTypeAsync -> SaveDeviceAsync -> BuildSuccessResultAsync
+     */
     [Theory, BitAutoData]
     public async Task ValidateAsync_ClientCredentialsGrantType_ShouldSucceed(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
@@ -232,7 +226,7 @@ public class BaseRequestValidatorTests
 
         context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device
 
-        _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+        _deviceValidator.SaveRequestingDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                          .Returns(device);
         // Act
         await _sut.ValidateAsync(context);
@@ -242,10 +236,13 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-    ValidateAsync -> IsValidAuthTypeAsync -> SaveDeviceAsync -> BuildSuccessResultAsync
-    */
-    [Theory, BitAutoData]
+     * ValidateAsync -> RequireSsoLoginAsync -> SaveDeviceAsync -> BuildSuccessResultAsync
+     */
+    [Theory]
+    [BitAutoData("client_credentials")]
+    [BitAutoData("authorization_code")]
     public async Task ValidateAsync_ClientCredentialsGrantType_ExistingDevice_ShouldSucceed(
+        string grantType,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult,
@@ -260,9 +257,9 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(1);
         _globalSettings.DisableEmailNewDevice = false;
 
-        context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device
+        context.ValidatedTokenRequest.GrantType = grantType;
 
-        _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+        _deviceValidator.SaveRequestingDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
                          .Returns(device);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
@@ -279,8 +276,8 @@ public class BaseRequestValidatorTests
     }
 
     /* Logic path
-    ValidateAsync -> IsLegacyUser -> BuildErrorResultAsync
-    */
+     * ValidateAsync -> SSORequired -> BuildErrorResultAsync
+     */
     [Theory, BitAutoData]
     public async Task ValidateAsync_InvalidAuthType_ShouldSetSsoResult(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
@@ -297,14 +294,12 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
-        context.ValidatedTokenRequest.GrantType = "";
+        context.ValidatedTokenRequest.GrantType = "something_invalid";
 
         _policyService.AnyPoliciesApplicableToUserAsync(
                         Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
                       .Returns(Task.FromResult(true));
-        _twoFactorAuthenticationValidator
-            .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
+
         // Act
         await _sut.ValidateAsync(context);
 
@@ -314,6 +309,9 @@ public class BaseRequestValidatorTests
         Assert.Equal("SSO authentication is required.", errorResponse.Message);
     }
 
+    /* Logic Path
+     * ValidateAsync -> UserService.IsLegacyUser -> FailAuthForLegacyUserAsync
+     */
     [Theory, BitAutoData]
     public async Task ValidateAsync_IsLegacyUser_FailAuthForLegacyUserAsync(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
