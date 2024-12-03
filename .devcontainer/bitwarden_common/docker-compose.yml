@@ -7,6 +7,9 @@ services:
       - ../../:/workspace:cached
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
+    ports:
+      - "1080:1080"
+      - "1025:1025"
 
   bitwarden_mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
