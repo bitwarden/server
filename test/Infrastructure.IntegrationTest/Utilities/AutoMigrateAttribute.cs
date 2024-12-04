@@ -1,6 +1,5 @@
 
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,6 +31,8 @@ public class AutoMigrateAttribute : TestCustomizerAttribute
         // Build services provider early and run migrations
         var sp = customizationContext.Services.BuildServiceProvider();
         var migrator = sp.GetRequiredService<IMigrationTesterService>();
-        migrator.ApplyMigration()
+        migrator.ApplyMigration();
+
+        return Task.CompletedTask;
     }
 }

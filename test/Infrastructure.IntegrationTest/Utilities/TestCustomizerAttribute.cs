@@ -16,7 +16,7 @@ public class CustomizationContext
 
     public IServiceCollection Services { get; }
 
-    public Func<ServiceProvider, ParameterInfo, object?> ParameterResolver { get; set; } = DefaultParameterResolver;
+    public Func<IServiceProvider, ParameterInfo, object?> ParameterResolver { get; set; } = DefaultParameterResolver;
 
 
     public CustomizationContext(Database database, MethodInfo testMethod, DisposalTracker disposalTracker)
@@ -27,7 +27,7 @@ public class CustomizationContext
         Services = new ServiceCollection();
     }
 
-    private static object? DefaultParameterResolver(ServiceProvider services, ParameterInfo parameter)
+    private static object? DefaultParameterResolver(IServiceProvider services, ParameterInfo parameter)
     {
         return services.GetService(parameter.ParameterType);
     }

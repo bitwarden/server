@@ -2,7 +2,6 @@ using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Sdk;
-using Xunit.v3;
 
 namespace Bit.Infrastructure.IntegrationTest.Utilities;
 
@@ -10,25 +9,29 @@ public class ServiceTheoryDataRow : TheoryDataRowBase
 {
     private readonly MethodInfo _testMethod;
     private readonly DisposalTracker _disposalTracker;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly CustomizationContext _customizationContext;
 
-    public ServiceTheoryDataRow(MethodInfo testMethod, DisposalTracker disposalTracker, IServiceProvider serviceProvider)
+    public ServiceTheoryDataRow(MethodInfo testMethod, DisposalTracker disposalTracker, CustomizationContext customizationContext)
     {
         _testMethod = testMethod;
         _disposalTracker = disposalTracker;
-        _serviceProvider = serviceProvider;
+        _customizationContext = customizationContext;
     }
 
     protected override object?[] GetData()
     {
         var parameters = _testMethod.GetParameters();
-        // Create a scope for this test
-        var scope = _serviceProvider.CreateAsyncScope();
 
-        var objects = new object[parameters.Length];
+        var sp = _customizationContext.Services.BuildServiceProvider();
+
+        // Create a scope for this test
+        var scope = sp.CreateAsyncScope();
+
+        var objects = new object?[parameters.Length];
         for (var i = 0; i < parameters.Length; i++)
         {
-            objects[i] = scope.ServiceProvider.GetRequiredService(parameters[i].ParameterType);
+            var parameter = parameters[i];
+            objects[i] = _customizationContext.ParameterResolver(scope.ServiceProvider, parameter);
         }
 
         _disposalTracker.Add(scope);

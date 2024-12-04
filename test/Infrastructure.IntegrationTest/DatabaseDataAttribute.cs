@@ -43,7 +43,7 @@ public class DatabaseDataAttribute : DataAttribute
             }
             else
             {
-                theory = new ServiceTheoryDataRow(testMethod, disposalTracker, customizationContext.Services.BuildServiceProvider());
+                theory = new ServiceTheoryDataRow(testMethod, disposalTracker, customizationContext);
             }
 
             theory
