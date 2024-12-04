@@ -95,7 +95,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
             throw new BadRequestException(NonCompliantMembersWillLoseAccessMessage);
         }
 
-        var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+        var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(
             new RevokeOrganizationUsersRequest(organizationId, currentActiveRevocableOrganizationUsers, performedBy));
 
         if (commandResult.HasErrors)

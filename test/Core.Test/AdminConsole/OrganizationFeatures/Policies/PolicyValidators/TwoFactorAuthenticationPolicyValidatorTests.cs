@@ -259,7 +259,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .DidNotReceive()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }
 
     [Theory, BitAutoData]
@@ -340,14 +340,14 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             });
 
         sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>());
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)

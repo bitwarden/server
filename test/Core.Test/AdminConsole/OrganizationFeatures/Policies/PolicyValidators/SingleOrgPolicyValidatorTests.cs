@@ -122,14 +122,14 @@ public class SingleOrgPolicyValidatorTests
             .Returns(true);
 
         sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>());
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(),
@@ -195,7 +195,7 @@ public class SingleOrgPolicyValidatorTests
             .Returns(false);
 
         sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
@@ -268,13 +268,13 @@ public class SingleOrgPolicyValidatorTests
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
 
         sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received()
-            .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
+            .RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }
 }

@@ -31,7 +31,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     private readonly IFeatureService _featureService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
-    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeOrganizationUserCommand;
 
     public SingleOrgPolicyValidator(
         IOrganizationUserRepository organizationUserRepository,
@@ -42,7 +42,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IFeatureService featureService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
-        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
+        IRevokeNonCompliantOrganizationUserCommand revokeOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
@@ -52,7 +52,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         _featureService = featureService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
-        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
+        _revokeOrganizationUserCommand = revokeOrganizationUserCommand;
     }
 
     public IEnumerable<PolicyType> RequiredPolicies => [];
@@ -97,7 +97,7 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             return;
         }
 
-        var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+        var commandResult = await _revokeOrganizationUserCommand.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(
             new RevokeOrganizationUsersRequest(organizationId, currentActiveRevocableOrganizationUsers, performedBy));
 
         if (commandResult.HasErrors)

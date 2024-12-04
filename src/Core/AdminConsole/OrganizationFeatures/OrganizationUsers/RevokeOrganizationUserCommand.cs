@@ -1,15 +1,15 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.Enums;
 using Bit.Core.Models.Commands;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
-public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserRepository organizationUserRepository,
+public class RevokeOrganizationUserCommand(IOrganizationUserRepository organizationUserRepository,
     IEventService eventService,
     IHasConfirmedOwnersExceptQuery confirmedOwnersExceptQuery,
     TimeProvider timeProvider) : IRevokeNonCompliantOrganizationUserCommand
@@ -21,6 +21,20 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
     public const string ErrorInvalidUsers = "Invalid users.";
     public const string ErrorRequestedByWasNotValid = "Action was performed by an unexpected type.";
 
+    public async Task<CommandResult> RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(RevokeOrganizationUsersRequest request)
+    {
+        var validationResult = await ValidateAsync(request);
+
+        validationResult = ValidateSelf(validationResult, request);
+
+        if (validationResult.HasErrors)
+        {
+            return validationResult;
+        }
+
+        return await RevokeOrganizationUsersAsync(request);
+    }
+
     public async Task<CommandResult> RevokeNonCompliantOrganizationUsersAsync(RevokeOrganizationUsersRequest request)
     {
         var validationResult = await ValidateAsync(request);
@@ -30,6 +44,11 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
             return validationResult;
         }
 
+        return await RevokeOrganizationUsersAsync(request);
+    }
+
+    private async Task<CommandResult> RevokeOrganizationUsersAsync(RevokeOrganizationUsersRequest request)
+    {
         await organizationUserRepository.RevokeManyByIdAsync(request.OrganizationUsers.Select(x => x.Id));
 
         var now = timeProvider.GetUtcNow();
@@ -47,28 +66,33 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
                 break;
         }
 
-        return validationResult;
+        return new CommandResult();
     }
 
-    private static (OrganizationUserUserDetails organizationUser, EventType eventType, DateTime? time) GetRevokedUserEventTuple(
-        OrganizationUserUserDetails organizationUser, DateTimeOffset dateTimeOffset) =>
+    private static (IOrganizationUser organizationUser, EventType eventType, DateTime? time) GetRevokedUserEventTuple(
+        IOrganizationUser organizationUser, DateTimeOffset dateTimeOffset) =>
         new(organizationUser, EventType.OrganizationUser_Revoked, dateTimeOffset.UtcDateTime);
 
-    private static (OrganizationUserUserDetails organizationUser, EventType eventType, EventSystemUser eventSystemUser, DateTime? time) GetRevokedUserEventBySystemUserTuple(
-        OrganizationUserUserDetails organizationUser, EventSystemUser systemUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
+    private static (IOrganizationUser organizationUser, EventType eventType, EventSystemUser eventSystemUser, DateTime? time) GetRevokedUserEventBySystemUserTuple(
+        IOrganizationUser organizationUser, EventSystemUser systemUser, DateTimeOffset dateTimeOffset) => new(organizationUser,
         EventType.OrganizationUser_Revoked, systemUser, dateTimeOffset.UtcDateTime);
+
+    private CommandResult ValidateSelf(CommandResult currentResult, RevokeOrganizationUsersRequest request)
+    {
+        if (request.ActionPerformedBy is StandardUser user
+            && request.OrganizationUsers.Any(x => x.UserId == user.UserId))
+        {
+            return new CommandResult(currentResult, ErrorCannotRevokeSelf);
+        }
+
+        return new CommandResult(currentResult);
+    }
 
     private async Task<CommandResult> ValidateAsync(RevokeOrganizationUsersRequest request)
     {
         if (!PerformedByIsAnExpectedType(request.ActionPerformedBy))
         {
             return new CommandResult(ErrorRequestedByWasNotValid);
-        }
-
-        if (request.ActionPerformedBy is StandardUser user
-            && request.OrganizationUsers.Any(x => x.UserId == user.UserId))
-        {
-            return new CommandResult(ErrorCannotRevokeSelf);
         }
 
         if (request.OrganizationUsers.Any(x => x.OrganizationId != request.OrganizationId))
@@ -103,10 +127,10 @@ public class RevokeNonCompliantOrganizationUserCommand(IOrganizationUserReposito
 
     private static bool PerformedByIsAnExpectedType(IActingUser entity) => entity is SystemUser or StandardUser;
 
-    private static bool IsAlreadyRevoked(OrganizationUserUserDetails organizationUser) =>
+    private static bool IsAlreadyRevoked(IOrganizationUser organizationUser) =>
         organizationUser is { Status: OrganizationUserStatusType.Revoked };
 
-    private static bool NonOwnersCannotRevokeOwners(OrganizationUserUserDetails organizationUser,
+    private static bool NonOwnersCannotRevokeOwners(IOrganizationUser organizationUser,
         IActingUser actingUser) =>
         actingUser is StandardUser { IsOrganizationOwnerOrProvider: false } && organizationUser.Type == OrganizationUserType.Owner;
 }

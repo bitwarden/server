@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Models.Data;
+﻿using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
@@ -14,54 +15,54 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class RevokeNonCompliantOrganizationUserCommandTests
+public class RevokeOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenUnrecognizedUserType_WhenAttemptingToRevoke_ThenErrorShouldBeReturned(
-            Guid organizationId, SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+            Guid organizationId, SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         var command = new RevokeOrganizationUsersRequest(organizationId, [], new InvalidUser());
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorRequestedByWasNotValid, result.ErrorMessages);
+        Assert.Contains(RevokeOrganizationUserCommand.ErrorRequestedByWasNotValid, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenUserAttemptsToRevokeThemselves_ThenErrorShouldBeReturned(
             Guid organizationId, OrganizationUserUserDetails revokingUser,
-            SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+            SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         var command = new RevokeOrganizationUsersRequest(organizationId, revokingUser,
             new StandardUser(revokingUser?.UserId ?? Guid.NewGuid(), true));
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorCannotRevokeSelf, result.ErrorMessages);
+        Assert.Contains(RevokeOrganizationUserCommand.ErrorCannotRevokeSelf, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenUserAttemptsToRevokeOrgUsersFromAnotherOrg_ThenErrorShouldBeReturned(
             Guid organizationId, OrganizationUserUserDetails userFromAnotherOrg,
-            SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+            SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         userFromAnotherOrg.OrganizationId = Guid.NewGuid();
 
         var command = new RevokeOrganizationUsersRequest(organizationId, userFromAnotherOrg,
             new StandardUser(Guid.NewGuid(), true));
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorInvalidUsers, result.ErrorMessages);
+        Assert.Contains(RevokeOrganizationUserCommand.ErrorInvalidUsers, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenUserAttemptsToRevokeAllOwnersFromOrg_ThenErrorShouldBeReturned(
             Guid organizationId, OrganizationUserUserDetails userToRevoke,
-            SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+            SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         userToRevoke.OrganizationId = organizationId;
 
@@ -72,16 +73,16 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(false);
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorOrgMustHaveAtLeastOneOwner, result.ErrorMessages);
+        Assert.Contains(RevokeOrganizationUserCommand.ErrorOrgMustHaveAtLeastOneOwner, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenUserAttemptsToRevokeOwnerWhenNotAnOwner_ThenErrorShouldBeReturned(
         Guid organizationId, OrganizationUserUserDetails userToRevoke,
-        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+        SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Type = OrganizationUserType.Owner;
@@ -93,16 +94,16 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains(RevokeNonCompliantOrganizationUserCommand.ErrorOnlyOwnersCanRevokeOtherOwners, result.ErrorMessages);
+        Assert.Contains(RevokeOrganizationUserCommand.ErrorOnlyOwnersCanRevokeOtherOwners, result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenUserAttemptsToRevokeUserWhoIsAlreadyRevoked_ThenErrorShouldBeReturned(
         Guid organizationId, OrganizationUserUserDetails userToRevoke,
-        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+        SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Status = OrganizationUserStatusType.Revoked;
@@ -114,16 +115,16 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
-        Assert.Contains($"{RevokeNonCompliantOrganizationUserCommand.ErrorUserAlreadyRevoked} Id: {userToRevoke.Id}", result.ErrorMessages);
+        Assert.Contains($"{RevokeOrganizationUserCommand.ErrorUserAlreadyRevoked} Id: {userToRevoke.Id}", result.ErrorMessages);
     }
 
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenPopulatedRequest_WhenUserHasMultipleInvalidUsers_ThenErrorShouldBeReturned(
         Guid organizationId, IEnumerable<OrganizationUserUserDetails> usersToRevoke,
-        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+        SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         var revocableUsers = usersToRevoke.ToList();
         revocableUsers.ForEach(user => user.OrganizationId = organizationId);
@@ -137,7 +138,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         Assert.True(result.HasErrors);
         Assert.True(result.ErrorMessages.Count > 1);
@@ -146,7 +147,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
     [Theory, BitAutoData]
     public async Task RevokeNonCompliantOrganizationUsersAsync_GivenValidPopulatedRequest_WhenUserAttemptsToRevokeAUser_ThenUserShouldBeRevoked(
         Guid organizationId, OrganizationUserUserDetails userToRevoke,
-        SutProvider<RevokeNonCompliantOrganizationUserCommand> sutProvider)
+        SutProvider<RevokeOrganizationUserCommand> sutProvider)
     {
         userToRevoke.OrganizationId = organizationId;
         userToRevoke.Type = OrganizationUserType.Admin;
@@ -158,7 +159,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
             .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
 
-        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersAsync(command);
+        var result = await sutProvider.Sut.RevokeNonCompliantOrganizationUsersPolicyEnablementAsync(command);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
@@ -169,7 +170,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventsAsync(
-                Arg.Is<IEnumerable<(OrganizationUserUserDetails organizationUser, EventType eventType, DateTime? time
+                Arg.Is<IEnumerable<(IOrganizationUser organizationUser, EventType eventType, DateTime? time
                     )>>(
                     x => x.Any(y =>
                         y.organizationUser.Id == userToRevoke.Id && y.eventType == EventType.OrganizationUser_Revoked)

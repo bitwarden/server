@@ -264,7 +264,8 @@ public class UserServiceTests
             new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
             sutProvider.GetDependency<IFeatureService>(),
             sutProvider.GetDependency<IPremiumUserBillingService>(),
-            sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
+            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);

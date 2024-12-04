@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -67,6 +69,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IFeatureService _featureService;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
     public UserService(
         IUserRepository userRepository,
@@ -101,7 +104,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPremiumUserBillingService premiumUserBillingService,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
         : base(
               store,
               optionsAccessor,
@@ -142,6 +146,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _featureService = featureService;
         _premiumUserBillingService = premiumUserBillingService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1343,17 +1348,47 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
+
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
 
-        var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
-            var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.DisplayName(), user.Email);
-        }).ToArray();
+            var organizationUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+            var organizations = await _organizationRepository.GetManyByUserIdAsync(user.Id);
 
-        await Task.WhenAll(removeOrgUserTasks);
+            await Task.WhenAll(twoFactorPolicies
+                .Select(async x =>
+                {
+                    var orgUser = organizationUsers.FirstOrDefault(ou => ou.Id == x.OrganizationUserId);
+                    var orgName = organizations.FirstOrDefault(ou => ou.Id == x.OrganizationUserId)?.DisplayName();
+
+                    if (orgUser == null || orgName == null)
+                    {
+                        return;
+                    }
+
+                    var result = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                        new RevokeOrganizationUsersRequest(orgUser.OrganizationId, orgUser,
+                            new StandardUser(user.Id,
+                                await _currentContext.OrganizationOwner(orgUser.OrganizationId))));
+
+                    if (result.Success)
+                    {
+                        await _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(orgName,
+                            user.Email);
+                    }
+                }));
+        }
+        else
+        {
+            await Task.WhenAll(twoFactorPolicies.Select(async p =>
+            {
+                await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
+                var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
+                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                    organization.DisplayName(), user.Email);
+            }));
+        }
     }
 
     public override async Task<IdentityResult> ConfirmEmailAsync(User user, string token)
