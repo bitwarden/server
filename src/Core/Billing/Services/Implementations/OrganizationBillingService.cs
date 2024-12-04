@@ -28,8 +28,7 @@ public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService,
-    ITaxService taxService) : IOrganizationBillingService
+    ISubscriberService subscriberService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -168,38 +167,14 @@ public class OrganizationBillingService(
                 throw new BillingException();
             }
 
-            customerCreateOptions.Address = new AddressOptions
-            {
-                Line1 = customerSetup.TaxInformation.Line1,
-                Line2 = customerSetup.TaxInformation.Line2,
-                City = customerSetup.TaxInformation.City,
-                PostalCode = customerSetup.TaxInformation.PostalCode,
-                State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country,
-            };
+            var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
+
+            customerCreateOptions.Address = address;
             customerCreateOptions.Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
-
-            if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
-            {
-                var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
-                    customerSetup.TaxInformation.TaxId);
-
-                if (taxIdType == null)
-                {
-                    logger.LogWarning("Could not determine tax ID type for organization '{OrganizationID}' in country '{Country}' with tax ID '{TaxID}'.",
-                        organization.Id,
-                        customerSetup.TaxInformation.Country,
-                        customerSetup.TaxInformation.TaxId);
-                }
-
-                customerCreateOptions.TaxIdData =
-                [
-                    new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
-                ];
-            }
+            customerCreateOptions.TaxIdData = taxIdData;
 
             var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
 

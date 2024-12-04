@@ -24,8 +24,7 @@ public class PremiumUserBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository,
-    ITaxService taxService) : IPremiumUserBillingService
+    IUserRepository userRepository) : IPremiumUserBillingService
 {
     public async Task Finalize(PremiumUserSale sale)
     {
@@ -83,19 +82,13 @@ public class PremiumUserBillingService(
             throw new BillingException();
         }
 
+        var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
+
         var subscriberName = user.SubscriberName();
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Address = new AddressOptions
-            {
-                Line1 = customerSetup.TaxInformation.Line1,
-                Line2 = customerSetup.TaxInformation.Line2,
-                City = customerSetup.TaxInformation.City,
-                PostalCode = customerSetup.TaxInformation.PostalCode,
-                State = customerSetup.TaxInformation.State,
-                Country = customerSetup.TaxInformation.Country,
-            },
+            Address = address,
             Description = user.Name,
             Email = user.Email,
             Expand = ["tax"],
@@ -120,27 +113,9 @@ public class PremiumUserBillingService(
             Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-            }
+            },
+            TaxIdData = taxIdData
         };
-
-        if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
-        {
-            var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
-                customerSetup.TaxInformation.TaxId);
-
-            if (taxIdType == null)
-            {
-                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
-                    customerSetup.TaxInformation.Country,
-                    customerSetup.TaxInformation.TaxId);
-                throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
-            }
-
-            customerCreateOptions.TaxIdData =
-            [
-                new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
-            ];
-        }
 
         var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
 

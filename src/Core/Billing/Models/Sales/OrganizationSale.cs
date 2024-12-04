@@ -65,7 +65,6 @@ public class OrganizationSale
             signup.TaxInfo.BillingAddressCountry,
             signup.TaxInfo.BillingAddressPostalCode,
             signup.TaxInfo.TaxIdNumber,
-            signup.TaxInfo.TaxIdType,
             signup.TaxInfo.BillingAddressLine1,
             signup.TaxInfo.BillingAddressLine2,
             signup.TaxInfo.BillingAddressCity,

@@ -1,5 +1,4 @@
-﻿using Bit.Core.Billing.Services;
-using Bit.Core.Services;
+﻿using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -46,16 +45,5 @@ public class StripeController(
         var setupIntent = await stripeAdapter.SetupIntentCreate(options);
 
         return TypedResults.Ok(setupIntent.ClientSecret);
-    }
-
-    [HttpGet]
-    [Route("~/tax/is-country-supported")]
-    public IResult IsCountrySupported(
-        [FromQuery] string country,
-        [FromServices] ITaxService taxService)
-    {
-        var isSupported = taxService.IsSupported(country);
-
-        return TypedResults.Ok(isSupported);
     }
 }

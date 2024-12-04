@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Services;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -77,19 +76,5 @@ public class AccountsBillingController(
             startAfter);
 
         return TypedResults.Ok(transactions);
-    }
-
-    [HttpPost("preview-invoice")]
-    public async Task<IResult> PreviewInvoiceAsync([FromBody] PreviewIndividualInvoiceRequestBody model)
-    {
-        var user = await userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var invoice = await paymentService.PreviewInvoiceAsync(model, user.GatewayCustomerId, user.GatewaySubscriptionId);
-
-        return TypedResults.Ok(invoice);
     }
 }
