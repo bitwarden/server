@@ -668,8 +668,7 @@ public class SubscriberService(
             await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions
                 {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                 });
         }
 

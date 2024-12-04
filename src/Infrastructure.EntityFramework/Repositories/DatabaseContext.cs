@@ -65,7 +65,6 @@ public class DatabaseContext : DbContext
     public DbSet<Send> Sends { get; set; }
     public DbSet<SsoConfig> SsoConfigs { get; set; }
     public DbSet<SsoUser> SsoUsers { get; set; }
-    public DbSet<TaxRate> TaxRates { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
@@ -102,7 +101,6 @@ public class DatabaseContext : DbContext
         var eProviderUser = builder.Entity<ProviderUser>();
         var eProviderOrganization = builder.Entity<ProviderOrganization>();
         var eSsoConfig = builder.Entity<SsoConfig>();
-        var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
@@ -159,7 +157,6 @@ public class DatabaseContext : DbContext
         eProviderUser.ToTable(nameof(ProviderUser));
         eProviderOrganization.ToTable(nameof(ProviderOrganization));
         eSsoConfig.ToTable(nameof(SsoConfig));
-        eTaxRate.ToTable(nameof(TaxRate));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
