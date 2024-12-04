@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bit.Api.AdminConsole.Public.Models.Response;
 
@@ -11,6 +12,9 @@ namespace Bit.Api.AdminConsole.Public.Models.Response;
 /// </summary>
 public class PolicyResponseModel : PolicyBaseModel, IResponseModel
 {
+    [JsonConstructor]
+    public PolicyResponseModel() { }
+
     public PolicyResponseModel(Policy policy)
     {
         if (policy == null)

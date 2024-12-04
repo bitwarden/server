@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,9 +19,9 @@ public class VerifyOrganizationDomainCommand(
     IDnsResolverService dnsResolverService,
     IEventService eventService,
     IGlobalSettings globalSettings,
-    IPolicyService policyService,
     IFeatureService featureService,
     ICurrentContext currentContext,
+    ISavePolicyCommand savePolicyCommand,
     ILogger<VerifyOrganizationDomainCommand> logger)
     : IVerifyOrganizationDomainCommand
 {
@@ -125,10 +125,15 @@ public class VerifyOrganizationDomainCommand(
     {
         if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            await policyService.SaveAsync(
-                new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true },
-                savingUserId: actingUser is StandardUser standardUser ? standardUser.UserId : null,
-                eventSystemUser: actingUser is SystemUser systemUser ? systemUser.SystemUserType : null);
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = organizationId,
+                Type = PolicyType.SingleOrg,
+                Enabled = true,
+                PerformedBy = actingUser
+            };
+
+            await savePolicyCommand.SaveAsync(policyUpdate);
         }
     }
 }
