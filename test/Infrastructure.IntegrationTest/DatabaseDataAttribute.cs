@@ -1,16 +1,6 @@
 ﻿using System.Reflection;
-using Bit.Core.Enums;
-using Bit.Core.Settings;
-using Bit.Infrastructure.Dapper;
-using Bit.Infrastructure.EntityFramework;
-using Bit.Infrastructure.EntityFramework.Repositories;
-using Bit.Infrastructure.IntegrationTest.Services;
 using Bit.Infrastructure.IntegrationTest.Utilities;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using Xunit.Sdk;
 using Xunit.v3;
@@ -19,29 +9,72 @@ namespace Bit.Infrastructure.IntegrationTest;
 
 public class DatabaseDataAttribute : DataAttribute
 {
-    public bool SelfHosted { get; set; }
     public bool UseFakeTimeProvider { get; set; }
-    public string? MigrationName { get; set; }
 
-    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
+    public override async ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
-        var builders = DatabaseStartup.Builders;
+        var customizers = GetOrderedCustomizers(testMethod);
 
-        if (builders == null)
+        var databases = DatabaseStartup.Databases;
+
+        if (databases == null)
         {
-            throw new InvalidOperationException("Builders wasn't supplied, this likely means DatabaseStartup didn't run.");
+            throw new InvalidOperationException("Databases wasn't supplied, this likely means DatabaseStartup didn't run.");
         }
 
-        var theoryData = new ITheoryDataRow[builders.Count];
-        for (var i = 0; i < builders.Count; i++)
+        var theories = new ITheoryDataRow[databases.Count];
+
+        for (var i = 0; i < theories.Length; i++)
         {
-            theoryData[i] = builders[i](testMethod, disposalTracker, this);
+            var customizationContext = new CustomizationContext(databases[i] with {}, testMethod, disposalTracker);
+            foreach (var customizer in customizers)
+            {
+                await customizer.CustomizeAsync(customizationContext);
+            }
+
+            var isEnabled = customizationContext.Enabled ?? customizationContext.Database.Enabled;
+
+            TheoryDataRowBase theory;
+
+            if (!isEnabled)
+            {
+                theory = new TheoryDataRow()
+                    .WithSkip("Not Enabled");
+            }
+            else
+            {
+                theory = new ServiceTheoryDataRow(testMethod, disposalTracker, customizationContext.Services.BuildServiceProvider());
+            }
+
+            theory
+                .WithTrait("Type", customizationContext.Database.Type.ToString())
+                .WithTrait("ConnectionString", customizationContext.Database.ConnectionString ?? "(none)")
+                .WithTestDisplayName($"{testMethod.Name}[{customizationContext.Database.Name ?? customizationContext.Database.Type.ToString()}]");
+
+            theories[i] = theory;
         }
-        return new(theoryData);
+
+        return theories;
     }
 
     public override bool SupportsDiscoveryEnumeration()
     {
         return true;
+    }
+
+    private static IEnumerable<TestCustomizerAttribute> GetOrderedCustomizers(MethodInfo methodInfo)
+    {
+        var assemblyAttributes = methodInfo.DeclaringType?.Assembly.GetCustomAttributes<TestCustomizerAttribute>() ?? [];
+        var typeAttributes = methodInfo.DeclaringType?.GetCustomAttributes<TestCustomizerAttribute>() ?? [];
+        var methodAttributes = methodInfo.GetCustomAttributes<TestCustomizerAttribute>();
+
+        IReadOnlyCollection<TestCustomizerAttribute> allAttributes = [..assemblyAttributes, ..typeAttributes, ..methodAttributes];
+
+        if (allAttributes.Count == 0)
+        {
+            return [DefaultCustomizerAttribute.Instance];
+        }
+
+        return allAttributes;
     }
 }
