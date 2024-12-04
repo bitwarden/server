@@ -77,8 +77,7 @@ public class StripePaymentServiceTests
             c.Address.Line2 == taxInfo.BillingAddressLine2 &&
             c.Address.City == taxInfo.BillingAddressCity &&
             c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
+            c.TaxIdData == null
         ));
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
@@ -135,8 +134,7 @@ public class StripePaymentServiceTests
             c.Address.Line2 == taxInfo.BillingAddressLine2 &&
             c.Address.City == taxInfo.BillingAddressCity &&
             c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
+            c.TaxIdData == null
         ));
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
@@ -192,8 +190,7 @@ public class StripePaymentServiceTests
             c.Address.Line2 == taxInfo.BillingAddressLine2 &&
             c.Address.City == taxInfo.BillingAddressCity &&
             c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
+            c.TaxIdData == null
         ));
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
@@ -250,8 +247,7 @@ public class StripePaymentServiceTests
             c.Address.Line2 == taxInfo.BillingAddressLine2 &&
             c.Address.City == taxInfo.BillingAddressCity &&
             c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
+            c.TaxIdData == null
         ));
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
@@ -445,8 +441,7 @@ public class StripePaymentServiceTests
             c.Address.Line2 == taxInfo.BillingAddressLine2 &&
             c.Address.City == taxInfo.BillingAddressCity &&
             c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
+            c.TaxIdData == null
         ));
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
@@ -515,8 +510,7 @@ public class StripePaymentServiceTests
             c.Address.Line2 == taxInfo.BillingAddressLine2 &&
             c.Address.City == taxInfo.BillingAddressCity &&
             c.Address.State == taxInfo.BillingAddressState &&
-            c.TaxIdData.First().Value == taxInfo.TaxIdNumber &&
-            c.TaxIdData.First().Type == taxInfo.TaxIdType
+            c.TaxIdData == null
         ));
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>

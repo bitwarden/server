@@ -83,7 +83,6 @@ public static class Utilities
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
-            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,
