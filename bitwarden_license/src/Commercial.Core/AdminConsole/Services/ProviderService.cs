@@ -28,7 +28,9 @@ namespace Bit.Commercial.Core.AdminConsole.Services;
 public class ProviderService : IProviderService
 {
     private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
-        PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019
+        PlanType.Free,
+        PlanType.FamiliesAnnually,
+        PlanType.FamiliesAnnually2019
     ];
 
     private readonly IDataProtector _dataProtector;
