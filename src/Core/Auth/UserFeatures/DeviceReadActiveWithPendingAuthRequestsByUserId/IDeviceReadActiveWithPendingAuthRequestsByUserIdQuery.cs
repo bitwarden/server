@@ -2,5 +2,4 @@
 
 public interface IDeviceReadActiveWithPendingAuthRequestsByUserIdQuery
 {
-
 }

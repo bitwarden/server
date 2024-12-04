@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -70,26 +72,34 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task<ICollection<Core.Entities.Device>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
+    public async Task<ICollection<DeviceAuthRequestResponseModel>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
-            // This is getting closer, need to keep work-shopping it.
+            var currentTime = DateTime.UtcNow;
+
             var query = from device in dbContext.Devices
                         join authRequest in dbContext.AuthRequests
-                            on device.UserId equals authRequest.UserId
+                            on device.Identifier equals authRequest.RequestDeviceIdentifier
                             into deviceRequests
+                        from authRequest in deviceRequests
+                            .Where(ar => ar.Type == AuthRequestType.AuthenticateAndUnlock || ar.Type == AuthRequestType.Unlock)
+                            .Where(ar => ar.Approved == null)
+                            .Where(ar => ar.CreationDate.AddMinutes(expirationMinutes) > currentTime)
+                            .OrderByDescending(ar => ar.CreationDate)
+                            .Take(1)
                         where device.UserId == userId && device.Active == true
                         select new
                         {
-                            AuthRequestId = from authRequest in deviceRequests select authRequest.Id,
-                            AuthCreationDate = from authRequest in deviceRequests select authRequest.CreationDate,
+                            Device = device,
+                            AuthRequestId = authRequest.Id,
+                            AuthRequestCreationDate = authRequest.CreationDate
                         };
 
             var devices = await query.ToListAsync();
-            return Mapper.Map<List<Core.Entities.Device>>(devices);
+            return Mapper.Map<List<DeviceAuthRequestResponseModel>>(devices);
         }
     }
 }
