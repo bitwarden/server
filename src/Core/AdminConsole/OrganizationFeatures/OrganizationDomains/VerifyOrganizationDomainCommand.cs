@@ -1,7 +1,9 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -12,124 +14,126 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 
-public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
+public class VerifyOrganizationDomainCommand(
+    IOrganizationDomainRepository organizationDomainRepository,
+    IDnsResolverService dnsResolverService,
+    IEventService eventService,
+    IGlobalSettings globalSettings,
+    IFeatureService featureService,
+    ICurrentContext currentContext,
+    ISavePolicyCommand savePolicyCommand,
+    ILogger<VerifyOrganizationDomainCommand> logger)
+    : IVerifyOrganizationDomainCommand
 {
-    private readonly IOrganizationDomainRepository _organizationDomainRepository;
-    private readonly IDnsResolverService _dnsResolverService;
-    private readonly IEventService _eventService;
-    private readonly IGlobalSettings _globalSettings;
-    private readonly IPolicyService _policyService;
-    private readonly IFeatureService _featureService;
-    private readonly ILogger<VerifyOrganizationDomainCommand> _logger;
-
-    public VerifyOrganizationDomainCommand(
-        IOrganizationDomainRepository organizationDomainRepository,
-        IDnsResolverService dnsResolverService,
-        IEventService eventService,
-        IGlobalSettings globalSettings,
-        IPolicyService policyService,
-        IFeatureService featureService,
-        ILogger<VerifyOrganizationDomainCommand> logger)
-    {
-        _organizationDomainRepository = organizationDomainRepository;
-        _dnsResolverService = dnsResolverService;
-        _eventService = eventService;
-        _globalSettings = globalSettings;
-        _policyService = policyService;
-        _featureService = featureService;
-        _logger = logger;
-    }
 
 
     public async Task<OrganizationDomain> UserVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
     {
-        var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain);
+        if (currentContext.UserId is null)
+        {
+            throw new InvalidOperationException(
+                $"{nameof(UserVerifyOrganizationDomainAsync)} can only be called by a user. " +
+                $"Please call {nameof(SystemVerifyOrganizationDomainAsync)} for system users.");
+        }
 
-        await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+        var actingUser = new StandardUser(currentContext.UserId.Value, await currentContext.OrganizationOwner(organizationDomain.OrganizationId));
+
+        var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain, actingUser);
+
+        await eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
             domainVerificationResult.VerifiedDate != null
                 ? EventType.OrganizationDomain_Verified
                 : EventType.OrganizationDomain_NotVerified);
 
-        await _organizationDomainRepository.ReplaceAsync(domainVerificationResult);
+        await organizationDomainRepository.ReplaceAsync(domainVerificationResult);
 
         return domainVerificationResult;
     }
 
     public async Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
     {
+        var actingUser = new SystemUser(EventSystemUser.DomainVerification);
+
         organizationDomain.SetJobRunCount();
 
-        var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain);
+        var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain, actingUser);
 
         if (domainVerificationResult.VerifiedDate is not null)
         {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
+            logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
 
-            await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+            await eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
                 EventType.OrganizationDomain_Verified,
                 EventSystemUser.DomainVerification);
         }
         else
         {
-            domainVerificationResult.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
+            domainVerificationResult.SetNextRunDate(globalSettings.DomainVerification.VerificationInterval);
 
-            await _eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+            await eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
                 EventType.OrganizationDomain_NotVerified,
                 EventSystemUser.DomainVerification);
 
-            _logger.LogInformation(Constants.BypassFiltersEventId,
+            logger.LogInformation(Constants.BypassFiltersEventId,
                 "Verification for organization {OrgId} with domain {Domain} failed",
                 domainVerificationResult.OrganizationId, domainVerificationResult.DomainName);
         }
 
-        await _organizationDomainRepository.ReplaceAsync(domainVerificationResult);
+        await organizationDomainRepository.ReplaceAsync(domainVerificationResult);
 
         return domainVerificationResult;
     }
 
-    private async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain)
+    private async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain, IActingUser actingUser)
     {
         domain.SetLastCheckedDate();
 
         if (domain.VerifiedDate is not null)
         {
-            await _organizationDomainRepository.ReplaceAsync(domain);
+            await organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("Domain has already been verified.");
         }
 
         var claimedDomain =
-            await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
+            await organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
 
         if (claimedDomain.Count > 0)
         {
-            await _organizationDomainRepository.ReplaceAsync(domain);
+            await organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("The domain is not available to be claimed.");
         }
 
         try
         {
-            if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
+            if (await dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
             {
                 domain.SetVerifiedDate();
 
-                await EnableSingleOrganizationPolicyAsync(domain.OrganizationId);
+                await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
             }
         }
         catch (Exception e)
         {
-            _logger.LogError("Error verifying Organization domain: {domain}. {errorMessage}",
+            logger.LogError("Error verifying Organization domain: {domain}. {errorMessage}",
                 domain.DomainName, e.Message);
         }
 
         return domain;
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId)
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
     {
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            await _policyService.SaveAsync(
-                new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true }, null);
+            var policyUpdate = new PolicyUpdate
+            {
+                OrganizationId = organizationId,
+                Type = PolicyType.SingleOrg,
+                Enabled = true,
+                PerformedBy = actingUser
+            };
+
+            await savePolicyCommand.SaveAsync(policyUpdate);
         }
     }
 }

@@ -5,5 +5,7 @@ public class BillingException(
     string message = null,
     Exception innerException = null) : Exception(message, innerException)
 {
-    public string Response { get; } = response ?? "Something went wrong with your request. Please contact support.";
+    public const string DefaultMessage = "Something went wrong with your request. Please contact support.";
+
+    public string Response { get; } = response ?? DefaultMessage;
 }

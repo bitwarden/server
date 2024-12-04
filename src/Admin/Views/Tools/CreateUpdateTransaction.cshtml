@@ -10,30 +10,30 @@
     <div asp-validation-summary="All" class="alert alert-danger"></div>
     <div class="row">
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="UserId"></label>
+            <div class="mb-3">
+                <label asp-for="UserId" class="form-label"></label>
                 <input type="text" class="form-control" asp-for="UserId">
             </div>
         </div>
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="OrganizationId"></label>
+            <div class="mb-3">
+                <label asp-for="OrganizationId" class="form-label"></label>
                 <input type="text" class="form-control" asp-for="OrganizationId">
             </div>
         </div>
     </div>
     <div class="row">
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="Date"></label>
+            <div class="mb-3">
+                <label asp-for="Date" class="form-label"></label>
                 <input type="datetime-local" class="form-control" asp-for="Date" required>
             </div>
         </div>
         <div class="col-md">
             <div class="form-group">
-                <div class="form-group">
-                    <label asp-for="Type"></label>
-                    <select class="form-control" asp-for="Type" required
+                <div class="mb-3">
+                    <label asp-for="Type" class="form-label"></label>
+                    <select class="form-select" asp-for="Type" required
                             asp-items="Html.GetEnumSelectList<Bit.Core.Enums.TransactionType>()"></select>
                 </div>
             </div>
@@ -41,24 +41,20 @@
     </div>
     <div class="row">
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="Amount"></label>
-                <div class="input-group mb-3">
-                    <div class="input-group-prepend">
-                        <span class="input-group-text">$</span>
-                    </div>
+            <div class="mb-3">
+                <label asp-for="Amount" class="form-label"></label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
                     <input type="number" min="-1000000.00" max="1000000.00" step="0.01" class="form-control"
                            asp-for="Amount" required placeholder="ex. 10.00">
                 </div>
             </div>
         </div>
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="RefundedAmount"></label>
-                <div class="input-group mb-3">
-                    <div class="input-group-prepend">
-                        <span class="input-group-text">$</span>
-                    </div>
+            <div class="mb-3">
+                <label asp-for="RefundedAmount" class="form-label"></label>
+                <div class="input-group">
+                    <span class="input-group-text">$</span>
                     <input type="number" min="0.01" max="1000000.00" step="0.01" class="form-control"
                            asp-for="RefundedAmount" placeholder="ex. 10.00">
                 </div>
@@ -69,39 +65,35 @@
         <input type="checkbox" class="form-check-input" asp-for="Refunded">
         <label class="form-check-label" asp-for="Refunded"></label>
     </div>
-    <div class="form-group">
-        <label asp-for="Details"></label>
+    <div class="mb-3">
+        <label asp-for="Details" class="form-label"></label>
         <input type="text" class="form-control" asp-for="Details" required>
     </div>
     <div class="row">
         <div class="col-md">
-            <div class="form-group">
-                <div class="form-group">
-                    <label asp-for="Gateway"></label>
-                    <select class="form-control" asp-for="Gateway"
-                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                        <option value="">--</option>
-                    </select>
-                </div>
+            <div class="mb-3">
+                <label asp-for="Gateway" class="form-label"></label>
+                <select class="form-select" asp-for="Gateway"
+                        asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                    <option value="">--</option>
+                </select>
             </div>
         </div>
         <div class="col-md">
-            <div class="form-group">
-                <label asp-for="GatewayId"></label>
+            <div class="mb-3">
+                <label asp-for="GatewayId" class="form-label"></label>
                 <input type="text" class="form-control" asp-for="GatewayId">
             </div>
         </div>
     </div>
     <div class="row">
         <div class="col-md-6">
-            <div class="form-group">
-                <div class="form-group">
-                    <label asp-for="PaymentMethod"></label>
-                    <select class="form-control" asp-for="PaymentMethod"
-                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.PaymentMethodType>()">
-                        <option value="">--</option>
-                    </select>
-                </div>
+            <div class="mb-3">
+                <label asp-for="PaymentMethod" class="form-label"></label>
+                <select class="form-select" asp-for="PaymentMethod"
+                        asp-items="Html.GetEnumSelectList<Bit.Core.Enums.PaymentMethodType>()">
+                    <option value="">--</option>
+                </select>
             </div>
         </div>
     </div>

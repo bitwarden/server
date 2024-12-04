@@ -15,6 +15,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -444,13 +445,6 @@ public class OrganizationService : IOrganizationService
 
     public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
     {
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!consolidatedBillingEnabled)
-        {
-            throw new InvalidOperationException($"{nameof(SignupClientAsync)} is only for use within Consolidated Billing");
-        }
-
         var plan = StaticStore.GetPlan(signup.Plan);
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
@@ -1443,10 +1437,7 @@ public class OrganizationService : IOrganizationService
 
         if (provider is { Enabled: true })
         {
-            var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-            if (consolidatedBillingEnabled && provider.Type == ProviderType.Msp &&
-                provider.Status == ProviderStatusType.Billable)
+            if (provider.IsBillable())
             {
                 return (false, "Seat limit has been reached. Please contact your provider to add more seats.");
             }
@@ -2341,10 +2332,13 @@ public class OrganizationService : IOrganizationService
             PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
         var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
 
+        var singleOrgCompliant = true;
+        var belongsToOtherOrgCompliant = true;
+        var twoFactorCompliant = true;
+
         if (hasOtherOrgs && singleOrgPolicyApplies)
         {
-            throw new BadRequestException("You cannot restore this user until " +
-                "they leave or remove all other organizations.");
+            singleOrgCompliant = false;
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
@@ -2352,8 +2346,7 @@ public class OrganizationService : IOrganizationService
             PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {
-            throw new BadRequestException("You cannot restore this user because they are a member of " +
-                "another organization which forbids it");
+            belongsToOtherOrgCompliant = false;
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
@@ -2363,9 +2356,27 @@ public class OrganizationService : IOrganizationService
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
-                throw new BadRequestException("You cannot restore this user until they enable " +
-                    "two-step login on their user account.");
+                twoFactorCompliant = false;
             }
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (!singleOrgCompliant && !twoFactorCompliant)
+        {
+            throw new BadRequestException(user.Email + " is not compliant with the single organization and two-step login polciy");
+        }
+        else if (!singleOrgCompliant)
+        {
+            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+        }
+        else if (!belongsToOtherOrgCompliant)
+        {
+            throw new BadRequestException(user.Email + " belongs to an organization that doesn't allow them to join multiple organizations");
+        }
+        else if (!twoFactorCompliant)
+        {
+            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
     }
 

@@ -79,6 +79,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email) =>
+        Task.CompletedTask;
+
+    public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
+        Task.CompletedTask;
+
     public Task SendTwoFactorEmailAsync(string email, string token)
     {
         return Task.FromResult(0);
@@ -296,5 +302,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
     public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
+
+    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
+        string organizationId,
+        string organizationName)
+    {
+        return Task.FromResult(0);
+    }
 }
 
