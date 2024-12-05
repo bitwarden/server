@@ -225,7 +225,7 @@ public class ToolsController : Controller
         return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId.Value });
     }
 
-    [RequireFeature(FeatureFlagKeys.PM15128_PromoteProviderServiceUser)]
+    [RequireFeature(FeatureFlagKeys.PromoteProviderServiceUserTool)]
     [RequirePermission(Permission.Tools_PromoteProviderServiceUser)]
     public IActionResult PromoteProviderServiceUser()
     {
@@ -234,7 +234,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequireFeature(FeatureFlagKeys.PM15128_PromoteProviderServiceUser)]
+    [RequireFeature(FeatureFlagKeys.PromoteProviderServiceUserTool)]
     [RequirePermission(Permission.Tools_PromoteProviderServiceUser)]
     public async Task<IActionResult> PromoteProviderServiceUser(PromoteProviderServiceUserModel model)
     {

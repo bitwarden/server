@@ -13,7 +13,7 @@
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
-    var canPromoteProviderServiceUser = FeatureService.IsEnabled(FeatureFlagKeys.PM15128_PromoteProviderServiceUser) &&
+    var canPromoteProviderServiceUser = FeatureService.IsEnabled(FeatureFlagKeys.PromoteProviderServiceUserTool) &&
                                         AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);

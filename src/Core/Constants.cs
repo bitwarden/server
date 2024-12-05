@@ -158,7 +158,7 @@ public static class FeatureFlagKeys
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
-    public const string PM15128_PromoteProviderServiceUser = "pm-15128-promote-provider-service-user";
+    public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
 
     public static List<string> GetAllKeys()
     {
