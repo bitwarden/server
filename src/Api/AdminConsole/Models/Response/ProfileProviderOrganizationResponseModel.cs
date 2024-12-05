@@ -49,5 +49,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         // https://bitwarden.atlassian.net/browse/PM-10863
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 }

@@ -24,7 +24,8 @@ BEGIN
         [LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
-        [AllowAdminAccessToAllCollectionItems]
+        [AllowAdminAccessToAllCollectionItems],
+        [UseRiskInsights]
     FROM
         [dbo].[Organization]
 END

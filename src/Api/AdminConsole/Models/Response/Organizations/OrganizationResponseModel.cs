@@ -60,6 +60,7 @@ public class OrganizationResponseModel : ResponseModel
         // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
         LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 
     public Guid Id { get; set; }
@@ -106,6 +107,7 @@ public class OrganizationResponseModel : ResponseModel
     // Deperectated: https://bitwarden.atlassian.net/browse/PM-10863
     public bool LimitCollectionCreationDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

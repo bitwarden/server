@@ -71,6 +71,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
                         LimitCollectionCreationDeletion = o.LimitCollectionCreationDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
+                        UseRiskInsights = o.UseRiskInsights,
                     };
         return query;
     }
