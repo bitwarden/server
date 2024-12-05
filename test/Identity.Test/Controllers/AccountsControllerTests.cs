@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -42,6 +43,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly GlobalSettings _globalSettings;
 
 
     public AccountsControllerTests()
@@ -57,6 +59,7 @@ public class AccountsControllerTests : IDisposable
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
+        _globalSettings = Substitute.For<GlobalSettings>();
 
         _sut = new AccountsController(
             _currentContext,
@@ -69,7 +72,8 @@ public class AccountsControllerTests : IDisposable
             _sendVerificationEmailForRegistrationCommand,
             _referenceEventService,
             _featureService,
-            _registrationEmailVerificationTokenDataFactory
+            _registrationEmailVerificationTokenDataFactory,
+            _globalSettings
         );
     }
 
