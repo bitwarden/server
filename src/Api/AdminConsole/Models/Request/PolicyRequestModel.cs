@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.Context;
 
 namespace Bit.Api.AdminConsole.Models.Request;
 
@@ -13,19 +15,12 @@ public class PolicyRequestModel
     public bool? Enabled { get; set; }
     public Dictionary<string, object> Data { get; set; }
 
-    public Policy ToPolicy(Guid orgId)
+    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext) => new()
     {
-        return ToPolicy(new Policy
-        {
-            Type = Type.Value,
-            OrganizationId = orgId
-        });
-    }
-
-    public Policy ToPolicy(Policy existingPolicy)
-    {
-        existingPolicy.Enabled = Enabled.GetValueOrDefault();
-        existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
-        return existingPolicy;
-    }
+        Type = Type!.Value,
+        OrganizationId = organizationId,
+        Data = Data != null ? JsonSerializer.Serialize(Data) : null,
+        Enabled = Enabled.GetValueOrDefault(),
+        PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
+    };
 }

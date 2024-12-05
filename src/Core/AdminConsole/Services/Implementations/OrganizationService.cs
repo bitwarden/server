@@ -642,7 +642,8 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
+        var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
+        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
         if (!canUse)
         {
             throw new BadRequestException(exception);

@@ -1,7 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -184,9 +186,13 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IPolicyService>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .Received(1)
-            .SaveAsync(Arg.Is<Policy>(x => x.Type == PolicyType.SingleOrg && x.OrganizationId == domain.OrganizationId && x.Enabled), userId);
+            .SaveAsync(Arg.Is<PolicyUpdate>(x => x.Type == PolicyType.SingleOrg &&
+                x.OrganizationId == domain.OrganizationId &&
+                x.Enabled &&
+                x.PerformedBy is StandardUser &&
+                x.PerformedBy.UserId == userId));
     }
 
     [Theory, BitAutoData]
@@ -210,9 +216,9 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IPolicyService>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<Policy>(), null);
+            .SaveAsync(Arg.Any<PolicyUpdate>());
     }
 
     [Theory, BitAutoData]
@@ -236,10 +242,9 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IPolicyService>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<Policy>(), null);
-
+            .SaveAsync(Arg.Any<PolicyUpdate>());
     }
 
     [Theory, BitAutoData]
@@ -263,9 +268,9 @@ public class VerifyOrganizationDomainCommandTests
 
         _ = await sutProvider.Sut.UserVerifyOrganizationDomainAsync(domain);
 
-        await sutProvider.GetDependency<IPolicyService>()
+        await sutProvider.GetDependency<ISavePolicyCommand>()
             .DidNotReceive()
-            .SaveAsync(Arg.Any<Policy>(), null);
+            .SaveAsync(Arg.Any<PolicyUpdate>());
     }
 
     [Theory, BitAutoData]
