@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
@@ -48,6 +49,9 @@ public class UpdateOrganizationLicenseCommandTests
         license.InstallationId = globalSettings.Installation.Id;
         license.LicenseType = LicenseType.Organization;
         sutProvider.GetDependency<ILicensingService>().VerifyLicense(license).Returns(true);
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(license)
+            .Returns((ClaimsPrincipal)null);
 
         // Passing values for SelfHostedOrganizationDetails.CanUseLicense
         // NSubstitute cannot override non-virtual members so we have to ensure the real method passes
@@ -79,10 +83,11 @@ public class UpdateOrganizationLicenseCommandTests
                 .Received(1)
                 .ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(
                     org => AssertPropertyEqual(license, org,
-                        "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
-                        "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires", "ExpirationWithoutGracePeriod") &&
-                         // Same property but different name, use explicit mapping
-                         org.ExpirationDate == license.Expires));
+                               "Id", "MaxStorageGb", "Issued", "Refresh", "Version", "Trial", "LicenseType",
+                               "Hash", "Signature", "SignatureBytes", "InstallationId", "Expires",
+                               "ExpirationWithoutGracePeriod", "Token") &&
+                           // Same property but different name, use explicit mapping
+                           org.ExpirationDate == license.Expires));
         }
         finally
         {

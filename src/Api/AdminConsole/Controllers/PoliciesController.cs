@@ -6,8 +6,8 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -28,7 +28,6 @@ namespace Bit.Api.AdminConsole.Controllers;
 public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPolicyService _policyService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
@@ -37,10 +36,10 @@ public class PoliciesController : Controller
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly IOrganizationHasVerifiedDomainsQuery _organizationHasVerifiedDomainsQuery;
+    private readonly ISavePolicyCommand _savePolicyCommand;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
-        IPolicyService policyService,
         IOrganizationUserRepository organizationUserRepository,
         IUserService userService,
         ICurrentContext currentContext,
@@ -48,10 +47,10 @@ public class PoliciesController : Controller
         IDataProtectionProvider dataProtectionProvider,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
-        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery)
+        IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
+        ISavePolicyCommand savePolicyCommand)
     {
         _policyRepository = policyRepository;
-        _policyService = policyService;
         _organizationUserRepository = organizationUserRepository;
         _userService = userService;
         _currentContext = currentContext;
@@ -62,6 +61,7 @@ public class PoliciesController : Controller
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _organizationHasVerifiedDomainsQuery = organizationHasVerifiedDomainsQuery;
+        _savePolicyCommand = savePolicyCommand;
     }
 
     [HttpGet("{type}")]
@@ -178,25 +178,20 @@ public class PoliciesController : Controller
     }
 
     [HttpPut("{type}")]
-    public async Task<PolicyResponseModel> Put(string orgId, int type, [FromBody] PolicyRequestModel model)
+    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
     {
-        var orgIdGuid = new Guid(orgId);
-        if (!await _currentContext.ManagePolicies(orgIdGuid))
+        if (!await _currentContext.ManagePolicies(orgId))
         {
             throw new NotFoundException();
         }
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(new Guid(orgId), (PolicyType)type);
-        if (policy == null)
+
+        if (type != model.Type)
         {
-            policy = model.ToPolicy(orgIdGuid);
-        }
-        else
-        {
-            policy = model.ToPolicy(policy);
+            throw new BadRequestException("Mismatched policy type");
         }
 
-        var userId = _userService.GetProperUserId(User);
-        await _policyService.SaveAsync(policy, userId);
+        var policyUpdate = await model.ToPolicyUpdateAsync(orgId, _currentContext);
+        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
         return new PolicyResponseModel(policy);
     }
 }
