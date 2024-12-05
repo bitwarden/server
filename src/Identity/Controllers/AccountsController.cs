@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -15,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -43,6 +45,7 @@ public class AccountsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly GlobalSettings _globalSettings;
 
     public AccountsController(
         ICurrentContext currentContext,
@@ -55,7 +58,8 @@ public class AccountsController : Controller
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IReferenceEventService referenceEventService,
         IFeatureService featureService,
-        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        GlobalSettings globalSettings
         )
     {
         _currentContext = currentContext;
@@ -69,6 +73,7 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _globalSettings = globalSettings;
     }
 
     [HttpPost("register")]
@@ -217,11 +222,63 @@ public class AccountsController : Controller
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
         if (kdfInformation == null)
         {
-            kdfInformation = new UserKdfInformation
+            if (!CoreHelpers.SettingHasValue(_globalSettings.KdfDefaultHashKey))
             {
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
-            };
+                kdfInformation = new UserKdfInformation
+                {
+                    Kdf = KdfType.PBKDF2_SHA256,
+                    KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                };
+            }
+            else
+            {
+                var defaults = new List<UserKdfInformation>
+                {
+                    new()
+                    {
+                        Kdf = KdfType.PBKDF2_SHA256,
+                        KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                    },
+                    // Add more weight to this default
+                    new()
+                    {
+                        Kdf = KdfType.PBKDF2_SHA256,
+                        KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+                    },
+                    new()
+                    {
+                        Kdf = KdfType.PBKDF2_SHA256,
+                        KdfIterations = 100_000,
+                    },
+                    new()
+                    {
+                        Kdf = KdfType.PBKDF2_SHA256,
+                        KdfIterations = 250_000,
+                    },
+                    new()
+                    {
+                        Kdf = KdfType.PBKDF2_SHA256,
+                        KdfIterations = 5_000,
+                    },
+                    new()
+                    {
+                        Kdf = KdfType.Argon2id,
+                        KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+                        KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+                        KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+                    }
+                };
+
+                var hashKey = Encoding.UTF8.GetBytes(_globalSettings.KdfDefaultHashKey);
+                var hashMessage = Encoding.UTF8.GetBytes(model.Email.Trim().ToLowerInvariant());
+                using var hmac = new System.Security.Cryptography.HMACSHA256(hashKey);
+                var hashBytes = hmac.ComputeHash(hashMessage);
+                var hashHex = BitConverter.ToString(hashBytes).Replace("-", string.Empty).ToLowerInvariant();
+                var first8Bytes = hashHex.Substring(0, 16);
+                var hashNumber = long.Parse(first8Bytes, System.Globalization.NumberStyles.HexNumber);
+                var hashIndex = (int)(hashNumber % defaults.Count);
+                kdfInformation = defaults[hashIndex];
+            }
         }
         return new PreloginResponseModel(kdfInformation);
     }
