@@ -1051,6 +1051,19 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
+    {
+        var message = CreateDefaultMessage("Domain not claimed", adminEmails);
+        var model = new OrganizationDomainUnverifiedViewModel
+        {
+            Url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/organizations/{organizationId}/settings/domain-verification",
+            DomainName = domainName
+        };
+        await AddMessageContentAsync(message, "OrganizationDomainUnclaimed", model);
+        message.Category = "UnclaimedOrganizationDomain";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
