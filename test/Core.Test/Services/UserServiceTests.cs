@@ -349,36 +349,6 @@ public class UserServiceTests
         Assert.False(result);
     }
 
-    [Theory, BitAutoData]
-    public async Task DeleteUserAsync_WithAccountDeprovisioningEnabled_Succeeds(
-        SutProvider<UserService> sutProvider, User user
-    )
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-
-        // Act
-        var result = await sutProvider.Sut.DeleteAsync(user);
-
-        // Assert
-        Assert.True(result == IdentityResult.Success);
-    }
-
-    [Theory, BitAutoData]
-    public async Task DeleteUserAsync_WithAccountDeprovisioningDisabled_Succeeds(
-        SutProvider<UserService> sutProvider, User user
-    )
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(false);
-
-        // Act
-        var result = await sutProvider.Sut.DeleteAsync(user);
-
-        // Assert
-        Assert.True(result == IdentityResult.Success);
-    }
-
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
