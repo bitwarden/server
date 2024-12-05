@@ -108,7 +108,7 @@ public class AccountsController : Controller
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
 
-        if (_defaultKdfHmacKey == null && CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
+        if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
             _defaultKdfHmacKey = Encoding.UTF8.GetBytes(globalSettings.KdfDefaultHashKey);
         }
