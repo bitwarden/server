@@ -1,8 +1,10 @@
 @using Bit.Admin.Enums;
+@using Bit.Core
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -11,13 +13,15 @@
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
+    var canPromoteProviderServiceUser = FeatureService.IsEnabled(FeatureFlagKeys.PM15128_PromoteProviderServiceUser) &&
+                                        AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
     var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
-    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
+    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
                         canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
 }
 
@@ -89,6 +93,12 @@
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
                                                 Promote Admin
+                                            </a>
+                                        }
+                                        @if (canPromoteProviderServiceUser)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteProviderServiceUser">
+                                                Promote Provider Service User
                                             </a>
                                         }
                                         @if (canGenerateLicense)
