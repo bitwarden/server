@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -36,7 +37,7 @@ public class OrganizationLicenseTests
     [Theory]
     [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion)] // Previous version (this property is 1 behind)
     [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion + 1)] // Current version
-    public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
+    public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion, ClaimsPrincipal claimsPrincipal)
     {
         var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
 
@@ -49,7 +50,7 @@ public class OrganizationLicenseTests
         {
             Id = new Guid(OrganizationLicenseFileFixtures.InstallationId)
         });
-        Assert.True(license.VerifyData(organization, globalSettings));
+        Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
     }
 
     /// <summary>

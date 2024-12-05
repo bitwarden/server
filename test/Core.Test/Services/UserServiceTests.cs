@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -62,6 +63,9 @@ public class UserServiceTests
         sutProvider.GetDependency<ILicensingService>()
             .VerifyLicense(userLicense)
             .Returns(true);
+        sutProvider.GetDependency<ILicensingService>()
+            .GetClaimsPrincipalFromLicense(userLicense)
+            .Returns((ClaimsPrincipal)null);
 
         await sutProvider.Sut.UpdateLicenseAsync(user, userLicense);
 
