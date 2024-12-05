@@ -24,6 +24,7 @@ public class OrganizationAbility
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 
     public Guid Id { get; set; }
@@ -41,4 +42,5 @@ public class OrganizationAbility
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

@@ -530,7 +530,9 @@ jobs:
 
   self-host-build:
     name: Trigger self-host build
-    if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
+    if: |
+      github.event_name != 'pull_request_target'
+      && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
     runs-on: ubuntu-22.04
     needs:
       - build-docker

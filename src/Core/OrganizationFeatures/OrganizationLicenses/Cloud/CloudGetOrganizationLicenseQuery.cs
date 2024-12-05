@@ -33,6 +33,10 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
         }
 
         var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
-        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
+
+        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version)
+        {
+            Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo)
+        };
     }
 }

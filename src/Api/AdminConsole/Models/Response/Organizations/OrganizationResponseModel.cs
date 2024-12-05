@@ -58,6 +58,7 @@ public class OrganizationResponseModel : ResponseModel
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 
     public Guid Id { get; set; }
@@ -102,6 +103,7 @@ public class OrganizationResponseModel : ResponseModel
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

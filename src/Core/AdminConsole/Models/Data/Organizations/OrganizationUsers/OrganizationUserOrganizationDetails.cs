@@ -57,4 +57,5 @@ public class OrganizationUserOrganizationDetails
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

@@ -256,6 +256,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
         Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
     }
 
     [DatabaseTheory, DatabaseData]

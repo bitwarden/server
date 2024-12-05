@@ -43,4 +43,5 @@ public class ProviderUserOrganizationDetails
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

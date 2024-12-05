@@ -103,6 +103,11 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 
+    /// <summary>
+    /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
+    /// </summary>
+    public bool UseRiskInsights { get; set; }
+
     public void SetNewId()
     {
         if (Id == default(Guid))

@@ -69,6 +69,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
         {
@@ -139,4 +140,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
     public bool UserIsManagedByOrganization { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

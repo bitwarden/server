@@ -642,7 +642,8 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
+        var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
+        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
         if (!canUse)
         {
             throw new BadRequestException(exception);
@@ -2324,10 +2325,13 @@ public class OrganizationService : IOrganizationService
             PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
         var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
 
+        var singleOrgCompliant = true;
+        var belongsToOtherOrgCompliant = true;
+        var twoFactorCompliant = true;
+
         if (hasOtherOrgs && singleOrgPolicyApplies)
         {
-            throw new BadRequestException("You cannot restore this user until " +
-                "they leave or remove all other organizations.");
+            singleOrgCompliant = false;
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
@@ -2335,8 +2339,7 @@ public class OrganizationService : IOrganizationService
             PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {
-            throw new BadRequestException("You cannot restore this user because they are a member of " +
-                "another organization which forbids it");
+            belongsToOtherOrgCompliant = false;
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
@@ -2346,9 +2349,27 @@ public class OrganizationService : IOrganizationService
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
-                throw new BadRequestException("You cannot restore this user until they enable " +
-                    "two-step login on their user account.");
+                twoFactorCompliant = false;
             }
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (!singleOrgCompliant && !twoFactorCompliant)
+        {
+            throw new BadRequestException(user.Email + " is not compliant with the single organization and two-step login polciy");
+        }
+        else if (!singleOrgCompliant)
+        {
+            throw new BadRequestException(user.Email + " is not compliant with the single organization policy");
+        }
+        else if (!belongsToOtherOrgCompliant)
+        {
+            throw new BadRequestException(user.Email + " belongs to an organization that doesn't allow them to join multiple organizations");
+        }
+        else if (!twoFactorCompliant)
+        {
+            throw new BadRequestException(user.Email + " is not compliant with the two-step login policy");
         }
     }
 
