@@ -52,6 +52,11 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.UseSecretsManager), entity.UseSecretsManager.ToString()),
             new(nameof(OrganizationLicenseConstants.SmSeats), entity.SmSeats.ToString()),
             new(nameof(OrganizationLicenseConstants.SmServiceAccounts), entity.SmServiceAccounts.ToString()),
+            // LimitCollectionCreationDeletion was split and removed from the
+            // license. Left here with an assignment from the new values for
+            // backwards compatibility.
+            new(nameof(OrganizationLicenseConstants.LimitCollectionCreationDeletion),
+                (entity.LimitCollectionCreation || entity.LimitCollectionDeletion).ToString()),
             new(nameof(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems), entity.AllowAdminAccessToAllCollectionItems.ToString()),
             new(nameof(OrganizationLicenseConstants.Expires), expires.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
