@@ -526,14 +526,6 @@ public class OrganizationsController : Controller
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        if (
-          _globalSettings.SelfHosted &&
-          !_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-        )
-        {
-            throw new BadRequestException("Only allowed when not self hosted.");
-        }
-
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {

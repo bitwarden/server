@@ -96,18 +96,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// </summary>
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deprecated by https://bitwarden.atlassian.net/browse/PM-10863. This
-    // was replaced with `LimitCollectionCreation` and
-    // `LimitCollectionDeletion`.
-    public bool LimitCollectionCreationDeletion
-    {
-        get => LimitCollectionCreation || LimitCollectionDeletion;
-        set
-        {
-            LimitCollectionCreation = value;
-            LimitCollectionDeletion = value;
-        }
-    }
 
     /// <summary>
     /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
@@ -319,11 +307,5 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-        {
-            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-        }
     }
 }
