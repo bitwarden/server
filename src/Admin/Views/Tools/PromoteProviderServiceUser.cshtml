@@ -1,0 +1,25 @@
+﻿@model PromoteProviderServiceUserModel
+@{
+    ViewData["Title"] = "Promote Provider Service User";
+}
+
+<h1>Promote Provider Service User</h1>
+
+<form method="post">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+    <div class="row">
+        <div class="col-md">
+            <div class="mb-3">
+                <label asp-for="UserId" class="form-label"></label>
+                <input type="text" class="form-control" asp-for="UserId">
+            </div>
+        </div>
+        <div class="col-md">
+            <div class="mb-3">
+                <label asp-for="ProviderId" class="form-label"></label>
+                <input type="text" class="form-control" asp-for="ProviderId">
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Promote Service User</button>
+</form>
