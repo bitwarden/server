@@ -78,28 +78,28 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var currentTime = DateTime.UtcNow;
-
             var query = from device in dbContext.Devices
-                        join authRequest in dbContext.AuthRequests
-                            on device.Identifier equals authRequest.RequestDeviceIdentifier
-                            into deviceRequests
-                        from authRequest in deviceRequests
-                            .Where(ar => ar.Type == AuthRequestType.AuthenticateAndUnlock || ar.Type == AuthRequestType.Unlock)
-                            .Where(ar => ar.Approved == null)
-                            .Where(ar => ar.CreationDate.AddMinutes(expirationMinutes) > currentTime)
-                            .OrderByDescending(ar => ar.CreationDate)
-                            .Take(1)
-                        where device.UserId == userId && device.Active == true
+                        where device.UserId == userId && device.Active
                         select new
                         {
-                            Device = device,
-                            AuthRequestId = authRequest.Id,
-                            AuthRequestCreationDate = authRequest.CreationDate
+                            device,
+                            authRequest = (from authRequest in dbContext.AuthRequests
+                                           where authRequest.RequestDeviceIdentifier == device.Identifier
+                                           where authRequest.Type == AuthRequestType.AuthenticateAndUnlock || authRequest.Type == AuthRequestType.Unlock
+                                           where authRequest.Approved == null
+                                           where authRequest.UserId == userId
+                                           where authRequest.CreationDate.AddMinutes(expirationMinutes) > DateTime.UtcNow
+                                           orderby authRequest.CreationDate descending
+                                           select authRequest).First()
                         };
 
-            var devices = await query.ToListAsync();
-            return Mapper.Map<List<DeviceAuthRequestResponseModel>>(devices);
+            var devices =
+                await query.Select(deviceWithAuthRequest => new DeviceAuthRequestResponseModel(
+                    deviceWithAuthRequest.device,
+                    deviceWithAuthRequest.authRequest != null ? deviceWithAuthRequest.authRequest.Id : Guid.Empty,
+                    deviceWithAuthRequest.authRequest != null ? deviceWithAuthRequest.authRequest.CreationDate : DateTime.MinValue)).ToListAsync();
+
+            return devices;
         }
     }
 }

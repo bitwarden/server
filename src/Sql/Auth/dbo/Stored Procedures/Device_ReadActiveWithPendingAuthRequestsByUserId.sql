@@ -14,7 +14,7 @@ BEGIN
                 AR.CreationDate,
                 AR.RequestDeviceIdentifier
             FROM [dbo].[AuthRequestView] AR
-            WHERE AR.Type IN (0, 1) -- Include only specific types, excluding Admin Approval (type 2)
+            WHERE AR.Type IN (0, 1) -- Include only AuthenticateAndUnlock and Unlock types, excluding Admin Approval (type 2)
                 AND DATEADD(mi, @ExpirationMinutes, AR.CreationDate) > GETUTCDATE() -- Ensure the request hasn't expired
                 AND AR.Approved IS NULL -- Include only requests that haven't been acknowledged or approved
                 ORDER BY AR.CreationDate DESC
