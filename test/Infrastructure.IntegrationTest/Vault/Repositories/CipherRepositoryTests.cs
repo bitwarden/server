@@ -8,7 +8,6 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -212,7 +211,10 @@ public class CipherRepositoryTests
 
         var user = await userRepository.CreateAsync(new User
         {
-            Name = "Test User", Email = $"test+{Guid.NewGuid()}@email.com", ApiKey = "TEST", SecurityStamp = "stamp",
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
         });
 
         var organization = await organizationRepository.CreateAsync(new Organization
@@ -240,7 +242,9 @@ public class CipherRepositoryTests
 
         var manageCipher = await cipherRepository.CreateAsync(new Cipher
         {
-            Type = CipherType.Login, OrganizationId = organization.Id, Data = ""
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
         });
 
         collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher.Id, organization.Id,

@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
 using Bit.Core.KeyManagement.UserKey;
@@ -324,7 +323,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                         OrganizationId = g.Key.OrganizationId,
                         Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
                         ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
-                        Edit =Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
                         Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
                         Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
                     }).ToList();
@@ -332,18 +331,18 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             else
             {
                 var groupByQuery = from p in query
-                    group p by new { p.Id, p.OrganizationId }
+                                   group p by new { p.Id, p.OrganizationId }
                     into g
-                    select new OrganizationCipherPermission
-                    {
-                        Id = g.Key.Id,
-                        OrganizationId = g.Key.OrganizationId,
-                        Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
-                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
-                        Edit =Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
-                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
-                        Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
-                    };
+                                   select new OrganizationCipherPermission
+                                   {
+                                       Id = g.Key.Id,
+                                       OrganizationId = g.Key.OrganizationId,
+                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                                       ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                                       Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                                       Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                                       Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
+                                   };
                 permissions = await groupByQuery.ToListAsync();
             }
 

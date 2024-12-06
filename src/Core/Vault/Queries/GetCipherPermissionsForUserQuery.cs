@@ -12,7 +12,7 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
     private readonly ICurrentContext _currentContext;
     private readonly ICipherRepository _cipherRepository;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService  _featureService;
+    private readonly IFeatureService _featureService;
 
     public GetCipherPermissionsForUserQuery(ICurrentContext currentContext, ICipherRepository cipherRepository, IApplicationCacheService applicationCacheService, IFeatureService featureService)
     {
@@ -69,7 +69,7 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
 
         // Owners/Admins can only edit all ciphers if the organization has the setting enabled
         if (orgAbility is { AllowAdminAccessToAllCollectionItems: true } && org is
-                { Type: OrganizationUserType.Admin or OrganizationUserType.Owner })
+            { Type: OrganizationUserType.Admin or OrganizationUserType.Owner })
         {
             return true;
         }
@@ -86,8 +86,8 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
     private async Task<bool> CanAccessUnassignedCiphersAsync(CurrentContextOrganization org)
     {
         if (org is
-            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-            { Permissions.EditAnyCollection: true })
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true })
         {
             return true;
         }

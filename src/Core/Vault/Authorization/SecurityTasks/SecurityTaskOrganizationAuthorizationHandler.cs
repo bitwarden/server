@@ -41,7 +41,7 @@ public class
     private static bool CanListAllTasksForOrganization(CurrentContextOrganization org)
     {
         return org is
-            { Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
-            { Permissions.AccessReports: true };
+        { Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
+        { Permissions.AccessReports: true };
     }
 }
