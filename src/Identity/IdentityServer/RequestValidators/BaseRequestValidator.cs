@@ -202,6 +202,7 @@ public abstract class BaseRequestValidator<T> where T : class
         if (device != null)
         {
             claims.Add(new Claim(Claims.Device, device.Identifier));
+            claims.Add(new Claim(Claims.DeviceType, device.Type.ToString()));
         }
 
         var customResponse = new Dictionary<string, object>();

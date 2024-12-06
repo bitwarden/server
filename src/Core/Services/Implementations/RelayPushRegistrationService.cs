@@ -25,7 +25,7 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds)
     {
         var requestModel = new PushRegistrationRequestModel
         {
@@ -33,7 +33,8 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             Identifier = identifier,
             PushToken = pushToken,
             Type = type,
-            UserId = userId
+            UserId = userId,
+            OrganizationIds = organizationIds
         };
         await SendAsync(HttpMethod.Post, "push/register", requestModel);
     }
