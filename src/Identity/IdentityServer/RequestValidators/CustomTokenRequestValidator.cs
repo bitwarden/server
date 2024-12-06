@@ -90,7 +90,10 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             return;
         }
         await ValidateAsync(context, context.Result.ValidatedRequest,
-            new CustomValidatorRequestContext { KnownDevice = true });
+            new CustomValidatorRequestContext
+            {
+                KnownDevice = true
+            });
     }
 
     protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,

@@ -91,15 +91,9 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         }
 
         var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
-        var validatorContext = new CustomValidatorRequestContext
-        {
-            User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
-        };
-
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
 
-        await ValidateAsync(context, context.Request, validatorContext);
+        await ValidateAsync(context, context.Request, new CustomValidatorRequestContext { User = user });
     }
 
     protected override Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,

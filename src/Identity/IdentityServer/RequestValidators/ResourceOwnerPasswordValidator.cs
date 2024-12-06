@@ -75,11 +75,16 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         }
 
         var user = await _userManager.FindByEmailAsync(context.UserName.ToLowerInvariant());
+        // We want to keep this device around incase the device is new for the user
+        var requestDevice = DeviceValidator.GetDeviceFromRequest(context.Request);
+        var knownDevice = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request),
+            KnownDevice = knownDevice != null,
+            Device = knownDevice ?? requestDevice,
         };
+
         string bypassToken = null;
         if (!validatorContext.KnownDevice &&
             _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
@@ -183,27 +188,25 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
     {
-        if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email"))
-        {
-            return false;
-        }
-        else
+        if (_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
         {
             try
             {
-                var authEmailHeader = _currentContext.HttpContext.Request.Headers["Auth-Email"];
                 var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-
                 if (authEmailDecoded != context.UserName)
                 {
                     return false;
                 }
             }
-            catch (System.Exception e) when (e is System.InvalidOperationException || e is System.FormatException)
+            catch (Exception e) when (e is InvalidOperationException || e is FormatException)
             {
                 // Invalid B64 encoding
                 return false;
             }
+        }
+        else
+        {
+            return false;
         }
 
         return true;
