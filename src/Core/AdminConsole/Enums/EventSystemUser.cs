@@ -6,4 +6,5 @@ public enum EventSystemUser : byte
     SCIM = 1,
     DomainVerification = 2,
     PublicApi = 3,
+    TwoFactorDisabling = 4,
 }
