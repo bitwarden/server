@@ -8,6 +8,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -197,5 +198,219 @@ public class CipherRepositoryTests
 
         Assert.NotEqual(default, userProperty);
         Assert.Equal(folder.Id, userProperty.Value.GetGuid());
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetCipherPermissionsForOrganizationAsync_Works(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User", Email = $"test+{Guid.NewGuid()}@email.com", ApiKey = "TEST", SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user.Email,
+            Plan = "Test"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        // MANAGE
+
+        var manageCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Manage Collection",
+            OrganizationId = organization.Id
+        });
+
+        var manageCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login, OrganizationId = organization.Id, Data = ""
+        });
+
+        collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher.Id, organization.Id,
+            new List<Guid> { manageCollection.Id });
+
+        collectionRepository.UpdateUsersAsync(manageCollection.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            }
+        });
+
+        // EDIT
+
+        var editCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Edit Collection",
+            OrganizationId = organization.Id
+        });
+
+        var editCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        collectionCipherRepository.UpdateCollectionsForAdminAsync(editCipher.Id, organization.Id,
+            new List<Guid> { editCollection.Id });
+
+        collectionRepository.UpdateUsersAsync(editCollection.Id,
+            new List<CollectionAccessSelection>
+            {
+                new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }
+            });
+
+        // EDIT EXCEPT PASSWORD
+
+        var editExceptPasswordCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Edit Except Password Collection",
+            OrganizationId = organization.Id
+        });
+
+        var editExceptPasswordCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        collectionCipherRepository.UpdateCollectionsForAdminAsync(editExceptPasswordCipher.Id, organization.Id,
+            new List<Guid> { editExceptPasswordCollection.Id });
+
+        collectionRepository.UpdateUsersAsync(editExceptPasswordCollection.Id, new List<CollectionAccessSelection>
+        {
+            new() { Id = orgUser.Id, HidePasswords = true, ReadOnly = false, Manage = false }
+        });
+
+        // VIEW ONLY
+
+        var viewOnlyCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "View Only Collection",
+            OrganizationId = organization.Id
+        });
+
+        var viewOnlyCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        collectionCipherRepository.UpdateCollectionsForAdminAsync(viewOnlyCipher.Id, organization.Id,
+            new List<Guid> { viewOnlyCollection.Id });
+
+        collectionRepository.UpdateUsersAsync(viewOnlyCollection.Id,
+            new List<CollectionAccessSelection>
+            {
+                new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = true, Manage = false }
+            });
+
+        // VIEW EXCEPT PASSWORD
+
+        var viewExceptPasswordCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "View Except Password Collection",
+            OrganizationId = organization.Id
+        });
+
+        var viewExceptPasswordCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        collectionCipherRepository.UpdateCollectionsForAdminAsync(viewExceptPasswordCipher.Id, organization.Id,
+            new List<Guid> { viewExceptPasswordCollection.Id });
+
+        collectionRepository.UpdateUsersAsync(viewExceptPasswordCollection.Id,
+            new List<CollectionAccessSelection>
+            {
+                new() { Id = orgUser.Id, HidePasswords = true, ReadOnly = true, Manage = false }
+            });
+
+        // UNASSIGNED
+
+        var unassignedCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+
+        Assert.NotEmpty(permissions);
+
+        var manageCipherPermission = permissions.FirstOrDefault(c => c.Id == manageCipher.Id);
+        Assert.NotNull(manageCipherPermission);
+        Assert.True(manageCipherPermission.Manage);
+        Assert.True(manageCipherPermission.Edit);
+        Assert.True(manageCipherPermission.Read);
+        Assert.True(manageCipherPermission.ViewPassword);
+        Assert.False(manageCipherPermission.Unassigned);
+
+        var editCipherPermission = permissions.FirstOrDefault(c => c.Id == editCipher.Id);
+        Assert.NotNull(editCipherPermission);
+        Assert.False(editCipherPermission.Manage);
+        Assert.True(editCipherPermission.Edit);
+        Assert.True(editCipherPermission.Read);
+        Assert.True(editCipherPermission.ViewPassword);
+        Assert.False(editCipherPermission.Unassigned);
+
+        var editExceptPasswordCipherPermission = permissions.FirstOrDefault(c => c.Id == editExceptPasswordCipher.Id);
+        Assert.NotNull(editExceptPasswordCipherPermission);
+        Assert.False(editExceptPasswordCipherPermission.Manage);
+        Assert.True(editExceptPasswordCipherPermission.Edit);
+        Assert.True(editExceptPasswordCipherPermission.Read);
+        Assert.False(editExceptPasswordCipherPermission.ViewPassword);
+        Assert.False(editExceptPasswordCipherPermission.Unassigned);
+
+        var viewOnlyCipherPermission = permissions.FirstOrDefault(c => c.Id == viewOnlyCipher.Id);
+        Assert.NotNull(viewOnlyCipherPermission);
+        Assert.False(viewOnlyCipherPermission.Manage);
+        Assert.False(viewOnlyCipherPermission.Edit);
+        Assert.True(viewOnlyCipherPermission.Read);
+        Assert.True(viewOnlyCipherPermission.ViewPassword);
+        Assert.False(viewOnlyCipherPermission.Unassigned);
+
+        var viewExceptPasswordCipherPermission = permissions.FirstOrDefault(c => c.Id == viewExceptPasswordCipher.Id);
+        Assert.NotNull(viewExceptPasswordCipherPermission);
+        Assert.False(viewExceptPasswordCipherPermission.Manage);
+        Assert.False(viewExceptPasswordCipherPermission.Edit);
+        Assert.True(viewExceptPasswordCipherPermission.Read);
+        Assert.False(viewExceptPasswordCipherPermission.ViewPassword);
+        Assert.False(viewExceptPasswordCipherPermission.Unassigned);
+
+        var unassignedCipherPermission = permissions.FirstOrDefault(c => c.Id == unassignedCipher.Id);
+        Assert.NotNull(unassignedCipherPermission);
+        Assert.True(unassignedCipherPermission.Unassigned);
+        Assert.False(unassignedCipherPermission.Manage);
+        Assert.False(unassignedCipherPermission.Edit);
+        Assert.False(unassignedCipherPermission.Read);
+        Assert.False(unassignedCipherPermission.ViewPassword);
     }
 }
