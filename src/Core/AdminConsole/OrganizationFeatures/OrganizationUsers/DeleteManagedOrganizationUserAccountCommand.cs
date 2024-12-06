@@ -23,7 +23,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
-    private readonly IFeatureService _featureService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -36,7 +35,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         IUserRepository userRepository,
         ICurrentContext currentContext,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IFeatureService featureService,
         IReferenceEventService referenceEventService,
         IPushNotificationService pushService,
         IOrganizationRepository organizationRepository,
@@ -49,7 +47,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _userRepository = userRepository;
         _currentContext = currentContext;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
-        _featureService = featureService;
         _referenceEventService = referenceEventService;
         _pushService = pushService;
         _organizationRepository = organizationRepository;
@@ -117,9 +114,15 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
-        var usersToDelete = users.Where(user => results.Select(r => r.OrganizationUserId == user.Id && string.IsNullOrEmpty(r.ErrorMessage)).Count() > 1);
+        var orgUserResultsToDelete = results.Where(result => string.IsNullOrEmpty(result.ErrorMessage));
+        var orgUsersToDelete = orgUsers.Where(orgUser => orgUserResultsToDelete.Any(result => orgUser.Id == result.OrganizationUserId));
+        var usersToDelete = users.Where(user => orgUsersToDelete.Any(orgUser => orgUser.UserId == user.Id));
 
-        await DeleteManyAsync(usersToDelete);
+        if (usersToDelete.Any())
+        {
+            await DeleteManyAsync(usersToDelete);
+        }
+
         await LogDeletedOrganizationUsersAsync(orgUsers, results);
 
         return results;
