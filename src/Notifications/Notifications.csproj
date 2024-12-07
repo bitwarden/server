@@ -7,8 +7,8 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications-SelfHost' " />
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="8.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="8.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
