@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Bit.Infrastructure.IntegrationTest.Utilities;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Sdk;
 using Xunit.v3;
@@ -47,8 +46,7 @@ public class DatabaseDataAttribute : DataAttribute
             }
 
             theory
-                .WithTrait("Type", customizationContext.Database.Type.ToString())
-                .WithTrait("ConnectionString", customizationContext.Database.ConnectionString ?? "(none)")
+                .WithTrait("DbType", customizationContext.Database.Type.ToString())
                 .WithTestDisplayName($"{testMethod.Name}[{customizationContext.Database.Name ?? customizationContext.Database.Type.ToString()}]");
 
             theories[i] = theory;

@@ -20,6 +20,7 @@ public class ServiceTheoryDataRow : TheoryDataRowBase
 
     protected override object?[] GetData()
     {
+        Console.WriteLine($"Traits:\n{Traits.Select((k, v) => $"{k}: {string.Join(", ", v)}\n")}");
         var parameters = _testMethod.GetParameters();
 
         var sp = _customizationContext.Services.BuildServiceProvider();
@@ -35,6 +36,7 @@ public class ServiceTheoryDataRow : TheoryDataRowBase
         }
 
         _disposalTracker.Add(scope);
+        _disposalTracker.Add(sp);
 
         return objects;
     }

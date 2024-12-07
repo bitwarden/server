@@ -6,7 +6,6 @@ using Bit.Infrastructure.EntityFramework;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MySqlConnector;
 
 namespace Bit.Infrastructure.IntegrationTest.Utilities;
 
