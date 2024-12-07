@@ -33,7 +33,7 @@
   <ItemGroup>
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="8.0.2" />
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="8.0.1" />
-    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.25.0" />
+    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.28.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
   </ItemGroup>
 

@@ -23,12 +23,12 @@
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="2.0.0" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.402" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.400.57" />
-    <PackageReference Include="Azure.Data.Tables" Version="12.9.0" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.3.4" />
+    <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />
+    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.4.0" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.10" />
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.1" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.2" />
-    <PackageReference Include="Azure.Storage.Queues" Version="12.19.1" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.21.0" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
     <PackageReference Include="DuoUniversal" Version="1.2.5" />
     <PackageReference Include="DnsClient" Version="1.8.0" />
