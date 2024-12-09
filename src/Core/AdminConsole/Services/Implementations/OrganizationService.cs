@@ -16,7 +16,6 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -502,129 +501,6 @@ public class OrganizationService : IOrganizationService
         return returnValue;
     }
 
-    /// <summary>
-    /// Create a new organization in a cloud environment
-    /// </summary>
-    public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(OrganizationSignup signup)
-    {
-        var plan = StaticStore.GetPlan(signup.Plan);
-
-        ValidatePasswordManagerPlan(plan, signup);
-
-        if (signup.UseSecretsManager)
-        {
-            if (signup.IsFromProvider)
-            {
-                throw new BadRequestException(
-                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
-            }
-            ValidateSecretsManagerPlan(plan, signup);
-        }
-
-        if (!signup.IsFromProvider)
-        {
-            await ValidateSignUpPoliciesAsync(signup.Owner.Id);
-        }
-
-        var organization = new Organization
-        {
-            // Pre-generate the org id so that we can save it with the Stripe subscription..
-            Id = CoreHelpers.GenerateComb(),
-            Name = signup.Name,
-            BillingEmail = signup.BillingEmail,
-            BusinessName = signup.BusinessName,
-            PlanType = plan!.Type,
-            Seats = (short)(plan.PasswordManager.BaseSeats + signup.AdditionalSeats),
-            MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = !plan.PasswordManager.BaseStorageGb.HasValue ?
-                (short?)null : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
-            UsePolicies = plan.HasPolicies,
-            UseSso = plan.HasSso,
-            UseGroups = plan.HasGroups,
-            UseEvents = plan.HasEvents,
-            UseDirectory = plan.HasDirectory,
-            UseTotp = plan.HasTotp,
-            Use2fa = plan.Has2fa,
-            UseApi = plan.HasApi,
-            UseResetPassword = plan.HasResetPassword,
-            SelfHost = plan.HasSelfHost,
-            UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
-            UseCustomPermissions = plan.HasCustomPermissions,
-            UseScim = plan.HasScim,
-            Plan = plan.Name,
-            Gateway = null,
-            ReferenceData = signup.Owner.ReferenceData,
-            Enabled = true,
-            LicenseKey = CoreHelpers.SecureRandomString(20),
-            PublicKey = signup.PublicKey,
-            PrivateKey = signup.PrivateKey,
-            CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
-            Status = OrganizationStatusType.Created,
-            UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager
-        };
-
-        if (signup.UseSecretsManager)
-        {
-            organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount +
-                                             signup.AdditionalServiceAccounts.GetValueOrDefault();
-        }
-
-        if (plan.Type == PlanType.Free && !signup.IsFromProvider)
-        {
-            var adminCount =
-                await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
-            if (adminCount > 0)
-            {
-                throw new BadRequestException("You can only be an admin of one free organization.");
-            }
-        }
-        else if (plan.Type != PlanType.Free)
-        {
-            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
-
-            if (deprecateStripeSourcesAPI)
-            {
-                var sale = OrganizationSale.From(organization, signup);
-                await _organizationBillingService.Finalize(sale);
-            }
-            else
-            {
-                if (signup.PaymentMethodType != null)
-                {
-                    await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
-                }
-                else
-                {
-                    await _paymentService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
-                }
-
-            }
-        }
-
-        var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
-        var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
-            {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = returnValue.Item1.Seats,
-                SignupInitiationPath = signup.InitiationPath,
-                Storage = returnValue.Item1.MaxStorageGb,
-                // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-            });
-
-        return returnValue;
-    }
-
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
         var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
@@ -642,7 +518,8 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
+        var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
+        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
         if (!canUse)
         {
             throw new BadRequestException(exception);
@@ -703,14 +580,6 @@ public class OrganizationService : IOrganizationService
             SmSeats = license.SmSeats,
             SmServiceAccounts = license.SmServiceAccounts,
         };
-
-        // These fields are being removed from consideration when processing
-        // licenses.
-        if (!_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-        {
-            organization.LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-            organization.AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-        }
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
 
