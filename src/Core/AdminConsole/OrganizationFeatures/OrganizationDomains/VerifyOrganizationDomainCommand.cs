@@ -1,12 +1,13 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
-using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,14 +20,15 @@ public class VerifyOrganizationDomainCommand(
     IDnsResolverService dnsResolverService,
     IEventService eventService,
     IGlobalSettings globalSettings,
-    IPolicyService policyService,
     IFeatureService featureService,
     ICurrentContext currentContext,
+    ISavePolicyCommand savePolicyCommand,
+    IMailService mailService,
+    IOrganizationUserRepository organizationUserRepository,
+    IOrganizationRepository organizationRepository,
     ILogger<VerifyOrganizationDomainCommand> logger)
     : IVerifyOrganizationDomainCommand
 {
-
-
     public async Task<OrganizationDomain> UserVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
     {
         if (currentContext.UserId is null)
@@ -109,7 +111,7 @@ public class VerifyOrganizationDomainCommand(
             {
                 domain.SetVerifiedDate();
 
-                await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+                await DomainVerificationSideEffectsAsync(domain, actingUser);
             }
         }
         catch (Exception e)
@@ -121,14 +123,37 @@ public class VerifyOrganizationDomainCommand(
         return domain;
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser)
+    private async Task DomainVerificationSideEffectsAsync(OrganizationDomain domain, IActingUser actingUser)
     {
         if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            await policyService.SaveAsync(
-                new Policy { OrganizationId = organizationId, Type = PolicyType.SingleOrg, Enabled = true },
-                savingUserId: actingUser is StandardUser standardUser ? standardUser.UserId : null,
-                eventSystemUser: actingUser is SystemUser systemUser ? systemUser.SystemUserType : null);
+            await EnableSingleOrganizationPolicyAsync(domain.OrganizationId, actingUser);
+            await SendVerifiedDomainUserEmailAsync(domain);
         }
+    }
+
+    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
+        await savePolicyCommand.SaveAsync(
+            new PolicyUpdate
+            {
+                OrganizationId = organizationId,
+                Type = PolicyType.SingleOrg,
+                Enabled = true,
+                PerformedBy = actingUser
+            });
+
+    private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
+    {
+        var orgUserUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(domain.OrganizationId);
+
+        var domainUserEmails = orgUserUsers
+            .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
+                         ou.Status != OrganizationUserStatusType.Revoked &&
+                         ou.Status != OrganizationUserStatusType.Invited)
+            .Select(ou => ou.Email);
+
+        var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
+
+        await mailService.SendClaimedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(domainUserEmails, organization));
     }
 }
