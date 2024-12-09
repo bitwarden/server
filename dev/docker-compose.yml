@@ -2,13 +2,14 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
       MSSQL_PID: Developer
     volumes:
-      - edgesql_dev_data:/var/opt/mssql
+      - mssql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
       - ./.data/mssql:/mnt/data
@@ -54,11 +55,13 @@ services:
       - postgres
 
   mysql:
-    image: mysql:8
+    image: mysql:8.0
     container_name: bw-mysql
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb-print-all-deadlocks=ON
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: vault_dev
@@ -68,7 +71,7 @@ services:
       - mysql
 
   idp:
-    image: kenchan0130/simplesamlphp:1.19.3
+    image: kenchan0130/simplesamlphp:1.19.8
     container_name: idp
     ports:
       - "8090:8080"
@@ -80,20 +83,6 @@ services:
       - ./authsources.php:/var/www/simplesamlphp/config/authsources.php
     profiles:
       - idp
-
-  open-ldap:
-    image: osixia/openldap:1.5.0
-    command: --copy-service
-    environment:
-      LDAP_ORGANISATION: "Bitwarden"
-      LDAP_DOMAIN: "bitwarden.com"
-    volumes:
-      - ./directory.ldif:/container/service/slapd/assets/config/bootstrap/ldif/output.ldif
-    ports:
-      - "389:389"
-      - "636:636"
-    profiles:
-      - ldap
 
   reverse-proxy:
     image: nginx:alpine
@@ -107,6 +96,6 @@ services:
       - proxy
 
 volumes:
-  edgesql_dev_data:
+  mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:

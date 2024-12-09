@@ -1,9 +1,12 @@
 ﻿using System.Reflection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -13,12 +16,13 @@ namespace Bit.Core.Models.Business;
 public class OrganizationLicense : ILicense
 {
     public OrganizationLicense()
-    { }
+    {
+    }
 
     public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
         ILicensingService licenseService, int? version = null)
     {
-        Version = version.GetValueOrDefault(CURRENT_LICENSE_FILE_VERSION); // TODO: Remember to change the constant
+        Version = version.GetValueOrDefault(CurrentLicenseFileVersion); // TODO: Remember to change the constant
         LicenseType = Enums.LicenseType.Organization;
         LicenseKey = org.LicenseKey;
         InstallationId = installationId;
@@ -47,6 +51,15 @@ public class OrganizationLicense : ILicense
         UsersGetPremium = org.UsersGetPremium;
         UseCustomPermissions = org.UseCustomPermissions;
         Issued = DateTime.UtcNow;
+        UsePasswordManager = org.UsePasswordManager;
+        UseSecretsManager = org.UseSecretsManager;
+        SmSeats = org.SmSeats;
+        SmServiceAccounts = org.SmServiceAccounts;
+
+        // Deprecated. Left for backwards compatibility with old license versions.
+        LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
+        AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
+        //
 
         if (subscriptionInfo?.Subscription == null)
         {
@@ -62,7 +75,7 @@ public class OrganizationLicense : ILicense
             }
         }
         else if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
-            subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
+                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
         {
             Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
             Trial = true;
@@ -75,10 +88,11 @@ public class OrganizationLicense : ILicense
                 Expires = Refresh = org.ExpirationDate.Value;
             }
             else if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
-                subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+                     subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
+                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants
+                    .OrganizationSelfHostSubscriptionGracePeriodDays);
                 ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
             }
             else
@@ -125,22 +139,33 @@ public class OrganizationLicense : ILicense
     public DateTime? Refresh { get; set; }
     public DateTime? Expires { get; set; }
     public DateTime? ExpirationWithoutGracePeriod { get; set; }
+    public bool UsePasswordManager { get; set; }
+    public bool UseSecretsManager { get; set; }
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+
+    // Deprecated. Left for backwards compatibility with old license versions.
+    public bool LimitCollectionCreationDeletion { get; set; } = true;
+    public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
+    //
+
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
-    [JsonIgnore]
-    public byte[] SignatureBytes => Convert.FromBase64String(Signature);
+    public string Token { get; set; }
+    [JsonIgnore] public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
-    /// getting out of date license errors</remarks>
-    private const int CURRENT_LICENSE_FILE_VERSION = 11;
+    /// getting out of date license errors
+    /// </remarks>
+    public const int CurrentLicenseFileVersion = 14;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 12;
+        get => Version is >= 1 and <= 15;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -154,6 +179,7 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(Signature)) &&
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
+                    !p.Name.Equals(nameof(Token)) &&
                     // UsersGetPremium was added in Version 2
                     (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
                     // UseEvents was added in Version 3
@@ -176,6 +202,15 @@ public class OrganizationLicense : ILicense
                     (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
                     // ExpirationWithoutGracePeriod was added in Version 12
                     (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
+                    // UseSecretsManager, UsePasswordManager, SmSeats, and SmServiceAccounts were added in Version 13
+                    (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(UsePasswordManager))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(SmSeats))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts))) &&
+                    // LimitCollectionCreationDeletion was added in Version 14
+                    (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
+                    // AllowAdminAccessToAllCollectionItems was added in Version 15
+                    (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
                     (
                         !forHash ||
                         (
@@ -205,37 +240,47 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
+    public bool CanUse(
+        IGlobalSettings globalSettings,
+        ILicensingService licensingService,
+        ClaimsPrincipal claimsPrincipal,
+        out string exception)
     {
-        if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
+        if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
         {
-            exception = "Invalid license. Your organization is disabled or the license has expired.";
-            return false;
+            return ObsoleteCanUse(globalSettings, licensingService, out exception);
         }
 
-        if (!ValidLicenseVersion)
+        var errorMessages = new StringBuilder();
+
+        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
+        if (!enabled)
         {
-            exception = $"Version {Version} is not supported.";
-            return false;
+            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
         }
 
-        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
+        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
+        if (installationId != globalSettings.Installation.Id)
         {
-            exception = "Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.";
-            return false;
+            errorMessages.AppendLine("The installation ID does not match the current installation.");
         }
 
-        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
+        if (!selfHost)
         {
-            exception = "Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.";
-            return false;
+            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
         }
 
-        if (!licensingService.VerifyLicense(this))
+        var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
+        if (licenseType != Enums.LicenseType.Organization)
         {
-            exception = "Invalid license.";
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
             return false;
         }
 
@@ -243,84 +288,241 @@ public class OrganizationLicense : ILicense
         return true;
     }
 
-    public bool VerifyData(Organization organization, IGlobalSettings globalSettings)
+    /// <summary>
+    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
+    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// </summary>
+    /// <param name="globalSettings"></param>
+    /// <param name="licensingService"></param>
+    /// <param name="exception"></param>
+    /// <returns></returns>
+    private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
+        var errorMessages = new StringBuilder();
+
+        if (!Enabled)
+        {
+            errorMessages.AppendLine("Your cloud-hosted organization is currently disabled.");
+        }
+
+        if (Issued > DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license hasn't been issued yet.");
+        }
+
+        if (Expires < DateTime.UtcNow)
+        {
+            errorMessages.AppendLine("The license has expired.");
+        }
+
+        if (!ValidLicenseVersion)
+        {
+            errorMessages.AppendLine($"Version {Version} is not supported.");
+        }
+
+        if (InstallationId != globalSettings.Installation.Id)
+        {
+            errorMessages.AppendLine("The installation ID does not match the current installation.");
+        }
+
+        if (!SelfHost)
+        {
+            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
+        }
+
+        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        {
+            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
+                                     "Upload this license from your personal account settings page.");
+        }
+
+        if (!licensingService.VerifyLicense(this))
+        {
+            errorMessages.AppendLine("The license verification failed.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
+            return false;
+        }
+
+        exception = "";
+        return true;
+    }
+
+    public bool VerifyData(
+        Organization organization,
+        ClaimsPrincipal claimsPrincipal,
+        IGlobalSettings globalSettings)
+    {
+        if (string.IsNullOrWhiteSpace(Token))
+        {
+            return ObsoleteVerifyData(organization, globalSettings);
+        }
+
+        var issued = claimsPrincipal.GetValue<DateTime>(nameof(Issued));
+        var expires = claimsPrincipal.GetValue<DateTime>(nameof(Expires));
+        var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
+        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
+        var enabled = claimsPrincipal.GetValue<bool>(nameof(Enabled));
+        var planType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
+        var seats = claimsPrincipal.GetValue<int?>(nameof(Seats));
+        var maxCollections = claimsPrincipal.GetValue<short?>(nameof(MaxCollections));
+        var useGroups = claimsPrincipal.GetValue<bool>(nameof(UseGroups));
+        var useDirectory = claimsPrincipal.GetValue<bool>(nameof(UseDirectory));
+        var useTotp = claimsPrincipal.GetValue<bool>(nameof(UseTotp));
+        var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
+        var name = claimsPrincipal.GetValue<string>(nameof(Name));
+        var usersGetPremium = claimsPrincipal.GetValue<bool>(nameof(UsersGetPremium));
+        var useEvents = claimsPrincipal.GetValue<bool>(nameof(UseEvents));
+        var use2fa = claimsPrincipal.GetValue<bool>(nameof(Use2fa));
+        var useApi = claimsPrincipal.GetValue<bool>(nameof(UseApi));
+        var usePolicies = claimsPrincipal.GetValue<bool>(nameof(UsePolicies));
+        var useSso = claimsPrincipal.GetValue<bool>(nameof(UseSso));
+        var useResetPassword = claimsPrincipal.GetValue<bool>(nameof(UseResetPassword));
+        var useKeyConnector = claimsPrincipal.GetValue<bool>(nameof(UseKeyConnector));
+        var useScim = claimsPrincipal.GetValue<bool>(nameof(UseScim));
+        var useCustomPermissions = claimsPrincipal.GetValue<bool>(nameof(UseCustomPermissions));
+        var useSecretsManager = claimsPrincipal.GetValue<bool>(nameof(UseSecretsManager));
+        var usePasswordManager = claimsPrincipal.GetValue<bool>(nameof(UsePasswordManager));
+        var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
+        var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
+
+        return issued <= DateTime.UtcNow &&
+               expires >= DateTime.UtcNow &&
+               installationId == globalSettings.Installation.Id &&
+               licenseKey == organization.LicenseKey &&
+               enabled == organization.Enabled &&
+               planType == organization.PlanType &&
+               seats == organization.Seats &&
+               maxCollections == organization.MaxCollections &&
+               useGroups == organization.UseGroups &&
+               useDirectory == organization.UseDirectory &&
+               useTotp == organization.UseTotp &&
+               selfHost == organization.SelfHost &&
+               name == organization.Name &&
+               usersGetPremium == organization.UsersGetPremium &&
+               useEvents == organization.UseEvents &&
+               use2fa == organization.Use2fa &&
+               useApi == organization.UseApi &&
+               usePolicies == organization.UsePolicies &&
+               useSso == organization.UseSso &&
+               useResetPassword == organization.UseResetPassword &&
+               useKeyConnector == organization.UseKeyConnector &&
+               useScim == organization.UseScim &&
+               useCustomPermissions == organization.UseCustomPermissions &&
+               useSecretsManager == organization.UseSecretsManager &&
+               usePasswordManager == organization.UsePasswordManager &&
+               smSeats == organization.SmSeats &&
+               smServiceAccounts == organization.SmServiceAccounts;
+    }
+
+    /// <summary>
+    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
+    /// Instead, extend the VerifyData method using the ClaimsPrincipal.
+    /// </summary>
+    /// <param name="organization"></param>
+    /// <param name="globalSettings"></param>
+    /// <returns></returns>
+    /// <exception cref="NotSupportedException"></exception>
+    private bool ObsoleteVerifyData(Organization organization, IGlobalSettings globalSettings)
+    {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
             return false;
         }
 
-        if (ValidLicenseVersion)
-        {
-            var valid =
-                globalSettings.Installation.Id == InstallationId &&
-                organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
-                organization.Enabled == Enabled &&
-                organization.PlanType == PlanType &&
-                organization.Seats == Seats &&
-                organization.MaxCollections == MaxCollections &&
-                organization.UseGroups == UseGroups &&
-                organization.UseDirectory == UseDirectory &&
-                organization.UseTotp == UseTotp &&
-                organization.SelfHost == SelfHost &&
-                organization.Name.Equals(Name);
-
-            if (valid && Version >= 2)
-            {
-                valid = organization.UsersGetPremium == UsersGetPremium;
-            }
-
-            if (valid && Version >= 3)
-            {
-                valid = organization.UseEvents == UseEvents;
-            }
-
-            if (valid && Version >= 4)
-            {
-                valid = organization.Use2fa == Use2fa;
-            }
-
-            if (valid && Version >= 5)
-            {
-                valid = organization.UseApi == UseApi;
-            }
-
-            if (valid && Version >= 6)
-            {
-                valid = organization.UsePolicies == UsePolicies;
-            }
-
-            if (valid && Version >= 7)
-            {
-                valid = organization.UseSso == UseSso;
-            }
-
-            if (valid && Version >= 8)
-            {
-                valid = organization.UseResetPassword == UseResetPassword;
-            }
-
-            if (valid && Version >= 9)
-            {
-                valid = organization.UseKeyConnector == UseKeyConnector;
-            }
-
-            if (valid && Version >= 10)
-            {
-                valid = organization.UseScim == UseScim;
-            }
-
-            if (valid && Version >= 11)
-            {
-                valid = organization.UseCustomPermissions == UseCustomPermissions;
-            }
-
-            return valid;
-        }
-        else
+        if (!ValidLicenseVersion)
         {
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
+
+        var valid =
+            globalSettings.Installation.Id == InstallationId &&
+            organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
+            organization.Enabled == Enabled &&
+            organization.PlanType == PlanType &&
+            organization.Seats == Seats &&
+            organization.MaxCollections == MaxCollections &&
+            organization.UseGroups == UseGroups &&
+            organization.UseDirectory == UseDirectory &&
+            organization.UseTotp == UseTotp &&
+            organization.SelfHost == SelfHost &&
+            organization.Name.Equals(Name);
+
+        if (valid && Version >= 2)
+        {
+            valid = organization.UsersGetPremium == UsersGetPremium;
+        }
+
+        if (valid && Version >= 3)
+        {
+            valid = organization.UseEvents == UseEvents;
+        }
+
+        if (valid && Version >= 4)
+        {
+            valid = organization.Use2fa == Use2fa;
+        }
+
+        if (valid && Version >= 5)
+        {
+            valid = organization.UseApi == UseApi;
+        }
+
+        if (valid && Version >= 6)
+        {
+            valid = organization.UsePolicies == UsePolicies;
+        }
+
+        if (valid && Version >= 7)
+        {
+            valid = organization.UseSso == UseSso;
+        }
+
+        if (valid && Version >= 8)
+        {
+            valid = organization.UseResetPassword == UseResetPassword;
+        }
+
+        if (valid && Version >= 9)
+        {
+            valid = organization.UseKeyConnector == UseKeyConnector;
+        }
+
+        if (valid && Version >= 10)
+        {
+            valid = organization.UseScim == UseScim;
+        }
+
+        if (valid && Version >= 11)
+        {
+            valid = organization.UseCustomPermissions == UseCustomPermissions;
+        }
+
+        /*Version 12 added ExpirationWithoutDatePeriod, but that property is informational only and is not saved
+            to the Organization object. It's validated as part of the hash but does not need to be validated here.
+            */
+
+        if (valid && Version >= 13)
+        {
+            valid = organization.UseSecretsManager == UseSecretsManager &&
+                    organization.UsePasswordManager == UsePasswordManager &&
+                    organization.SmSeats == SmSeats &&
+                    organization.SmServiceAccounts == SmServiceAccounts;
+        }
+
+        /*
+            * Version 14 added LimitCollectionCreationDeletion and Version
+            * 15 added AllowAdminAccessToAllCollectionItems, however they
+            * are no longer used and are intentionally excluded from
+            * validation.
+            */
+
+        return valid;
     }
 
     public bool VerifySignature(X509Certificate2 certificate)

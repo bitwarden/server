@@ -1,8 +1,8 @@
-﻿using Bit.Core.Settings;
-using IdentityServer4.Configuration;
+﻿using Duende.IdentityServer.Configuration;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Core.IdentityServer;
@@ -10,15 +10,18 @@ namespace Bit.Core.IdentityServer;
 public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<CookieAuthenticationOptions>
 {
     private readonly IdentityServerOptions _idsrv;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IDistributedCache _distributedCache;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
 
-    public ConfigureOpenIdConnectDistributedOptions(IHttpContextAccessor httpContextAccessor, GlobalSettings globalSettings,
+    public ConfigureOpenIdConnectDistributedOptions(
+        [FromKeyedServices("persistent")]
+        IDistributedCache distributedCache,
+        IDataProtectionProvider dataProtectionProvider,
         IdentityServerOptions idsrv)
     {
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
-        _globalSettings = globalSettings;
         _idsrv = idsrv;
+        _distributedCache = distributedCache;
+        _dataProtectionProvider = dataProtectionProvider;
     }
 
     public void PostConfigure(string name, CookieAuthenticationOptions options)
@@ -34,19 +37,7 @@ public class ConfigureOpenIdConnectDistributedOptions : IPostConfigureOptions<Co
         options.Cookie.Name = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
         options.Cookie.IsEssential = true;
         options.Cookie.SameSite = _idsrv.Authentication.CookieSameSiteMode;
-        options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_httpContextAccessor, name);
-
-        if (string.IsNullOrWhiteSpace(_globalSettings.IdentityServer?.RedisConnectionString))
-        {
-            options.SessionStore = new MemoryCacheTicketStore();
-        }
-        else
-        {
-            var redisOptions = new RedisCacheOptions
-            {
-                Configuration = _globalSettings.IdentityServer.RedisConnectionString,
-            };
-            options.SessionStore = new RedisCacheTicketStore(redisOptions);
-        }
+        options.TicketDataFormat = new DistributedCacheTicketDataFormatter(_distributedCache, _dataProtectionProvider, name);
+        options.SessionStore = new DistributedCacheTicketStore(_distributedCache);
     }
 }

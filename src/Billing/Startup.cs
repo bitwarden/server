@@ -1,5 +1,10 @@
 ﻿using System.Globalization;
+using Bit.Billing.Services;
+using Bit.Billing.Services.Implementations;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -39,14 +44,29 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        // PayPal Client
-        services.AddSingleton<Utilities.PayPalIpnClient>();
-
         // BitPay Client
         services.AddSingleton<BitPayClient>();
 
+        // PayPal IPN Client
+        services.AddHttpClient<IPayPalIPNClient, PayPalIPNClient>();
+
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
+
+        //Handlers
+        services.AddScoped<IStripeEventUtilityService, StripeEventUtilityService>();
+        services.AddScoped<ISubscriptionDeletedHandler, SubscriptionDeletedHandler>();
+        services.AddScoped<ISubscriptionUpdatedHandler, SubscriptionUpdatedHandler>();
+        services.AddScoped<IUpcomingInvoiceHandler, UpcomingInvoiceHandler>();
+        services.AddScoped<IChargeSucceededHandler, ChargeSucceededHandler>();
+        services.AddScoped<IChargeRefundedHandler, ChargeRefundedHandler>();
+        services.AddScoped<ICustomerUpdatedHandler, CustomerUpdatedHandler>();
+        services.AddScoped<IInvoiceCreatedHandler, InvoiceCreatedHandler>();
+        services.AddScoped<IPaymentFailedHandler, PaymentFailedHandler>();
+        services.AddScoped<IPaymentMethodAttachedHandler, PaymentMethodAttachedHandler>();
+        services.AddScoped<IPaymentSucceededHandler, PaymentSucceededHandler>();
+        services.AddScoped<IInvoiceFinalizedHandler, InvoiceFinalizedHandler>();
+        services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity
         services.AddCustomIdentityServices(globalSettings);
@@ -55,8 +75,14 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddDistributedCache(globalSettings);
+        services.AddBillingOperations();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+
+        // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
+        // TODO: no longer be required - see PM-1880
+        services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
         // Mvc
         services.AddMvc(config =>
@@ -68,12 +94,12 @@ public class Startup
         // Authentication
         services.AddAuthentication();
 
-        // Jobs service, uncomment when we have some jobs to run
-        // Jobs.JobsHostedService.AddJobsServices(services);
-        // services.AddHostedService<Jobs.JobsHostedService>();
-
         // Set up HttpClients
         services.AddHttpClient("FreshdeskApi");
+
+        services.AddScoped<IStripeFacade, StripeFacade>();
+        services.AddScoped<IStripeEventService, StripeEventService>();
+        services.AddScoped<IProviderEventService, ProviderEventService>();
     }
 
     public void Configure(

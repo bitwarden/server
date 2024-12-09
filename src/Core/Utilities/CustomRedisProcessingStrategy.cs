@@ -2,6 +2,7 @@
 using AspNetCoreRateLimit.Redis;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
 
@@ -26,6 +27,7 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
     private const string _redisTimeoutCacheKey = "IpRateLimitRedisTimeout";
 
     public CustomRedisProcessingStrategy(
+        [FromKeyedServices("rate-limiter")]
         IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
         ILogger<CustomRedisProcessingStrategy> logger,
@@ -66,9 +68,10 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
         {
             return await base.ProcessRequestAsync(requestIdentity, rule, counterKeyBuilder, rateLimitOptions, cancellationToken);
         }
-        catch (RedisTimeoutException)
+        catch (Exception ex) when (ex is RedisTimeoutException || ex is RedisConnectionException)
         {
-            // If this is the first timeout we've had, start a new counter and sliding window 
+            _logger.LogWarning(ex, "Redis appears down, skipping rate limiting");
+            // If this is the first timeout/connection error we've had, start a new counter and sliding window 
             timeoutCounter ??= new TimeoutCounter()
             {
                 Count = 0,

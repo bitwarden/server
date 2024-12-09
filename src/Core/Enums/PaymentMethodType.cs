@@ -16,10 +16,6 @@ public enum PaymentMethodType : byte
     Credit = 4,
     [Display(Name = "Wire Transfer")]
     WireTransfer = 5,
-    [Display(Name = "Apple In-App Purchase")]
-    AppleInApp = 6,
-    [Display(Name = "Google In-App Purchase")]
-    GoogleInApp = 7,
     [Display(Name = "Check")]
     Check = 8,
     [Display(Name = "None")]

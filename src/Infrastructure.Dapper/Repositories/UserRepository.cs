@@ -1,12 +1,16 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
+
+#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -17,23 +21,19 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public UserRepository(
         GlobalSettings globalSettings,
         IDataProtectionProvider dataProtectionProvider)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
         _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
     }
 
-    public UserRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
-    public override async Task<User> GetByIdAsync(Guid id)
+    public override async Task<User?> GetByIdAsync(Guid id)
     {
         var user = await base.GetByIdAsync(id);
         UnprotectData(user);
         return user;
     }
 
-    public async Task<User> GetByEmailAsync(string email)
+    public async Task<User?> GetByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -47,7 +47,28 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+    public async Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails)
+    {
+        var emailTable = new DataTable();
+        emailTable.Columns.Add("Email", typeof(string));
+        foreach (var email in emails)
+        {
+            emailTable.Rows.Add(email);
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadByEmails]",
+                new { Emails = emailTable.AsTableValuedParameter("dbo.EmailArray") },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<User?> GetBySsoUserAsync(string externalId, Guid? organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -61,7 +82,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<UserKdfInformation> GetKdfInformationByEmailAsync(string email)
+    public async Task<UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -103,7 +124,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public async Task<string> GetPublicKeyAsync(Guid id)
+    public async Task<string?> GetPublicKeyAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -151,6 +172,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandTimeout: 180);
         }
     }
+    public async Task DeleteManyAsync(IEnumerable<User> users)
+    {
+        var ids = users.Select(user => user.Id);
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = JsonSerializer.Serialize(ids) },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
 
     public async Task UpdateStorageAsync(Guid id)
     {
@@ -175,6 +208,52 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    /// <inheritdoc />
+    public async Task UpdateUserKeyAndEncryptedDataAsync(
+        User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
+        {
+            // Update user
+            await using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
+                cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
+
+                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value =
+                    string.IsNullOrWhiteSpace(user.PrivateKey) ? DBNull.Value : user.PrivateKey;
+
+                cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
+                cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
+                    user.AccountRevisionDate;
+                cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
+                    user.LastKeyRotationDate;
+                cmd.ExecuteNonQuery();
+            }
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                await action(connection, transaction);
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
+
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
@@ -182,6 +261,20 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<User>(
                 $"[{Schema}].[{Table}_ReadByIds]",
                 new { Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
+    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<UserWithCalculatedPremium>(
+                $"[{Schema}].[{Table}_ReadByIdsWithCalculatedPremium]",
+                new { Ids = JsonSerializer.Serialize(ids) },
                 commandType: CommandType.StoredProcedure);
 
             UnprotectData(results);
@@ -205,13 +298,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
             user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.MasterPassword));
+                _dataProtector.Protect(user.MasterPassword!));
         }
 
         if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
             user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.Key));
+                _dataProtector.Protect(user.Key!));
         }
 
         // Save
@@ -222,7 +315,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         user.Key = originalKey;
     }
 
-    private void UnprotectData(User user)
+    private void UnprotectData(User? user)
     {
         if (user == null)
         {

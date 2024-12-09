@@ -1,0 +1,221 @@
+﻿@using Bit.Admin.Enums;
+@using Bit.Core
+@using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core.Billing.Enums
+@using Bit.Core.Billing.Extensions
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
+
+@model ProviderEditModel
+@{
+    ViewData["Title"] = "Provider: " + Model.Provider.DisplayName();
+    var canEdit = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+}
+
+<h1>Provider <small>@Model.Provider.DisplayName()</small></h1>
+
+<h2>Provider Information</h2>
+@await Html.PartialAsync("_ViewInformation", Model)
+@await Html.PartialAsync("Admins", Model)
+<form method="post" id="edit-form">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+    <input type="hidden" asp-for="Type" readonly>
+    <h2>General</h2>
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">Name</dt>
+        <dd class="col-sm-8 col-lg-9">@Model.Provider.DisplayName()</dd>
+    </dl>
+    <h2>Business Information</h2>
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">Business Name</dt>
+        <dd class="col-sm-8 col-lg-9">@Model.Provider.DisplayBusinessName()</dd>
+    </dl>
+    <h2>Billing</h2>
+    <div class="row">
+        <div class="col-sm">
+            <div class="mb-3">
+                <label asp-for="BillingEmail" class="form-label"></label>
+                <input type="email" class="form-control" asp-for="BillingEmail" readonly='@(!canEdit)'>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <div class="mb-3">
+                <label asp-for="BillingPhone" class="form-label"></label>
+                <input type="tel" class="form-control" asp-for="BillingPhone">
+            </div>
+        </div>
+    </div>
+    @if (Model.Provider.IsBillable())
+    {
+        switch (Model.Provider.Type)
+        {
+            case ProviderType.Msp:
+            {
+                <div class="row">
+                    <div class="col-sm">
+                        <div class="mb-3">
+                            <label asp-for="TeamsMonthlySeatMinimum" class="form-label"></label>
+                            <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
+                        </div>
+                    </div>
+                    <div class="col-sm">
+                        <div class="mb-3">
+                            <label asp-for="EnterpriseMonthlySeatMinimum" class="form-label"></label>
+                            <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
+                        </div>
+                    </div>
+                </div>
+                break;
+            }
+            case ProviderType.MultiOrganizationEnterprise:
+            {
+                @if (FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises) && Model.Provider.Type == ProviderType.MultiOrganizationEnterprise)
+                {
+                    <div class="row">
+                        <div class="col-sm">
+                            <div class="mb-3">
+                                @{
+                                    var multiOrgPlans = new List<PlanType>
+                                    {
+                                        PlanType.EnterpriseAnnually,
+                                        PlanType.EnterpriseMonthly
+                                    };
+                                }
+                                <label asp-for="Plan" class="form-label"></label>
+                                <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                                    <option value="">--</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-sm">
+                            <div class="mb-3">
+                                <label asp-for="EnterpriseMinimumSeats" class="form-label"></label>
+                                <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+                            </div>
+                        </div>
+                    </div>
+                }
+                break;
+            }
+        }
+        <div class="row">
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="Gateway" class="form-label"></label>
+                    <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                        <option value="">--</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="GatewayCustomerId" class="form-label"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                        <button class="btn btn-secondary" type="button" onclick="window.open('@Model.GatewayCustomerUrl', '_blank')">
+                            <i class="fa fa-external-link"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="GatewaySubscriptionId" class="form-label"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                        <button class="btn btn-secondary" type="button" onclick="window.open('@Model.GatewaySubscriptionUrl', '_blank')">
+                            <i class="fa fa-external-link"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</form>
+@await Html.PartialAsync("Organizations", Model)
+@if (canEdit)
+{
+    <!-- Modals -->
+    <div class="modal fade rounded" id="requestDeletionModal" tabindex="-1" aria-labelledby="requestDeletionModal" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content rounded">
+                <div class="p-3">
+                    <h4 class="fw-bolder" id="exampleModalLabel">Request provider deletion</h4>
+                </div>
+                <div class="modal-body">
+                    <span class="fw-light">
+                        Enter the email of the provider admin that will receive the request to delete the provider portal.
+                    </span>
+                    <form>
+                        <div class="mb-3">
+                            <label for="provider-email" class="col-form-label">Provider email</label>
+                            <input type="email" class="form-control" id="provider-email">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-pill" onclick="initiateDeleteProvider('@Model.Provider.Id')">Send email request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="DeleteModal" tabindex="-1" aria-labelledby="DeleteModal" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content rounded">
+                <div class="p-3">
+                    <h4 class="fw-bolder" id="exampleModalLabel">Delete provider</h4>
+                </div>
+                <div class="modal-body">
+                    <span class="fw-light">
+                        This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
+                    </span>
+                    <form>
+                        <div class="mb-3">
+                            <label for="provider-name" class="col-form-label">Provider name</label>
+                            <input type="text" class="form-control" id="provider-name">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-pill" onclick="deleteProvider('@Model.Provider.Id');">Delete provider</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="linkedWarningModal" tabindex="-1" role="dialog" aria-labelledby="linkedWarningModal" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content rounded">
+                <div class="modal-body">
+                    <h4 class="fw-bolder">Cannot Delete @Model.Name</h4>
+                    <p class="fw-lighter">You must unlink all clients before you can delete @Model.Name.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-pill" data-bs-dismiss="modal">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- End of Modal Section -->
+
+    <div class="d-flex mt-4">
+        <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+        <div class="ms-auto d-flex">
+            <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
+            <button id="requestDeletionBtn" hidden="hidden" data-bs-toggle="modal" data-bs-target="#requestDeletionModal"></button>
+
+            <button class="btn btn-outline-danger ms-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
+            <button id="deleteBtn" hidden="hidden" data-bs-toggle="modal" data-bs-target="#DeleteModal"></button>
+
+            <button id="linkAccWarningBtn" hidden="hidden" data-bs-toggle="modal" data-bs-target="#linkedWarningModal"></button>
+        </div>
+    </div>
+}

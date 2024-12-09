@@ -72,6 +72,12 @@ public class SutProvider<TSut> : ISutProvider
         Sut = default;
     }
 
+    public void Recreate()
+    {
+        _dependencies = new Dictionary<Type, Dictionary<string, object>>();
+        Sut = _fixture.Create<TSut>();
+    }
+
     ISutProvider ISutProvider.Create() => Create();
     public SutProvider<TSut> Create()
     {
@@ -120,7 +126,6 @@ public class SutProvider<TSut> : ISutProvider
             {
                 return _sutProvider.GetDependency(parameterInfo.ParameterType, "");
             }
-
 
             // This is the equivalent of _fixture.Create<parameterInfo.ParameterType>, but no overload for
             // Create(Type type) exists.

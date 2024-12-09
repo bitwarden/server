@@ -10,23 +10,23 @@ public static class KdfSettingsValidator
         switch (kdfType)
         {
             case KdfType.PBKDF2_SHA256:
-                if (kdfIterations < 5000 || kdfIterations > 2_000_000)
+                if (!AuthConstants.PBKDF2_ITERATIONS.InsideRange(kdfIterations))
                 {
-                    yield return new ValidationResult("KDF iterations must be between 5000 and 2000000.");
+                    yield return new ValidationResult($"KDF iterations must be between {AuthConstants.PBKDF2_ITERATIONS.Min} and {AuthConstants.PBKDF2_ITERATIONS.Max}.");
                 }
                 break;
             case KdfType.Argon2id:
-                if (kdfIterations <= 0)
+                if (!AuthConstants.ARGON2_ITERATIONS.InsideRange(kdfIterations))
                 {
-                    yield return new ValidationResult("Argon2 iterations must be greater than 0.");
+                    yield return new ValidationResult($"Argon2 iterations must be between {AuthConstants.ARGON2_ITERATIONS.Min} and {AuthConstants.ARGON2_ITERATIONS.Max}.");
                 }
-                else if (!kdfMemory.HasValue || kdfMemory.Value < 15 || kdfMemory.Value > 1024)
+                else if (!kdfMemory.HasValue || !AuthConstants.ARGON2_MEMORY.InsideRange(kdfMemory.Value))
                 {
-                    yield return new ValidationResult("Argon2 memory must be between 15mb and 1024mb.");
+                    yield return new ValidationResult($"Argon2 memory must be between {AuthConstants.ARGON2_MEMORY.Min}mb and {AuthConstants.ARGON2_MEMORY.Max}mb.");
                 }
-                else if (!kdfParallelism.HasValue || kdfParallelism.Value < 1 || kdfParallelism.Value > 16)
+                else if (!kdfParallelism.HasValue || !AuthConstants.ARGON2_PARALLELISM.InsideRange(kdfParallelism.Value))
                 {
-                    yield return new ValidationResult("Argon2 parallelism must be between 1 and 16.");
+                    yield return new ValidationResult($"Argon2 parallelism must be between {AuthConstants.ARGON2_PARALLELISM.Min} and {AuthConstants.ARGON2_PARALLELISM.Max}.");
                 }
                 break;
 

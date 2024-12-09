@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Scim.Models;
 

@@ -1,8 +1,9 @@
-﻿CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
     OU.[OrganizationId],
+    OU.[Id] OrganizationUserId,
     O.[Name],
     O.[Enabled],
     O.[PlanType],
@@ -44,7 +45,12 @@ SELECT
     OU.[AccessSecretsManager],
     O.[UsePasswordManager],
     O.[SmSeats],
-    O.[SmServiceAccounts]
+    O.[SmServiceAccounts],
+    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

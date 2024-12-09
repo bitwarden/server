@@ -6,25 +6,25 @@
     @Key VARCHAR(MAX),
     @Status SMALLINT,
     @Type TINYINT,
-    @AccessAll BIT,
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY,
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
     @AccessSecretsManager BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @AccessAll, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
+    EXEC [dbo].[OrganizationUser_Update] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager
     -- Update
     UPDATE
         [Target]
     SET
         [Target].[ReadOnly] = [Source].[ReadOnly],
-        [Target].[HidePasswords] = [Source].[HidePasswords]
+        [Target].[HidePasswords] = [Source].[HidePasswords],
+        [Target].[Manage] = [Source].[Manage]
     FROM
         [dbo].[CollectionUser] AS [Target]
     INNER JOIN
@@ -34,16 +34,24 @@ BEGIN
         AND (
             [Target].[ReadOnly] != [Source].[ReadOnly]
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
+            OR [Target].[Manage] != [Source].[Manage]
         )
 
     -- Insert
-    INSERT INTO
-        [dbo].[CollectionUser]
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    )
     SELECT
         [Source].[Id],
         @Id,
         [Source].[ReadOnly],
-        [Source].[HidePasswords]
+        [Source].[HidePasswords],
+        [Source].[Manage]
     FROM
         @Collections AS [Source]
     INNER JOIN
@@ -58,7 +66,7 @@ BEGIN
                 [CollectionId] = [Source].[Id]
                 AND [OrganizationUserId] = @Id
         )
-    
+
     -- Delete
     DELETE
         CU

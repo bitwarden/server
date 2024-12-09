@@ -6,7 +6,7 @@ using AutoFixture.Xunit2;
 using Bit.Core;
 using Bit.Core.Test.Helpers.Factories;
 using Microsoft.AspNetCore.DataProtection;
-using Moq;
+using NSubstitute;
 
 namespace Bit.Test.Common.AutoFixture;
 
@@ -33,17 +33,17 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
 
         if (pi.ParameterType == typeof(IDataProtectionProvider))
         {
-            var dataProtector = new Mock<IDataProtector>();
-            dataProtector
-                .Setup(d => d.Unprotect(It.IsAny<byte[]>()))
-                .Returns<byte[]>(data => Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix + Encoding.UTF8.GetString(data)));
+            var dataProtector = Substitute.For<IDataProtector>();
+            dataProtector.Unprotect(Arg.Any<byte[]>())
+                .Returns(data =>
+                    Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
+                                           Encoding.UTF8.GetString((byte[])data[0])));
 
-            var dataProtectionProvider = new Mock<IDataProtectionProvider>();
-            dataProtectionProvider
-                .Setup(x => x.CreateProtector(Constants.DatabaseFieldProtectorPurpose))
-                .Returns(dataProtector.Object);
+            var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
+            dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
+                .Returns(dataProtector);
 
-            return dataProtectionProvider.Object;
+            return dataProtectionProvider;
         }
 
         return new NoSpecimen();

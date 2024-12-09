@@ -48,6 +48,12 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = identityData;
                 Identity = new CipherIdentityModel(identityData);
                 break;
+            case CipherType.SSHKey:
+                var sshKeyData = JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data);
+                Data = sshKeyData;
+                cipherData = sshKeyData;
+                SSHKey = new CipherSSHKeyModel(sshKeyData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -63,6 +69,7 @@ public class CipherMiniResponseModel : ResponseModel
         CreationDate = cipher.CreationDate;
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
+        Key = cipher.Key;
     }
 
     public Guid Id { get; set; }
@@ -75,6 +82,7 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherSSHKeyModel SSHKey { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
     public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
@@ -83,6 +91,7 @@ public class CipherMiniResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
     public DateTime? DeletedDate { get; set; }
     public CipherRepromptType Reprompt { get; set; }
+    public string Key { get; set; }
 }
 
 public class CipherResponseModel : CipherMiniResponseModel
@@ -125,6 +134,12 @@ public class CipherDetailsResponseModel : CipherResponseModel
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? new List<Guid>();
     }
 
+    public CipherDetailsResponseModel(CipherDetailsWithCollections cipher, GlobalSettings globalSettings, string obj = "cipherDetails")
+        : base(cipher, globalSettings, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+    }
+
     public IEnumerable<Guid> CollectionIds { get; set; }
 }
 
@@ -142,6 +157,20 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         {
             CollectionIds = new Guid[] { };
         }
+    }
+
+    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
+        : base(cipher, globalSettings, orgUseTotp, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+    }
+
+    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        GlobalSettings globalSettings, string obj = "cipherMiniDetails")
+        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }

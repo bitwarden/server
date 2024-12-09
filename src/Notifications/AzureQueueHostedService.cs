@@ -65,13 +65,13 @@ public class AzureQueueHostedService : IHostedService, IDisposable
                         try
                         {
                             await HubHelpers.SendNotificationToHubAsync(
-                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, cancellationToken);
+                                message.DecodeMessageText(), _hubContext, _anonymousHubContext, _logger, cancellationToken);
                             await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                         }
                         catch (Exception e)
                         {
-                            _logger.LogError("Error processing dequeued message: " +
-                                $"{message.MessageId} x{message.DequeueCount}. {e.Message}", e);
+                            _logger.LogError(e, "Error processing dequeued message: {MessageId} x{DequeueCount}.",
+                                message.MessageId, message.DequeueCount);
                             if (message.DequeueCount > 2)
                             {
                                 await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
@@ -86,7 +86,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
             }
             catch (Exception e)
             {
-                _logger.LogError("Error processing messages.", e);
+                _logger.LogError(e, "Error processing messages.");
             }
         }
 

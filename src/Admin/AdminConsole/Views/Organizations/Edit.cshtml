@@ -1,0 +1,136 @@
+@using Bit.Admin.Enums;
+@using Bit.Admin.Models
+@using Bit.Core.Billing.Enums
+@using Bit.Core.Enums
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+@model OrganizationEditModel
+@{
+    ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Name;
+
+    var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
+    var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
+    var canInitiateTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateTrial);
+    var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
+    var canUnlinkFromProvider = AccessControlService.UserHasPermission(Permission.Provider_Edit);
+}
+
+@section Scripts {
+    @await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationFormScripts.cshtml")
+
+    <script>
+        (() => {
+            const treamsTrialButton = document.getElementById('teams-trial');
+            if (treamsTrialButton != null) {
+                treamsTrialButton.addEventListener('click', () => {
+                    if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
+                        alert('Organization is not on a free plan.');
+                        return;
+                    }
+                    setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
+                    togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
+                    document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
+                });
+            }
+
+            const entTrialButton = document.getElementById('enterprise-trial');
+            if (entTrialButton != null) {
+                entTrialButton.addEventListener('click', () => {
+                    if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
+                        alert('Organization is not on a free plan.');
+                        return;
+                    }
+                    setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
+                    togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
+                    document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+                });
+            }
+
+            const initDeleteButton = document.getElementById('initiate-delete-form');
+            if (initDeleteButton != null) {
+                initDeleteButton.addEventListener('submit', (e) => {
+                    const email = prompt('Enter the email address of the owner/admin that your want to ' +
+                        'request the organization delete verification process with.');
+                    document.getElementById('AdminEmail').value = email;
+                    if (email == null || email === '') {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            function setTrialDefaults(planType) {
+                // Plan
+                document.getElementById('@(nameof(Model.PlanType))').value = planType;
+                // Password Manager
+                document.getElementById('@(nameof(Model.Seats))').value = '10';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Secret Manager
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmSeats))').value = '10';
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = getPlan(planType)?.baseServiceAccount;
+                }
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+            }
+        })();
+    </script>
+}
+
+<h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Name</small></h1>
+
+@if (Model.Provider != null)
+{
+    <h2>Provider Relationship</h2>
+    @await Html.PartialAsync("_ProviderInformation", Model.Provider)
+}
+
+@if (canViewOrganizationInformation)
+{
+    <h2>Organization Information</h2>
+    @await Html.PartialAsync("_ViewInformation", Model)
+}
+
+@if (canViewBillingInformation)
+{
+    <h2>Billing Information</h2>
+    @await Html.PartialAsync("_BillingInformation",
+                new BillingInformationModel { BillingInfo = Model.BillingInfo, BillingHistoryInfo = Model.BillingHistoryInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+}
+
+@await Html.PartialAsync("~/AdminConsole/Views/Shared/_OrganizationForm.cshtml", Model)
+
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+    <div class="ms-auto d-flex">
+        @if (canInitiateTrial && Model.Provider is null)
+        {
+            <button class="btn btn-secondary me-2" type="button" id="teams-trial">
+                Teams Trial
+            </button>
+            <button class="btn btn-secondary me-2" type="button" id="enterprise-trial">
+                Enterprise Trial
+            </button>
+        }
+        @if (canUnlinkFromProvider && Model.Provider is not null)
+        {
+            <button class="btn btn-outline-danger me-2"
+                    onclick="return unlinkProvider('@Model.Organization.Id');">
+                Unlink provider
+            </button>
+        }
+        @if (canDelete)
+        {
+            <form asp-action="DeleteInitiation" asp-route-id="@Model.Organization.Id" id="initiate-delete-form">
+                <input type="hidden" name="AdminEmail" id="AdminEmail" />
+                <button class="btn btn-danger me-2" type="submit">Request Delete</button>
+            </form>
+            <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
+                  onsubmit="return confirm('Are you sure you want to hard delete this organization?')">
+                <button class="btn btn-outline-danger" type="submit">Delete</button>
+            </form>
+        }
+    </div>
+</div>
+

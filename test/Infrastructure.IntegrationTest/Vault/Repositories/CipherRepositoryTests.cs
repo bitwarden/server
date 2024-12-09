@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -16,8 +17,7 @@ public class CipherRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesUserRevisionDate(
         IUserRepository userRepository,
-        ICipherRepository cipherRepository,
-        ITestDatabaseHelper helper)
+        ICipherRepository cipherRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -34,14 +34,13 @@ public class CipherRepositoryTests
             Data = "", // TODO: EF does not enforce this as NOT NULL
         });
 
-        helper.ClearTracker();
-
         await cipherRepository.DeleteAsync(cipher);
 
         var deletedCipher = await cipherRepository.GetByIdAsync(cipher.Id);
 
         Assert.Null(deletedCipher);
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(updatedUser);
         Assert.NotEqual(updatedUser.AccountRevisionDate, user.AccountRevisionDate);
     }
 
@@ -52,8 +51,7 @@ public class CipherRepositoryTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
         ICipherRepository cipherRepository,
-        ICollectionCipherRepository collectionCipherRepository,
-        ITestDatabaseHelper helper)
+        ICollectionCipherRepository collectionCipherRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -63,9 +61,8 @@ public class CipherRepositoryTests
             SecurityStamp = "stamp",
         });
 
-        helper.ClearTracker();
-
         user = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(user);
 
         var organization = await organizationRepository.CreateAsync(new Organization
         {
@@ -97,10 +94,9 @@ public class CipherRepositoryTests
                 Id = orgUser.Id,
                 HidePasswords = true,
                 ReadOnly = true,
+                Manage = true
             },
         });
-
-        helper.ClearTracker();
 
         await Task.Delay(100);
 
@@ -116,6 +112,7 @@ public class CipherRepositoryTests
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
+        Assert.NotNull(updatedUser);
         Assert.True(updatedUser.AccountRevisionDate - user.AccountRevisionDate > TimeSpan.Zero,
             "The AccountRevisionDate is expected to be changed");
 
@@ -128,8 +125,7 @@ public class CipherRepositoryTests
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IFolderRepository folderRepository,
-        ITestDatabaseHelper helper)
+        IFolderRepository folderRepository)
     {
         // This tests what happens when a cipher is moved into an organizations
         var user = await userRepository.CreateAsync(new User
@@ -142,6 +138,7 @@ public class CipherRepositoryTests
 
 
         user = await userRepository.GetByIdAsync(user.Id);
+        Assert.NotNull(user);
 
         // Create cipher in personal vault
         var createdCipher = await cipherRepository.CreateAsync(new Cipher
@@ -171,8 +168,6 @@ public class CipherRepositoryTests
             UserId = user.Id,
         });
 
-        helper.ClearTracker();
-
         // Move cipher to organization vault
         await cipherRepository.ReplaceAsync(new CipherDetails
         {
@@ -185,6 +180,7 @@ public class CipherRepositoryTests
 
         var updatedCipher = await cipherRepository.GetByIdAsync(createdCipher.Id);
 
+        Assert.NotNull(updatedCipher);
         Assert.Null(updatedCipher.UserId);
         Assert.Equal(organization.Id, updatedCipher.OrganizationId);
         Assert.NotNull(updatedCipher.Folders);

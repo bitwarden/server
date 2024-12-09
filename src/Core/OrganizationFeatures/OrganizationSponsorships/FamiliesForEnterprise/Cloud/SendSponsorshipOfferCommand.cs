@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business.Tokenables;
@@ -64,6 +65,6 @@ public class SendSponsorshipOfferCommand : ISendSponsorshipOfferCommand
             throw new BadRequestException("Cannot find an outstanding sponsorship offer for this organization.");
         }
 
-        await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+        await SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.DisplayName());
     }
 }

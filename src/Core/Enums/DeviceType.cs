@@ -49,5 +49,11 @@ public enum DeviceType : byte
     [Display(Name = "SDK")]
     SDK = 21,
     [Display(Name = "Server")]
-    Server = 22
+    Server = 22,
+    [Display(Name = "Windows CLI")]
+    WindowsCLI = 23,
+    [Display(Name = "MacOs CLI")]
+    MacOsCLI = 24,
+    [Display(Name = "Linux CLI")]
+    LinuxCLI = 25
 }

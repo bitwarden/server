@@ -1,0 +1,22 @@
+﻿@using Bit.SharedWeb.Utilities
+@using Bit.Core.AdminConsole.Enums.Provider
+@model ProviderViewModel
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Id</dt>
+    <dd class="col-sm-8 col-lg-9"><code>@Model.Provider.Id</code></dd>
+
+    <dt class="col-sm-4 col-lg-3">Status</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.Provider.Status</dd>
+
+    <dt class="col-sm-4 col-lg-3">Users</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.Provider.Type == ProviderType.Reseller ? "N/A" : Model.UserCount)</dd>
+
+    <dt class="col-sm-4 col-lg-3">Provider Type</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.Provider.Type.GetDisplayAttribute()?.GetName())</dd>
+
+    <dt class="col-sm-4 col-lg-3">Created</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.Provider.CreationDate.ToString()</dd>
+
+    <dt class="col-sm-4 col-lg-3">Modified</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.Provider.RevisionDate.ToString()</dd>
+</dl>

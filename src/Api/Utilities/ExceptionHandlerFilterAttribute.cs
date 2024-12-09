@@ -1,6 +1,9 @@
 ﻿using System.Reflection;
 using Bit.Api.Models.Public.Response;
 using Bit.Core;
+﻿using System.Text;
+using Bit.Api.Models.Public.Response;
+using Bit.Core.Billing;
 using Bit.Core.Exceptions;
 using Bit.Core.Resources;
 using Microsoft.AspNetCore.Mvc;
@@ -49,23 +52,57 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                 }
             }
         }
-        else if (exception is StripeException stripeException && stripeException?.StripeError?.Type == "card_error")
+        else if (exception is StripeException { StripeError.Type: "card_error" } stripeCardErrorException)
         {
             context.HttpContext.Response.StatusCode = 400;
             if (_publicApi)
             {
-                publicErrorModel = new ErrorResponseModel(stripeException.StripeError.Param,
-                    stripeException.Message);
+                publicErrorModel = new ErrorResponseModel(stripeCardErrorException.StripeError.Param,
+                    stripeCardErrorException.Message);
             }
             else
             {
-                internalErrorModel = new InternalApi.ErrorResponseModel(stripeException.StripeError.Param,
-                    stripeException.Message);
+                internalErrorModel = new InternalApi.ErrorResponseModel(stripeCardErrorException.StripeError.Param,
+                    stripeCardErrorException.Message);
             }
         }
         else if (exception is GatewayException)
         {
             context.HttpContext.Response.StatusCode = 400;
+        }
+        else if (exception is BillingException billingException)
+        {
+            errorMessage = billingException.Response;
+            context.HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        }
+        else if (exception is StripeException stripeException)
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+
+            var error = stripeException.Message;
+
+            if (stripeException.StripeError != null)
+            {
+                var stringBuilder = new StringBuilder();
+
+                if (!string.IsNullOrEmpty(stripeException.StripeError.Code))
+                {
+                    stringBuilder.Append($"{stripeException.StripeError.Code} | ");
+                }
+
+                stringBuilder.Append(stripeException.StripeError.Message);
+
+                if (!string.IsNullOrEmpty(stripeException.StripeError.DocUrl))
+                {
+                    stringBuilder.Append($" > {stripeException.StripeError.DocUrl}");
+                }
+
+                error = stringBuilder.ToString();
+            }
+
+            logger.LogError("An unhandled error occurred while communicating with Stripe: {Error}", error);
+            errorMessage = "Something went wrong with your request. Please contact support.";
+            context.HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         }
         else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
         {

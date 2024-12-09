@@ -1,0 +1,48 @@
+﻿@using Bit.SharedWeb.Utilities
+@using Bit.Core.AdminConsole.Enums.Provider
+@using Bit.Core
+
+@model CreateProviderModel
+
+@inject Bit.Core.Services.IFeatureService FeatureService
+
+@{
+    ViewData["Title"] = "Create Provider";
+
+    var providerTypes = Enum.GetValues<ProviderType>()
+        .OrderBy(x => x.GetDisplayAttribute().Order)
+        .ToList();
+
+    if (!FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
+    {
+        providerTypes.Remove(ProviderType.MultiOrganizationEnterprise);
+    }
+}
+
+<h1>Create Provider</h1>
+<form method="post" asp-action="Create">
+    <div asp-validation-summary="All" class="alert alert-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Type" class="form-label h2"></label>
+        @foreach (var providerType in providerTypes)
+        {
+            var providerTypeValue = (int)providerType;
+            <div class="mb-3">
+                <div class="row">
+                    <div class="col">
+                        <div class="form-check">
+                            @Html.RadioButtonFor(m => m.Type, providerType, new { id = $"providerType-{providerTypeValue}", @class = "form-check-input" })
+                            @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetName(), new { @class = "form-check-label", @for = $"providerType-{providerTypeValue}" })
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-body-secondary ps-4", @for = $"providerType-{providerTypeValue}" })
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <button type="submit" class="btn btn-primary mb-2">Next</button>
+</form>

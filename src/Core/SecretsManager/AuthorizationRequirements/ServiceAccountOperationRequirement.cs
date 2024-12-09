@@ -15,4 +15,5 @@ public static class ServiceAccountOperations
     public static readonly ServiceAccountOperationRequirement ReadAccessTokens = new() { Name = nameof(ReadAccessTokens) };
     public static readonly ServiceAccountOperationRequirement CreateAccessToken = new() { Name = nameof(CreateAccessToken) };
     public static readonly ServiceAccountOperationRequirement RevokeAccessTokens = new() { Name = nameof(RevokeAccessTokens) };
+    public static readonly ServiceAccountOperationRequirement ReadEvents = new() { Name = nameof(ReadEvents) };
 }

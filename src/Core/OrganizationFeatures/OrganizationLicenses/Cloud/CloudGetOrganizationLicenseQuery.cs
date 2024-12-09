@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -33,6 +33,10 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
         }
 
         var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
-        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
+
+        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version)
+        {
+            Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo)
+        };
     }
 }

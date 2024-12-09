@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
+WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,6 +25,12 @@ BEGIN
     END
 
     BEGIN TRANSACTION Organization_DeleteById
+
+    DELETE
+    FROM
+        [dbo].[AuthRequest]
+    WHERE
+        [OrganizationId] = @Id
 
     DELETE
     FROM
@@ -112,6 +119,23 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    -- Delete Notification Status
+    DELETE
+        NS
+    FROM
+        [dbo].[NotificationStatus] NS
+    INNER JOIN
+        [dbo].[Notification] N ON N.[Id] = NS.[NotificationId]
+    WHERE
+        N.[OrganizationId] = @Id
+    
+    -- Delete Notification
+    DELETE
+    FROM
+        [dbo].[Notification]
+    WHERE
+        [OrganizationId] = @Id
+    
     DELETE
     FROM
         [dbo].[Organization]

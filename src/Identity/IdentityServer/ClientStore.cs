@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Security.Claims;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -10,9 +11,9 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -79,9 +80,9 @@ public class ClientStore : IClientStore
             return await CreateUserClientAsync(clientId);
         }
 
-        if (_staticClientStore.ApiClients.ContainsKey(clientId))
+        if (_staticClientStore.ApiClients.TryGetValue(clientId, out var client))
         {
-            return _staticClientStore.ApiClients[clientId];
+            return client;
         }
 
         return await CreateApiKeyClientAsync(clientId);
@@ -89,7 +90,12 @@ public class ClientStore : IClientStore
 
     private async Task<Client> CreateApiKeyClientAsync(string clientId)
     {
-        var apiKey = await _apiKeyRepository.GetDetailsByIdAsync(new Guid(clientId));
+        if (!Guid.TryParse(clientId, out var guid))
+        {
+            return null;
+        }
+
+        var apiKey = await _apiKeyRepository.GetDetailsByIdAsync(guid);
 
         if (apiKey == null || apiKey.ExpireAt <= DateTime.Now)
         {
@@ -100,16 +106,11 @@ public class ClientStore : IClientStore
         {
             case ServiceAccountApiKeyDetails key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager)
+                if (!org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
                 break;
-        }
-
-        if (string.IsNullOrEmpty(apiKey.ClientSecretHash))
-        {
-            apiKey.ClientSecretHash = apiKey.ClientSecret.Sha256();
         }
 
         var client = new Client
@@ -127,7 +128,7 @@ public class ClientStore : IClientStore
             Claims = new List<ClientClaim>
             {
                 new(JwtClaimTypes.Subject, apiKey.ServiceAccountId.ToString()),
-                new(Claims.Type, ClientType.ServiceAccount.ToString()),
+                new(Claims.Type, IdentityClientType.ServiceAccount.ToString()),
             },
         };
 
@@ -159,7 +160,7 @@ public class ClientStore : IClientStore
         {
             new(JwtClaimTypes.Subject, user.Id.ToString()),
             new(JwtClaimTypes.AuthenticationMethod, "Application", "external"),
-            new(Claims.Type, ClientType.User.ToString()),
+            new(Claims.Type, IdentityClientType.User.ToString()),
         };
         var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
         var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
@@ -217,7 +218,7 @@ public class ClientStore : IClientStore
             Claims = new List<ClientClaim>
             {
                 new(JwtClaimTypes.Subject, org.Id.ToString()),
-                new(Claims.Type, ClientType.Organization.ToString()),
+                new(Claims.Type, IdentityClientType.Organization.ToString()),
             },
         };
     }

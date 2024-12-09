@@ -40,10 +40,15 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
 
     public async Task DeleteRegistrationAsync(string deviceId)
     {
-        await SendAsync(HttpMethod.Delete, string.Concat("push/", deviceId));
+        var requestModel = new PushDeviceRequestModel
+        {
+            Id = deviceId,
+        };
+        await SendAsync(HttpMethod.Post, "push/delete", requestModel);
     }
 
-    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task AddUserRegistrationOrganizationAsync(
+        IEnumerable<string> deviceIds, string organizationId)
     {
         if (!deviceIds.Any())
         {
@@ -54,7 +59,8 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
         await SendAsync(HttpMethod.Put, "push/add-organization", requestModel);
     }
 
-    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task DeleteUserRegistrationOrganizationAsync(
+        IEnumerable<string> deviceIds, string organizationId)
     {
         if (!deviceIds.Any())
         {

@@ -1,0 +1,225 @@
+{
+  "id": "evt_1Nv0w8IGBnsLynRrZoDVI44u",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1695833408,
+  "data": {
+    "object": {
+      "object": "invoice",
+      "account_country": "US",
+      "account_name": "Bitwarden Inc.",
+      "account_tax_ids": null,
+      "amount_due": 0,
+      "amount_paid": 0,
+      "amount_remaining": 0,
+      "amount_shipping": 0,
+      "application": null,
+      "application_fee_amount": null,
+      "attempt_count": 0,
+      "attempted": false,
+      "automatic_tax": {
+        "enabled": true,
+        "status": "complete"
+      },
+      "billing_reason": "upcoming",
+      "charge": null,
+      "collection_method": "charge_automatically",
+      "created": 1697128681,
+      "currency": "usd",
+      "custom_fields": null,
+      "customer": "cus_M8DV9wiyNa2JxQ",
+      "customer_address": {
+        "city": null,
+        "country": "US",
+        "line1": "",
+        "line2": null,
+        "postal_code": "90019",
+        "state": null
+      },
+      "customer_email": "vphan@bitwarden.com",
+      "customer_name": null,
+      "customer_phone": null,
+      "customer_shipping": null,
+      "customer_tax_exempt": "none",
+      "customer_tax_ids": [
+      ],
+      "default_payment_method": null,
+      "default_source": null,
+      "default_tax_rates": [
+      ],
+      "description": null,
+      "discount": null,
+      "discounts": [
+      ],
+      "due_date": null,
+      "effective_at": null,
+      "ending_balance": -6779,
+      "footer": null,
+      "from_invoice": null,
+      "last_finalization_error": null,
+      "latest_revision": null,
+      "lines": {
+        "object": "list",
+        "data": [
+          {
+            "id": "il_tmp_12b5e8IGBnsLynRr1996ac3a",
+            "object": "line_item",
+            "amount": 2000,
+            "amount_excluding_tax": 2000,
+            "currency": "usd",
+            "description": "5 × 2019 Enterprise Seat (Monthly) (at $4.00 / month)",
+            "discount_amounts": [
+            ],
+            "discountable": true,
+            "discounts": [
+            ],
+            "livemode": false,
+            "metadata": {
+            },
+            "period": {
+              "end": 1699807081,
+              "start": 1697128681
+            },
+            "plan": {
+              "id": "enterprise-org-seat-monthly",
+              "object": "plan",
+              "active": true,
+              "aggregate_usage": null,
+              "amount": 400,
+              "amount_decimal": "400",
+              "billing_scheme": "per_unit",
+              "created": 1494268635,
+              "currency": "usd",
+              "interval": "month",
+              "interval_count": 1,
+              "livemode": false,
+              "metadata": {
+              },
+              "nickname": "2019 Enterprise Seat (Monthly)",
+              "product": "prod_BVButYytPSlgs6",
+              "tiers_mode": null,
+              "transform_usage": null,
+              "trial_period_days": null,
+              "usage_type": "licensed"
+            },
+            "price": {
+              "id": "enterprise-org-seat-monthly",
+              "object": "price",
+              "active": true,
+              "billing_scheme": "per_unit",
+              "created": 1494268635,
+              "currency": "usd",
+              "custom_unit_amount": null,
+              "livemode": false,
+              "lookup_key": null,
+              "metadata": {
+              },
+              "nickname": "2019 Enterprise Seat (Monthly)",
+              "product": "prod_BVButYytPSlgs6",
+              "recurring": {
+                "aggregate_usage": null,
+                "interval": "month",
+                "interval_count": 1,
+                "trial_period_days": null,
+                "usage_type": "licensed"
+              },
+              "tax_behavior": "unspecified",
+              "tiers_mode": null,
+              "transform_quantity": null,
+              "type": "recurring",
+              "unit_amount": 400,
+              "unit_amount_decimal": "400"
+            },
+            "proration": false,
+            "proration_details": {
+              "credited_items": null
+            },
+            "quantity": 5,
+            "subscription": "sub_1NQxz4IGBnsLynRr1KbitG7v",
+            "subscription_item": "si_ODOmLnPDHBuMxX",
+            "tax_amounts": [
+              {
+                "amount": 0,
+                "inclusive": false,
+                "tax_rate": "txr_1N6XCyIGBnsLynRr0LHs4AUD",
+                "taxability_reason": "product_exempt",
+                "taxable_amount": 0
+              }
+            ],
+            "tax_rates": [
+            ],
+            "type": "subscription",
+            "unit_amount_excluding_tax": "400"
+          }
+        ],
+        "has_more": false,
+        "total_count": 1,
+        "url": "/v1/invoices/upcoming/lines?customer=cus_M8DV9wiyNa2JxQ&subscription=sub_1NQxz4IGBnsLynRr1KbitG7v"
+      },
+      "livemode": false,
+      "metadata": {
+      },
+      "next_payment_attempt": 1697132281,
+      "number": null,
+      "on_behalf_of": null,
+      "paid": false,
+      "paid_out_of_band": false,
+      "payment_intent": null,
+      "payment_settings": {
+        "default_mandate": null,
+        "payment_method_options": null,
+        "payment_method_types": null
+      },
+      "period_end": 1697128681,
+      "period_start": 1694536681,
+      "post_payment_credit_notes_amount": 0,
+      "pre_payment_credit_notes_amount": 0,
+      "quote": null,
+      "receipt_number": null,
+      "rendering": null,
+      "rendering_options": null,
+      "shipping_cost": null,
+      "shipping_details": null,
+      "starting_balance": -8779,
+      "statement_descriptor": null,
+      "status": "draft",
+      "status_transitions": {
+        "finalized_at": null,
+        "marked_uncollectible_at": null,
+        "paid_at": null,
+        "voided_at": null
+      },
+      "subscription": "sub_1NQxz4IGBnsLynRr1KbitG7v",
+      "subscription_details": {
+        "metadata": {
+        }
+      },
+      "subtotal": 2000,
+      "subtotal_excluding_tax": 2000,
+      "tax": 0,
+      "test_clock": null,
+      "total": 2000,
+      "total_discount_amounts": [
+      ],
+      "total_excluding_tax": 2000,
+      "total_tax_amounts": [
+        {
+          "amount": 0,
+          "inclusive": false,
+          "tax_rate": "txr_1N6XCyIGBnsLynRr0LHs4AUD",
+          "taxability_reason": "product_exempt",
+          "taxable_amount": 0
+        }
+      ],
+      "transfer_data": null,
+      "webhooks_delivered_at": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 5,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "invoice.upcoming"
+}

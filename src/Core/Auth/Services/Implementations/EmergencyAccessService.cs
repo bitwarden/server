@@ -1,4 +1,7 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -31,6 +34,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationService _organizationService;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -44,7 +48,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         IPasswordHasher<User> passwordHasher,
         GlobalSettings globalSettings,
         IOrganizationService organizationService,
-        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -58,6 +63,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _globalSettings = globalSettings;
         _organizationService = organizationService;
         _dataProtectorTokenizer = dataProtectorTokenizer;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -325,7 +331,9 @@ public class EmergencyAccessService : IEmergencyAccessService
 
         var grantor = await _userRepository.GetByIdAsync(emergencyAccess.GrantorId);
 
-        grantor.MasterPassword = _passwordHasher.HashPassword(grantor, newMasterPasswordHash);
+        await _userService.UpdatePasswordHash(grantor, newMasterPasswordHash);
+        grantor.RevisionDate = DateTime.UtcNow;
+        grantor.LastPasswordChangeDate = grantor.RevisionDate;
         grantor.Key = key;
         // Disable TwoFactor providers since they will otherwise block logins
         grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>());
@@ -337,7 +345,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         {
             if (o.Type != OrganizationUserType.Owner)
             {
-                await _organizationService.DeleteUserAsync(o.OrganizationId, grantor.Id);
+                await _removeOrganizationUserCommand.RemoveUserAsync(o.OrganizationId, grantor.Id);
             }
         }
     }
@@ -385,7 +393,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, withOrganizations: false);
 
         return new EmergencyAccessViewData
         {

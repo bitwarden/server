@@ -9,12 +9,12 @@ public class PushUpdateRequestModel
 
     public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
     {
-        DeviceIds = deviceIds;
+        Devices = deviceIds.Select(d => new PushDeviceRequestModel { Id = d });
         OrganizationId = organizationId;
     }
 
     [Required]
-    public IEnumerable<string> DeviceIds { get; set; }
+    public IEnumerable<PushDeviceRequestModel> Devices { get; set; }
     [Required]
     public string OrganizationId { get; set; }
 }

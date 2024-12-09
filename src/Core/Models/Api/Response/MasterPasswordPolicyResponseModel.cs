@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Data.Organizations.Policies;
+﻿using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 namespace Bit.Core.Models.Api.Response;
 

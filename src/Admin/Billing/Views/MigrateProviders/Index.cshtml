@@ -1,0 +1,46 @@
+@model Bit.Admin.Billing.Models.MigrateProvidersRequestModel;
+@{
+    ViewData["Title"] = "Migrate Providers";
+}
+
+<h1>Migrate Providers</h1>
+<h2>Bulk Consolidated Billing Migration Tool</h2>
+<section>
+    <p>
+        This tool allows you to provide a list of IDs for Providers that you would like to migrate to Consolidated Billing.
+        Because of the expensive nature of the operation, you can only migrate 10 Providers at a time.
+    </p>
+    <p class="alert alert-warning">
+        Updates made through this tool are irreversible without manual intervention.
+    </p>
+    <p>Example Input (Please enter each Provider ID separated by a new line):</p>
+    <div class="card">
+        <div class="card-body">
+            <pre class="mb-0">f513affc-2290-4336-879e-21ec3ecf3e78
+f7a5cb0d-4b74-445c-8d8c-232d1d32bbe2
+bf82d3cf-0e21-4f39-b81b-ef52b2fc6a3a
+174e82fc-70c3-448d-9fe7-00bad2a3ab00
+22a4bbbf-58e3-4e4c-a86a-a0d7caf4ff14</pre>
+        </div>
+    </div>
+    <form method="post" asp-controller="MigrateProviders" asp-action="Post" class="mt-2">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <div class="mb-3">
+            <label class="form-label" asp-for="ProviderIds"></label>
+            <textarea rows="10" class="form-control" type="text" asp-for="ProviderIds"></textarea>
+        </div>
+        <div class="mb-3">
+            <input type="submit" value="Run" class="btn btn-primary"/>
+        </div>
+    </form>
+    <form method="get" asp-controller="MigrateProviders" asp-action="Results" class="mt-2">
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <div class="mb-3">
+            <label class="form-label" asp-for="ProviderIds"></label>
+            <textarea rows="10" class="form-control" type="text" asp-for="ProviderIds"></textarea>
+        </div>
+        <div class="mb-3">
+            <input type="submit" value="See Previous Results" class="btn btn-primary"/>
+        </div>
+    </form>
+</section>

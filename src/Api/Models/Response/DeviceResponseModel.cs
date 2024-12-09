@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
@@ -19,9 +20,7 @@ public class DeviceResponseModel : ResponseModel
         Type = device.Type;
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
-        EncryptedUserKey = device.EncryptedUserKey;
-        EncryptedPublicKey = device.EncryptedPublicKey;
-        EncryptedPrivateKey = device.EncryptedPrivateKey;
+        IsTrusted = device.IsTrusted();
     }
 
     public Guid Id { get; set; }
@@ -29,7 +28,5 @@ public class DeviceResponseModel : ResponseModel
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
     public DateTime CreationDate { get; set; }
-    public string EncryptedUserKey { get; }
-    public string EncryptedPublicKey { get; }
-    public string EncryptedPrivateKey { get; }
+    public bool IsTrusted { get; set; }
 }

@@ -3,7 +3,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Moq;
+using NSubstitute;
 using StackExchange.Redis;
 using Xunit;
 
@@ -37,14 +37,12 @@ public class CustomRedisProcessingStrategyTests
 
     #endregion
 
-    private readonly Mock<ICounterKeyBuilder> _mockCounterKeyBuilder = new();
-    private Mock<IDatabase> _mockDb;
+    private readonly ICounterKeyBuilder _mockCounterKeyBuilder = Substitute.For<ICounterKeyBuilder>();
+    private IDatabase _mockDb;
 
     public CustomRedisProcessingStrategyTests()
     {
-        _mockCounterKeyBuilder
-            .Setup(x =>
-                x.Build(It.IsAny<ClientRequestIdentity>(), It.IsAny<RateLimitRule>()))
+        _mockCounterKeyBuilder.Build(Arg.Any<ClientRequestIdentity>(), Arg.Any<RateLimitRule>())
             .Returns(_sampleClientId.ClientId);
     }
 
@@ -55,12 +53,12 @@ public class CustomRedisProcessingStrategyTests
         var strategy = BuildProcessingStrategy();
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
         // Assert
         Assert.Equal(1, result.Count);
-        VerifyRedisCalls(Times.Once());
+        VerifyRedisCalls(1);
     }
 
     [Fact]
@@ -70,60 +68,63 @@ public class CustomRedisProcessingStrategyTests
         var strategy = BuildProcessingStrategy(false);
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Count);
-        VerifyRedisCalls(Times.Never());
+        VerifyRedisNotCalled();
     }
 
     [Fact]
     public async Task SkipRateLimit_When_TimeoutThresholdExceeded()
     {
         // Arrange
-        var mockCache = new Mock<IMemoryCache>();
+        var mockCache = Substitute.For<IMemoryCache>();
         object existingCount = new CustomRedisProcessingStrategy.TimeoutCounter
         {
             Count = _sampleSettings.DistributedIpRateLimiting.MaxRedisTimeoutsThreshold + 1
         };
-        mockCache.Setup(x => x.TryGetValue(It.IsAny<object>(), out existingCount)).Returns(true);
+        mockCache.TryGetValue(Arg.Any<object>(), out existingCount).ReturnsForAnyArgs(x =>
+        {
+            x[1] = existingCount;
+            return true;
+        });
 
-        var strategy = BuildProcessingStrategy(mockCache: mockCache.Object);
+        var strategy = BuildProcessingStrategy(mockCache: mockCache);
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
         // Assert
         Assert.Equal(0, result.Count);
-        VerifyRedisCalls(Times.Never());
+        VerifyRedisNotCalled();
     }
 
     [Fact]
     public async Task SkipRateLimit_When_RedisTimeoutException()
     {
         // Arrange
-        var mockCache = new Mock<IMemoryCache>();
-        var mockCacheEntry = new Mock<ICacheEntry>();
-        mockCacheEntry.SetupAllProperties();
-        mockCache.Setup(x => x.CreateEntry(It.IsAny<object>())).Returns(mockCacheEntry.Object);
+        var mockCache = Substitute.For<IMemoryCache>();
+        var mockCacheEntry = Substitute.For<ICacheEntry>();
+        mockCache.CreateEntry(Arg.Any<object>()).Returns(mockCacheEntry);
 
-        var strategy = BuildProcessingStrategy(mockCache: mockCache.Object, throwRedisTimeout: true);
+        var strategy = BuildProcessingStrategy(mockCache: mockCache, throwRedisTimeout: true);
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
-        var timeoutCounter = ((CustomRedisProcessingStrategy.TimeoutCounter)mockCacheEntry.Object.Value);
+        var timeoutCounter = ((CustomRedisProcessingStrategy.TimeoutCounter)mockCacheEntry.Value);
 
         // Assert
         Assert.Equal(0, result.Count); // Skip rate limiting
-        VerifyRedisCalls(Times.Once());
+        VerifyRedisCalls(1);
 
         Assert.Equal(1, timeoutCounter.Count); // Timeout count increased/cached
-        Assert.NotNull(mockCacheEntry.Object.AbsoluteExpiration);
-        mockCache.Verify(x => x.CreateEntry(It.IsAny<object>()));
+        Assert.NotNull(mockCacheEntry.AbsoluteExpiration);
+        mockCache.Received().CreateEntry(Arg.Any<object>());
     }
 
     [Fact]
@@ -136,26 +137,33 @@ public class CustomRedisProcessingStrategyTests
         // Act
 
         // Redis Timeout 1
-        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
         // Redis Timeout 2
-        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
         // Skip Redis
-        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder.Object, _sampleOptions,
+        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
             CancellationToken.None);
 
         // Assert
-        VerifyRedisCalls(Times.Exactly(_sampleSettings.DistributedIpRateLimiting.MaxRedisTimeoutsThreshold));
+        VerifyRedisCalls(_sampleSettings.DistributedIpRateLimiting.MaxRedisTimeoutsThreshold);
     }
 
-    private void VerifyRedisCalls(Times times)
+    private void VerifyRedisCalls(int times)
     {
-        _mockDb.Verify(x =>
-            x.ScriptEvaluateAsync(It.IsAny<LuaScript>(), It.IsAny<object>(), It.IsAny<CommandFlags>()),
-            times);
+        _mockDb
+            .Received(times)
+            .ScriptEvaluateAsync(Arg.Any<LuaScript>(), Arg.Any<object>(), Arg.Any<CommandFlags>());
+    }
+
+    private void VerifyRedisNotCalled()
+    {
+        _mockDb
+            .DidNotReceive()
+            .ScriptEvaluateAsync(Arg.Any<LuaScript>(), Arg.Any<object>(), Arg.Any<CommandFlags>());
     }
 
     private CustomRedisProcessingStrategy BuildProcessingStrategy(
@@ -163,36 +171,33 @@ public class CustomRedisProcessingStrategyTests
         bool throwRedisTimeout = false,
         IMemoryCache mockCache = null)
     {
-        var mockRedisConnection = new Mock<IConnectionMultiplexer>();
+        var mockRedisConnection = Substitute.For<IConnectionMultiplexer>();
 
-        mockRedisConnection.Setup(x => x.IsConnected).Returns(isRedisConnected);
+        mockRedisConnection.IsConnected.Returns(isRedisConnected);
 
-        _mockDb = new Mock<IDatabase>();
+        _mockDb = Substitute.For<IDatabase>();
 
         var mockScriptEvaluate = _mockDb
-            .Setup(x =>
-                x.ScriptEvaluateAsync(It.IsAny<LuaScript>(), It.IsAny<object>(), It.IsAny<CommandFlags>()));
+            .ScriptEvaluateAsync(Arg.Any<LuaScript>(), Arg.Any<object>(), Arg.Any<CommandFlags>());
 
         if (throwRedisTimeout)
         {
-            mockScriptEvaluate.ThrowsAsync(new RedisTimeoutException("Timeout", CommandStatus.WaitingToBeSent));
+            mockScriptEvaluate.Returns<RedisResult>(x => throw new RedisTimeoutException("Timeout", CommandStatus.WaitingToBeSent));
         }
         else
         {
-            mockScriptEvaluate.ReturnsAsync(RedisResult.Create(1));
+            mockScriptEvaluate.Returns(RedisResult.Create(1));
         }
 
-        mockRedisConnection
-            .Setup(x =>
-                x.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
-            .Returns(_mockDb.Object);
+        mockRedisConnection.GetDatabase(Arg.Any<int>(), Arg.Any<object>())
+            .Returns(_mockDb);
 
-        var mockLogger = new Mock<ILogger<CustomRedisProcessingStrategy>>();
-        var mockConfig = new Mock<IRateLimitConfiguration>();
+        var mockLogger = Substitute.For<ILogger<CustomRedisProcessingStrategy>>();
+        var mockConfig = Substitute.For<IRateLimitConfiguration>();
 
-        mockCache ??= new Mock<IMemoryCache>().Object;
+        mockCache ??= Substitute.For<IMemoryCache>();
 
-        return new CustomRedisProcessingStrategy(mockRedisConnection.Object, mockConfig.Object,
-            mockLogger.Object, mockCache, _sampleSettings);
+        return new CustomRedisProcessingStrategy(mockRedisConnection, mockConfig,
+            mockLogger, mockCache, _sampleSettings);
     }
 }

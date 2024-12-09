@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[Grant_Save]
-    @Key  NVARCHAR(200),
-    @Type  NVARCHAR(50),
+    @Key NVARCHAR(200),
+    @Type NVARCHAR(50),
     @SubjectId NVARCHAR(200),
     @SessionId NVARCHAR(100),
     @ClientId NVARCHAR(200),
@@ -13,53 +13,26 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    MERGE
-        [dbo].[Grant] AS [Target]
-    USING
-    ( 
-        VALUES
-        (
-            @Key,
-            @Type,
-            @SubjectId,
-            @SessionId,
-            @ClientId,
-            @Description,
-            @CreationDate,
-            @ExpirationDate,
-            @ConsumedDate,
-            @Data
-        )
-    ) AS [Source]
-    (
-        [Key],
-        [Type],
-        [SubjectId],
-        [SessionId],
-        [ClientId],
-        [Description],
-        [CreationDate],
-        [ExpirationDate],
-        [ConsumedDate],
-        [Data]
-    ) 
-    ON
-        [Target].[Key] = [Source].[Key]
-    WHEN MATCHED THEN
-        UPDATE
-        SET
-            [Type] = [Source].[Type],
-            [SubjectId] = [Source].[SubjectId],
-            [SessionId] = [Source].[SessionId],
-            [ClientId] = [Source].[ClientId],
-            [Description] = [Source].[Description],
-            [CreationDate] = [Source].[CreationDate],
-            [ExpirationDate] = [Source].[ExpirationDate],
-            [ConsumedDate] = [Source].[ConsumedDate],
-            [Data] = [Source].[Data]
-    WHEN NOT MATCHED THEN
-        INSERT
-        (
+    -- First, try to update the existing row
+    UPDATE [dbo].[Grant]
+    SET
+        [Type] = @Type,
+        [SubjectId] = @SubjectId,
+        [SessionId] = @SessionId,
+        [ClientId] = @ClientId,
+        [Description] = @Description,
+        [CreationDate] = @CreationDate,
+        [ExpirationDate] = @ExpirationDate,
+        [ConsumedDate] = @ConsumedDate,
+        [Data] = @Data
+    WHERE
+        [Key] = @Key
+
+    -- If no row was updated, insert a new one
+    IF @@ROWCOUNT = 0
+    BEGIN
+        INSERT INTO [dbo].[Grant]
+            (
             [Key],
             [Type],
             [SubjectId],
@@ -70,19 +43,19 @@ BEGIN
             [ExpirationDate],
             [ConsumedDate],
             [Data]
-        )
+            )
         VALUES
-        (
-            [Source].[Key],
-            [Source].[Type],
-            [Source].[SubjectId],
-            [Source].[SessionId],
-            [Source].[ClientId],
-            [Source].[Description],
-            [Source].[CreationDate],
-            [Source].[ExpirationDate],
-            [Source].[ConsumedDate],
-            [Source].[Data]
-        )
-    ;
+            (
+                @Key,
+                @Type,
+                @SubjectId,
+                @SessionId,
+                @ClientId,
+                @Description,
+                @CreationDate,
+                @ExpirationDate,
+                @ConsumedDate,
+                @Data
+            )
+    END
 END

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
@@ -12,31 +13,25 @@ public class TwoFactorDuoResponseModel : ResponseModel
     public TwoFactorDuoResponseModel(User user)
         : base(ResponseObj)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
         Build(provider);
     }
 
-    public TwoFactorDuoResponseModel(Organization org)
+    public TwoFactorDuoResponseModel(Organization organization)
         : base(ResponseObj)
     {
-        if (org == null)
-        {
-            throw new ArgumentNullException(nameof(org));
-        }
+        ArgumentNullException.ThrowIfNull(organization);
 
-        var provider = org.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
         Build(provider);
     }
 
     public bool Enabled { get; set; }
     public string Host { get; set; }
-    public string SecretKey { get; set; }
-    public string IntegrationKey { get; set; }
+    public string ClientSecret { get; set; }
+    public string ClientId { get; set; }
 
     private void Build(TwoFactorProvider provider)
     {
@@ -44,22 +39,33 @@ public class TwoFactorDuoResponseModel : ResponseModel
         {
             Enabled = provider.Enabled;
 
-            if (provider.MetaData.ContainsKey("Host"))
+            if (provider.MetaData.TryGetValue("Host", out var host))
             {
-                Host = (string)provider.MetaData["Host"];
+                Host = (string)host;
             }
-            if (provider.MetaData.ContainsKey("SKey"))
+            if (provider.MetaData.TryGetValue("ClientSecret", out var clientSecret))
             {
-                SecretKey = (string)provider.MetaData["SKey"];
+                ClientSecret = MaskSecret((string)clientSecret);
             }
-            if (provider.MetaData.ContainsKey("IKey"))
+            if (provider.MetaData.TryGetValue("ClientId", out var clientId))
             {
-                IntegrationKey = (string)provider.MetaData["IKey"];
+                ClientId = (string)clientId;
             }
         }
         else
         {
             Enabled = false;
         }
+    }
+
+    private static string MaskSecret(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key) || key.Length <= 6)
+        {
+            return key;
+        }
+
+        // Mask all but the first 6 characters.
+        return string.Concat(key.AsSpan(0, 6), new string('*', key.Length - 6));
     }
 }

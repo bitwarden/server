@@ -58,7 +58,7 @@ public class DistributedCacheCookieManager : ICookieManager
     }
 
     private IDistributedCache GetCache(HttpContext context) =>
-        context.RequestServices.GetRequiredService<IDistributedCache>();
+        context.RequestServices.GetRequiredKeyedService<IDistributedCache>("persistent");
 
     private string GetKey(string key, string id) => $"{CacheKeyPrefix}-{key}-{id}";
 

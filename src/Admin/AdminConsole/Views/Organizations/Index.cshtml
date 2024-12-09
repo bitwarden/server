@@ -1,0 +1,150 @@
+﻿@model OrganizationsModel
+@{
+    ViewData["Title"] = "Organizations";
+}
+
+<h1>Organizations</h1>
+
+<form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get">
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="Name">Name</label>
+        <input type="text" class="form-control" placeholder="Name" asp-for="Name" name="name">
+    </div>
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="UserEmail">User email</label>
+        <input type="text" class="form-control" placeholder="User email" asp-for="UserEmail" name="userEmail">
+    </div>
+    @if(!Model.SelfHosted)
+    {
+        <div class="col-12">
+            <label class="visually-hidden" asp-for="Paid">Customer</label>
+            <select class="form-select" asp-for="Paid" name="paid">
+                <option asp-selected="!Model.Paid.HasValue" value="">-- Customer --</option>
+                <option asp-selected="Model.Paid.GetValueOrDefault(false)" value="true">Paid</option>
+                <option asp-selected="!Model.Paid.GetValueOrDefault(true)" value="false">Freeloader</option>
+            </select>
+        </div>
+    }
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary" title="Search">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th style="width: 190px;">Plan</th>
+                <th style="width: 80px;">Seats</th>
+                <th style="width: 150px;">Created</th>
+                <th style="width: 170px; min-width: 170px;">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if(!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="5">No results to list.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach(var org in Model.Items)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="@Model.Action" asp-route-id="@org.Id">@org.DisplayName()</a>
+                        </td>
+                        <td>
+                            @org.Plan
+                        </td>
+                        <td>
+                            @org.Seats
+                        </td>
+                        <td>
+                            <span title="@org.CreationDate.ToString()">
+                                @org.CreationDate.ToShortDateString()
+                            </span>
+                        </td>
+                        <td>
+                            @if(!Model.SelfHosted)
+                            {
+                                if(!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
+                                {
+                                    <i class="fa fa-usd fa-lg fa-fw" title="Paid"></i>
+                                }
+                                else
+                                {
+                                    <i class="fa fa-smile-o fa-lg fa-fw text-body-secondary" title="Freeloader"></i>
+                                }
+                            }
+                            @if(org.MaxStorageGb.HasValue && org.MaxStorageGb > 1)
+                            {
+                                <i class="fa fa-plus-square fa-lg fa-fw"
+                                   title="Additional Storage, @(org.MaxStorageGb - 1) GB"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-plus-square-o fa-lg fa-fw text-body-secondary"
+                                   title="No Additional Storage"></i>
+                            }
+                            @if(org.Enabled)
+                            {
+                                <i class="fa fa-check-circle fa-lg fa-fw"
+                                   title="Enabled, expires @(org.ExpirationDate?.ToShortDateString() ?? "-")"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-times-circle-o fa-lg fa-fw text-body-secondary" title="Disabled"></i>
+                            }
+                            @if(org.TwoFactorIsEnabled())
+                            {
+                                <i class="fa fa-lock fa-lg fa-fw" title="2FA Enabled"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-unlock fa-lg fa-fw text-body-secondary" title="2FA Not Enabled"></i>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<nav>
+    <ul class="pagination">
+        @if(Model.PreviousPage.HasValue)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-page="@Model.PreviousPage.Value"
+                   asp-route-count="@Model.Count" asp-route-userEmail="@Model.UserEmail"
+                   asp-route-name="@Model.Name" asp-route-paid="@Model.Paid">Previous</a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Previous</a>
+            </li>
+        }
+        @if(Model.NextPage.HasValue)
+        {
+            <li class="page-item">
+                <a class="page-link" asp-action="Index" asp-route-page="@Model.NextPage.Value"
+                   asp-route-count="@Model.Count" asp-route-userEmail="@Model.UserEmail"
+                   asp-route-name="@Model.Name" asp-route-paid="@Model.Paid">Next</a>
+            </li>
+        }
+        else
+        {
+            <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">Next</a>
+            </li>
+        }
+    </ul>
+</nav>

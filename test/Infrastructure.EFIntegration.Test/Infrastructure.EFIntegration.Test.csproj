@@ -8,7 +8,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
-    <PackageReference Include="Moq" Version="4.17.2" />
     <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
@@ -22,6 +21,9 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Infrastructure.Dapper\Infrastructure.Dapper.csproj" />
       <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
+      <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
+      <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
+      <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
       <ProjectReference Include="..\Common\Common.csproj" />
       <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
     </ItemGroup>

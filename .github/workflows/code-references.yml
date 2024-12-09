@@ -1,0 +1,59 @@
+name: Collect code references
+
+on:
+  pull_request:
+
+jobs:
+  check-ld-secret:
+    name: Check for LD secret
+    runs-on: ubuntu-22.04
+    outputs:
+      available: ${{ steps.check-ld-secret.outputs.available }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check
+        id: check-ld-secret
+        run: |
+          if [ "${{ secrets.LD_ACCESS_TOKEN }}" != '' ]; then
+            echo "available=true" >> $GITHUB_OUTPUT;
+          else
+            echo "available=false" >> $GITHUB_OUTPUT;
+          fi
+
+  refs:
+    name: Code reference collection
+    runs-on: ubuntu-22.04
+    needs: check-ld-secret
+    if: ${{ needs.check-ld-secret.outputs.available == 'true' }}
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Collect
+        id: collect
+        uses: launchdarkly/find-code-references-in-pull-request@d008aa4f321d8cd35314d9cb095388dcfde84439 # v2.0.0
+        with:
+          project-key: default
+          environment-key: dev
+          access-token: ${{ secrets.LD_ACCESS_TOKEN }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add label
+        if: steps.collect.outputs.any-changed == 'true'
+        run: gh pr edit $PR_NUMBER --add-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Remove label
+        if: steps.collect.outputs.any-changed == 'false'
+        run: gh pr edit $PR_NUMBER --remove-label feature-flag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}

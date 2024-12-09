@@ -38,11 +38,17 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             case not null when requirement == SecretOperations.Create:
                 await CanCreateSecretAsync(context, requirement, resource);
                 break;
+            case not null when requirement == SecretOperations.Read:
+                await CanReadSecretAsync(context, requirement, resource);
+                break;
             case not null when requirement == SecretOperations.Update:
                 await CanUpdateSecretAsync(context, requirement, resource);
                 break;
             case not null when requirement == SecretOperations.Delete:
                 await CanDeleteSecretAsync(context, requirement, resource);
+                break;
+            case not null when requirement == SecretOperations.ReadAccessPolicies:
+                await CanReadAccessPoliciesAsync(context, requirement, resource);
                 break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
@@ -85,15 +91,27 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
+    private async Task CanReadSecretAsync(AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement, Secret resource)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
+
+        if (access.Read)
+        {
+            context.Succeed(requirement);
+        }
+    }
 
     private async Task CanUpdateSecretAsync(AuthorizationHandlerContext context,
         SecretOperationRequirement requirement, Secret resource)
     {
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
 
-        // All projects should be apart of the same organization
+        // All projects should be in the same organization
         if (resource.Projects != null
-            && resource.Projects.Any()
+            && resource.Projects.Count != 0
             && !await _projectRepository.ProjectsAreInOrganization(resource.Projects.Select(p => p.Id).ToList(),
                 resource.OrganizationId))
         {
@@ -137,10 +155,42 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
+    private async Task CanReadAccessPoliciesAsync(AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement, Secret resource)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        // Only users and admins can read access policies
+        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
+        {
+            return;
+        }
+
+        var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
+
+        if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
     private async Task<bool> GetAccessToUpdateSecretAsync(Secret resource, Guid userId, AccessClientType accessClient)
     {
-        var newProject = resource.Projects?.FirstOrDefault();
+        // Request was to remove all projects from the secret. This is not allowed for non admin users.
+        if (resource.Projects?.Count == 0)
+        {
+            return false;
+        }
+
         var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
+
+        // No project mapping changes requested, return secret access.
+        if (resource.Projects == null)
+        {
+            return access;
+        }
+
+        var newProject = resource.Projects?.FirstOrDefault();
         var accessToNew = newProject != null &&
                           (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
                           .Write;

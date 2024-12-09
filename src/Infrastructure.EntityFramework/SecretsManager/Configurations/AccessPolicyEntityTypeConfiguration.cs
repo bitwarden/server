@@ -1,4 +1,5 @@
-﻿using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+﻿using Bit.Infrastructure.EntityFramework.SecretsManager.Discriminators;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,11 +11,14 @@ public class AccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<Acce
     {
         builder
             .HasDiscriminator<string>("Discriminator")
-            .HasValue<UserProjectAccessPolicy>("user_project")
-            .HasValue<UserServiceAccountAccessPolicy>("user_service_account")
-            .HasValue<GroupProjectAccessPolicy>("group_project")
-            .HasValue<GroupServiceAccountAccessPolicy>("group_service_account")
-            .HasValue<ServiceAccountProjectAccessPolicy>("service_account_project");
+            .HasValue<UserProjectAccessPolicy>(AccessPolicyDiscriminator.UserProject)
+            .HasValue<UserServiceAccountAccessPolicy>(AccessPolicyDiscriminator.UserServiceAccount)
+            .HasValue<UserSecretAccessPolicy>(AccessPolicyDiscriminator.UserSecret)
+            .HasValue<GroupProjectAccessPolicy>(AccessPolicyDiscriminator.GroupProject)
+            .HasValue<GroupServiceAccountAccessPolicy>(AccessPolicyDiscriminator.GroupServiceAccount)
+            .HasValue<GroupSecretAccessPolicy>(AccessPolicyDiscriminator.GroupSecret)
+            .HasValue<ServiceAccountProjectAccessPolicy>(AccessPolicyDiscriminator.ServiceAccountProject)
+            .HasValue<ServiceAccountSecretAccessPolicy>(AccessPolicyDiscriminator.ServiceAccountSecret);
 
         builder
             .Property(s => s.Id)
@@ -39,6 +43,12 @@ public class UserProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfigu
         builder
             .Property(e => e.GrantedProjectId)
             .HasColumnName(nameof(UserProjectAccessPolicy.GrantedProjectId));
+
+        builder
+            .HasOne(e => e.GrantedProject)
+            .WithMany(e => e.UserAccessPolicies)
+            .HasForeignKey(nameof(UserProjectAccessPolicy.GrantedProjectId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -56,6 +66,26 @@ public class UserServiceAccountAccessPolicyEntityTypeConfiguration : IEntityType
     }
 }
 
+public class UserSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<UserSecretAccessPolicy>
+{
+    public void Configure(EntityTypeBuilder<UserSecretAccessPolicy> builder)
+    {
+        builder
+            .Property(e => e.OrganizationUserId)
+            .HasColumnName(nameof(UserSecretAccessPolicy.OrganizationUserId));
+
+        builder
+            .Property(e => e.GrantedSecretId)
+            .HasColumnName(nameof(UserSecretAccessPolicy.GrantedSecretId));
+
+        builder
+            .HasOne(e => e.GrantedSecret)
+            .WithMany(e => e.UserAccessPolicies)
+            .HasForeignKey(nameof(UserSecretAccessPolicy.GrantedSecretId))
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 public class GroupProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<GroupProjectAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<GroupProjectAccessPolicy> builder)
@@ -67,6 +97,18 @@ public class GroupProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfig
         builder
             .Property(e => e.GrantedProjectId)
             .HasColumnName(nameof(GroupProjectAccessPolicy.GrantedProjectId));
+
+        builder
+            .HasOne(e => e.GrantedProject)
+            .WithMany(e => e.GroupAccessPolicies)
+            .HasForeignKey(nameof(GroupProjectAccessPolicy.GrantedProjectId))
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasOne(e => e.Group)
+            .WithMany()
+            .HasForeignKey(nameof(GroupProjectAccessPolicy.GroupId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -81,6 +123,38 @@ public class GroupServiceAccountAccessPolicyEntityTypeConfiguration : IEntityTyp
         builder
             .Property(e => e.GrantedServiceAccountId)
             .HasColumnName(nameof(GroupServiceAccountAccessPolicy.GrantedServiceAccountId));
+
+        builder
+            .HasOne(e => e.Group)
+            .WithMany()
+            .HasForeignKey(nameof(GroupProjectAccessPolicy.GroupId))
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class GroupSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<GroupSecretAccessPolicy>
+{
+    public void Configure(EntityTypeBuilder<GroupSecretAccessPolicy> builder)
+    {
+        builder
+            .Property(e => e.GroupId)
+            .HasColumnName(nameof(GroupSecretAccessPolicy.GroupId));
+
+        builder
+            .Property(e => e.GrantedSecretId)
+            .HasColumnName(nameof(GroupSecretAccessPolicy.GrantedSecretId));
+
+        builder
+            .HasOne(e => e.GrantedSecret)
+            .WithMany(e => e.GroupAccessPolicies)
+            .HasForeignKey(nameof(GroupSecretAccessPolicy.GrantedSecretId))
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasOne(e => e.Group)
+            .WithMany()
+            .HasForeignKey(nameof(GroupSecretAccessPolicy.GroupId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -95,5 +169,31 @@ public class ServiceAccountProjectAccessPolicyEntityTypeConfiguration : IEntityT
         builder
             .Property(e => e.GrantedProjectId)
             .HasColumnName(nameof(ServiceAccountProjectAccessPolicy.GrantedProjectId));
+
+        builder
+            .HasOne(e => e.GrantedProject)
+            .WithMany(e => e.ServiceAccountAccessPolicies)
+            .HasForeignKey(nameof(ServiceAccountProjectAccessPolicy.GrantedProjectId))
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+public class ServiceAccountSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<ServiceAccountSecretAccessPolicy>
+{
+    public void Configure(EntityTypeBuilder<ServiceAccountSecretAccessPolicy> builder)
+    {
+        builder
+            .Property(e => e.ServiceAccountId)
+            .HasColumnName(nameof(ServiceAccountSecretAccessPolicy.ServiceAccountId));
+
+        builder
+            .Property(e => e.GrantedSecretId)
+            .HasColumnName(nameof(ServiceAccountSecretAccessPolicy.GrantedSecretId));
+
+        builder
+            .HasOne(e => e.GrantedSecret)
+            .WithMany(e => e.ServiceAccountAccessPolicies)
+            .HasForeignKey(nameof(ServiceAccountSecretAccessPolicy.GrantedSecretId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -1,0 +1,78 @@
+@inject Bit.Core.Services.IFeatureService FeatureService
+@model OrganizationViewModel
+
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Id</dt>
+    <dd id="org-id" class="col-sm-8 col-lg-9"><code>@Model.Organization.Id</code></dd>
+
+    <dt class="col-sm-4 col-lg-3">Plan</dt>
+    <dd id="org-plan" class="col-sm-8 col-lg-9">@Model.Organization.Plan</dd>
+
+    <dt class="col-sm-4 col-lg-3">Expires</dt>
+    <dd id="org-expiration-date" class="col-sm-8 col-lg-9">@(Model.Organization.ExpirationDate?.ToString() ?? "-")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Users</dt>
+    <dd id="org-user-seats" class="col-sm-8 col-lg-9">
+        @Model.OccupiedSeatCount / @(Model.Organization.Seats?.ToString() ?? "-")
+        (<span id="org-invited-users" title="Invited">@Model.UserInvitedCount</span> /
+        <span id="org-accepted-users" title="Accepted">@Model.UserAcceptedCount</span> /
+        <span id="org-confirmed-users" title="Confirmed">@Model.UserConfirmedCount</span>)
+    </dd>
+
+    <dt class="col-sm-4 col-lg-3">Owners</dt>
+    <dd id="org-owner" class="col-sm-8 col-lg-9">@(string.IsNullOrWhiteSpace(Model.Owners) ? "None" : Model.Owners)</dd>
+
+    <dt class="col-sm-4 col-lg-3">Admins</dt>
+    <dd id="org-admins" class="col-sm-8 col-lg-9">@(string.IsNullOrWhiteSpace(Model.Admins) ? "None" : Model.Admins)</dd>
+
+    <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
+    <dd id="org-2fa" class="col-sm-8 col-lg-9">@(Model.Organization.TwoFactorIsEnabled() ? "Yes" : "No")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Groups</dt>
+    <dd id="org-group-count" class="col-sm-8 col-lg-9">@Model.GroupCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Policies</dt>
+    <dd id="org-policy-count" class="col-sm-8 col-lg-9">@Model.PolicyCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Public/Private Keys</dt>
+    <dd id="org-has-keys" class="col-sm-8 col-lg-9">@(Model.HasPublicPrivateKeys ? "Yes" : "No")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Created</dt>
+    <dd id="org-creation-date" class="col-sm-8 col-lg-9">@Model.Organization.CreationDate.ToString()</dd>
+
+    <dt class="col-sm-4 col-lg-3">Modified</dt>
+    <dd id="org-modified-date" class="col-sm-8 col-lg-9">@Model.Organization.RevisionDate.ToString()</dd>
+</dl>
+
+<h2>Password Manager</h2>
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Items</dt>
+    <dd id="pm-item-count" class="col-sm-8 col-lg-9">@Model.CipherCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Collections</dt>
+    <dd id="pm-collection-count" class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
+
+    <dt class="col-sm-4 col-lg-3">Administrators manage all collections</dt>
+    <dd id="pm-manage-collections" class="col-sm-8 col-lg-9">@(Model.Organization.AllowAdminAccessToAllCollectionItems ? "On" : "Off")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
+    <dd id="pm-collection-creation" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionCreation ? "On" : "Off")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Limit collection deletion to administrators</dt>
+    <dd id="pm-collection-deletion" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionDeletion ? "On" : "Off")</dd>
+</dl>
+
+<h2>Secrets Manager</h2>
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Secrets</dt>
+    <dd id="sm-secret-count" class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.SecretsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Projects</dt>
+    <dd id="sm-project-count" class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ProjectsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Machine Accounts</dt>
+    <dd id="sm-machine-account" class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ServiceAccountsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Secrets Manager Seats</dt>
+    <dd id="sm-seat-count" class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.OccupiedSmSeatsCount: "N/A" )</dd>
+</dl>

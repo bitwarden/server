@@ -205,16 +205,15 @@ mail_dist/
 src/Core/Properties/launchSettings.json
 *.override.env
 **/*.DS_Store
-src/Admin/wwwroot/lib
-src/Admin/wwwroot/css
+src/Admin/wwwroot/assets
 .vscode/*
 **/.vscode/*
-bitwarden_license/src/Sso/wwwroot/lib
-bitwarden_license/src/Sso/wwwroot/css
+bitwarden_license/src/Sso/wwwroot/assets
 .github/test/build.secrets
 **/CoverageOutput/
 .idea/*
 **/**.swp
+.mono
 
 src/Admin/Admin.zip
 src/Api/Api.zip
@@ -225,4 +224,4 @@ src/Identity/Identity.zip
 src/Notifications/Notifications.zip
 bitwarden_license/src/Portal/Portal.zip
 bitwarden_license/src/Sso/Sso.zip
-src/Api/flags.json
+**/src/**/flags.json

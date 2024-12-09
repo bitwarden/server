@@ -1,0 +1,130 @@
+{
+  "id": "evt_3NvKgBIGBnsLynRr0pJJqudS",
+  "object": "event",
+  "api_version": "2024-06-20",
+  "created": 1695909300,
+  "data": {
+    "object": {
+      "id": "ch_3NvKgBIGBnsLynRr0ZyvP9AN",
+      "object": "charge",
+      "amount": 7200,
+      "amount_captured": 7200,
+      "amount_refunded": 0,
+      "application": null,
+      "application_fee": null,
+      "application_fee_amount": null,
+      "balance_transaction": "txn_3NvKgBIGBnsLynRr0KbYEz76",
+      "billing_details": {
+        "address": {
+          "city": null,
+          "country": null,
+          "line1": null,
+          "line2": null,
+          "postal_code": null,
+          "state": null
+        },
+        "email": null,
+        "name": null,
+        "phone": null
+      },
+      "calculated_statement_descriptor": "BITWARDEN",
+      "captured": true,
+      "created": 1695909299,
+      "currency": "usd",
+      "customer": "cus_OimAwOzQmThNXx",
+      "description": "Subscription update",
+      "destination": null,
+      "dispute": null,
+      "disputed": false,
+      "failure_balance_transaction": null,
+      "failure_code": null,
+      "failure_message": null,
+      "fraud_details": {
+      },
+      "invoice": "in_1NvKgBIGBnsLynRrmRFHAcoV",
+      "livemode": false,
+      "metadata": {
+      },
+      "on_behalf_of": null,
+      "order": null,
+      "outcome": {
+        "network_status": "approved_by_network",
+        "reason": null,
+        "risk_level": "normal",
+        "risk_score": 37,
+        "seller_message": "Payment complete.",
+        "type": "authorized"
+      },
+      "paid": true,
+      "payment_intent": "pi_3NvKgBIGBnsLynRr09Ny3Heu",
+      "payment_method": "pm_1NvKbpIGBnsLynRrcOwez4A1",
+      "payment_method_details": {
+        "card": {
+          "amount_authorized": 7200,
+          "brand": "visa",
+          "checks": {
+            "address_line1_check": null,
+            "address_postal_code_check": null,
+            "cvc_check": "pass"
+          },
+          "country": "US",
+          "exp_month": 6,
+          "exp_year": 2033,
+          "extended_authorization": {
+            "status": "disabled"
+          },
+          "fingerprint": "0VgUBpvqcUUnuSmK",
+          "funding": "credit",
+          "incremental_authorization": {
+            "status": "unavailable"
+          },
+          "installments": null,
+          "last4": "4242",
+          "mandate": null,
+          "multicapture": {
+            "status": "unavailable"
+          },
+          "network": "visa",
+          "network_token": {
+            "used": false
+          },
+          "overcapture": {
+            "maximum_amount_capturable": 7200,
+            "status": "unavailable"
+          },
+          "three_d_secure": null,
+          "wallet": null
+        },
+        "type": "card"
+      },
+      "receipt_email": "cturnbull@bitwarden.com",
+      "receipt_number": null,
+      "receipt_url": "https://pay.stripe.com/receipts/invoices/CAcaFwoVYWNjdF8xOXNtSVhJR0Juc0x5blJyKLSL1qgGMgYTnk_JOUA6LBY_SDEZNtuae1guQ6Dlcuev1TUHwn712t-UNnZdIc383zS15bXv_1dby8e4?s=ap",
+      "refunded": false,
+      "refunds": {
+        "object": "list",
+        "data": [
+        ],
+        "has_more": false,
+        "total_count": 0,
+        "url": "/v1/charges/ch_3NvKgBIGBnsLynRr0ZyvP9AN/refunds"
+      },
+      "review": null,
+      "shipping": null,
+      "source": null,
+      "source_transfer": null,
+      "statement_descriptor": null,
+      "statement_descriptor_suffix": null,
+      "status": "succeeded",
+      "transfer_data": null,
+      "transfer_group": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 9,
+  "request": {
+    "id": "req_rig8N5Ca8EXYRy",
+    "idempotency_key": "db75068d-5d90-4c65-a410-4e2ed8347509"
+  },
+  "type": "charge.succeeded"
+}

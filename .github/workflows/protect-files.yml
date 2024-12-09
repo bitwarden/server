@@ -1,9 +1,7 @@
 # Runs if there are changes to the paths: list.
 # Starts a matrix job to check for modified files, then sets output based on the results.
 # The input decides if the label job is ran, adding a label to the PR.
----
-
-name: Protect Files
+name: Protect files
 
 on:
   pull_request:
@@ -17,7 +15,7 @@ on:
 jobs:
   changed-files:
     name: Check for file changes
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       changes: ${{steps.check-changes.outputs.changes_detected}}
 
@@ -29,8 +27,8 @@ jobs:
             path: util/Migrator/DbScripts
             label: "DB-migrations-changed"
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Check out repo
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
 
@@ -49,7 +47,7 @@ jobs:
           done
 
       - name: Add label to pull request
-        if: contains(steps.check-changes.outputs.changes_detected, true)
+        if: contains(steps.check-changes.outputs.changes_detected, 'true')
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90 # 1.0.4
         with:
           add-labels: ${{ matrix.label }}

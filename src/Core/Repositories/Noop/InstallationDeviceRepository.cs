@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Models.Data;
 
+#nullable enable
+
 namespace Bit.Core.Repositories.Noop;
 
 public class InstallationDeviceRepository : IInstallationDeviceRepository

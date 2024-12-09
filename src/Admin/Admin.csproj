@@ -1,9 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin-SelfHost' " />
   <ItemGroup>
@@ -14,17 +14,18 @@
     <ProjectReference Include="..\Core\Core.csproj" />
     <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Billing\Controllers\" />
+    <Folder Include="Billing\Models\" />
+  </ItemGroup>
 
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
       </ItemGroup>
     </When>
   </Choose>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.26.1" />
-  </ItemGroup>
 
 </Project>

@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
-using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -13,11 +13,11 @@ using Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NS = Newtonsoft.Json;
 using NSL = Newtonsoft.Json.Linq;
-using User = Bit.Core.Entities.User;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
@@ -161,7 +161,10 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Collection> collections, IEnumerable<Core.Entities.CollectionCipher> collectionCiphers)
+    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers,
+        IEnumerable<Core.Entities.Collection> collections,
+        IEnumerable<Core.Entities.CollectionCipher> collectionCiphers,
+        IEnumerable<Core.Entities.CollectionUser> collectionUsers)
     {
         if (!ciphers.Any())
         {
@@ -184,6 +187,13 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 var collectionCipherEntities = Mapper.Map<List<CollectionCipher>>(collectionCiphers);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
             }
+
+            if (collectionUsers.Any())
+            {
+                var collectionUserEntities = Mapper.Map<List<CollectionUser>>(collectionUsers);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionUserEntities);
+            }
+
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(ciphers.First().OrganizationId.Value);
             await dbContext.SaveChangesAsync();
         }
@@ -337,6 +347,17 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<ICollection<CipherOrganizationDetails>> GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherOrganizationDetailsReadByOrganizationIdQuery(organizationId, true);
+            var data = await query.Run(dbContext).ToListAsync();
+            return data;
+        }
+    }
+
     public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -366,6 +387,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Reprompt = c.Reprompt,
                                         ViewPassword = true,
                                         OrganizationUseTotp = false,
+                                        Key = c.Key
                                     };
             }
             var ciphers = await cipherDetailsView.ToListAsync();
@@ -521,32 +543,10 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
         else
         {
-            availableCollectionsQuery = from c in context.Collections
-                                        join o in context.Organizations
-                                            on c.OrganizationId equals o.Id
-                                        join ou in context.OrganizationUsers
-                                            on new { OrganizationId = o.Id, UserId = userId } equals
-                                            new { ou.OrganizationId, ou.UserId }
-                                        join cu in context.CollectionUsers
-                                            on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
-                                            new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
-                                        from cu in cu_g.DefaultIfEmpty()
-                                        join gu in context.GroupUsers
-                                            on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                                            new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
-                                        from gu in gu_g.DefaultIfEmpty()
-                                        join g in context.Groups
-                                            on gu.GroupId equals g.Id into g_g
-                                        from g in g_g.DefaultIfEmpty()
-                                        join cg in context.CollectionGroups
-                                            on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                                            new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
-                                        from cg in cg_g.DefaultIfEmpty()
-                                        where o.Id == organizationId &&
-                                            o.Enabled &&
-                                            ou.Status == OrganizationUserStatusType.Confirmed &&
-                                            (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
-                                        select c.Id;
+            availableCollectionsQuery =
+                new CollectionsReadByOrganizationIdUserIdQuery(organizationId.Value, userId.Value)
+                    .Run(context)
+                    .Select(c => c.Id);
         }
 
         var availableCollections = await availableCollectionsQuery.ToListAsync();
@@ -591,6 +591,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             trackedCipher.Attachments = cipher.Attachments;
             trackedCipher.RevisionDate = cipher.RevisionDate;
             trackedCipher.DeletedDate = cipher.DeletedDate;
+            trackedCipher.Key = cipher.Key;
 
             await transaction.CommitAsync();
 
@@ -623,6 +624,31 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
         return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
+    }
+
+    public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
+            var ciphers = from c in dbContext.Ciphers
+                          where c.OrganizationId == organizationId &&
+                                ids.Contains(c.Id)
+                          select c;
+
+            await ciphers.ForEachAsync(cipher =>
+            {
+                dbContext.Attach(cipher);
+                cipher.DeletedDate = null;
+                cipher.RevisionDate = utcNow;
+            });
+
+            await OrganizationUpdateStorage(organizationId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+            return utcNow;
+        }
     }
 
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
@@ -788,20 +814,31 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Tools.Entities.Send> sends)
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        return async (SqlConnection _, SqlTransaction _) =>
         {
+            var newCiphers = ciphers.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
-            await UserUpdateKeys(user);
-            var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            var folderEntities = Mapper.Map<List<Folder>>(folders);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
-            var sendEntities = Mapper.Map<List<Send>>(sends);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, sendEntities);
+            var userCiphers = await GetDbSet(dbContext)
+                .Where(c => c.UserId == userId)
+                .ToListAsync();
+            var validCiphers = userCiphers
+                .Where(cipher => newCiphers.Any(newCipher => newCipher.Id == cipher.Id));
+            foreach (var cipher in validCiphers)
+            {
+                var updateCipher = newCiphers.First(newCipher => newCipher.Id == cipher.Id);
+                cipher.Data = updateCipher.Data;
+                cipher.Attachments = updateCipher.Attachments;
+                cipher.RevisionDate = updateCipher.RevisionDate;
+                cipher.Key = updateCipher.Key;
+            }
+
             await dbContext.SaveChangesAsync();
-        }
+        };
     }
 
     public async Task UpsertAsync(CipherDetails cipher)

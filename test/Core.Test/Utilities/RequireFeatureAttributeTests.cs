@@ -64,7 +64,7 @@ public class RequireFeatureAttributeTests
         var featureService = Substitute.For<IFeatureService>();
         var currentContext = Substitute.For<ICurrentContext>();
 
-        featureService.IsEnabled(_testFeature, Arg.Any<ICurrentContext>()).Returns(enabled);
+        featureService.IsEnabled(_testFeature).Returns(enabled);
 
         services.AddSingleton(featureService);
         services.AddSingleton(currentContext);

@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CollectionCipher = Bit.Core.Entities.CollectionCipher;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -22,7 +23,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
             var entity = Mapper.Map<Models.CollectionCipher>(obj);
             dbContext.Add(entity);
             await dbContext.SaveChangesAsync();
-            var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId))).OrganizationId;
+            var organizationId = (await dbContext.Ciphers.FirstOrDefaultAsync(c => c.Id.Equals(obj.CipherId)))?.OrganizationId;
             if (organizationId.HasValue)
             {
                 await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(obj.CollectionId, organizationId.Value);
@@ -81,28 +82,10 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 .Select(c => c.OrganizationId)
                 .FirstAsync();
 
-            var availableCollections = await (from c in dbContext.Collections
-                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
-                                              join ou in dbContext.OrganizationUsers
-                                                 on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
-                                                 new { ou.OrganizationId, ou.UserId }
-                                              join cu in dbContext.CollectionUsers
-                                                 on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
-                                                 new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
-                                              from cu in cu_g.DefaultIfEmpty()
-                                              join gu in dbContext.GroupUsers
-                                                 on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                                                 new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
-                                              from gu in gu_g.DefaultIfEmpty()
-                                              join g in dbContext.Groups on gu.GroupId equals g.Id into g_g
-                                              from g in g_g.DefaultIfEmpty()
-                                              join cg in dbContext.CollectionGroups
-                                                 on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                                                 new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
-                                              from cg in cg_g.DefaultIfEmpty()
-                                              where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
-                                                 && (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
-                                              select c.Id).ToListAsync();
+            var availableCollectionsQuery = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId);
+            var availableCollections = await availableCollectionsQuery
+                .Run(dbContext)
+                .Select(c => c.Id).ToListAsync();
 
             var collectionCiphers = await (from cc in dbContext.CollectionCiphers
                                            where cc.CipherId == cipherId
@@ -181,31 +164,11 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availableCollections = from c in dbContext.Collections
-                                       join o in dbContext.Organizations
-                                           on c.OrganizationId equals o.Id
-                                       join ou in dbContext.OrganizationUsers
-                                           on o.Id equals ou.OrganizationId
-                                       where ou.UserId == userId
-                                       join cu in dbContext.CollectionUsers
-                                           on ou.Id equals cu.OrganizationUserId into cu_g
-                                       from cu in cu_g.DefaultIfEmpty()
-                                       where !ou.AccessAll && cu.CollectionId == c.Id
-                                       join gu in dbContext.GroupUsers
-                                           on ou.Id equals gu.OrganizationUserId into gu_g
-                                       from gu in gu_g.DefaultIfEmpty()
-                                       where cu.CollectionId == null && !ou.AccessAll
-                                       join g in dbContext.Groups
-                                           on gu.GroupId equals g.Id into g_g
-                                       from g in g_g.DefaultIfEmpty()
-                                       join cg in dbContext.CollectionGroups
-                                           on gu.GroupId equals cg.GroupId into cg_g
-                                       from cg in cg_g.DefaultIfEmpty()
-                                       where !g.AccessAll && cg.CollectionId == c.Id &&
-                                       (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed &&
-                                       (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
-                                       select new { c, o, ou, cu, gu, g, cg };
-            var count = await availableCollections.CountAsync();
+
+            var availableCollectionsQuery = new CollectionsReadByOrganizationIdUserIdQuery(organizationId, userId);
+            var availableCollections = availableCollectionsQuery
+                .Run(dbContext);
+
             if (await availableCollections.CountAsync() < 1)
             {
                 return;
@@ -213,13 +176,56 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
 
             var insertData = from collectionId in collectionIds
                              from cipherId in cipherIds
-                             where availableCollections.Select(x => x.c.Id).Contains(collectionId)
+                             where availableCollections.Select(c => c.Id).Contains(collectionId)
                              select new Models.CollectionCipher
                              {
                                  CollectionId = collectionId,
                                  CipherId = cipherId,
                              };
             await dbContext.AddRangeAsync(insertData);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var availableCollections = await (from c in dbContext.Collections
+                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                              where o.Id == organizationId && o.Enabled
+                                              select c).ToListAsync();
+
+            var currentCollectionCiphers = await (from cc in dbContext.CollectionCiphers
+                                                  where cipherIds.Contains(cc.CipherId)
+                                                  select cc).ToListAsync();
+
+            var insertData = from collectionId in collectionIds
+                             from cipherId in cipherIds
+                             where
+                                 availableCollections.Select(c => c.Id).Contains(collectionId) &&
+                                 !currentCollectionCiphers.Any(cc => cc.CipherId == cipherId && cc.CollectionId == collectionId)
+                             select new Models.CollectionCipher { CollectionId = collectionId, CipherId = cipherId, };
+
+            await dbContext.AddRangeAsync(insertData);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var currentCollectionCiphersToBeRemoved = await (from cc in dbContext.CollectionCiphers
+                                                             where cipherIds.Contains(cc.CipherId) && collectionIds.Contains(cc.CollectionId)
+                                                             select cc).ToListAsync();
+            dbContext.RemoveRange(currentCollectionCiphersToBeRemoved);
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
             await dbContext.SaveChangesAsync();
         }

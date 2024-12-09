@@ -18,6 +18,7 @@ public class CipherRequestModel
     public string FolderId { get; set; }
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
+    public string Key { get; set; }
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
@@ -36,6 +37,7 @@ public class CipherRequestModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherSSHKeyModel SSHKey { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
@@ -81,11 +83,15 @@ public class CipherRequestModel
             case CipherType.SecureNote:
                 existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
                 break;
+            case CipherType.SSHKey:
+                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
         }
 
         existingCipher.Reprompt = Reprompt;
+        existingCipher.Key = Key;
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
@@ -164,6 +170,7 @@ public class CipherRequestModel
             PasswordRevisionDate = Login.PasswordRevisionDate,
             Totp = Login.Totp,
             AutofillOnPageLoad = Login.AutofillOnPageLoad,
+            Fido2Credentials = Login.Fido2Credentials == null ? null : Login.Fido2Credentials.ToCipherLoginFido2CredentialData(),
         };
     }
 
@@ -225,6 +232,21 @@ public class CipherRequestModel
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
             Type = SecureNote.Type,
+        };
+    }
+
+    private CipherSSHKeyData ToCipherSSHKeyData()
+    {
+        return new CipherSSHKeyData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+
+            PrivateKey = SSHKey.PrivateKey,
+            PublicKey = SSHKey.PublicKey,
+            KeyFingerprint = SSHKey.KeyFingerprint,
         };
     }
 }
@@ -291,6 +313,7 @@ public class CipherBulkRestoreRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
+    public Guid OrganizationId { get; set; }
 }
 
 public class CipherBulkMoveRequestModel

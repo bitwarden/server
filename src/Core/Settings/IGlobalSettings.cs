@@ -8,6 +8,7 @@ public interface IGlobalSettings
     bool SelfHosted { get; set; }
     bool UnifiedDeployment { get; set; }
     string KnownProxies { get; set; }
+    string ProjectName { get; set; }
     bool EnableCloudCommunication { get; set; }
     string LicenseDirectory { get; set; }
     string LicenseCertificatePassword { get; set; }
@@ -22,4 +23,5 @@ public interface IGlobalSettings
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }
+    string DevelopmentDirectory { get; set; }
 }

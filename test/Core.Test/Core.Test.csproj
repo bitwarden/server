@@ -9,7 +9,6 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
-    <PackageReference Include="Moq" Version="4.17.2" />
     <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
@@ -18,7 +17,7 @@
     </PackageReference>
     <PackageReference Include="AutoFixture.Xunit2" Version="$(AutoFixtureXUnit2Version)" />
     <PackageReference Include="AutoFixture.AutoNSubstitute" Version="$(AutoFixtureAutoNSubstituteVersion)" />
-    <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="1.2.0" />
+    <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="2.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />

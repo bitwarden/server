@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Organizations;

@@ -1,0 +1,35 @@
+{
+  "name": "Bitwarden Dev",
+  "dockerComposeFile": [
+    "../../.devcontainer/bitwarden_common/docker-compose.yml",
+    "../../.devcontainer/internal_dev/docker-compose.override.yml"
+  ],
+  "service": "bitwarden_server",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    {
+      "source": "../../dev/.data/keys",
+      "target": "/home/vscode/.aspnet/DataProtection-Keys",
+      "type": "bind"
+    }
+  ],
+  "customizations": {
+    "vscode": {
+      "settings": {},
+      "features": {},
+      "extensions": ["ms-dotnettools.csdevkit"]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
+  "forwardPorts": [1080, 1433],
+  "portsAttributes": {
+    "1080": {
+      "label": "Mail Catcher",
+      "onAutoForward": "notify"
+    },
+    "1433": {
+      "label": "SQL Server",
+      "onAutoForward": "notify"
+    }
+  }
+}

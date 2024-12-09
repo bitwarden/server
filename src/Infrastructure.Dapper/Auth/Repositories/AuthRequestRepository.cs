@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
@@ -6,6 +7,8 @@ using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
+
+#nullable enable
 
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
@@ -72,6 +75,22 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
+        }
+    }
+
+    public async Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests)
+    {
+        if (!authRequests.Any())
+        {
+            return;
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteAsync(
+                $"[dbo].[AuthRequest_UpdateMany]",
+                new { jsonData = JsonSerializer.Serialize(authRequests) },
+                commandType: CommandType.StoredProcedure);
         }
     }
 }

@@ -81,7 +81,7 @@ public class IconsController : Controller
             }
             else
             {
-                icon = result.Icon;
+                icon = result;
             }
 
             // Only cache not found and smaller images (<= 50kb)
