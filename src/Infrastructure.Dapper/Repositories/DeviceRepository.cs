@@ -90,6 +90,19 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
                 },
                 commandType: CommandType.StoredProcedure);
 
+            foreach (var result in results)
+            {
+                result.IsTrusted = result.IsTrusted;
+                if (result.DevicePendingAuthRequest != null)
+                {
+                    result.DevicePendingAuthRequest = new DeviceAuthRequestResponseModel.PendingAuthRequest
+                    {
+                        Id = result.DevicePendingAuthRequest.Id,
+                        CreationDate = result.DevicePendingAuthRequest.CreationDate
+                    };
+                }
+            }
+
             return results.ToList();
         }
     }

@@ -31,7 +31,7 @@ public class DeviceAuthRequestResponseModel : ResponseModel
     }
 
     /**
-     * Is there a better way to do this in Dapper so that I don't need to explicitly
+     * Is there a better way to do this for Dapper so that I don't need to explicitly
      * enumerate all the properties in the constructor for mapping?
      */
     public DeviceAuthRequestResponseModel(
@@ -56,7 +56,9 @@ public class DeviceAuthRequestResponseModel : ResponseModel
         Type = (DeviceType)type;
         Identifier = identifier;
         CreationDate = creationDate;
-        IsTrusted = active;
+        IsTrusted = !string.IsNullOrEmpty(encryptedUserKey) &&
+                    !string.IsNullOrEmpty(encryptedPublicKey) &&
+                    !string.IsNullOrEmpty(encryptedPrivateKey);
         if (authRequestId != Guid.Empty && authRequestCreationDate != DateTime.MinValue)
         {
             DevicePendingAuthRequest = new PendingAuthRequest()
@@ -66,6 +68,7 @@ public class DeviceAuthRequestResponseModel : ResponseModel
             };
         }
     }
+
 
     public Guid Id { get; set; }
     public string Name { get; set; }

@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -77,29 +77,8 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-
-            var query = from device in dbContext.Devices
-                        where device.UserId == userId && device.Active
-                        select new
-                        {
-                            device,
-                            authRequest = (from authRequest in dbContext.AuthRequests
-                                           where authRequest.RequestDeviceIdentifier == device.Identifier
-                                           where authRequest.Type == AuthRequestType.AuthenticateAndUnlock || authRequest.Type == AuthRequestType.Unlock
-                                           where authRequest.Approved == null
-                                           where authRequest.UserId == userId
-                                           where authRequest.CreationDate.AddMinutes(expirationMinutes) > DateTime.UtcNow
-                                           orderby authRequest.CreationDate descending
-                                           select authRequest).First()
-                        };
-
-            var devices =
-                await query.Select(deviceWithAuthRequest => new DeviceAuthRequestResponseModel(
-                    deviceWithAuthRequest.device,
-                    deviceWithAuthRequest.authRequest != null ? deviceWithAuthRequest.authRequest.Id : Guid.Empty,
-                    deviceWithAuthRequest.authRequest != null ? deviceWithAuthRequest.authRequest.CreationDate : DateTime.MinValue)).ToListAsync();
-
-            return devices;
+            var query = new DeviceWithPendingAuthByUserIdQuery();
+            return await query.GetQuery(dbContext, userId, expirationMinutes).ToListAsync();
         }
     }
 }
