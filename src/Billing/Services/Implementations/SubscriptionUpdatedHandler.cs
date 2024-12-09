@@ -1,4 +1,6 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Enums;
+using Bit.Core.Models;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -15,6 +17,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -22,7 +25,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationService organizationService,
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
-        IUserService userService)
+        IUserService userService,
+        IPushNotificationService pushNotificationService)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -30,6 +34,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
+        _pushNotificationService = pushNotificationService;
     }
 
     /// <summary>
@@ -70,6 +75,17 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
                     await _organizationService.EnableAsync(organizationId.Value);
+                    var payload = new OrganizationStatusPushNotification
+                    {
+                        OrganizationId = organizationId.Value,
+                        Enabled = true
+                    };
+
+                    await _pushNotificationService.SendPayloadToUserAsync(
+                        organizationId.Value.ToString(),
+                        PushType.SyncOrganizationStatusChanged,
+                        payload,
+                        null);
                     break;
                 }
             case StripeSubscriptionStatus.Active:
