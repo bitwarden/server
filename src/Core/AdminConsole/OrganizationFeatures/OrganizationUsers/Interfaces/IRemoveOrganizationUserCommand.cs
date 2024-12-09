@@ -50,4 +50,11 @@ public interface IRemoveOrganizationUserCommand
     /// </returns>
     Task<IEnumerable<(Guid OrganizationUserId, string ErrorMessage)>> RemoveUsersAsync(
         Guid organizationId, IEnumerable<Guid> organizationUserIds, EventSystemUser eventSystemUser);
+
+    /// <summary>
+    /// Removes a user from an organization when they have left voluntarily. This should only be called by the same user who is being removed.
+    /// </summary>
+    /// <param name="organizationId">Organization to leave.</param>
+    /// <param name="userId">User to leave.</param>
+    Task UserLeaveAsync(Guid organizationId, Guid userId);
 }
