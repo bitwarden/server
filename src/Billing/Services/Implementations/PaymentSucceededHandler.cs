@@ -152,7 +152,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 Enabled = organization.Enabled
             };
 
-            await _pushNotificationService.SendPayloadToOrganizationAsync(
+            await _pushNotificationService.SendPayloadToUserAsync(
                 organizationId.Value.ToString(),
                 PushType.SyncOrganizationStatusChanged,
                 payload,
