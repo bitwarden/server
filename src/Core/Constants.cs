@@ -158,6 +158,7 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
+    public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
 
     public static List<string> GetAllKeys()
