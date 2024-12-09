@@ -2,36 +2,26 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
-        INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
-        ILogger<NotificationHubPushRegistrationService> logger)
+        INotificationHubPool notificationHubPool)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _notificationHubPool = notificationHubPool;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -45,14 +35,19 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Templates = new Dictionary<string, InstallationTemplate>()
         };
 
-        installation.Tags = new List<string>
-        {
-            $"userId:{userId}"
-        };
+        var clientType = DeviceTypes.ToClientType(type);
+
+        installation.Tags = new List<string> { $"userId:{userId}", $"clientType:{clientType}" };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             installation.Tags.Add("deviceIdentifier:" + identifier);
+        }
+
+        var organizationIdsList = organizationIds.ToList();
+        foreach (var organizationId in organizationIdsList)
+        {
+            installation.Tags.Add($"organizationId:{organizationId}");
         }
 
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
@@ -66,11 +61,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
             case DeviceType.iOS:
                 payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
-                    "\"aps\":{\"content-available\":1}}";
+                                  "\"aps\":{\"content-available\":1}}";
                 messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
+                                  "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
                 badgeMessageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}";
+                                       "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}";
 
                 installation.Platform = NotificationPlatform.Apns;
                 break;
@@ -84,10 +79,12 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
         }
 
-        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
-        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
+        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType,
+            organizationIdsList);
+        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType,
+            organizationIdsList);
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier);
+            userId, identifier, clientType, organizationIdsList);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -97,7 +94,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier)
+        string userId, string identifier, ClientType clientType, List<string> organizationIds)
     {
         if (templateBody == null)
         {
@@ -111,14 +108,18 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Body = templateBody,
             Tags = new List<string>
             {
-                fullTemplateId,
-                $"{fullTemplateId}_userId:{userId}"
+                fullTemplateId, $"{fullTemplateId}_userId:{userId}", $"clientType:{clientType}"
             }
         };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{identifier}");
+        }
+
+        foreach (var organizationId in organizationIds)
+        {
+            template.Tags.Add($"organizationId:{organizationId}");
         }
 
         installation.Templates.Add(fullTemplateId, template);
@@ -169,11 +170,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             return;
         }
 
-        var operation = new PartialUpdateOperation
-        {
-            Operation = op,
-            Path = "/tags"
-        };
+        var operation = new PartialUpdateOperation { Operation = op, Path = "/tags" };
 
         if (op == UpdateOperationType.Add)
         {
@@ -188,7 +185,8 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         {
             try
             {
-                await ClientFor(GetComb(deviceId)).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
+                await ClientFor(GetComb(deviceId))
+                    .PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
             }
             catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
             {
@@ -197,29 +195,24 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private INotificationHubClient ClientFor(Guid deviceId)
     {
         return _notificationHubPool.ClientFor(deviceId);
     }
 
     private Guid GetComb(string deviceId)
     {
-        var deviceIdString = deviceId;
-        InstallationDeviceEntity installationDeviceEntity;
-        Guid deviceIdGuid;
-        if (InstallationDeviceEntity.TryParse(deviceIdString, out installationDeviceEntity))
+        if (InstallationDeviceEntity.TryParse(deviceId, out var installationDeviceEntity))
         {
             // Strip off the installation id (PartitionId). RowKey is the ID in the Installation's table.
-            deviceIdString = installationDeviceEntity.RowKey;
+            deviceId = installationDeviceEntity.RowKey;
         }
 
-        if (Guid.TryParse(deviceIdString, out deviceIdGuid))
-        {
-        }
-        else
+        if (!Guid.TryParse(deviceId, out var deviceIdGuid))
         {
             throw new Exception($"Invalid device id {deviceId}.");
         }
+
         return deviceIdGuid;
     }
 }
