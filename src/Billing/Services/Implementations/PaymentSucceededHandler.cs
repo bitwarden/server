@@ -153,10 +153,10 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
             };
 
             await _pushNotificationService.SendPayloadToOrganizationAsync(
-                 organizationId.Value.ToString(),
-                 PushType.SyncOrganizationStatusChanged,
-                 payload,
-                 null);
+                organizationId.Value.ToString(),
+                PushType.SyncOrganizationStatusChanged,
+                payload,
+                null);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
