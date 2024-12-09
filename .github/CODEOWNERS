@@ -38,7 +38,6 @@ src/Identity @bitwarden/team-auth-dev
 # Key Management team
 **/KeyManagement @bitwarden/team-key-management-dev
 
-**/SecretsManager @bitwarden/team-secrets-manager-dev
 **/Tools @bitwarden/team-tools-dev
 
 # Vault team
