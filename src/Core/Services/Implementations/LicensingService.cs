@@ -1,15 +1,22 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Licenses.Models;
+using Bit.Core.Billing.Licenses.Services;
 using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using IdentityModel;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Bit.Core.Services;
 
@@ -19,27 +26,33 @@ public class LicensingService : ILicensingService
     private readonly IGlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly ILogger<LicensingService> _logger;
+    private readonly ILicenseClaimsFactory<Organization> _organizationLicenseClaimsFactory;
+    private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
+    private readonly IFeatureService _featureService;
 
     private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
 
     public LicensingService(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
         IWebHostEnvironment environment,
         ILogger<LicensingService> logger,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ILicenseClaimsFactory<Organization> organizationLicenseClaimsFactory,
+        IFeatureService featureService,
+        ILicenseClaimsFactory<User> userLicenseClaimsFactory)
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
         _logger = logger;
         _globalSettings = globalSettings;
+        _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
+        _featureService = featureService;
+        _userLicenseClaimsFactory = userLicenseClaimsFactory;
 
         var certThumbprint = environment.IsDevelopment() ?
             "207E64A231E8AA32AAF68A61037C075EBEBD553F" :
@@ -104,13 +117,13 @@ public class LicensingService : ILicensingService
                     continue;
                 }
 
-                if (!license.VerifyData(org, _globalSettings))
+                if (!license.VerifyData(org, GetClaimsPrincipalFromLicense(license), _globalSettings))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid data.");
                     continue;
                 }
 
-                if (!license.VerifySignature(_certificate))
+                if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
                 {
                     await DisableOrganizationAsync(org, license, "Invalid signature.");
                     continue;
@@ -203,13 +216,14 @@ public class LicensingService : ILicensingService
             return false;
         }
 
-        if (!license.VerifyData(user))
+        var claimsPrincipal = GetClaimsPrincipalFromLicense(license);
+        if (!license.VerifyData(user, claimsPrincipal))
         {
             await DisablePremiumAsync(user, license, "Invalid data.");
             return false;
         }
 
-        if (!license.VerifySignature(_certificate))
+        if (string.IsNullOrWhiteSpace(license.Token) && !license.VerifySignature(_certificate))
         {
             await DisablePremiumAsync(user, license, "Invalid signature.");
             return false;
@@ -234,7 +248,21 @@ public class LicensingService : ILicensingService
 
     public bool VerifyLicense(ILicense license)
     {
-        return license.VerifySignature(_certificate);
+        if (string.IsNullOrWhiteSpace(license.Token))
+        {
+            return license.VerifySignature(_certificate);
+        }
+
+        try
+        {
+            _ = GetClaimsPrincipalFromLicense(license);
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(e, "Invalid token.");
+            return false;
+        }
     }
 
     public byte[] SignLicense(ILicense license)
@@ -271,5 +299,102 @@ public class LicensingService : ILicensingService
 
         using var fs = File.OpenRead(filePath);
         return await JsonSerializer.DeserializeAsync<OrganizationLicense>(fs);
+    }
+
+    public ClaimsPrincipal GetClaimsPrincipalFromLicense(ILicense license)
+    {
+        if (string.IsNullOrWhiteSpace(license.Token))
+        {
+            return null;
+        }
+
+        var audience = license switch
+        {
+            OrganizationLicense orgLicense => $"organization:{orgLicense.Id}",
+            UserLicense userLicense => $"user:{userLicense.Id}",
+            _ => throw new ArgumentException("Unsupported license type.", nameof(license)),
+        };
+
+        var token = license.Token;
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new X509SecurityKey(_certificate),
+            ValidateIssuer = true,
+            ValidIssuer = "bitwarden",
+            ValidateAudience = true,
+            ValidAudience = audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
+            RequireExpirationTime = true
+        };
+
+        try
+        {
+            return tokenHandler.ValidateToken(token, validationParameters, out _);
+        }
+        catch (Exception ex)
+        {
+            // Token exceptions thrown are interpreted by the client as Identity errors and cause the user to logout
+            // Mask them by rethrowing as BadRequestException
+            throw new BadRequestException($"Invalid license. {ex.Message}");
+        }
+    }
+
+    public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            return null;
+        }
+
+        var licenseContext = new LicenseContext
+        {
+            InstallationId = installationId,
+            SubscriptionInfo = subscriptionInfo,
+        };
+
+        var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);
+        var audience = $"organization:{organization.Id}";
+
+        return GenerateToken(claims, audience);
+    }
+
+    public async Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            return null;
+        }
+
+        var licenseContext = new LicenseContext { SubscriptionInfo = subscriptionInfo };
+        var claims = await _userLicenseClaimsFactory.GenerateClaims(user, licenseContext);
+        var audience = $"user:{user.Id}";
+
+        return GenerateToken(claims, audience);
+    }
+
+    private string GenerateToken(List<Claim> claims, string audience)
+    {
+        if (claims.All(claim => claim.Type != JwtClaimTypes.JwtId))
+        {
+            claims.Add(new Claim(JwtClaimTypes.JwtId, Guid.NewGuid().ToString()));
+        }
+
+        var securityKey = new RsaSecurityKey(_certificate.GetRSAPrivateKey());
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Issuer = "bitwarden",
+            Audience = audience,
+            NotBefore = DateTime.UtcNow,
+            Expires = DateTime.UtcNow.AddYears(1), // Org expiration is a claim
+            SigningCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.RsaSha256Signature)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 }

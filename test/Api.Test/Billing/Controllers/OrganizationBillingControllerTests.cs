@@ -52,7 +52,7 @@ public class OrganizationBillingControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true, true, true, true));
+            .Returns(new OrganizationMetadata(true, true, true, true, true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
@@ -64,6 +64,7 @@ public class OrganizationBillingControllerTests
         Assert.True(response.IsManaged);
         Assert.True(response.IsOnSecretsManagerStandalone);
         Assert.True(response.IsSubscriptionUnpaid);
+        Assert.True(response.HasSubscription);
     }
 
     [Theory, BitAutoData]

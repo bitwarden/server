@@ -19,14 +19,13 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class ProviderBillingController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IProviderBillingService providerBillingService,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter,
-    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
+    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
@@ -93,7 +92,8 @@ public class ProviderBillingController(
             subscription,
             providerPlans,
             taxInformation,
-            subscriptionSuspension);
+            subscriptionSuspension,
+            provider);
 
         return TypedResults.Ok(response);
     }
