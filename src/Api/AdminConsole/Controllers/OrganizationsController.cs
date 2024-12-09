@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -52,11 +53,11 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -73,11 +74,11 @@ public class OrganizationsController : Controller
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IFeatureService featureService,
         GlobalSettings globalSettings,
-        IPushNotificationService pushNotificationService,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -93,11 +94,11 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _featureService = featureService;
         _globalSettings = globalSettings;
-        _pushNotificationService = pushNotificationService;
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
     }
 
     [HttpGet("{id}")]
@@ -175,8 +176,8 @@ public class OrganizationsController : Controller
         }
 
         var organizationSignup = model.ToOrganizationSignup(user);
-        var result = await _organizationService.SignUpAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Item1);
+        var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
+        return new OrganizationResponseModel(result.Organization);
     }
 
     [HttpPost("create-without-payment")]
@@ -190,8 +191,8 @@ public class OrganizationsController : Controller
         }
 
         var organizationSignup = model.ToOrganizationSignup(user);
-        var result = await _organizationService.SignUpAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Item1);
+        var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
+        return new OrganizationResponseModel(result.Organization);
     }
 
     [HttpPut("{id}")]
@@ -289,9 +290,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
@@ -322,8 +321,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Invalid token.");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
             if (provider.IsBillable())
@@ -357,7 +355,7 @@ public class OrganizationsController : Controller
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
             var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.ProductTier != ProductTierType.Enterprise)
+            if (plan.ProductTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
             {
                 throw new NotFoundException();
             }
@@ -528,14 +526,6 @@ public class OrganizationsController : Controller
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        if (
-          _globalSettings.SelfHosted &&
-          !_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-        )
-        {
-            throw new BadRequestException("Only allowed when not self hosted.");
-        }
-
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
