@@ -259,7 +259,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
         }
 
-        await _removeOrganizationUserCommand.RemoveUserAsync(id, user.Id);
+        await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
     }
 
     [HttpDelete("{id}")]
