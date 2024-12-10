@@ -271,7 +271,7 @@
             "preLaunchTask": "buildSso",
         },
         {
-            "name": "MsSqlMigratorUtility",
+            "name": "MSSQL Migrator",
             "configurations": [
                 "run-MsSqlMigratorUtility"
             ],
