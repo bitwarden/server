@@ -472,7 +472,7 @@ public class HandlebarsMailService : IMailService
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Hey {emailAddress}, here is a heads up on your claimed account:",
+                    TitleFirst = $"Hey {emailAddress}, your account is owned by {org.DisplayName()}",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
                 });
     }
