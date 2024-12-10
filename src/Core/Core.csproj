@@ -34,7 +34,7 @@
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
-    <PackageReference Include="MailKit" Version="4.8.0" />    
+    <PackageReference Include="MailKit" Version="4.9.0" />    
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.10" />
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.46.0" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.2.0" />
