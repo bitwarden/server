@@ -99,31 +99,9 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // 2. Check for null device in request
-        var device = validatorContext.Device;
-        if (device == null)
-        {
-            var requestDevice = DeviceValidator.GetDeviceFromRequest(request);
-            if (requestDevice == null)
-            {
-                await BuildErrorResultAsync("No device information provided.", false, context, user);
-                return;
-            }
-            // check request for new device otp before making the long trip to the database
-            if (DeviceValidator.NewDeviceOtpRequest(request))
-            {
-                device = requestDevice;
-            }
-            else
-            {
-                // set device to the the KnownDevice if it exists otherwise set it to the device in the request
-                device = await _deviceValidator.GetKnownDeviceAsync(user, requestDevice) ?? requestDevice;
-            }
-        }
-
-        // 3. Does this user belong to an organization that requires SSO
-        var ssoRequired = await RequireSsoLoginAsync(user, request.GrantType);
-        if (ssoRequired)
+        // 2. Does this user belong to an organization that requires SSO
+        validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
+        if (validatorContext.SsoRequired)
         {
             SetSsoResult(context,
                 new Dictionary<string, object>
@@ -133,11 +111,11 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // 4. Check if 2FA is required
-        var (twoFactorRequired, twoFactorOrganization) = await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
+        // 3. Check if 2FA is required
+        (validatorContext.TwoFactorRequired, var twoFactorOrganization) = await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
         // This flag is used to determine if the user wants a rememberMe token sent when authentication is successful
         var returnRememberMeToken = false;
-        if (twoFactorRequired)
+        if (validatorContext.TwoFactorRequired)
         {
             var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
             var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
@@ -195,37 +173,15 @@ public abstract class BaseRequestValidator<T> where T : class
             }
         }
 
-        // 5. Check if the user is logging in from a new device
-        if (!validatorContext.KnownDevice)
+        // 4. Check if the user is logging in from a new device
+        var deviceValid = await _deviceValidator.DeviceValid(request, validatorContext);
+        if (!deviceValid)
         {
-            if (FeatureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-                && _globalSettings.EnableNewDeviceVerification)
-            {
-                if (request.GrantType == "password" &&
-                    !twoFactorRequired &&
-                    !ssoRequired)
-                {
-                    // We only want to return early if the device is invalid or there is an error
-                    var (deviceValidated, errorMessage) = await _deviceValidator.HandleNewDeviceVerificationAsync(user, request);
-                    if (!deviceValidated)
-                    {
-                        await BuildErrorResultAsync(errorMessage, false, context, user);
-                        return;
-                    }
-                }
-                else
-                {
-                    device = await _deviceValidator.SaveRequestingDeviceAsync(user, device);
-                }
-            }
-            // backwards compatibility
-            else
-            {
-                device = await _deviceValidator.SaveRequestingDeviceAsync(user, request);
-            }
+            SetValidationErrorResult(context, validatorContext);
+            return;
         }
 
-        // 6. Force legacy users to the web for migration
+        // 5. Force legacy users to the web for migration
         if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
         {
             if (UserService.IsLegacyUser(user) && request.ClientId != "web")
@@ -235,7 +191,7 @@ public abstract class BaseRequestValidator<T> where T : class
             }
         }
 
-        await BuildSuccessResultAsync(user, context, device, returnRememberMeToken);
+        await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
@@ -309,11 +265,23 @@ public abstract class BaseRequestValidator<T> where T : class
             new Dictionary<string, object> { { "ErrorModel", new ErrorResponseModel(message) } });
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
+
+    /// <summary>
+    /// This consumes the ValidationErrorResult property in the CustomValidatorRequestContext and sets
+    /// it appropriately in the response object for the token and grant validators.
+    /// </summary>
+    /// <param name="context">The current grant or token context</param>
+    /// <param name="requestContext">The modified request context containing material used to build the response object</param>
+    protected abstract void SetValidationErrorResult(T context, CustomValidatorRequestContext requestContext);
     protected abstract Task SetSuccessResult(T context, User user, List<Claim> claims,
         Dictionary<string, object> customResponse);
-    protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
+
     protected abstract ClaimsPrincipal GetSubject(T context);
 
     /// <summary>

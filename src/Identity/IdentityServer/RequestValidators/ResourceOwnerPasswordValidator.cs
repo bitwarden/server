@@ -161,6 +161,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         return Task.CompletedTask;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -168,6 +169,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             customResponse);
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetSsoResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -175,10 +177,23 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             customResponse);
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(ResourceOwnerPasswordValidationContext context,
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
+    protected override void SetValidationErrorResult(
+        ResourceOwnerPasswordValidationContext context, CustomValidatorRequestContext requestContext)
+    {
+        context.Result = new GrantValidationResult
+        {
+            Error = requestContext.ValidationErrorResult.Error,
+            ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription,
+            IsError = true,
+            CustomResponse = requestContext.CustomResponse
+        };
     }
 
     protected override ClaimsPrincipal GetSubject(ResourceOwnerPasswordValidationContext context)

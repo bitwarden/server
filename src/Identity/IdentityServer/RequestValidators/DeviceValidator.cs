@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection;
+﻿using System.Reflection;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -7,8 +6,10 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
+using Bit.Identity.IdentityServer.Enums;
+using Bit.Core.Models.Api;
+using System.ComponentModel.DataAnnotations;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -18,7 +19,8 @@ public class DeviceValidator(
     GlobalSettings globalSettings,
     IMailService mailService,
     ICurrentContext currentContext,
-    IUserService userService) : IDeviceValidator
+    IUserService userService,
+    IFeatureService featureService) : IDeviceValidator
 {
     private readonly IDeviceService _deviceService = deviceService;
     private readonly IDeviceRepository _deviceRepository = deviceRepository;
@@ -26,8 +28,9 @@ public class DeviceValidator(
     private readonly IMailService _mailService = mailService;
     private readonly ICurrentContext _currentContext = currentContext;
     private readonly IUserService _userService = userService;
+    private readonly IFeatureService _featureService = featureService;
 
-    public async Task<Device> SaveRequestingDeviceAsync(User user, ValidatedTokenRequest request)
+    public async Task<Device> SaveRequestingDeviceAsync(User user, ValidatedRequest request)
     {
         // Quick lil' null check.
         var device = GetDeviceFromRequest(request);
@@ -117,15 +120,16 @@ public class DeviceValidator(
         return !string.IsNullOrEmpty(request.Raw["NewDeviceOtp"]?.ToString());
     }
 
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
-    public async Task<(bool, string)> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
+    public async Task<(bool, DeviceValidationErrorType)> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
     {
         var device = GetDeviceFromRequest(request);
         if (device == null || user == null)
         {
-            return (false, "invalid user or device");
+            return (false, DeviceValidationErrorType.InvalidUserOrDevice);
         }
 
+        // associate the device with the user
+        device.UserId = user.Id;
         // parse request for NewDeviceOtp to validate
         var newDeviceOtp = request.Raw["NewDeviceOtp"]?.ToString();
         if (!string.IsNullOrEmpty(newDeviceOtp))
@@ -134,24 +138,117 @@ public class DeviceValidator(
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
             if (otpValid)
             {
-                // associate the device with the user
-                device.UserId = user.Id;
                 await _deviceService.SaveAsync(device);
-                return (true, null);
+                return (true, DeviceValidationErrorType.None);
             }
-            return (false, "invalid otp");
+            return (false, DeviceValidationErrorType.InvalidNewDeviceOtp);
         }
-
         // if a user has no devices they are assumed to be newly registered user which does not require new device verification
         var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
         if (devices.Count == 0)
         {
             await _deviceService.SaveAsync(device);
-            return (true, null);
+            return (true, DeviceValidationErrorType.None);
         }
 
         // if we get to here then we need to send a new device verification email
-        await _userService.SendOTPAsync(user);
-        return (false, "new device verification required");
+        return (false, DeviceValidationErrorType.NewDeviceVerificationRequired);
+    }
+
+    public async Task<bool> DeviceValid(ValidatedTokenRequest request, CustomValidatorRequestContext context)
+    {
+        // if the device is known then return early. Login with Passkey (Webauthn grantType) sets knownDevice
+        // to true and we want to honor that.
+        if (context.KnownDevice)
+        {
+            return true;
+        }
+
+        // Parse device from request and return early if no device information is provided
+        var requestDevice = context.Device ?? GetDeviceFromRequest(request);
+        // If both are null then return error
+        if (requestDevice == null)
+        {
+            (context.ValidationErrorResult, context.CustomResponse) =
+                BuildErrorResult(DeviceValidationErrorType.NoDeviceInformationProvided);
+            return false;
+        }
+
+        // if not a new device request then check if the device is known
+        if (!NewDeviceOtpRequest(request))
+        {
+            var knownDevice = await GetKnownDeviceAsync(context.User, requestDevice);
+            // if the device is know then the device is valid and we return
+            if (knownDevice != null)
+            {
+                context.Device = knownDevice;
+                return true;
+            }
+        }
+
+        // We have established that the device is unknown at this point; begin new device verification
+        if (_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification))
+        {
+            if (request.GrantType == "password" &&
+                request.Raw["AuthRequest"] == null &&
+                !context.TwoFactorRequired &&
+                !context.SsoRequired &&
+                _globalSettings.EnableNewDeviceVerification)
+            {
+                // We only want to return early if the device is invalid or there is an error
+                var (deviceValidated, errorType) = await HandleNewDeviceVerificationAsync(context.User, request);
+                if (!deviceValidated)
+                {
+                    (context.ValidationErrorResult, context.CustomResponse) =
+                        BuildErrorResult(errorType);
+                    await _userService.SendOTPAsync(context.User);
+                    return false;
+                }
+            }
+            else
+            {
+                // if new EnableNewDeviceVerification is not enabled then we save the device
+                requestDevice.UserId = context.User.Id;
+                await _deviceService.SaveAsync(requestDevice);
+                context.Device = requestDevice;
+            }
+            return true;
+        }
+        else
+        {
+            // backwards compatibility
+            context.Device = await SaveRequestingDeviceAsync(context.User, request);
+            return true;
+        }
+    }
+
+    private (Duende.IdentityServer.Validation.ValidationResult, Dictionary<string, object>) BuildErrorResult(DeviceValidationErrorType errorType)
+    {
+        var result = new Duende.IdentityServer.Validation.ValidationResult
+        {
+            IsError = true,
+            Error = "device_error",
+        };
+        var customResponse = new Dictionary<string, object>();
+        switch (errorType)
+        {
+            case DeviceValidationErrorType.InvalidUserOrDevice:
+                result.ErrorDescription = "Invalid user or device";
+                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid user or device"));
+                break;
+            case DeviceValidationErrorType.InvalidNewDeviceOtp:
+                result.ErrorDescription = "Invalid New Device OTP";
+                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid new device otp"));
+                break;
+            case DeviceValidationErrorType.NewDeviceVerificationRequired:
+                result.ErrorDescription = "New device verification required";
+                customResponse.Add("ErrorModel", new ErrorResponseModel("new device verification required"));
+                break;
+            case DeviceValidationErrorType.NoDeviceInformationProvided:
+                result.ErrorDescription = "No device information provided";
+                customResponse.Add("ErrorModel", new ErrorResponseModel("no device information provided"));
+                break;
+        }
+        return (result, customResponse);
     }
 }

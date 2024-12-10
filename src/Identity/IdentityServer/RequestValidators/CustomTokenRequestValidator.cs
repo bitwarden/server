@@ -165,6 +165,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         return context.Result.ValidatedRequest.Subject;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -175,16 +176,18 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.CustomResponse = customResponse;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetSsoResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
         Debug.Assert(context.Result is not null);
         context.Result.Error = "invalid_grant";
-        context.Result.ErrorDescription = "Single Sign on required.";
+        context.Result.ErrorDescription = "Sso authentication required.";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -192,5 +195,15 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.Error = "invalid_grant";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;
+    }
+
+    protected override void SetValidationErrorResult(
+        CustomTokenRequestValidationContext context, CustomValidatorRequestContext requestContext)
+    {
+        Debug.Assert(context.Result is not null);
+        context.Result.Error = requestContext.ValidationErrorResult.Error;
+        context.Result.IsError = requestContext.ValidationErrorResult.IsError;
+        context.Result.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
+        context.Result.CustomResponse = requestContext.CustomResponse;
     }
 }
