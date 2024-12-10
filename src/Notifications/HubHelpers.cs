@@ -85,6 +85,13 @@ public static class HubHelpers
                 await hubContext.Clients.User(authRequestNotification.Payload.UserId.ToString())
                     .SendAsync("ReceiveMessage", authRequestNotification, cancellationToken);
                 break;
+            case PushType.SyncOrganizationStatusChanged:
+                var orgStatusNotification =
+                    JsonSerializer.Deserialize<PushNotificationData<OrganizationStatusPushNotification>>(
+                        notificationJson, _deserializerOptions);
+                await hubContext.Clients.Group($"Organization_{orgStatusNotification.Payload.OrganizationId}")
+                    .SendAsync("ReceiveMessage", orgStatusNotification, cancellationToken);
+                break;
             default:
                 break;
         }

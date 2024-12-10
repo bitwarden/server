@@ -50,3 +50,10 @@ public class AuthRequestPushNotification
     public Guid UserId { get; set; }
     public Guid Id { get; set; }
 }
+
+public class OrganizationStatusPushNotification
+{
+    public Guid UserId { get; set; }
+    public Guid OrganizationId { get; set; }
+    public bool Enabled { get; set; }
+}
