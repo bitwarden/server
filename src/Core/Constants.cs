@@ -159,6 +159,7 @@ public static class FeatureFlagKeys
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
+    public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
 
     public static List<string> GetAllKeys()
     {
