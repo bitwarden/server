@@ -21,9 +21,9 @@ internal class Program
         [Option("no-transaction", Description = "Run without adding transaction per script or all scripts")]
         bool noTransactionMigration = false
         )
-        {
-            return MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun, noTransactionMigration) ? 0 : -1;
-        }
+    {
+        return MigrateDatabase(databaseConnectionString, repeatable, folderName, dryRun, noTransactionMigration) ? 0 : -1;
+    }
 
 
     private static bool MigrateDatabase(string databaseConnectionString,
