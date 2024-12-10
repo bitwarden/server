@@ -100,7 +100,7 @@ public class SavePolicyCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest(PolicyUpdate policyUpdate)
+    public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest([PolicyUpdate(PolicyType.ActivateAutofill)] PolicyUpdate policyUpdate)
     {
         var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -115,7 +115,7 @@ public class SavePolicyCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(PolicyUpdate policyUpdate)
+    public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest([PolicyUpdate(PolicyType.ActivateAutofill)] PolicyUpdate policyUpdate)
     {
         var sutProvider = SutProviderFactory();
         sutProvider.GetDependency<IApplicationCacheService>()

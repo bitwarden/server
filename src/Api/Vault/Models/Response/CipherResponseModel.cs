@@ -166,5 +166,12 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         CollectionIds = cipher.CollectionIds ?? [];
     }
 
+    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        GlobalSettings globalSettings, string obj = "cipherMiniDetails")
+        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+    }
+
     public IEnumerable<Guid> CollectionIds { get; set; }
 }

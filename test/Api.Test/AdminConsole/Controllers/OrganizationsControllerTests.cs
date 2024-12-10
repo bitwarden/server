@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
@@ -46,11 +47,11 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IFeatureService _featureService;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
     private readonly OrganizationsController _sut;
 
     public OrganizationsControllerTests()
@@ -69,11 +70,11 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
-        _pushNotificationService = Substitute.For<IPushNotificationService>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerBillingService = Substitute.For<IProviderBillingService>();
         _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
+        _cloudOrganizationSignUpCommand = Substitute.For<ICloudOrganizationSignUpCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -90,11 +91,11 @@ public class OrganizationsControllerTests : IDisposable
             _organizationApiKeyRepository,
             _featureService,
             _globalSettings,
-            _pushNotificationService,
             _providerRepository,
             _providerBillingService,
             _orgDeleteTokenDataFactory,
-            _removeOrganizationUserCommand);
+            _removeOrganizationUserCommand,
+            _cloudOrganizationSignUpCommand);
     }
 
     public void Dispose()
@@ -129,7 +130,7 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
             exception.Message);
 
-        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
+        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().UserLeaveAsync(default, default);
     }
 
     [Theory, AutoData]
@@ -192,7 +193,7 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.Leave(orgId);
 
-        await _removeOrganizationUserCommand.Received(1).RemoveUserAsync(orgId, user.Id);
+        await _removeOrganizationUserCommand.Received(1).UserLeaveAsync(orgId, user.Id);
     }
 
     [Theory, AutoData]
@@ -217,8 +218,6 @@ public class OrganizationsControllerTests : IDisposable
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
 
         _userService.VerifySecretAsync(user, requestModel.Secret).Returns(true);
-
-        _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
 
         _providerRepository.GetByOrganizationIdAsync(organization.Id).Returns(provider);
 

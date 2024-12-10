@@ -1,7 +1,5 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -102,11 +100,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled &&
-            provider.Status == ProviderStatusType.Billable &&
-            organization.Status == OrganizationStatusType.Managed &&
+        if (provider.IsBillable() &&
+            organization.IsValidClient() &&
             !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
             await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions

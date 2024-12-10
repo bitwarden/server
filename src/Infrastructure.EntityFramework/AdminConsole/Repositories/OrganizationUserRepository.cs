@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -720,5 +720,17 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var data = await query.Run(dbContext).ToListAsync();
             return data;
         }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
 }
