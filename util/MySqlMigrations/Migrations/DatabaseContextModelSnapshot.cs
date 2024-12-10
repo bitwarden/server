@@ -191,6 +191,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("UseResetPassword")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseRiskInsights")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseScim")
                         .HasColumnType("tinyint(1)");
 
