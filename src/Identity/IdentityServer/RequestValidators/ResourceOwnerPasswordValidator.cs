@@ -183,7 +183,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
     {
-        if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Auth-Email"))
+        if (!_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
         {
             return false;
         }
@@ -191,7 +191,6 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         {
             try
             {
-                var authEmailHeader = _currentContext.HttpContext.Request.Headers["Auth-Email"];
                 var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
 
                 if (authEmailDecoded != context.UserName)
