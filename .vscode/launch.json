@@ -270,6 +270,17 @@
             },
             "preLaunchTask": "buildSso",
         },
+        {
+            "name": "MsSqlMigratorUtility",
+            "configurations": [
+                "run-MsSqlMigratorUtility"
+            ],
+            "presentation": {
+                "hidden": false,
+                "group": "util",
+            },
+            "preLaunchTask": "buildMsSqlMigratorUtility",
+        },
     ],
     "configurations": [
         // Configurations represent run-only scenarios so that they can be used in multiple compounds
@@ -600,6 +611,21 @@
             "type": "coreclr",
             "request": "attach",
             "processId": "${command:pickProcess}"
+        },
+        {
+            "name": "run-MsSqlMigratorUtility",
+            "presentation": {
+                "hidden": true,
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${workspaceFolder}/util/MsSqlMigratorUtility/bin/Debug/net8.0/MsSqlMigratorUtility.dll",
+            "args": [
+                "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+            ],
+            "cwd": "${workspaceFolder}/util/MsSqlMigratorUtility",
+            "stopAtEntry": false
         }
     ],
 }
