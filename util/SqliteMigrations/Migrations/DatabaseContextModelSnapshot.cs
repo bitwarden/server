@@ -186,6 +186,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseResetPassword")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseRiskInsights")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseScim")
                         .HasColumnType("INTEGER");
 

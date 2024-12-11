@@ -539,7 +539,7 @@ public class OrganizationUsersController : Controller
         var userId = _userService.GetProperUserId(User);
         var result = await _removeOrganizationUserCommand.RemoveUsersAsync(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
-            new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
