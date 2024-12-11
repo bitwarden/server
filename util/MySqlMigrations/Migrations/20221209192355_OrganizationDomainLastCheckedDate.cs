@@ -12,13 +12,12 @@ public partial class OrganizationDomainLastCheckedDate : Migration
             name: "LastCheckedDate",
             table: "OrganizationDomain",
             type: "datetime(6)",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "LastCheckedDate",
-            table: "OrganizationDomain");
+        migrationBuilder.DropColumn(name: "LastCheckedDate", table: "OrganizationDomain");
     }
 }

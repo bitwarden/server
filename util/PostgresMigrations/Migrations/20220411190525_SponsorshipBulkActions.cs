@@ -8,7 +8,8 @@ public partial class SponsorshipBulkActions : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
         migrationBuilder.AlterColumn<Guid>(
             name: "SponsoringOrganizationUserId",
@@ -18,7 +19,8 @@ public partial class SponsorshipBulkActions : Migration
             defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
             oldClrType: typeof(Guid),
             oldType: "uuid",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<Guid>(
             name: "SponsoringOrganizationId",
@@ -28,7 +30,8 @@ public partial class SponsorshipBulkActions : Migration
             defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
             oldClrType: typeof(Guid),
             oldType: "uuid",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
@@ -36,14 +39,16 @@ public partial class SponsorshipBulkActions : Migration
             column: "SponsoringOrganizationId",
             principalTable: "Organization",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Cascade);
+            onDelete: ReferentialAction.Cascade
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
         migrationBuilder.AlterColumn<Guid>(
             name: "SponsoringOrganizationUserId",
@@ -51,7 +56,8 @@ public partial class SponsorshipBulkActions : Migration
             type: "uuid",
             nullable: true,
             oldClrType: typeof(Guid),
-            oldType: "uuid");
+            oldType: "uuid"
+        );
 
         migrationBuilder.AlterColumn<Guid>(
             name: "SponsoringOrganizationId",
@@ -59,7 +65,8 @@ public partial class SponsorshipBulkActions : Migration
             type: "uuid",
             nullable: true,
             oldClrType: typeof(Guid),
-            oldType: "uuid");
+            oldType: "uuid"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
@@ -67,6 +74,7 @@ public partial class SponsorshipBulkActions : Migration
             column: "SponsoringOrganizationId",
             principalTable: "Organization",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+            onDelete: ReferentialAction.Restrict
+        );
     }
 }

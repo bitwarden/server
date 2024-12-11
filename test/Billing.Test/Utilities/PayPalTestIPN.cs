@@ -10,7 +10,7 @@ public enum IPNBody
     UnsupportedTransactionType,
     SuccessfulRefund,
     RefundMissingParentTransaction,
-    SuccessfulPaymentForUserCredit
+    SuccessfulPaymentForUserCredit,
 }
 
 public static class PayPalTestIPN
@@ -27,7 +27,7 @@ public static class PayPalTestIPN
             IPNBody.SuccessfulRefund => "successful-refund.txt",
             IPNBody.SuccessfulPaymentForUserCredit => "successful-payment-user-credit.txt",
             IPNBody.TransactionMissingEntityIds => "transaction-missing-entity-ids.txt",
-            IPNBody.UnsupportedTransactionType => "unsupported-transaction-type.txt"
+            IPNBody.UnsupportedTransactionType => "unsupported-transaction-type.txt",
         };
 
         var content = await EmbeddedResourceReader.ReadAsync("IPN", fileName);

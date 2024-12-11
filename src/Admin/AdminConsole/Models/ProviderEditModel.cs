@@ -19,7 +19,9 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
         IReadOnlyCollection<ProviderPlan> providerPlans,
         string gatewayCustomerUrl = null,
-        string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations)
+        string gatewaySubscriptionUrl = null
+    )
+        : base(provider, providerUsers, organizations)
     {
         Name = provider.DisplayName();
         BusinessName = provider.DisplayBusinessName();
@@ -44,24 +46,31 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
 
     [Display(Name = "Billing Email")]
     public string BillingEmail { get; set; }
+
     [Display(Name = "Billing Phone Number")]
     public string BillingPhone { get; set; }
+
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
     public string Name { get; set; }
+
     [Display(Name = "Teams (Monthly) Seat Minimum")]
     public int TeamsMonthlySeatMinimum { get; set; }
 
     [Display(Name = "Enterprise (Monthly) Seat Minimum")]
     public int EnterpriseMonthlySeatMinimum { get; set; }
+
     [Display(Name = "Gateway")]
     public GatewayType? Gateway { get; set; }
+
     [Display(Name = "Gateway Customer Id")]
     public string GatewayCustomerId { get; set; }
+
     [Display(Name = "Gateway Subscription Id")]
     public string GatewaySubscriptionId { get; set; }
     public string GatewayCustomerUrl { get; }
     public string GatewaySubscriptionUrl { get; }
+
     [Display(Name = "Provider Type")]
     public ProviderType Type { get; set; }
 
@@ -86,8 +95,9 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         return existingProvider;
     }
 
-    private static int GetSeatMinimum(IEnumerable<ProviderPlan> providerPlans, PlanType planType)
-        => providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType)?.SeatMinimum ?? 0;
+    private static int GetSeatMinimum(IEnumerable<ProviderPlan> providerPlans, PlanType planType) =>
+        providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == planType)?.SeatMinimum
+        ?? 0;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -96,25 +106,39 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
             case ProviderType.Reseller:
                 if (string.IsNullOrWhiteSpace(BillingEmail))
                 {
-                    var billingEmailDisplayName = nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(BillingEmail);
-                    yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
+                    var billingEmailDisplayName =
+                        nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName()
+                        ?? nameof(BillingEmail);
+                    yield return new ValidationResult(
+                        $"The {billingEmailDisplayName} field is required."
+                    );
                 }
                 break;
             case ProviderType.MultiOrganizationEnterprise:
                 if (Plan == null)
                 {
-                    var displayName = nameof(Plan).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(Plan);
+                    var displayName =
+                        nameof(Plan).GetDisplayAttribute<CreateProviderModel>()?.GetName()
+                        ?? nameof(Plan);
                     yield return new ValidationResult($"The {displayName} field is required.");
                 }
                 if (EnterpriseMinimumSeats == null)
                 {
-                    var displayName = nameof(EnterpriseMinimumSeats).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMinimumSeats);
+                    var displayName =
+                        nameof(EnterpriseMinimumSeats)
+                            .GetDisplayAttribute<CreateProviderModel>()
+                            ?.GetName() ?? nameof(EnterpriseMinimumSeats);
                     yield return new ValidationResult($"The {displayName} field is required.");
                 }
                 if (EnterpriseMinimumSeats < 0)
                 {
-                    var displayName = nameof(EnterpriseMinimumSeats).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(EnterpriseMinimumSeats);
-                    yield return new ValidationResult($"The {displayName} field cannot be less than 0.");
+                    var displayName =
+                        nameof(EnterpriseMinimumSeats)
+                            .GetDisplayAttribute<CreateProviderModel>()
+                            ?.GetName() ?? nameof(EnterpriseMinimumSeats);
+                    yield return new ValidationResult(
+                        $"The {displayName} field cannot be less than 0."
+                    );
                 }
                 break;
         }

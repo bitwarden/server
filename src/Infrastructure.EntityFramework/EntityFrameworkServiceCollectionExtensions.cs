@@ -25,11 +25,17 @@ namespace Bit.Infrastructure.EntityFramework;
 
 public static class EntityFrameworkServiceCollectionExtensions
 {
-    public static void SetupEntityFramework(this IServiceCollection services, string connectionString, SupportedDatabaseProviders provider)
+    public static void SetupEntityFramework(
+        this IServiceCollection services,
+        string connectionString,
+        SupportedDatabaseProviders provider
+    )
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {
-            throw new Exception($"Database provider type {provider} was selected but no connection string was found.");
+            throw new Exception(
+                $"Database provider type {provider} was selected but no connection string was found."
+            );
         }
 
         // TODO: We should move away from using LINQ syntax for EF (TDL-48).
@@ -40,14 +46,20 @@ public static class EntityFrameworkServiceCollectionExtensions
         {
             if (provider == SupportedDatabaseProviders.Postgres)
             {
-                options.UseNpgsql(connectionString, b => b.MigrationsAssembly("PostgresMigrations"));
+                options.UseNpgsql(
+                    connectionString,
+                    b => b.MigrationsAssembly("PostgresMigrations")
+                );
                 // Handle NpgSql Legacy Support for `timestamp without timezone` issue
                 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             }
             else if (provider == SupportedDatabaseProviders.MySql)
             {
-                options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString),
-                    b => b.MigrationsAssembly("MySqlMigrations"));
+                options.UseMySql(
+                    connectionString,
+                    ServerVersion.AutoDetect(connectionString),
+                    b => b.MigrationsAssembly("MySqlMigrations")
+                );
             }
             else if (provider == SupportedDatabaseProviders.Sqlite)
             {
@@ -60,7 +72,10 @@ public static class EntityFrameworkServiceCollectionExtensions
         });
     }
 
-    public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
+    public static void AddPasswordManagerEFRepositories(
+        this IServiceCollection services,
+        bool selfHosted
+    )
     {
         services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
@@ -75,9 +90,15 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IInstallationRepository, InstallationRepository>();
         services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
-        services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+        services.AddSingleton<
+            IOrganizationConnectionRepository,
+            OrganizationConnectionRepository
+        >();
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
-        services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
+        services.AddSingleton<
+            IOrganizationSponsorshipRepository,
+            OrganizationSponsorshipRepository
+        >();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
@@ -95,9 +116,14 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
-        services
-            .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
-        services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
+        services.AddSingleton<
+            IClientOrganizationMigrationRecordRepository,
+            ClientOrganizationMigrationRecordRepository
+        >();
+        services.AddSingleton<
+            IPasswordHealthReportApplicationRepository,
+            PasswordHealthReportApplicationRepository
+        >();
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
 

@@ -8,7 +8,8 @@ public partial class AddInstallationIdToEvents : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
         migrationBuilder.AlterColumn<Guid>(
             name: "SponsoringOrganizationId",
@@ -16,13 +17,15 @@ public partial class AddInstallationIdToEvents : Migration
             type: "uuid",
             nullable: true,
             oldClrType: typeof(Guid),
-            oldType: "uuid");
+            oldType: "uuid"
+        );
 
         migrationBuilder.AddColumn<Guid>(
             name: "InstallationId",
             table: "Event",
             type: "uuid",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
@@ -30,18 +33,18 @@ public partial class AddInstallationIdToEvents : Migration
             column: "SponsoringOrganizationId",
             principalTable: "Organization",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+            onDelete: ReferentialAction.Restrict
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
-        migrationBuilder.DropColumn(
-            name: "InstallationId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "InstallationId", table: "Event");
 
         migrationBuilder.AlterColumn<Guid>(
             name: "SponsoringOrganizationId",
@@ -51,7 +54,8 @@ public partial class AddInstallationIdToEvents : Migration
             defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
             oldClrType: typeof(Guid),
             oldType: "uuid",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
@@ -59,6 +63,7 @@ public partial class AddInstallationIdToEvents : Migration
             column: "SponsoringOrganizationId",
             principalTable: "Organization",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Cascade);
+            onDelete: ReferentialAction.Cascade
+        );
     }
 }

@@ -22,22 +22,18 @@ public class ActivePageTagHelper : TagHelper
     [HtmlAttributeNotBound]
     [ViewContext]
     public ViewContext ViewContext { get; set; }
+
     [HtmlAttributeName(ActiveControllerName)]
     public string ActiveController { get; set; }
+
     [HtmlAttributeName(ActiveActionName)]
     public string ActiveAction { get; set; }
 
     public override void Process(TagHelperContext context, TagHelperOutput output)
     {
-        if (context == null)
-        {
-            throw new ArgumentNullException(nameof(context));
-        }
+        ArgumentNullException.ThrowIfNull(context);
 
-        if (output == null)
-        {
-            throw new ArgumentNullException(nameof(output));
-        }
+        ArgumentNullException.ThrowIfNull(output);
 
         if (ActiveAction == null && ActiveController == null)
         {
@@ -65,9 +61,10 @@ public class ActivePageTagHelper : TagHelper
         }
     }
 
-    private bool ActiveMatch(string route, string descriptor)
+    private static bool ActiveMatch(string route, string descriptor)
     {
-        return route == null || route == "*" ||
-            route.Split(',').Any(c => c.Trim().ToLower() == descriptor.ToLower());
+        return route == null
+            || route == "*"
+            || route.Split(',').Any(c => c.Trim().Equals(descriptor, StringComparison.CurrentCultureIgnoreCase));
     }
 }

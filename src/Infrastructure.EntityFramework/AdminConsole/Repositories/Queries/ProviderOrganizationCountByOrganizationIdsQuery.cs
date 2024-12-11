@@ -15,9 +15,10 @@ public class ProviderOrganizationCountByOrganizationIdsQuery : IQuery<ProviderOr
 
     public IQueryable<ProviderOrganization> Run(DatabaseContext dbContext)
     {
-        var query = from po in dbContext.ProviderOrganizations
-                    where _organizationIds.Contains(po.OrganizationId)
-                    select po;
+        var query =
+            from po in dbContext.ProviderOrganizations
+            where _organizationIds.Contains(po.OrganizationId)
+            select po;
         return query;
     }
 }

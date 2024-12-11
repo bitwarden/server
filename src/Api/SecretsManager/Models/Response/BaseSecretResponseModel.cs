@@ -7,12 +7,10 @@ public class BaseSecretResponseModel : ResponseModel
 {
     private const string _objectName = "baseSecret";
 
-    public BaseSecretResponseModel(Secret secret, string objectName = _objectName) : base(objectName)
+    public BaseSecretResponseModel(Secret secret, string objectName = _objectName)
+        : base(objectName)
     {
-        if (secret == null)
-        {
-            throw new ArgumentNullException(nameof(secret));
-        }
+        ArgumentNullException.ThrowIfNull(secret);
 
         Id = secret.Id;
         OrganizationId = secret.OrganizationId;
@@ -24,13 +22,11 @@ public class BaseSecretResponseModel : ResponseModel
         Projects = secret.Projects?.Select(p => new SecretResponseInnerProject(p));
     }
 
-    public BaseSecretResponseModel(string objectName = _objectName) : base(objectName)
-    {
-    }
+    public BaseSecretResponseModel(string objectName = _objectName)
+        : base(objectName) { }
 
-    public BaseSecretResponseModel() : base(_objectName)
-    {
-    }
+    public BaseSecretResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
 
@@ -56,9 +52,7 @@ public class BaseSecretResponseModel : ResponseModel
             Name = project.Name;
         }
 
-        public SecretResponseInnerProject()
-        {
-        }
+        public SecretResponseInnerProject() { }
 
         public Guid Id { get; set; }
         public string Name { get; set; }

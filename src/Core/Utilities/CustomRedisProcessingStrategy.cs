@@ -15,7 +15,7 @@ namespace Bit.Core.Utilities;
 /// </summary>
 /// <remarks>
 /// This is necessary to ensure the service does not become unresponsive due to Redis being out of service. As
-/// the default implementation would throw an exception and exit the request pipeline for all requests. 
+/// the default implementation would throw an exception and exit the request pipeline for all requests.
 /// </remarks>
 public class CustomRedisProcessingStrategy : RedisProcessingStrategy
 {
@@ -27,12 +27,12 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
     private const string _redisTimeoutCacheKey = "IpRateLimitRedisTimeout";
 
     public CustomRedisProcessingStrategy(
-        [FromKeyedServices("rate-limiter")]
-        IConnectionMultiplexer connectionMultiplexer,
+        [FromKeyedServices("rate-limiter")] IConnectionMultiplexer connectionMultiplexer,
         IRateLimitConfiguration config,
         ILogger<CustomRedisProcessingStrategy> logger,
         IMemoryCache memoryCache,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
         : base(connectionMultiplexer, config, logger)
     {
         _connectionMultiplexer = connectionMultiplexer;
@@ -41,9 +41,13 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
         _distributedSettings = globalSettings.DistributedIpRateLimiting;
     }
 
-    public override async Task<RateLimitCounter> ProcessRequestAsync(ClientRequestIdentity requestIdentity,
-        RateLimitRule rule, ICounterKeyBuilder counterKeyBuilder, RateLimitOptions rateLimitOptions,
-        CancellationToken cancellationToken = default)
+    public override async Task<RateLimitCounter> ProcessRequestAsync(
+        ClientRequestIdentity requestIdentity,
+        RateLimitRule rule,
+        ICounterKeyBuilder counterKeyBuilder,
+        RateLimitOptions rateLimitOptions,
+        CancellationToken cancellationToken = default
+    )
     {
         // If Redis is down entirely, skip rate limiting
         if (!_connectionMultiplexer.IsConnected)
@@ -59,28 +63,38 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
             if (timeoutCounter.Count >= _distributedSettings.MaxRedisTimeoutsThreshold)
             {
                 _logger.LogDebug(
-                    "Redis timeout threshold has been exceeded, backing off and skipping IP rate limiting");
+                    "Redis timeout threshold has been exceeded, backing off and skipping IP rate limiting"
+                );
                 return SkipRateLimitResult();
             }
         }
 
         try
         {
-            return await base.ProcessRequestAsync(requestIdentity, rule, counterKeyBuilder, rateLimitOptions, cancellationToken);
+            return await base.ProcessRequestAsync(
+                requestIdentity,
+                rule,
+                counterKeyBuilder,
+                rateLimitOptions,
+                cancellationToken
+            );
         }
         catch (Exception ex) when (ex is RedisTimeoutException || ex is RedisConnectionException)
         {
             _logger.LogWarning(ex, "Redis appears down, skipping rate limiting");
-            // If this is the first timeout/connection error we've had, start a new counter and sliding window 
+            // If this is the first timeout/connection error we've had, start a new counter and sliding window
             timeoutCounter ??= new TimeoutCounter()
             {
                 Count = 0,
-                ExpiresAt = DateTime.UtcNow.AddSeconds(_distributedSettings.SlidingWindowSeconds)
+                ExpiresAt = DateTime.UtcNow.AddSeconds(_distributedSettings.SlidingWindowSeconds),
             };
             timeoutCounter.Count++;
 
-            _memoryCache.Set(_redisTimeoutCacheKey, timeoutCounter,
-                new MemoryCacheEntryOptions { AbsoluteExpiration = timeoutCounter.ExpiresAt });
+            _memoryCache.Set(
+                _redisTimeoutCacheKey,
+                timeoutCounter,
+                new MemoryCacheEntryOptions { AbsoluteExpiration = timeoutCounter.ExpiresAt }
+            );
 
             // Just because Redis timed out does not mean we should kill the request
             return SkipRateLimitResult();

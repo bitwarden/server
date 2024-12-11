@@ -11,34 +11,20 @@ public class EmailTwoFactorTokenProviderTests : BaseTokenProviderTests<EmailTwoF
 {
     public override TwoFactorProviderType TwoFactorProviderType => TwoFactorProviderType.Email;
 
-    public static IEnumerable<object[]> CanGenerateTwoFactorTokenAsyncData
-        => SetupCanGenerateData(
-            (
-                new Dictionary<string, object>
-                {
-                    ["Email"] = "test@email.com",
-                },
-                true
-            ),
-            (
-                new Dictionary<string, object>
-                {
-                    ["NotEmail"] = "value",
-                },
-                false
-            ),
-            (
-                new Dictionary<string, object>
-                {
-                    ["Email"] = "",
-                },
-                false
-            )
+    public static IEnumerable<object[]> CanGenerateTwoFactorTokenAsyncData =>
+        SetupCanGenerateData(
+            (new Dictionary<string, object> { ["Email"] = "test@email.com" }, true),
+            (new Dictionary<string, object> { ["NotEmail"] = "value" }, false),
+            (new Dictionary<string, object> { ["Email"] = "" }, false)
         );
 
     [Theory, BitMemberAutoData(nameof(CanGenerateTwoFactorTokenAsyncData))]
-    public override async Task RunCanGenerateTwoFactorTokenAsync(Dictionary<string, object> metaData, bool expectedResponse,
-        User user, SutProvider<EmailTwoFactorTokenProvider> sutProvider)
+    public override async Task RunCanGenerateTwoFactorTokenAsync(
+        Dictionary<string, object> metaData,
+        bool expectedResponse,
+        User user,
+        SutProvider<EmailTwoFactorTokenProvider> sutProvider
+    )
     {
         await base.RunCanGenerateTwoFactorTokenAsync(metaData, expectedResponse, user, sutProvider);
     }

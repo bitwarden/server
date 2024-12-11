@@ -40,7 +40,8 @@ public class RegisterUserCommandTests
     public async Task RegisterUser_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user)
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user)
             .Returns(IdentityResult.Success);
 
@@ -50,25 +51,28 @@ public class RegisterUserCommandTests
         // Assert
         Assert.True(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .CreateUserAsync(user);
+        await sutProvider.GetDependency<IUserService>().Received(1).CreateUserAsync(user);
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendWelcomeEmailAsync(user);
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+            .RaiseEventAsync(
+                Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup)
+            );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUser_WhenCreateUserFails_ReturnsIdentityResultFailed(SutProvider<RegisterUserCommand> sutProvider, User user)
+    public async Task RegisterUser_WhenCreateUserFails_ReturnsIdentityResultFailed(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user)
             .Returns(IdentityResult.Failed());
 
@@ -78,15 +82,15 @@ public class RegisterUserCommandTests
         // Assert
         Assert.False(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
-            .Received(1)
-            .CreateUserAsync(user);
+        await sutProvider.GetDependency<IUserService>().Received(1).CreateUserAsync(user);
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider
+            .GetDependency<IMailService>()
             .DidNotReceive()
             .SendWelcomeEmailAsync(Arg.Any<User>());
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .DidNotReceive()
             .RaiseEventAsync(Arg.Any<ReferenceEvent>());
     }
@@ -99,28 +103,41 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaOrganizationInviteToken_NoOrgInviteOrOrgUserIdOrReferenceData_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash)
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash
+    )
     {
         // Arrange
         user.ReferenceData = null;
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, null, null);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(
+            user,
+            masterPasswordHash,
+            null,
+            null
+        );
 
         // Assert
         Assert.True(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
             .CreateUserAsync(user, masterPasswordHash);
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+            .RaiseEventAsync(
+                Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup)
+            );
     }
 
     // Complex happy path test
@@ -128,22 +145,30 @@ public class RegisterUserCommandTests
     [BitAutoData(false, null)]
     [BitAutoData(true, "sampleInitiationPath")]
     [BitAutoData(true, "Secrets Manager trial")]
-    public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(bool addUserReferenceData, string initiationPath,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid orgUserId, Policy twoFactorPolicy)
+    public async Task RegisterUserViaOrganizationInviteToken_ComplexHappyPath_Succeeds(
+        bool addUserReferenceData,
+        string initiationPath,
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        OrganizationUser orgUser,
+        string orgInviteToken,
+        Guid orgUserId,
+        Policy twoFactorPolicy
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration.Returns(false);
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration.Returns(false);
 
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration.Returns(true);
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration.Returns(true);
 
         orgUser.Email = user.Email;
         orgUser.Id = orgUserId;
 
         var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
-        sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+        sutProvider
+            .GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
             .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
             .Returns(callInfo =>
             {
@@ -151,34 +176,53 @@ public class RegisterUserCommandTests
                 return true;
             });
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(orgUserId)
             .Returns(orgUser);
 
         twoFactorPolicy.Enabled = true;
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication)
+        sutProvider
+            .GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(
+                orgUser.OrganizationId,
+                PolicyType.TwoFactorAuthentication
+            )
             .Returns(twoFactorPolicy);
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
-        user.ReferenceData = addUserReferenceData ? $"{{\"initiationPath\":\"{initiationPath}\"}}" : null;
+        user.ReferenceData = addUserReferenceData
+            ? $"{{\"initiationPath\":\"{initiationPath}\"}}"
+            : null;
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId);
+        var result = await sutProvider.Sut.RegisterUserViaOrganizationInviteToken(
+            user,
+            masterPasswordHash,
+            orgInviteToken,
+            orgUserId
+        );
 
         // Assert
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
+        await sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .GetByIdAsync(orgUserId);
 
-        await sutProvider.GetDependency<IPolicyRepository>()
+        await sutProvider
+            .GetDependency<IPolicyRepository>()
             .Received(1)
-            .GetByOrganizationIdTypeAsync(orgUser.OrganizationId, PolicyType.TwoFactorAuthentication);
+            .GetByOrganizationIdTypeAsync(
+                orgUser.OrganizationId,
+                PolicyType.TwoFactorAuthentication
+            );
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
             .SetTwoFactorProvider(user, TwoFactorProviderType.Email);
 
@@ -187,61 +231,88 @@ public class RegisterUserCommandTests
         {
             [TwoFactorProviderType.Email] = new TwoFactorProvider
             {
-                MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                Enabled = true
-            }
+                MetaData = new Dictionary<string, object>
+                {
+                    ["Email"] = user.Email.ToLowerInvariant(),
+                },
+                Enabled = true,
+            },
         };
 
-        var serializedTwoFactorProviders =
-            JsonHelpers.LegacySerialize(twoFactorProviders, JsonHelpers.LegacyEnumKeyResolver);
+        var serializedTwoFactorProviders = JsonHelpers.LegacySerialize(
+            twoFactorProviders,
+            JsonHelpers.LegacyEnumKeyResolver
+        );
 
         Assert.Equal(user.TwoFactorProviders, serializedTwoFactorProviders);
 
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(
+                Arg.Is<User>(u => u.EmailVerified == true && u.ApiKey != null),
+                masterPasswordHash
+            );
 
         if (addUserReferenceData)
         {
             if (initiationPath.Contains("Secrets Manager trial"))
             {
-                await sutProvider.GetDependency<IMailService>()
+                await sutProvider
+                    .GetDependency<IMailService>()
                     .Received(1)
                     .SendTrialInitiationEmailAsync(user.Email);
             }
             else
             {
-                await sutProvider.GetDependency<IMailService>()
+                await sutProvider
+                    .GetDependency<IMailService>()
                     .Received(1)
                     .SendWelcomeEmailAsync(user);
             }
 
-            await sutProvider.GetDependency<IReferenceEventService>()
+            await sutProvider
+                .GetDependency<IReferenceEventService>()
                 .Received(1)
-                .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == initiationPath));
-
+                .RaiseEventAsync(
+                    Arg.Is<ReferenceEvent>(refEvent =>
+                        refEvent.Type == ReferenceEventType.Signup
+                        && refEvent.SignupInitiationPath == initiationPath
+                    )
+                );
         }
         else
         {
-            await sutProvider.GetDependency<IReferenceEventService>()
+            await sutProvider
+                .GetDependency<IReferenceEventService>()
                 .Received(1)
-                .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.SignupInitiationPath == default));
+                .RaiseEventAsync(
+                    Arg.Is<ReferenceEvent>(refEvent =>
+                        refEvent.Type == ReferenceEventType.Signup
+                        && refEvent.SignupInitiationPath == default
+                    )
+                );
         }
 
         Assert.True(result.Succeeded);
-
     }
 
     [Theory]
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(string scenario,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
+    public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithDisabledOpenRegistration_ThrowsBadRequestException(
+        string scenario,
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        OrganizationUser orgUser,
+        string orgInviteToken,
+        Guid? orgUserId
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration.Returns(true);
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration.Returns(true);
 
         switch (scenario)
         {
@@ -249,7 +320,8 @@ public class RegisterUserCommandTests
                 orgUser.Email = null; // make org user not match user and thus make tokenable invalid
                 var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
-                sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+                sutProvider
+                    .GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
                     .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
                     .Returns(callInfo =>
                     {
@@ -266,20 +338,37 @@ public class RegisterUserCommandTests
         }
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
-        Assert.Equal("Open registration has been disabled by the system administrator.", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaOrganizationInviteToken(
+                    user,
+                    masterPasswordHash,
+                    orgInviteToken,
+                    orgUserId
+                )
+        );
+        Assert.Equal(
+            "Open registration has been disabled by the system administrator.",
+            exception.Message
+        );
     }
 
     [Theory]
     [BitAutoData("invalidOrgInviteToken")]
     [BitAutoData("nullOrgInviteToken")]
     [BitAutoData("nullOrgUserId")]
-    public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(string scenario,
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, OrganizationUser orgUser, string orgInviteToken, Guid? orgUserId)
+    public async Task RegisterUserViaOrganizationInviteToken_MissingOrInvalidOrgInviteDataWithEnabledOpenRegistration_ThrowsBadRequestException(
+        string scenario,
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        OrganizationUser orgUser,
+        string orgInviteToken,
+        Guid? orgUserId
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration.Returns(false);
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration.Returns(false);
 
         string expectedErrorMessage = null;
         switch (scenario)
@@ -288,7 +377,8 @@ public class RegisterUserCommandTests
                 orgUser.Email = null; // make org user not match user and thus make tokenable invalid
                 var orgInviteTokenable = new OrgUserInviteTokenable(orgUser);
 
-                sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
+                sutProvider
+                    .GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>()
                     .TryUnprotect(orgInviteToken, out Arg.Any<OrgUserInviteTokenable>())
                     .Returns(callInfo =>
                     {
@@ -300,23 +390,33 @@ public class RegisterUserCommandTests
                 break;
             case "nullOrgInviteToken":
                 orgInviteToken = null;
-                expectedErrorMessage = "Organization user id cannot be provided without an organization invite token.";
+                expectedErrorMessage =
+                    "Organization user id cannot be provided without an organization invite token.";
                 break;
             case "nullOrgUserId":
                 orgUserId = default;
-                expectedErrorMessage = "Organization invite token cannot be validated without an organization user id.";
+                expectedErrorMessage =
+                    "Organization invite token cannot be validated without an organization user id.";
                 break;
         }
 
         user.ReferenceData = null;
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
         // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationInviteToken(user, masterPasswordHash, orgInviteToken, orgUserId));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaOrganizationInviteToken(
+                    user,
+                    masterPasswordHash,
+                    orgInviteToken,
+                    orgUserId
+                )
+        );
         Assert.Equal(expectedErrorMessage, exception.Message);
     }
 
@@ -326,71 +426,133 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken, bool receiveMarketingMaterials)
+    public async Task RegisterUserViaEmailVerificationToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string emailVerificationToken,
+        bool receiveMarketingMaterials
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
-            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+        sutProvider
+            .GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(
+                emailVerificationToken,
+                out Arg.Any<RegistrationEmailVerificationTokenable>()
+            )
             .Returns(callInfo =>
             {
-                callInfo[1] = new RegistrationEmailVerificationTokenable(user.Email, user.Name, receiveMarketingMaterials);
+                callInfo[1] = new RegistrationEmailVerificationTokenable(
+                    user.Email,
+                    user.Name,
+                    receiveMarketingMaterials
+                );
                 return true;
             });
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken);
+        var result = await sutProvider.Sut.RegisterUserViaEmailVerificationToken(
+            user,
+            masterPasswordHash,
+            emailVerificationToken
+        );
 
         // Assert
         Assert.True(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(
+                Arg.Is<User>(u =>
+                    u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null
+                ),
+                masterPasswordHash
+            );
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendWelcomeEmailAsync(user);
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup && refEvent.ReceiveMarketingEmails == receiveMarketingMaterials));
+            .RaiseEventAsync(
+                Arg.Is<ReferenceEvent>(refEvent =>
+                    refEvent.Type == ReferenceEventType.Signup
+                    && refEvent.ReceiveMarketingEmails == receiveMarketingMaterials
+                )
+            );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken, bool receiveMarketingMaterials)
+    public async Task RegisterUserViaEmailVerificationToken_InvalidToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string emailVerificationToken,
+        bool receiveMarketingMaterials
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
-            .TryUnprotect(emailVerificationToken, out Arg.Any<RegistrationEmailVerificationTokenable>())
+        sutProvider
+            .GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .TryUnprotect(
+                emailVerificationToken,
+                out Arg.Any<RegistrationEmailVerificationTokenable>()
+            )
             .Returns(callInfo =>
             {
-                callInfo[1] = new RegistrationEmailVerificationTokenable("wrongEmail@test.com", user.Name, receiveMarketingMaterials);
+                callInfo[1] = new RegistrationEmailVerificationTokenable(
+                    "wrongEmail@test.com",
+                    user.Name,
+                    receiveMarketingMaterials
+                );
                 return true;
             });
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaEmailVerificationToken(
+                    user,
+                    masterPasswordHash,
+                    emailVerificationToken
+                )
+        );
         Assert.Equal("Invalid email verification token.", result.Message);
-
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash, string emailVerificationToken)
+    public async Task RegisterUserViaEmailVerificationToken_DisabledOpenRegistration_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string emailVerificationToken
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration = true;
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration = true;
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RegisterUserViaEmailVerificationToken(user, masterPasswordHash, emailVerificationToken));
-        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
-
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaEmailVerificationToken(
+                    user,
+                    masterPasswordHash,
+                    emailVerificationToken
+                )
+        );
+        Assert.Equal(
+            "Open registration has been disabled by the system administrator.",
+            result.Message
+        );
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -399,67 +561,107 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
-        string orgSponsoredFreeFamilyPlanInviteToken)
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+        sutProvider
+            .GetDependency<IValidateRedemptionTokenCommand>()
             .ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, user.Email)
             .Returns((true, new OrganizationSponsorship()));
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken);
+        var result =
+            await sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
+                user,
+                masterPasswordHash,
+                orgSponsoredFreeFamilyPlanInviteToken
+            );
 
         // Assert
         Assert.True(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(
+                Arg.Is<User>(u =>
+                    u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null
+                ),
+                masterPasswordHash
+            );
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendWelcomeEmailAsync(user);
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+            .RaiseEventAsync(
+                Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup)
+            );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_InvalidToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IValidateRedemptionTokenCommand>()
+        sutProvider
+            .GetDependency<IValidateRedemptionTokenCommand>()
             .ValidateRedemptionTokenAsync(orgSponsoredFreeFamilyPlanInviteToken, user.Email)
             .Returns((false, new OrganizationSponsorship()));
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
+                    user,
+                    masterPasswordHash,
+                    orgSponsoredFreeFamilyPlanInviteToken
+                )
+        );
         Assert.Equal("Invalid org sponsored free family plan token.", result.Message);
-
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken)
+    public async Task RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration = true;
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration = true;
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, masterPasswordHash, orgSponsoredFreeFamilyPlanInviteToken));
-        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
+                    user,
+                    masterPasswordHash,
+                    orgSponsoredFreeFamilyPlanInviteToken
+                )
+        );
+        Assert.Equal(
+            "Open registration has been disabled by the system administrator.",
+            result.Message
+        );
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -469,55 +671,87 @@ public class RegisterUserCommandTests
     [Theory]
     [BitAutoData]
     public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_Succeeds(
-        SutProvider<RegisterUserCommand> sutProvider, User user, string masterPasswordHash,
-        EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        EmergencyAccess emergencyAccess,
+        string acceptEmergencyAccessInviteToken,
+        Guid acceptEmergencyAccessId
+    )
     {
         // Arrange
         emergencyAccess.Email = user.Email;
         emergencyAccess.Id = acceptEmergencyAccessId;
 
-        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
-            .TryUnprotect(acceptEmergencyAccessInviteToken, out Arg.Any<EmergencyAccessInviteTokenable>())
+        sutProvider
+            .GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(
+                acceptEmergencyAccessInviteToken,
+                out Arg.Any<EmergencyAccessInviteTokenable>()
+            )
             .Returns(callInfo =>
             {
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 10);
                 return true;
             });
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId);
+        var result = await sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(
+            user,
+            masterPasswordHash,
+            acceptEmergencyAccessInviteToken,
+            acceptEmergencyAccessId
+        );
 
         // Assert
         Assert.True(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(
+                Arg.Is<User>(u =>
+                    u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null
+                ),
+                masterPasswordHash
+            );
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendWelcomeEmailAsync(user);
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+            .RaiseEventAsync(
+                Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup)
+            );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, EmergencyAccess emergencyAccess, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_InvalidToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        EmergencyAccess emergencyAccess,
+        string acceptEmergencyAccessInviteToken,
+        Guid acceptEmergencyAccessId
+    )
     {
         // Arrange
         emergencyAccess.Email = "wrong@email.com";
         emergencyAccess.Id = acceptEmergencyAccessId;
 
-        sutProvider.GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
-            .TryUnprotect(acceptEmergencyAccessInviteToken, out Arg.Any<EmergencyAccessInviteTokenable>())
+        sutProvider
+            .GetDependency<IDataProtectorTokenFactory<EmergencyAccessInviteTokenable>>()
+            .TryUnprotect(
+                acceptEmergencyAccessInviteToken,
+                out Arg.Any<EmergencyAccessInviteTokenable>()
+            )
             .Returns(callInfo =>
             {
                 callInfo[1] = new EmergencyAccessInviteTokenable(emergencyAccess, 10);
@@ -525,25 +759,45 @@ public class RegisterUserCommandTests
             });
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(
+                    user,
+                    masterPasswordHash,
+                    acceptEmergencyAccessInviteToken,
+                    acceptEmergencyAccessId
+                )
+        );
         Assert.Equal("Invalid accept emergency access invite token.", result.Message);
-
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider, User user,
-        string masterPasswordHash, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    public async Task RegisterUserViaAcceptEmergencyAccessInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        string acceptEmergencyAccessInviteToken,
+        Guid acceptEmergencyAccessId
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration = true;
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration = true;
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(user, masterPasswordHash, acceptEmergencyAccessInviteToken, acceptEmergencyAccessId));
-        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaAcceptEmergencyAccessInviteToken(
+                    user,
+                    masterPasswordHash,
+                    acceptEmergencyAccessInviteToken,
+                    acceptEmergencyAccessId
+                )
+        );
+        Assert.Equal(
+            "Open registration has been disabled by the system administrator.",
+            result.Message
+        );
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -552,33 +806,45 @@ public class RegisterUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaProviderInviteToken_Succeeds(SutProvider<RegisterUserCommand> sutProvider,
-        User user, string masterPasswordHash, Guid providerUserId)
+    public async Task RegisterUserViaProviderInviteToken_Succeeds(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        Guid providerUserId
+    )
     {
         // Arrange
         // Start with plaintext
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
-        var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
+        var decryptedProviderInviteToken =
+            $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
 
         // Get the byte array of the plaintext
-        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(decryptedProviderInviteToken);
+        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(
+            decryptedProviderInviteToken
+        );
 
         // Base64 encode the byte array (this is passed to protector.protect(bytes))
-        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(decryptedProviderInviteTokenByteArray);
+        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(
+            decryptedProviderInviteTokenByteArray
+        );
 
         var mockDataProtector = Substitute.For<IDataProtector>();
 
         // Given any byte array, just return the decryptedProviderInviteTokenByteArray (sidestepping any actual encryption)
-        mockDataProtector.Unprotect(Arg.Any<byte[]>()).Returns(decryptedProviderInviteTokenByteArray);
+        mockDataProtector
+            .Unprotect(Arg.Any<byte[]>())
+            .Returns(decryptedProviderInviteTokenByteArray);
 
-        sutProvider.GetDependency<IDataProtectionProvider>()
+        sutProvider
+            .GetDependency<IDataProtectionProvider>()
             .CreateProtector("ProviderServiceDataProtector")
             .Returns(mockDataProtector);
 
-        sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(120); // 5 days
 
-        sutProvider.GetDependency<IUserService>()
+        sutProvider
+            .GetDependency<IUserService>()
             .CreateUserAsync(user, masterPasswordHash)
             .Returns(IdentityResult.Success);
 
@@ -587,99 +853,148 @@ public class RegisterUserCommandTests
         sutProvider.Create();
 
         // Act
-        var result = await sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, providerUserId);
+        var result = await sutProvider.Sut.RegisterUserViaProviderInviteToken(
+            user,
+            masterPasswordHash,
+            base64EncodedProviderInvToken,
+            providerUserId
+        );
 
         // Assert
         Assert.True(result.Succeeded);
 
-        await sutProvider.GetDependency<IUserService>()
+        await sutProvider
+            .GetDependency<IUserService>()
             .Received(1)
-            .CreateUserAsync(Arg.Is<User>(u => u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null), masterPasswordHash);
+            .CreateUserAsync(
+                Arg.Is<User>(u =>
+                    u.Name == user.Name && u.EmailVerified == true && u.ApiKey != null
+                ),
+                masterPasswordHash
+            );
 
-        await sutProvider.GetDependency<IMailService>()
-            .Received(1)
-            .SendWelcomeEmailAsync(user);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendWelcomeEmailAsync(user);
 
-        await sutProvider.GetDependency<IReferenceEventService>()
+        await sutProvider
+            .GetDependency<IReferenceEventService>()
             .Received(1)
-            .RaiseEventAsync(Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup));
+            .RaiseEventAsync(
+                Arg.Is<ReferenceEvent>(refEvent => refEvent.Type == ReferenceEventType.Signup)
+            );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaProviderInviteToken_InvalidToken_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider,
-        User user, string masterPasswordHash, Guid providerUserId)
+    public async Task RegisterUserViaProviderInviteToken_InvalidToken_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        Guid providerUserId
+    )
     {
         // Arrange
         // Start with plaintext
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
-        var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
+        var decryptedProviderInviteToken =
+            $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
 
         // Get the byte array of the plaintext
-        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(decryptedProviderInviteToken);
+        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(
+            decryptedProviderInviteToken
+        );
 
         // Base64 encode the byte array (this is passed to protector.protect(bytes))
-        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(decryptedProviderInviteTokenByteArray);
+        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(
+            decryptedProviderInviteTokenByteArray
+        );
 
         var mockDataProtector = Substitute.For<IDataProtector>();
 
         // Given any byte array, just return the decryptedProviderInviteTokenByteArray (sidestepping any actual encryption)
-        mockDataProtector.Unprotect(Arg.Any<byte[]>()).Returns(decryptedProviderInviteTokenByteArray);
+        mockDataProtector
+            .Unprotect(Arg.Any<byte[]>())
+            .Returns(decryptedProviderInviteTokenByteArray);
 
-        sutProvider.GetDependency<IDataProtectionProvider>()
+        sutProvider
+            .GetDependency<IDataProtectionProvider>()
             .CreateProtector("ProviderServiceDataProtector")
             .Returns(mockDataProtector);
 
-        sutProvider.GetDependency<IGlobalSettings>()
-            .OrganizationInviteExpirationHours.Returns(120); // 5 days
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(120); // 5 days
 
         // Using sutProvider in the parameters of the function means that the constructor has already run for the
         // command so we have to recreate it in order for our mock overrides to be used.
         sutProvider.Create();
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, Guid.NewGuid()));
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaProviderInviteToken(
+                    user,
+                    masterPasswordHash,
+                    base64EncodedProviderInvToken,
+                    Guid.NewGuid()
+                )
+        );
         Assert.Equal("Invalid provider invite token.", result.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RegisterUserViaProviderInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(SutProvider<RegisterUserCommand> sutProvider,
-        User user, string masterPasswordHash, Guid providerUserId)
+    public async Task RegisterUserViaProviderInviteToken_DisabledOpenRegistration_ThrowsBadRequestException(
+        SutProvider<RegisterUserCommand> sutProvider,
+        User user,
+        string masterPasswordHash,
+        Guid providerUserId
+    )
     {
         // Arrange
         // Start with plaintext
         var nowMillis = CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow);
-        var decryptedProviderInviteToken = $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
+        var decryptedProviderInviteToken =
+            $"ProviderUserInvite {providerUserId} {user.Email} {nowMillis}";
 
         // Get the byte array of the plaintext
-        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(decryptedProviderInviteToken);
+        var decryptedProviderInviteTokenByteArray = Encoding.UTF8.GetBytes(
+            decryptedProviderInviteToken
+        );
 
         // Base64 encode the byte array (this is passed to protector.protect(bytes))
-        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(decryptedProviderInviteTokenByteArray);
+        var base64EncodedProviderInvToken = WebEncoders.Base64UrlEncode(
+            decryptedProviderInviteTokenByteArray
+        );
 
         var mockDataProtector = Substitute.For<IDataProtector>();
 
         // Given any byte array, just return the decryptedProviderInviteTokenByteArray (sidestepping any actual encryption)
-        mockDataProtector.Unprotect(Arg.Any<byte[]>()).Returns(decryptedProviderInviteTokenByteArray);
+        mockDataProtector
+            .Unprotect(Arg.Any<byte[]>())
+            .Returns(decryptedProviderInviteTokenByteArray);
 
-        sutProvider.GetDependency<IDataProtectionProvider>()
+        sutProvider
+            .GetDependency<IDataProtectionProvider>()
             .CreateProtector("ProviderServiceDataProtector")
             .Returns(mockDataProtector);
 
-        sutProvider.GetDependency<IGlobalSettings>()
-            .DisableUserRegistration = true;
+        sutProvider.GetDependency<IGlobalSettings>().DisableUserRegistration = true;
 
         // Using sutProvider in the parameters of the function means that the constructor has already run for the
         // command so we have to recreate it in order for our mock overrides to be used.
         sutProvider.Create();
 
         // Act & Assert
-        var result = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RegisterUserViaProviderInviteToken(user, masterPasswordHash, base64EncodedProviderInvToken, providerUserId));
-        Assert.Equal("Open registration has been disabled by the system administrator.", result.Message);
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.RegisterUserViaProviderInviteToken(
+                    user,
+                    masterPasswordHash,
+                    base64EncodedProviderInvToken,
+                    providerUserId
+                )
+        );
+        Assert.Equal(
+            "Open registration has been disabled by the system administrator.",
+            result.Message
+        );
     }
-
-
 }

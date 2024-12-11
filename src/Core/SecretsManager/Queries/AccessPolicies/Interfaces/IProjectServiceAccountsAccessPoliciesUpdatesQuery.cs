@@ -6,5 +6,7 @@ namespace Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 
 public interface IProjectServiceAccountsAccessPoliciesUpdatesQuery
 {
-    Task<ProjectServiceAccountsAccessPoliciesUpdates> GetAsync(ProjectServiceAccountsAccessPolicies grantedPolicies);
+    Task<ProjectServiceAccountsAccessPoliciesUpdates> GetAsync(
+        ProjectServiceAccountsAccessPolicies grantedPolicies
+    );
 }

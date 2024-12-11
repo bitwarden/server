@@ -9,6 +9,10 @@ namespace Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 /// </summary>
 public interface ITdeOffboardingPasswordCommand
 {
-    public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string masterPassword, string key,
-        string orgSsoIdentifier);
+    public Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(
+        User user,
+        string masterPassword,
+        string key,
+        string orgSsoIdentifier
+    );
 }

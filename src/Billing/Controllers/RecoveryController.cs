@@ -12,21 +12,27 @@ namespace Bit.Billing.Controllers;
 public class RecoveryController(
     IStripeEventProcessor stripeEventProcessor,
     IStripeFacade stripeFacade,
-    IWebHostEnvironment webHostEnvironment) : Controller
+    IWebHostEnvironment webHostEnvironment
+) : Controller
 {
-    private readonly string _stripeURL = webHostEnvironment.IsDevelopment() || webHostEnvironment.IsEnvironment("QA")
-        ? "https://dashboard.stripe.com/test"
-        : "https://dashboard.stripe.com";
+    private readonly string _stripeURL =
+        webHostEnvironment.IsDevelopment() || webHostEnvironment.IsEnvironment("QA")
+            ? "https://dashboard.stripe.com/test"
+            : "https://dashboard.stripe.com";
 
     // ReSharper disable once RouteTemplates.ActionRoutePrefixCanBeExtractedToControllerRoute
     [HttpPost("events/inspect")]
-    public async Task<Ok<EventsResponseBody>> InspectEventsAsync([FromBody] EventsRequestBody requestBody)
+    public async Task<Ok<EventsResponseBody>> InspectEventsAsync(
+        [FromBody] EventsRequestBody requestBody
+    )
     {
-        var inspected = await Task.WhenAll(requestBody.EventIds.Select(async eventId =>
-        {
-            var @event = await stripeFacade.GetEvent(eventId);
-            return Map(@event);
-        }));
+        var inspected = await Task.WhenAll(
+            requestBody.EventIds.Select(async eventId =>
+            {
+                var @event = await stripeFacade.GetEvent(eventId);
+                return Map(@event);
+            })
+        );
 
         var response = new EventsResponseBody { Events = inspected.ToList() };
 
@@ -35,34 +41,39 @@ public class RecoveryController(
 
     // ReSharper disable once RouteTemplates.ActionRoutePrefixCanBeExtractedToControllerRoute
     [HttpPost("events/process")]
-    public async Task<Ok<EventsResponseBody>> ProcessEventsAsync([FromBody] EventsRequestBody requestBody)
+    public async Task<Ok<EventsResponseBody>> ProcessEventsAsync(
+        [FromBody] EventsRequestBody requestBody
+    )
     {
-        var processed = await Task.WhenAll(requestBody.EventIds.Select(async eventId =>
-        {
-            var @event = await stripeFacade.GetEvent(eventId);
-            try
+        var processed = await Task.WhenAll(
+            requestBody.EventIds.Select(async eventId =>
             {
-                await stripeEventProcessor.ProcessEventAsync(@event);
-                return Map(@event);
-            }
-            catch (Exception exception)
-            {
-                return Map(@event, exception.Message);
-            }
-        }));
+                var @event = await stripeFacade.GetEvent(eventId);
+                try
+                {
+                    await stripeEventProcessor.ProcessEventAsync(@event);
+                    return Map(@event);
+                }
+                catch (Exception exception)
+                {
+                    return Map(@event, exception.Message);
+                }
+            })
+        );
 
         var response = new EventsResponseBody { Events = processed.ToList() };
 
         return TypedResults.Ok(response);
     }
 
-    private EventResponseBody Map(Event @event, string processingError = null) => new()
-    {
-        Id = @event.Id,
-        URL = $"{_stripeURL}/workbench/events/{@event.Id}",
-        APIVersion = @event.ApiVersion,
-        Type = @event.Type,
-        CreatedUTC = @event.Created,
-        ProcessingError = processingError
-    };
+    private EventResponseBody Map(Event @event, string processingError = null) =>
+        new()
+        {
+            Id = @event.Id,
+            URL = $"{_stripeURL}/workbench/events/{@event.Id}",
+            APIVersion = @event.ApiVersion,
+            Type = @event.Type,
+            CreatedUTC = @event.Created,
+            ProcessingError = processingError,
+        };
 }

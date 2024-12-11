@@ -14,27 +14,38 @@ public partial class DistributedCache : Migration
             name: "Cache",
             columns: table => new
             {
-                Id = table.Column<string>(type: "character varying(449)", maxLength: 449, nullable: false),
+                Id = table.Column<string>(
+                    type: "character varying(449)",
+                    maxLength: 449,
+                    nullable: false
+                ),
                 Value = table.Column<byte[]>(type: "bytea", nullable: true),
-                ExpiresAtTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                ExpiresAtTime = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: false
+                ),
                 SlidingExpirationInSeconds = table.Column<long>(type: "bigint", nullable: true),
-                AbsoluteExpiration = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                AbsoluteExpiration = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: true
+                ),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_Cache", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Cache_ExpiresAtTime",
             table: "Cache",
-            column: "ExpiresAtTime");
+            column: "ExpiresAtTime"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "Cache");
+        migrationBuilder.DropTable(name: "Cache");
     }
 }

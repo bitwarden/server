@@ -17,22 +17,25 @@ public class ServiceAccountGrantedPolicyUpdatesQuery : IServiceAccountGrantedPol
     }
 
     public async Task<ServiceAccountGrantedPoliciesUpdates> GetAsync(
-        ServiceAccountGrantedPolicies grantedPolicies)
+        ServiceAccountGrantedPolicies grantedPolicies
+    )
     {
-        var currentPolicies =
-            await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(grantedPolicies.ServiceAccountId);
+        var currentPolicies = await _accessPolicyRepository.GetServiceAccountGrantedPoliciesAsync(
+            grantedPolicies.ServiceAccountId
+        );
         if (currentPolicies == null)
         {
             return new ServiceAccountGrantedPoliciesUpdates
             {
                 ServiceAccountId = grantedPolicies.ServiceAccountId,
                 OrganizationId = grantedPolicies.OrganizationId,
-                ProjectGrantedPolicyUpdates = grantedPolicies.ProjectGrantedPolicies.Select(p =>
-                    new ServiceAccountProjectAccessPolicyUpdate
+                ProjectGrantedPolicyUpdates = grantedPolicies.ProjectGrantedPolicies.Select(
+                    p => new ServiceAccountProjectAccessPolicyUpdate
                     {
                         Operation = AccessPolicyOperation.Create,
-                        AccessPolicy = p
-                    })
+                        AccessPolicy = p,
+                    }
+                ),
             };
         }
 

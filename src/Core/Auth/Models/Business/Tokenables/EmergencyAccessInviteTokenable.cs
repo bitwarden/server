@@ -27,9 +27,9 @@ public class EmergencyAccessInviteTokenable : Tokens.ExpiringTokenable
 
     public bool IsValid(Guid id, string email)
     {
-        return Id == id &&
-            Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
+        return Id == id && Email.Equals(email, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    protected override bool TokenIsValid() => Identifier == TokenIdentifier && Id != default && !string.IsNullOrWhiteSpace(Email);
+    protected override bool TokenIsValid() =>
+        Identifier == TokenIdentifier && Id != default && !string.IsNullOrWhiteSpace(Email);
 }

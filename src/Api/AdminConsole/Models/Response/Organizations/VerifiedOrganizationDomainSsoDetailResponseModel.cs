@@ -5,18 +5,18 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class VerifiedOrganizationDomainSsoDetailResponseModel : ResponseModel
 {
-    public VerifiedOrganizationDomainSsoDetailResponseModel(VerifiedOrganizationDomainSsoDetail data)
+    public VerifiedOrganizationDomainSsoDetailResponseModel(
+        VerifiedOrganizationDomainSsoDetail data
+    )
         : base("verifiedOrganizationDomainSsoDetails")
     {
-        if (data is null)
-        {
-            throw new ArgumentNullException(nameof(data));
-        }
+        ArgumentNullException.ThrowIfNull(data);
 
         DomainName = data.DomainName;
         OrganizationIdentifier = data.OrganizationIdentifier;
         OrganizationName = data.OrganizationName;
     }
+
     public string DomainName { get; }
     public string OrganizationIdentifier { get; }
     public string OrganizationName { get; }

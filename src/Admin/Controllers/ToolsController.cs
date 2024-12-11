@@ -44,7 +44,8 @@ public class ToolsController : Controller
         ITaxRateRepository taxRateRepository,
         IPaymentService paymentService,
         IStripeAdapter stripeAdapter,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment
+    )
     {
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
@@ -77,11 +78,12 @@ public class ToolsController : Controller
 
         var btGateway = new Braintree.BraintreeGateway
         {
-            Environment = _globalSettings.Braintree.Production ?
-                Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
+            Environment = _globalSettings.Braintree.Production
+                ? Braintree.Environment.PRODUCTION
+                : Braintree.Environment.SANDBOX,
             MerchantId = _globalSettings.Braintree.MerchantId,
             PublicKey = _globalSettings.Braintree.PublicKey,
-            PrivateKey = _globalSettings.Braintree.PrivateKey
+            PrivateKey = _globalSettings.Braintree.PrivateKey,
         };
 
         var btObjIdField = model.Id[0] == 'o' ? "organization_id" : "user_id";
@@ -97,20 +99,24 @@ public class ToolsController : Controller
                     SubmitForSettlement = true,
                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                     {
-                        CustomField = $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
-                    }
+                        CustomField =
+                            $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}",
+                    },
                 },
                 CustomFields = new Dictionary<string, string>
                 {
                     [btObjIdField] = btObjId.ToString(),
-                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
-                }
-            });
+                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion,
+                },
+            }
+        );
 
         if (!transactionResult.IsSuccess())
         {
-            ModelState.AddModelError(string.Empty, "Charge failed. " +
-                "Refer to Braintree admin portal for more information.");
+            ModelState.AddModelError(
+                string.Empty,
+                "Charge failed. " + "Refer to Braintree admin portal for more information."
+            );
         }
         else
         {
@@ -123,11 +129,10 @@ public class ToolsController : Controller
     [RequirePermission(Permission.Tools_CreateEditTransaction)]
     public IActionResult CreateTransaction(Guid? organizationId = null, Guid? userId = null)
     {
-        return View("CreateUpdateTransaction", new CreateUpdateTransactionModel
-        {
-            OrganizationId = organizationId,
-            UserId = userId
-        });
+        return View(
+            "CreateUpdateTransaction",
+            new CreateUpdateTransactionModel { OrganizationId = organizationId, UserId = userId }
+        );
     }
 
     [HttpPost]
@@ -199,15 +204,23 @@ public class ToolsController : Controller
         }
 
         var orgUsers = await _organizationUserRepository.GetManyByOrganizationAsync(
-            model.OrganizationId.Value, null);
+            model.OrganizationId.Value,
+            null
+        );
         var user = orgUsers.FirstOrDefault(u => u.UserId == model.UserId.Value);
         if (user == null)
         {
-            ModelState.AddModelError(nameof(model.UserId), "User Id not found in this organization.");
+            ModelState.AddModelError(
+                nameof(model.UserId),
+                "User Id not found in this organization."
+            );
         }
         else if (user.Type != Core.Enums.OrganizationUserType.Admin)
         {
-            ModelState.AddModelError(nameof(model.UserId), "User is not an admin of this organization.");
+            ModelState.AddModelError(
+                nameof(model.UserId),
+                "User is not an admin of this organization."
+            );
         }
 
         if (!ModelState.IsValid)
@@ -260,7 +273,9 @@ public class ToolsController : Controller
         }
         if (model.InstallationId.HasValue)
         {
-            var installation = await _installationRepository.GetByIdAsync(model.InstallationId.Value);
+            var installation = await _installationRepository.GetByIdAsync(
+                model.InstallationId.Value
+            );
             if (installation == null)
             {
                 ModelState.AddModelError(nameof(model.InstallationId), "Installation not found.");
@@ -278,8 +293,11 @@ public class ToolsController : Controller
 
         if (organization != null)
         {
-            var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization,
-                model.InstallationId.Value, model.Version);
+            var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(
+                organization,
+                model.InstallationId.Value,
+                model.Version
+            );
             var ms = new MemoryStream();
             await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
             ms.Seek(0, SeekOrigin.Begin);
@@ -315,12 +333,14 @@ public class ToolsController : Controller
 
         var skip = (page - 1) * count;
         var rates = await _taxRateRepository.SearchAsync(skip, count);
-        return View(new TaxRatesModel
-        {
-            Items = rates.ToList(),
-            Page = page,
-            Count = count
-        });
+        return View(
+            new TaxRatesModel
+            {
+                Items = rates.ToList(),
+                Page = page,
+                Count = count,
+            }
+        );
     }
 
     [RequirePermission(Permission.Tools_ManageTaxRates)]
@@ -338,7 +358,7 @@ public class ToolsController : Controller
             Country = rate.Country,
             State = rate.State,
             PostalCode = rate.PostalCode,
-            Rate = rate.Rate
+            Rate = rate.Rate,
         };
 
         return View(model);
@@ -367,12 +387,16 @@ public class ToolsController : Controller
             var taxParts = line.Split(',');
             if (taxParts.Length < 2)
             {
-                throw new Exception($"This line is not in the format of <postal code>,<rate>,<state code>,<country code>: {line}");
+                throw new Exception(
+                    $"This line is not in the format of <postal code>,<rate>,<state code>,<country code>: {line}"
+                );
             }
             var postalCode = taxParts[0].Trim();
             if (string.IsNullOrWhiteSpace(postalCode))
             {
-                throw new Exception($"'{line}' is not valid, the first element must contain a postal code.");
+                throw new Exception(
+                    $"'{line}' is not valid, the first element must contain a postal code."
+                );
             }
             if (!decimal.TryParse(taxParts[1], out var rate) || rate <= 0M || rate > 100)
             {
@@ -384,8 +408,11 @@ public class ToolsController : Controller
             {
                 country = "US";
             }
-            var taxRate = currentTaxRates.FirstOrDefault(r => r.Country == country && r.PostalCode == postalCode) ??
-                new TaxRate
+            var taxRate =
+                currentTaxRates.FirstOrDefault(r =>
+                    r.Country == country && r.PostalCode == postalCode
+                )
+                ?? new TaxRate
                 {
                     Country = country,
                     PostalCode = postalCode,
@@ -416,10 +443,15 @@ public class ToolsController : Controller
     [RequirePermission(Permission.Tools_ManageTaxRates)]
     public async Task<IActionResult> TaxRateAddEdit(TaxRateAddEditModel model)
     {
-        var existingRateCheck = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = model.Country, PostalCode = model.PostalCode });
-        if (existingRateCheck.Any())
+        var existingRateCheck = await _taxRateRepository.GetByLocationAsync(
+            new TaxRate() { Country = model.Country, PostalCode = model.PostalCode }
+        );
+        if (existingRateCheck.Count != 0)
         {
-            ModelState.AddModelError(nameof(model.PostalCode), "A tax rate already exists for this Country/Postal Code combination.");
+            ModelState.AddModelError(
+                nameof(model.PostalCode),
+                "A tax rate already exists for this Country/Postal Code combination."
+            );
         }
 
         if (!ModelState.IsValid)
@@ -433,7 +465,7 @@ public class ToolsController : Controller
             Country = model.Country,
             State = model.State,
             PostalCode = model.PostalCode,
-            Rate = model.Rate
+            Rate = model.Rate,
         };
 
         if (!string.IsNullOrWhiteSpace(model.StripeTaxRateId))
@@ -470,17 +502,21 @@ public class ToolsController : Controller
         var subscriptions = await _stripeAdapter.SubscriptionListAsync(options);
 
         options.StartingAfter = subscriptions.LastOrDefault()?.Id;
-        options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
-            subscriptions.FirstOrDefault()?.Id :
-            null;
+        options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options)
+            ? subscriptions.FirstOrDefault()?.Id
+            : null;
 
         var isProduction = _environment.IsProduction();
         var model = new StripeSubscriptionsModel()
         {
             Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
-            Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
-            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync(),
-            Filter = options
+            Prices = (
+                await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })
+            ).Data,
+            TestClocks = isProduction
+                ? new List<Stripe.TestHelpers.TestClock>()
+                : await _stripeAdapter.TestClockListAsync(),
+            Filter = options,
         };
         return View(model);
     }
@@ -492,16 +528,23 @@ public class ToolsController : Controller
         if (!ModelState.IsValid)
         {
             var isProduction = _environment.IsProduction();
-            model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
-            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync();
+            model.Prices = (
+                await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })
+            ).Data;
+            model.TestClocks = isProduction
+                ? new List<Stripe.TestHelpers.TestClock>()
+                : await _stripeAdapter.TestClockListAsync();
             return View(model);
         }
 
-        if (model.Action == StripeSubscriptionsAction.Export || model.Action == StripeSubscriptionsAction.BulkCancel)
+        if (
+            model.Action == StripeSubscriptionsAction.Export
+            || model.Action == StripeSubscriptionsAction.BulkCancel
+        )
         {
-            var subscriptions = model.Filter.SelectAll ?
-                await _stripeAdapter.SubscriptionListAsync(model.Filter) :
-                model.Items.Where(x => x.Selected).Select(x => x.Subscription);
+            var subscriptions = model.Filter.SelectAll
+                ? await _stripeAdapter.SubscriptionListAsync(model.Filter)
+                : model.Items.Where(x => x.Selected).Select(x => x.Subscription);
 
             if (model.Action == StripeSubscriptionsAction.Export)
             {
@@ -515,16 +558,24 @@ public class ToolsController : Controller
         }
         else
         {
-            if (model.Action == StripeSubscriptionsAction.PreviousPage || model.Action == StripeSubscriptionsAction.Search)
+            if (
+                model.Action == StripeSubscriptionsAction.PreviousPage
+                || model.Action == StripeSubscriptionsAction.Search
+            )
             {
                 model.Filter.StartingAfter = null;
             }
 
-            if (model.Action == StripeSubscriptionsAction.NextPage || model.Action == StripeSubscriptionsAction.Search)
+            if (
+                model.Action == StripeSubscriptionsAction.NextPage
+                || model.Action == StripeSubscriptionsAction.Search
+            )
             {
                 if (!string.IsNullOrEmpty(model.Filter.StartingAfter))
                 {
-                    var subscription = await _stripeAdapter.SubscriptionGetAsync(model.Filter.StartingAfter);
+                    var subscription = await _stripeAdapter.SubscriptionGetAsync(
+                        model.Filter.StartingAfter
+                    );
                     if (subscription.Status == "canceled")
                     {
                         model.Filter.StartingAfter = null;
@@ -534,13 +585,15 @@ public class ToolsController : Controller
             }
         }
 
-
         return RedirectToAction("StripeSubscriptions", model.Filter);
     }
 
     // This requires a redundant API call to Stripe because of the way they handle pagination.
     // The StartingBefore value has to be inferred from the list we get, and isn't supplied by Stripe.
-    private async Task<bool> StripeSubscriptionsGetHasPreviousPage(List<Stripe.Subscription> subscriptions, StripeSubscriptionListOptions options)
+    private async Task<bool> StripeSubscriptionsGetHasPreviousPage(
+        List<Stripe.Subscription> subscriptions,
+        StripeSubscriptionListOptions options
+    )
     {
         var hasPreviousPage = false;
         if (subscriptions.FirstOrDefault()?.Id != null)
@@ -552,9 +605,10 @@ public class ToolsController : Controller
                 Status = options.Status,
                 CurrentPeriodEndDate = options.CurrentPeriodEndDate,
                 CurrentPeriodEndRange = options.CurrentPeriodEndRange,
-                Price = options.Price
+                Price = options.Price,
             };
-            hasPreviousPage = (await _stripeAdapter.SubscriptionListAsync(previousPageSearchOptions)).Count > 0;
+            hasPreviousPage =
+                (await _stripeAdapter.SubscriptionListAsync(previousPageSearchOptions)).Count > 0;
         }
         return hasPreviousPage;
     }
@@ -579,13 +633,13 @@ public class ToolsController : Controller
             CustomerEmail = s.Customer?.Email,
             SubscriptionStatus = s.Status,
             InvoiceDueDate = s.CurrentPeriodEnd,
-            SubscriptionProducts = s.Items?.Data.Select(p => p.Plan.Id)
+            SubscriptionProducts = s.Items?.Data.Select(p => p.Plan.Id),
         });
 
         var options = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
+            WriteIndented = true,
         };
 
         var result = System.Text.Json.JsonSerializer.Serialize(fieldsToExport, options);

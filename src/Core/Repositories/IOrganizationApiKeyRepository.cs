@@ -7,5 +7,8 @@ namespace Bit.Core.Repositories;
 
 public interface IOrganizationApiKeyRepository : IRepository<OrganizationApiKey, Guid>
 {
-    Task<IEnumerable<OrganizationApiKey>> GetManyByOrganizationIdTypeAsync(Guid organizationId, OrganizationApiKeyType? type = null);
+    Task<IEnumerable<OrganizationApiKey>> GetManyByOrganizationIdTypeAsync(
+        Guid organizationId,
+        OrganizationApiKeyType? type = null
+    );
 }

@@ -13,12 +13,16 @@ public class DeleteOrganizationConnectionCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task DeleteAsync_CallsDelete(OrganizationConnection connection,
-        SutProvider<DeleteOrganizationConnectionCommand> sutProvider)
+    public async Task DeleteAsync_CallsDelete(
+        OrganizationConnection connection,
+        SutProvider<DeleteOrganizationConnectionCommand> sutProvider
+    )
     {
         await sutProvider.Sut.DeleteAsync(connection);
 
-        await sutProvider.GetDependency<IOrganizationConnectionRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IOrganizationConnectionRepository>()
+            .Received(1)
             .DeleteAsync(connection);
     }
 }

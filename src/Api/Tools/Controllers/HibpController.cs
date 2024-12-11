@@ -14,8 +14,9 @@ namespace Bit.Api.Tools.Controllers;
 [Authorize("Application")]
 public class HibpController : Controller
 {
-    private const string HibpBreachApi = "https://haveibeenpwned.com/api/v3/breachedaccount/{0}" +
-        "?truncateResponse=false&includeUnverified=false";
+    private const string HibpBreachApi =
+        "https://haveibeenpwned.com/api/v3/breachedaccount/{0}"
+        + "?truncateResponse=false&includeUnverified=false";
     private static HttpClient _httpClient;
 
     private readonly IUserService _userService;
@@ -31,7 +32,8 @@ public class HibpController : Controller
     public HibpController(
         IUserService userService,
         ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _userService = userService;
         _currentContext = currentContext;
@@ -51,7 +53,10 @@ public class HibpController : Controller
         {
             throw new BadRequestException("HaveIBeenPwned API key not set.");
         }
-        var request = new HttpRequestMessage(HttpMethod.Get, string.Format(HibpBreachApi, username));
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            string.Format(HibpBreachApi, username)
+        );
         request.Headers.Add("hibp-api-key", _globalSettings.HibpApiKey);
         request.Headers.Add("hibp-client-id", GetClientId());
         request.Headers.Add("User-Agent", _userAgent);
@@ -88,10 +93,7 @@ public class HibpController : Controller
     private string GetClientId()
     {
         var userId = _userService.GetProperUserId(User).Value;
-        using (var sha256 = SHA256.Create())
-        {
-            var hash = sha256.ComputeHash(userId.ToByteArray());
-            return Convert.ToBase64String(hash);
-        }
+        var hash = SHA256.HashData(userId.ToByteArray());
+        return Convert.ToBase64String(hash);
     }
 }

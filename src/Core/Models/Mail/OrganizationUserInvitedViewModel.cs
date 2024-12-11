@@ -8,7 +8,6 @@ namespace Bit.Core.Models.Mail;
 
 public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
 {
-
     // Private constructor to enforce usage of the factory method.
     private OrganizationUserInvitedViewModel() { }
 
@@ -16,18 +15,23 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
         OrganizationInvitesInfo orgInvitesInfo,
         OrganizationUser orgUser,
         ExpiringToken expiringToken,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
-        var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
+        var freeOrgTitle =
+            "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
         return new OrganizationUserInvitedViewModel
         {
             TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
-            TitleSecondBold =
-                orgInvitesInfo.IsFreeOrg
-                    ? string.Empty
-                    : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
-            TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
-            OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + orgUser.Status,
+            TitleSecondBold = orgInvitesInfo.IsFreeOrg
+                ? string.Empty
+                : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+            TitleThird = orgInvitesInfo.IsFreeOrg
+                ? string.Empty
+                : " on Bitwarden and start securing your passwords!",
+            OrganizationName =
+                CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false)
+                + orgUser.Status,
             Email = WebUtility.UrlEncode(orgUser.Email),
             OrganizationId = orgUser.OrganizationId.ToString(),
             OrganizationUserId = orgUser.Id.ToString(),
@@ -41,7 +45,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
             OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
             OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
             OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
-            OrgUserHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id]
+            OrgUserHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[orgUser.Id],
         };
     }
 
@@ -71,7 +75,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
                 $"organizationName={OrganizationNameUrlEncoded}",
                 $"token={Token}",
                 $"initOrganization={InitOrganization}",
-                $"orgUserHasExistingUser={OrgUserHasExistingUser}"
+                $"orgUserHasExistingUser={OrgUserHasExistingUser}",
             };
 
             if (OrgSsoEnabled && OrgSsoLoginRequiredPolicyEnabled)

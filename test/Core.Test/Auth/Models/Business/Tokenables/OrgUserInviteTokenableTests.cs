@@ -4,7 +4,6 @@ using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Xunit;
 
-
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
@@ -56,10 +55,7 @@ public class OrgUserInviteTokenableTests
     public void Constructor_CustomExpirationDate_ExpirationMatchesProvidedValue()
     {
         var customExpiration = DateTime.UtcNow.AddHours(3);
-        var token = new OrgUserInviteTokenable
-        {
-            ExpirationDate = customExpiration
-        };
+        var token = new OrgUserInviteTokenable { ExpirationDate = customExpiration };
 
         Assert.True(TimesAreCloseEnough(customExpiration, token.ExpirationDate, _timeTolerance));
     }
@@ -81,10 +77,7 @@ public class OrgUserInviteTokenableTests
     [Fact]
     public void Valid_WrongIdentifier_ReturnsFalse()
     {
-        var token = new OrgUserInviteTokenable
-        {
-            Identifier = "IncorrectIdentifier"
-        };
+        var token = new OrgUserInviteTokenable { Identifier = "IncorrectIdentifier" };
 
         Assert.False(token.Valid);
     }
@@ -97,7 +90,7 @@ public class OrgUserInviteTokenableTests
     {
         var token = new OrgUserInviteTokenable
         {
-            OrgUserId = default // Guid.Empty
+            OrgUserId = default, // Guid.Empty
         };
 
         Assert.False(token.Valid);
@@ -111,14 +104,10 @@ public class OrgUserInviteTokenableTests
     [InlineData("")]
     public void Valid_NullOrEmptyOrgUserEmail_ReturnsFalse(string email)
     {
-        var token = new OrgUserInviteTokenable
-        {
-            OrgUserEmail = email
-        };
+        var token = new OrgUserInviteTokenable { OrgUserEmail = email };
 
         Assert.False(token.Valid);
     }
-
 
     /// <summary>
     /// Tests the validity of the token when the token is expired.
@@ -127,14 +116,10 @@ public class OrgUserInviteTokenableTests
     public void Valid_ExpiredToken_ReturnsFalse()
     {
         var expiredDate = DateTime.UtcNow.AddHours(-3);
-        var token = new OrgUserInviteTokenable
-        {
-            ExpirationDate = expiredDate
-        };
+        var token = new OrgUserInviteTokenable { ExpirationDate = expiredDate };
 
         Assert.False(token.Valid);
     }
-
 
     /// <summary>
     /// Tests the TokenIsValid method when given a null OrganizationUser object.
@@ -155,7 +140,7 @@ public class OrgUserInviteTokenableTests
     {
         var token = new OrgUserInviteTokenable(orgUser)
         {
-            OrgUserId = Guid.NewGuid() // Force a different ID
+            OrgUserId = Guid.NewGuid(), // Force a different ID
         };
 
         Assert.False(token.TokenIsValid(orgUser));
@@ -169,7 +154,7 @@ public class OrgUserInviteTokenableTests
     {
         var token = new OrgUserInviteTokenable(orgUser)
         {
-            OrgUserEmail = "wrongemail@example.com" // Force a different email
+            OrgUserEmail = "wrongemail@example.com", // Force a different email
         };
 
         Assert.False(token.TokenIsValid(orgUser));
@@ -200,7 +185,6 @@ public class OrgUserInviteTokenableTests
         Assert.True(token.TokenIsValid(orgUser));
     }
 
-
     /// <summary>
     /// Tests the TokenIsValid method when the token is expired.
     /// Should return true as TokenIsValid only validates token data -- not token expiration.
@@ -209,10 +193,7 @@ public class OrgUserInviteTokenableTests
     public void TokenIsValid_ExpiredToken_ReturnsTrue(OrganizationUser orgUser)
     {
         var expiredDate = DateTime.UtcNow.AddHours(-3);
-        var token = new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = expiredDate
-        };
+        var token = new OrgUserInviteTokenable(orgUser) { ExpirationDate = expiredDate };
 
         Assert.True(token.TokenIsValid(orgUser));
     }
@@ -225,10 +206,7 @@ public class OrgUserInviteTokenableTests
     {
         // Arbitrary time for testing
         var expectedDateTime = DateTime.UtcNow.AddHours(-3);
-        var token = new OrgUserInviteTokenable(orgUser)
-        {
-            ExpirationDate = expectedDateTime
-        };
+        var token = new OrgUserInviteTokenable(orgUser) { ExpirationDate = expectedDateTime };
 
         var result = Tokenable.FromToken<OrgUserInviteTokenable>(token.ToToken());
 

@@ -8,6 +8,7 @@ public class SubscriptionInfoCustomizeAttribute : BitCustomizeAttribute
 {
     public override ICustomization GetCustomization() => new SubscriptionInfoCustomization();
 }
+
 public class SubscriptionInfoCustomization : ICustomization
 {
     public void Customize(IFixture fixture)

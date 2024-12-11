@@ -16,11 +16,8 @@ public class BaseMailModel
             return WebVaultUrl;
         }
     }
-    public string CurrentYear
+    public static string CurrentYear
     {
-        get
-        {
-            return DateTime.UtcNow.Year.ToString();
-        }
+        get { return DateTime.UtcNow.Year.ToString(); }
     }
 }

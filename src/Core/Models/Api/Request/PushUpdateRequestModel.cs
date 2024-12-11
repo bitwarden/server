@@ -4,8 +4,7 @@ namespace Bit.Core.Models.Api;
 
 public class PushUpdateRequestModel
 {
-    public PushUpdateRequestModel()
-    { }
+    public PushUpdateRequestModel() { }
 
     public PushUpdateRequestModel(IEnumerable<string> deviceIds, string organizationId)
     {
@@ -15,6 +14,7 @@ public class PushUpdateRequestModel
 
     [Required]
     public IEnumerable<PushDeviceRequestModel> Devices { get; set; }
+
     [Required]
     public string OrganizationId { get; set; }
 }

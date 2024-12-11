@@ -8,13 +8,13 @@ using EFProviderInvoiceItem = Bit.Infrastructure.EntityFramework.Billing.Models.
 
 namespace Bit.Infrastructure.EntityFramework.Billing.Repositories;
 
-public class ProviderInvoiceItemRepository(
-    IMapper mapper,
-    IServiceScopeFactory serviceScopeFactory)
+public class ProviderInvoiceItemRepository(IMapper mapper, IServiceScopeFactory serviceScopeFactory)
     : Repository<ProviderInvoiceItem, EFProviderInvoiceItem, Guid>(
         serviceScopeFactory,
         mapper,
-        context => context.ProviderInvoiceItems), IProviderInvoiceItemRepository
+        context => context.ProviderInvoiceItems
+    ),
+        IProviderInvoiceItemRepository
 {
     public async Task<ICollection<ProviderInvoiceItem>> GetByInvoiceId(string invoiceId)
     {

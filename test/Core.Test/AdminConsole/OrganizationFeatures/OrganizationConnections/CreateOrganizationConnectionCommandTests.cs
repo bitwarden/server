@@ -15,12 +15,16 @@ public class CreateOrganizationConnectionCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task CreateAsync_CallsCreate(OrganizationConnectionData<BillingSyncConfig> data,
-        SutProvider<CreateOrganizationConnectionCommand> sutProvider)
+    public async Task CreateAsync_CallsCreate(
+        OrganizationConnectionData<BillingSyncConfig> data,
+        SutProvider<CreateOrganizationConnectionCommand> sutProvider
+    )
     {
         await sutProvider.Sut.CreateAsync(data);
 
-        await sutProvider.GetDependency<IOrganizationConnectionRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IOrganizationConnectionRepository>()
+            .Received(1)
             .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.ToEntity())));
     }
 }

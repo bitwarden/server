@@ -18,10 +18,7 @@ public class AzureQueuePushNotificationServiceTests
         _globalSettings = new GlobalSettings();
         _httpContextAccessor = Substitute.For<IHttpContextAccessor>();
 
-        _sut = new AzureQueuePushNotificationService(
-            _globalSettings,
-            _httpContextAccessor
-        );
+        _sut = new AzureQueuePushNotificationService(_globalSettings, _httpContextAccessor);
     }
 
     // Remove this test when we add actual tests. It only proves that

@@ -18,39 +18,45 @@ public class CollectionCustomization : ICustomization
     {
         var orgId = Guid.NewGuid();
 
-        fixture.Customize<Organization>(composer => composer
-            .With(o => o.Id, orgId));
+        fixture.Customize<Organization>(composer => composer.With(o => o.Id, orgId));
 
-        fixture.Customize<CurrentContextOrganization>(composer => composer
-            .With(o => o.Id, orgId));
+        fixture.Customize<CurrentContextOrganization>(composer => composer.With(o => o.Id, orgId));
 
-        fixture.Customize<OrganizationUser>(composer => composer
-            .With(o => o.OrganizationId, orgId)
-            .WithGuidFromSeed(o => o.Id, _userIdSeed));
+        fixture.Customize<OrganizationUser>(composer =>
+            composer.With(o => o.OrganizationId, orgId).WithGuidFromSeed(o => o.Id, _userIdSeed)
+        );
 
-        fixture.Customize<Collection>(composer => composer
-            .With(o => o.OrganizationId, orgId)
-            .WithGuidFromSeed(c => c.Id, _collectionIdSeed));
+        fixture.Customize<Collection>(composer =>
+            composer
+                .With(o => o.OrganizationId, orgId)
+                .WithGuidFromSeed(c => c.Id, _collectionIdSeed)
+        );
 
-        fixture.Customize<CollectionDetails>(composer => composer
-            .With(o => o.OrganizationId, orgId)
-            .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
+        fixture.Customize<CollectionDetails>(composer =>
+            composer
+                .With(o => o.OrganizationId, orgId)
+                .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed)
+        );
 
-        fixture.Customize<CollectionAdminDetails>(composer => composer
-            .With(o => o.OrganizationId, orgId)
-            .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
+        fixture.Customize<CollectionAdminDetails>(composer =>
+            composer
+                .With(o => o.OrganizationId, orgId)
+                .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed)
+        );
 
-        fixture.Customize<CollectionUser>(c => c
-            .WithGuidFromSeed(cu => cu.OrganizationUserId, _userIdSeed)
-            .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed));
+        fixture.Customize<CollectionUser>(c =>
+            c.WithGuidFromSeed(cu => cu.OrganizationUserId, _userIdSeed)
+                .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed)
+        );
 
-        fixture.Customize<Group>(composer => composer
-            .With(o => o.OrganizationId, orgId)
-            .WithGuidFromSeed(o => o.Id, _groupIdSeed));
+        fixture.Customize<Group>(composer =>
+            composer.With(o => o.OrganizationId, orgId).WithGuidFromSeed(o => o.Id, _groupIdSeed)
+        );
 
-        fixture.Customize<CollectionGroup>(c => c
-            .WithGuidFromSeed(cu => cu.GroupId, _groupIdSeed)
-            .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed));
+        fixture.Customize<CollectionGroup>(c =>
+            c.WithGuidFromSeed(cu => cu.GroupId, _groupIdSeed)
+                .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed)
+        );
     }
 }
 

@@ -12,7 +12,12 @@ public class CreateClientOrganizationRequestBody
     [Required(ErrorMessage = "'ownerEmail' must be provided")]
     public string OwnerEmail { get; set; }
 
-    [EnumMatches<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly, PlanType.EnterpriseAnnually, ErrorMessage = "'planType' must be Teams (Monthly), Enterprise (Monthly) or Enterprise (Annually)")]
+    [EnumMatches<PlanType>(
+        PlanType.TeamsMonthly,
+        PlanType.EnterpriseMonthly,
+        PlanType.EnterpriseAnnually,
+        ErrorMessage = "'planType' must be Teams (Monthly), Enterprise (Monthly) or Enterprise (Annually)"
+    )]
     public PlanType PlanType { get; set; }
 
     [Range(1, int.MaxValue, ErrorMessage = "'seats' must be greater than 0")]

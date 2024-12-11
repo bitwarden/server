@@ -24,7 +24,8 @@ public class EfMigrationTesterService : IMigrationTesterService
     public EfMigrationTesterService(
         DatabaseContext databaseContext,
         SupportedDatabaseProviders databaseType,
-        string migrationName)
+        string migrationName
+    )
     {
         _databaseContext = databaseContext;
         _databaseType = databaseType;
@@ -45,7 +46,8 @@ public class EfMigrationTesterService : IMigrationTesterService
     /// </summary>
     private void DeleteMigrationHistory()
     {
-        var deleteCommand = "DELETE FROM __EFMigrationsHistory WHERE MigrationId LIKE @migrationName";
+        var deleteCommand =
+            "DELETE FROM __EFMigrationsHistory WHERE MigrationId LIKE @migrationName";
         IDbDataParameter? parameter;
 
         switch (_databaseType)
@@ -54,7 +56,8 @@ public class EfMigrationTesterService : IMigrationTesterService
                 parameter = new MySqlParameter("@migrationName", "%" + _migrationName);
                 break;
             case SupportedDatabaseProviders.Postgres:
-                deleteCommand = "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" LIKE @migrationName";
+                deleteCommand =
+                    "DELETE FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" LIKE @migrationName";
                 parameter = new NpgsqlParameter("@migrationName", "%" + _migrationName);
                 break;
             case SupportedDatabaseProviders.Sqlite:

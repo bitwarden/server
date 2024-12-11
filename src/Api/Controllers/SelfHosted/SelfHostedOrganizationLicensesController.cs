@@ -36,7 +36,8 @@ public class SelfHostedOrganizationLicensesController : Controller
         IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IUserService userService,
-        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand)
+        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand
+    )
     {
         _currentContext = currentContext;
         _selfHostedGetOrganizationLicenseQuery = selfHostedGetOrganizationLicenseQuery;
@@ -48,7 +49,9 @@ public class SelfHostedOrganizationLicensesController : Controller
     }
 
     [HttpPost("")]
-    public async Task<OrganizationResponseModel> PostLicenseAsync(OrganizationCreateLicenseRequestModel model)
+    public async Task<OrganizationResponseModel> PostLicenseAsync(
+        OrganizationCreateLicenseRequestModel model
+    )
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -56,14 +59,23 @@ public class SelfHostedOrganizationLicensesController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
+        var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(
+            HttpContext,
+            model.License
+        );
         if (license == null)
         {
             throw new BadRequestException("Invalid license");
         }
 
-        var result = await _organizationService.SignUpAsync(license, user, model.Key,
-            model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
+        var result = await _organizationService.SignUpAsync(
+            license,
+            user,
+            model.Key,
+            model.CollectionName,
+            model.Keys?.PublicKey,
+            model.Keys?.EncryptedPrivateKey
+        );
         return new OrganizationResponseModel(result.Item1);
     }
 
@@ -76,27 +88,38 @@ public class SelfHostedOrganizationLicensesController : Controller
             throw new NotFoundException();
         }
 
-        var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
+        var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(
+            HttpContext,
+            model.License
+        );
         if (license == null)
         {
             throw new BadRequestException("Invalid license");
         }
 
-        var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
+        var selfHostedOrganizationDetails =
+            await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
         if (selfHostedOrganizationDetails == null)
         {
             throw new NotFoundException();
         }
 
-        var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
+        var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(
+            license.LicenseKey
+        );
 
-        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(
+            selfHostedOrganizationDetails,
+            license,
+            currentOrganization
+        );
     }
 
     [HttpPost("{id}/sync")]
     public async Task SyncLicenseAsync(string id)
     {
-        var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(new Guid(id));
+        var selfHostedOrganizationDetails =
+            await _organizationRepository.GetSelfHostedOrganizationDetailsById(new Guid(id));
         if (selfHostedOrganizationDetails == null)
         {
             throw new NotFoundException();
@@ -107,19 +130,30 @@ public class SelfHostedOrganizationLicensesController : Controller
             throw new NotFoundException();
         }
 
-        var billingSyncConnection =
-            (await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(selfHostedOrganizationDetails.Id,
-                OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
+        var billingSyncConnection = (
+            await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(
+                selfHostedOrganizationDetails.Id,
+                OrganizationConnectionType.CloudBillingSync
+            )
+        ).FirstOrDefault();
         if (billingSyncConnection == null)
         {
             throw new NotFoundException("Unable to get Cloud Billing Sync connection");
         }
 
-        var license =
-            await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(selfHostedOrganizationDetails, billingSyncConnection);
-        var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
+        var license = await _selfHostedGetOrganizationLicenseQuery.GetLicenseAsync(
+            selfHostedOrganizationDetails,
+            billingSyncConnection
+        );
+        var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(
+            license.LicenseKey
+        );
 
-        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(
+            selfHostedOrganizationDetails,
+            license,
+            currentOrganization
+        );
 
         var config = billingSyncConnection.GetConfig<BillingSyncConfig>();
         config.LastLicenseSync = DateTime.Now;

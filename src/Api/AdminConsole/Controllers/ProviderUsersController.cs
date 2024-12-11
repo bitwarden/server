@@ -25,7 +25,8 @@ public class ProviderUsersController : Controller
         IProviderUserRepository providerUserRepository,
         IProviderService providerService,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _providerUserRepository = providerUserRepository;
         _providerService = providerService;
@@ -66,23 +67,35 @@ public class ProviderUsersController : Controller
             throw new NotFoundException();
         }
 
-        var invite = ProviderUserInviteFactory.CreateInitialInvite(model.Emails, model.Type.Value,
-            _userService.GetProperUserId(User).Value, providerId);
+        var invite = ProviderUserInviteFactory.CreateInitialInvite(
+            model.Emails,
+            model.Type.Value,
+            _userService.GetProperUserId(User).Value,
+            providerId
+        );
         await _providerService.InviteUserAsync(invite);
     }
 
     [HttpPost("reinvite")]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkReinvite(
+        Guid providerId,
+        [FromBody] ProviderUserBulkRequestModel model
+    )
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
             throw new NotFoundException();
         }
 
-        var invite = ProviderUserInviteFactory.CreateReinvite(model.Ids, _userService.GetProperUserId(User).Value, providerId);
+        var invite = ProviderUserInviteFactory.CreateReinvite(
+            model.Ids,
+            _userService.GetProperUserId(User).Value,
+            providerId
+        );
         var result = await _providerService.ResendInvitesAsync(invite);
         return new ListResponseModel<ProviderUserBulkResponseModel>(
-            result.Select(t => new ProviderUserBulkResponseModel(t.Item1.Id, t.Item2)));
+            result.Select(t => new ProviderUserBulkResponseModel(t.Item1.Id, t.Item2))
+        );
     }
 
     [HttpPost("{id:guid}/reinvite")]
@@ -93,13 +106,20 @@ public class ProviderUsersController : Controller
             throw new NotFoundException();
         }
 
-        var invite = ProviderUserInviteFactory.CreateReinvite(new[] { id },
-            _userService.GetProperUserId(User).Value, providerId);
+        var invite = ProviderUserInviteFactory.CreateReinvite(
+            new[] { id },
+            _userService.GetProperUserId(User).Value,
+            providerId
+        );
         await _providerService.ResendInvitesAsync(invite);
     }
 
     [HttpPost("{id:guid}/accept")]
-    public async Task Accept(Guid providerId, Guid id, [FromBody] ProviderUserAcceptRequestModel model)
+    public async Task Accept(
+        Guid providerId,
+        Guid id,
+        [FromBody] ProviderUserAcceptRequestModel model
+    )
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -111,7 +131,11 @@ public class ProviderUsersController : Controller
     }
 
     [HttpPost("{id:guid}/confirm")]
-    public async Task Confirm(Guid providerId, Guid id, [FromBody] ProviderUserConfirmRequestModel model)
+    public async Task Confirm(
+        Guid providerId,
+        Guid id,
+        [FromBody] ProviderUserConfirmRequestModel model
+    )
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
@@ -119,12 +143,18 @@ public class ProviderUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _providerService.ConfirmUsersAsync(providerId, new Dictionary<Guid, string> { [id] = model.Key }, userId.Value);
+        await _providerService.ConfirmUsersAsync(
+            providerId,
+            new Dictionary<Guid, string> { [id] = model.Key },
+            userId.Value
+        );
     }
 
     [HttpPost("confirm")]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkConfirm(Guid providerId,
-        [FromBody] ProviderUserBulkConfirmRequestModel model)
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkConfirm(
+        Guid providerId,
+        [FromBody] ProviderUserBulkConfirmRequestModel model
+    )
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
@@ -132,22 +162,35 @@ public class ProviderUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var results = await _providerService.ConfirmUsersAsync(providerId, model.ToDictionary(), userId.Value);
+        var results = await _providerService.ConfirmUsersAsync(
+            providerId,
+            model.ToDictionary(),
+            userId.Value
+        );
 
-        return new ListResponseModel<ProviderUserBulkResponseModel>(results.Select(r =>
-            new ProviderUserBulkResponseModel(r.Item1.Id, r.Item2)));
+        return new ListResponseModel<ProviderUserBulkResponseModel>(
+            results.Select(r => new ProviderUserBulkResponseModel(r.Item1.Id, r.Item2))
+        );
     }
 
     [HttpPost("public-keys")]
-    public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserPublicKeyResponseModel>> UserPublicKeys(
+        Guid providerId,
+        [FromBody] ProviderUserBulkRequestModel model
+    )
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
             throw new NotFoundException();
         }
 
-        var result = await _providerUserRepository.GetManyPublicKeysByProviderUserAsync(providerId, model.Ids);
-        var responses = result.Select(r => new ProviderUserPublicKeyResponseModel(r.Id, r.UserId, r.PublicKey)).ToList();
+        var result = await _providerUserRepository.GetManyPublicKeysByProviderUserAsync(
+            providerId,
+            model.Ids
+        );
+        var responses = result
+            .Select(r => new ProviderUserPublicKeyResponseModel(r.Id, r.UserId, r.PublicKey))
+            .ToList();
         return new ListResponseModel<ProviderUserPublicKeyResponseModel>(responses);
     }
 
@@ -185,7 +228,10 @@ public class ProviderUsersController : Controller
 
     [HttpDelete("")]
     [HttpPost("delete")]
-    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(Guid providerId, [FromBody] ProviderUserBulkRequestModel model)
+    public async Task<ListResponseModel<ProviderUserBulkResponseModel>> BulkDelete(
+        Guid providerId,
+        [FromBody] ProviderUserBulkRequestModel model
+    )
     {
         if (!_currentContext.ProviderManageUsers(providerId))
         {
@@ -194,7 +240,8 @@ public class ProviderUsersController : Controller
 
         var userId = _userService.GetProperUserId(User);
         var result = await _providerService.DeleteUsersAsync(providerId, model.Ids, userId.Value);
-        return new ListResponseModel<ProviderUserBulkResponseModel>(result.Select(r =>
-            new ProviderUserBulkResponseModel(r.Item1.Id, r.Item2)));
+        return new ListResponseModel<ProviderUserBulkResponseModel>(
+            result.Select(r => new ProviderUserBulkResponseModel(r.Item1.Id, r.Item2))
+        );
     }
 }

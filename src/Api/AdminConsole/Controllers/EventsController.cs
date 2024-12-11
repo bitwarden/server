@@ -29,7 +29,8 @@ public class EventsController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IEventRepository eventRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _userService = userService;
         _cipherRepository = cipherRepository;
@@ -41,19 +42,30 @@ public class EventsController : Controller
 
     [HttpGet("")]
     public async Task<ListResponseModel<EventResponseModel>> GetUser(
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         var dateRange = ApiHelpers.GetDateRange(start, end);
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _eventRepository.GetManyByUserAsync(userId, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByUserAsync(
+            userId,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
     [HttpGet("~/ciphers/{id}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetCipher(string id,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetCipher(
+        string id,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         var cipher = await _cipherRepository.GetByIdAsync(new Guid(id));
         if (cipher == null)
@@ -78,15 +90,23 @@ public class EventsController : Controller
         }
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyByCipherAsync(cipher, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByCipherAsync(
+            cipher,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
     [HttpGet("~/organizations/{id}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetOrganization(string id,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetOrganization(
+        string id,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         var orgId = new Guid(id);
         if (!await _currentContext.AccessEventLogs(orgId))
@@ -95,34 +115,54 @@ public class EventsController : Controller
         }
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByOrganizationAsync(
+            orgId,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
     [HttpGet("~/organizations/{orgId}/users/{id}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(string orgId, string id,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetOrganizationUser(
+        string orgId,
+        string id,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || !organizationUser.UserId.HasValue ||
-            !await _currentContext.AccessEventLogs(organizationUser.OrganizationId))
+        if (
+            organizationUser == null
+            || !organizationUser.UserId.HasValue
+            || !await _currentContext.AccessEventLogs(organizationUser.OrganizationId)
+        )
         {
             throw new NotFoundException();
         }
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyByOrganizationActingUserAsync(organizationUser.OrganizationId,
-            organizationUser.UserId.Value, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByOrganizationActingUserAsync(
+            organizationUser.OrganizationId,
+            organizationUser.UserId.Value,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
     [HttpGet("~/providers/{providerId:guid}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetProvider(Guid providerId,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetProvider(
+        Guid providerId,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         if (!_currentContext.ProviderAccessEventLogs(providerId))
         {
@@ -130,27 +170,43 @@ public class EventsController : Controller
         }
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyByProviderAsync(providerId, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByProviderAsync(
+            providerId,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }
 
     [HttpGet("~/providers/{providerId:guid}/users/{id:guid}/events")]
-    public async Task<ListResponseModel<EventResponseModel>> GetProviderUser(Guid providerId, Guid id,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetProviderUser(
+        Guid providerId,
+        Guid id,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         var providerUser = await _providerUserRepository.GetByIdAsync(id);
-        if (providerUser == null || !providerUser.UserId.HasValue ||
-            !_currentContext.ProviderAccessEventLogs(providerUser.ProviderId))
+        if (
+            providerUser == null
+            || !providerUser.UserId.HasValue
+            || !_currentContext.ProviderAccessEventLogs(providerUser.ProviderId)
+        )
         {
             throw new NotFoundException();
         }
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
-        var result = await _eventRepository.GetManyByProviderActingUserAsync(providerUser.ProviderId,
-            providerUser.UserId.Value, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByProviderActingUserAsync(
+            providerUser.ProviderId,
+            providerUser.UserId.Value,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }

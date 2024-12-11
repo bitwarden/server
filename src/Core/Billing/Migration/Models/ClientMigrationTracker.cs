@@ -11,7 +11,7 @@ public enum ClientMigrationProgress
     ResetOrganization = 6,
     RecreatedSubscription = 7,
     RemovedMigrationRecord = 8,
-    Reversed = 9
+    Reversed = 9,
 }
 
 public class ClientMigrationTracker

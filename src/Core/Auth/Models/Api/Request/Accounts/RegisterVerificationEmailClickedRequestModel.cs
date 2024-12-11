@@ -11,5 +11,4 @@ public class RegisterVerificationEmailClickedRequestModel
     public required string Email { get; set; }
 
     public required string EmailVerificationToken { get; set; }
-
 }

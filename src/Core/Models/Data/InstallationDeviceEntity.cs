@@ -20,7 +20,10 @@ public class InstallationDeviceEntity : ITableEntity
         {
             throw new ArgumentException("Not enough parts.");
         }
-        if (!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
+        if (
+            !Guid.TryParse(parts[0], out var installationId)
+            || !Guid.TryParse(parts[1], out var deviceId)
+        )
         {
             throw new ArgumentException("Could not parse parts.");
         }
@@ -37,7 +40,11 @@ public class InstallationDeviceEntity : ITableEntity
     {
         return deviceId != null && deviceId.Length == 73 && deviceId[36] == '_';
     }
-    public static bool TryParse(string deviceId, out InstallationDeviceEntity installationDeviceEntity)
+
+    public static bool TryParse(
+        string deviceId,
+        out InstallationDeviceEntity installationDeviceEntity
+    )
     {
         installationDeviceEntity = null;
         var installationId = Guid.Empty;
@@ -51,7 +58,10 @@ public class InstallationDeviceEntity : ITableEntity
         {
             return false;
         }
-        if (!Guid.TryParse(parts[0], out installationId) || !Guid.TryParse(parts[1], out deviceIdGuid))
+        if (
+            !Guid.TryParse(parts[0], out installationId)
+            || !Guid.TryParse(parts[1], out deviceIdGuid)
+        )
         {
             return false;
         }

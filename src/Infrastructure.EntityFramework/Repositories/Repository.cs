@@ -9,12 +9,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public abstract class Repository<T, TEntity, TId> : BaseEntityFrameworkRepository, IRepository<T, TId>
+public abstract class Repository<T, TEntity, TId>
+    : BaseEntityFrameworkRepository,
+        IRepository<T, TId>
     where TId : IEquatable<TId>
     where T : class, ITableObject<TId>
     where TEntity : class, ITableObject<TId>
 {
-    public Repository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, Func<DatabaseContext, DbSet<TEntity>> getDbSet)
+    public Repository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        Func<DatabaseContext, DbSet<TEntity>> getDbSet
+    )
         : base(serviceScopeFactory, mapper)
     {
         GetDbSet = getDbSet;

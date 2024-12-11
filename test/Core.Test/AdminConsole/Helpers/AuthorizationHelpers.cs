@@ -19,8 +19,8 @@ public static class AuthorizationHelpers
             .GetType()
             .GetProperties()
             .Where(p =>
-                p.PropertyType == typeof(bool) &&
-                (bool)p.GetValue(permissions, null)! == false)
+                p.PropertyType == typeof(bool) && (bool)p.GetValue(permissions, null)! == false
+            )
             .Select(p => p.Name);
 
         var result = new Permissions();
@@ -41,12 +41,13 @@ public static class AuthorizationHelpers
     /// Used largely for authorization testing.
     /// </summary>
     /// <returns></returns>
-    public static IEnumerable<CurrentContextOrganization> AllRoles() => new List<CurrentContextOrganization>
-    {
-        new () { Type = OrganizationUserType.Owner },
-        new () { Type = OrganizationUserType.Admin },
-        new () { Type = OrganizationUserType.Custom, Permissions = new Permissions() },
-        new () { Type = OrganizationUserType.Custom, Permissions = new Permissions().Invert() },
-        new () { Type = OrganizationUserType.User },
-    };
+    public static IEnumerable<CurrentContextOrganization> AllRoles() =>
+        new List<CurrentContextOrganization>
+        {
+            new() { Type = OrganizationUserType.Owner },
+            new() { Type = OrganizationUserType.Admin },
+            new() { Type = OrganizationUserType.Custom, Permissions = new Permissions() },
+            new() { Type = OrganizationUserType.Custom, Permissions = new Permissions().Invert() },
+            new() { Type = OrganizationUserType.User },
+        };
 }

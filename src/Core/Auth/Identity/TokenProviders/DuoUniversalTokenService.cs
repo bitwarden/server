@@ -26,7 +26,8 @@ public interface IDuoUniversalTokenService
     string GenerateAuthUrl(
         Duo.Client duoClient,
         IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
-        User user);
+        User user
+    );
 
     /// <summary>
     /// Makes the request to Duo to validate the authCode and state token
@@ -40,7 +41,8 @@ public interface IDuoUniversalTokenService
         Duo.Client duoClient,
         IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
         User user,
-        string token);
+        string token
+    );
 
     /// <summary>
     /// Generates a Duo.Client object for use with Duo SDK v4. This method is to validate a Duo configuration
@@ -72,9 +74,8 @@ public interface IDuoUniversalTokenService
     Task<Duo.Client> BuildDuoTwoFactorClientAsync(TwoFactorProvider provider);
 }
 
-public class DuoUniversalTokenService(
-    ICurrentContext currentContext,
-    GlobalSettings globalSettings) : IDuoUniversalTokenService
+public class DuoUniversalTokenService(ICurrentContext currentContext, GlobalSettings globalSettings)
+    : IDuoUniversalTokenService
 {
     private readonly ICurrentContext _currentContext = currentContext;
     private readonly GlobalSettings _globalSettings = globalSettings;
@@ -82,7 +83,8 @@ public class DuoUniversalTokenService(
     public string GenerateAuthUrl(
         Duo.Client duoClient,
         IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
-        User user)
+        User user
+    )
     {
         var state = tokenDataFactory.Protect(new DuoUserStateTokenable(user));
         var authUrl = duoClient.GenerateAuthUri(user.Email, state);
@@ -94,7 +96,8 @@ public class DuoUniversalTokenService(
         Duo.Client duoClient,
         IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
         User user,
-        string token)
+        string token
+    )
     {
         var parts = token.Split("|");
         var authCode = parts[0];
@@ -112,12 +115,18 @@ public class DuoUniversalTokenService(
         return res.AuthResult.Result == "allow";
     }
 
-    public async Task<bool> ValidateDuoConfiguration(string clientSecret, string clientId, string host)
+    public async Task<bool> ValidateDuoConfiguration(
+        string clientSecret,
+        string clientId,
+        string host
+    )
     {
         // Do some simple checks to ensure data integrity
-        if (!ValidDuoHost(host) ||
-            string.IsNullOrWhiteSpace(clientSecret) ||
-            string.IsNullOrWhiteSpace(clientId))
+        if (
+            !ValidDuoHost(host)
+            || string.IsNullOrWhiteSpace(clientSecret)
+            || string.IsNullOrWhiteSpace(clientId)
+        )
         {
             return false;
         }
@@ -130,13 +139,12 @@ public class DuoUniversalTokenService(
 
     public bool HasProperDuoMetadata(TwoFactorProvider provider)
     {
-        return provider?.MetaData != null &&
-               provider.MetaData.ContainsKey("ClientId") &&
-               provider.MetaData.ContainsKey("ClientSecret") &&
-               provider.MetaData.ContainsKey("Host") &&
-               ValidDuoHost((string)provider.MetaData["Host"]);
+        return provider?.MetaData != null
+            && provider.MetaData.ContainsKey("ClientId")
+            && provider.MetaData.ContainsKey("ClientSecret")
+            && provider.MetaData.ContainsKey("Host")
+            && ValidDuoHost((string)provider.MetaData["Host"]);
     }
-
 
     /// <summary>
     /// Checks the host string to make sure it meets Duo's Guidelines before attempting to create a Duo.Client.
@@ -147,9 +155,9 @@ public class DuoUniversalTokenService(
     {
         if (Uri.TryCreate($"https://{host}", UriKind.Absolute, out var uri))
         {
-            return (string.IsNullOrWhiteSpace(uri.PathAndQuery) || uri.PathAndQuery == "/") &&
-                uri.Host.StartsWith("api-") &&
-                (uri.Host.EndsWith(".duosecurity.com") || uri.Host.EndsWith(".duofederal.com"));
+            return (string.IsNullOrWhiteSpace(uri.PathAndQuery) || uri.PathAndQuery == "/")
+                && uri.Host.StartsWith("api-")
+                && (uri.Host.EndsWith(".duosecurity.com") || uri.Host.EndsWith(".duofederal.com"));
         }
         return false;
     }
@@ -158,15 +166,22 @@ public class DuoUniversalTokenService(
     {
         // Fetch Client name from header value since duo auth can be initiated from multiple clients and we want
         // to redirect back to the initiating client
-        _currentContext.HttpContext.Request.Headers.TryGetValue("Bitwarden-Client-Name", out var bitwardenClientName);
-        var redirectUri = string.Format("{0}/duo-redirect-connector.html?client={1}",
-            _globalSettings.BaseServiceUri.Vault, bitwardenClientName.FirstOrDefault() ?? "web");
+        _currentContext.HttpContext.Request.Headers.TryGetValue(
+            "Bitwarden-Client-Name",
+            out var bitwardenClientName
+        );
+        var redirectUri = string.Format(
+            "{0}/duo-redirect-connector.html?client={1}",
+            _globalSettings.BaseServiceUri.Vault,
+            bitwardenClientName.FirstOrDefault() ?? "web"
+        );
 
         var client = new Duo.ClientBuilder(
             (string)provider.MetaData["ClientId"],
             (string)provider.MetaData["ClientSecret"],
             (string)provider.MetaData["Host"],
-            redirectUri).Build();
+            redirectUri
+        ).Build();
 
         if (!await client.DoHealthCheck(false))
         {

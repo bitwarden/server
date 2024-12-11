@@ -50,6 +50,5 @@ public class OrganizationSponsorshipRequestModel
             ValidUntil = ValidUntil,
             ToDelete = ToDelete,
         };
-
     }
 }

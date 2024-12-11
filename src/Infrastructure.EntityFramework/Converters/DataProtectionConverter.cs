@@ -3,11 +3,11 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.Infrastructure.EntityFramework.Converters;
+
 public class DataProtectionConverter : ValueConverter<string, string>
 {
-    public DataProtectionConverter(IDataProtector dataProtector) :
-        base(s => Protect(dataProtector, s), s => Unprotect(dataProtector, s))
-    { }
+    public DataProtectionConverter(IDataProtector dataProtector)
+        : base(s => Protect(dataProtector, s), s => Unprotect(dataProtector, s)) { }
 
     private static string Protect(IDataProtector dataProtector, string value)
     {
@@ -16,8 +16,7 @@ public class DataProtectionConverter : ValueConverter<string, string>
             return value;
         }
 
-        return string.Concat(
-            Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(value));
+        return string.Concat(Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(value));
     }
 
     private static string Unprotect(IDataProtector dataProtector, string value)
@@ -28,6 +27,7 @@ public class DataProtectionConverter : ValueConverter<string, string>
         }
 
         return dataProtector.Unprotect(
-            value.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+            value.Substring(Constants.DatabaseFieldProtectedPrefix.Length)
+        );
     }
 }

@@ -12,7 +12,12 @@ public class EventReadPageByCipherIdQuery : IQuery<Event>
     private readonly DateTime? _beforeDate;
     private readonly PageOptions _pageOptions;
 
-    public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public EventReadPageByCipherIdQuery(
+        Cipher cipher,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
         _cipher = cipher;
         _startDate = startDate;
@@ -21,7 +26,13 @@ public class EventReadPageByCipherIdQuery : IQuery<Event>
         _pageOptions = pageOptions;
     }
 
-    public EventReadPageByCipherIdQuery(Cipher cipher, DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
+    public EventReadPageByCipherIdQuery(
+        Cipher cipher,
+        DateTime startDate,
+        DateTime endDate,
+        DateTime? beforeDate,
+        PageOptions pageOptions
+    )
     {
         _cipher = cipher;
         _startDate = startDate;
@@ -32,16 +43,25 @@ public class EventReadPageByCipherIdQuery : IQuery<Event>
 
     public IQueryable<Event> Run(DatabaseContext dbContext)
     {
-        var q = from e in dbContext.Events
-                where e.Date >= _startDate &&
-                (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                ((!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue) ||
-                (_cipher.OrganizationId.HasValue && _cipher.OrganizationId == e.OrganizationId)) &&
-                ((!_cipher.UserId.HasValue && !e.UserId.HasValue) ||
-                    (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)) &&
-                _cipher.Id == e.CipherId
-                orderby e.Date descending
-                select e;
+        var q =
+            from e in dbContext.Events
+            where
+                e.Date >= _startDate
+                && (_beforeDate == null || e.Date < _beforeDate.Value)
+                && (
+                    (!_cipher.OrganizationId.HasValue && !e.OrganizationId.HasValue)
+                    || (
+                        _cipher.OrganizationId.HasValue
+                        && _cipher.OrganizationId == e.OrganizationId
+                    )
+                )
+                && (
+                    (!_cipher.UserId.HasValue && !e.UserId.HasValue)
+                    || (_cipher.UserId.HasValue && _cipher.UserId == e.UserId)
+                )
+                && _cipher.Id == e.CipherId
+            orderby e.Date descending
+            select e;
         return q.Skip(0).Take(_pageOptions.PageSize);
     }
 }

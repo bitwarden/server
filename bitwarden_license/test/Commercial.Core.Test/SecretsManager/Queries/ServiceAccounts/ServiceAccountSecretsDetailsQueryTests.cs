@@ -24,28 +24,51 @@ public class ServiceAccountSecretsDetailsQueryTests
         Guid userId,
         AccessClientType accessClient,
         ServiceAccount mockSa,
-        ServiceAccountSecretsDetails mockSaDetails)
+        ServiceAccountSecretsDetails mockSaDetails
+    )
     {
-        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default)
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetManyByOrganizationIdAsync(default, default, default)
             .ReturnsForAnyArgs(new List<ServiceAccount> { mockSa });
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdWithSecretsDetailsAsync(default, default, default)
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetManyByOrganizationIdWithSecretsDetailsAsync(default, default, default)
             .ReturnsForAnyArgs(new List<ServiceAccountSecretsDetails> { mockSaDetails });
 
-
-        var result = await sutProvider.Sut.GetManyByOrganizationIdAsync(organizationId, userId, accessClient, includeAccessToSecrets);
+        var result = await sutProvider.Sut.GetManyByOrganizationIdAsync(
+            organizationId,
+            userId,
+            accessClient,
+            includeAccessToSecrets
+        );
 
         if (includeAccessToSecrets)
         {
-            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                .GetManyByOrganizationIdWithSecretsDetailsAsync(Arg.Is(AssertHelper.AssertPropertyEqual(mockSaDetails.ServiceAccount.OrganizationId)),
-                    Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            await sutProvider
+                .GetDependency<IServiceAccountRepository>()
+                .Received(1)
+                .GetManyByOrganizationIdWithSecretsDetailsAsync(
+                    Arg.Is(
+                        AssertHelper.AssertPropertyEqual(
+                            mockSaDetails.ServiceAccount.OrganizationId
+                        )
+                    ),
+                    Arg.Any<Guid>(),
+                    Arg.Any<AccessClientType>()
+                );
         }
         else
         {
-            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(mockSa.OrganizationId)),
-                    Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            await sutProvider
+                .GetDependency<IServiceAccountRepository>()
+                .Received(1)
+                .GetManyByOrganizationIdAsync(
+                    Arg.Is(AssertHelper.AssertPropertyEqual(mockSa.OrganizationId)),
+                    Arg.Any<Guid>(),
+                    Arg.Any<AccessClientType>()
+                );
             Assert.Equal(0, result.First().AccessToSecrets);
         }
     }

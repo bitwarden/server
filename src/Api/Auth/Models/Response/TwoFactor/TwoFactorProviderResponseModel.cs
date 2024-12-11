@@ -13,10 +13,7 @@ public class TwoFactorProviderResponseModel : ResponseModel
     public TwoFactorProviderResponseModel(TwoFactorProviderType type, TwoFactorProvider provider)
         : base(ResponseObj)
     {
-        if (provider == null)
-        {
-            throw new ArgumentNullException(nameof(provider));
-        }
+        ArgumentNullException.ThrowIfNull(provider);
 
         Enabled = provider.Enabled;
         Type = type;
@@ -25,10 +22,7 @@ public class TwoFactorProviderResponseModel : ResponseModel
     public TwoFactorProviderResponseModel(TwoFactorProviderType type, User user)
         : base(ResponseObj)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(type);
         Enabled = provider?.Enabled ?? false;
@@ -38,10 +32,7 @@ public class TwoFactorProviderResponseModel : ResponseModel
     public TwoFactorProviderResponseModel(TwoFactorProviderType type, Organization organization)
         : base(ResponseObj)
     {
-        if (organization == null)
-        {
-            throw new ArgumentNullException(nameof(organization));
-        }
+        ArgumentNullException.ThrowIfNull(organization);
 
         var provider = organization.GetTwoFactorProvider(type);
         Enabled = provider?.Enabled ?? false;

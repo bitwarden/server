@@ -4,13 +4,14 @@ public class NginxConfigBuilder
 {
     private const string ConfFile = "/bitwarden/nginx/default.conf";
 
-    private const string DefaultContentSecurityPolicy = "default-src 'self'; " +
-        "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: https://haveibeenpwned.com; " +
-        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-        "https://api.2fa.directory; object-src 'self' blob:;";
+    private const string DefaultContentSecurityPolicy =
+        "default-src 'self'; "
+        + "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; "
+        + "img-src 'self' data: https://haveibeenpwned.com; "
+        + "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "connect-src 'self' wss://{0} https://api.pwnedpasswords.com "
+        + "https://api.2fa.directory; object-src 'self' blob:;";
 
     private readonly Context _context;
 
@@ -24,21 +25,26 @@ public class NginxConfigBuilder
         var model = new TemplateModel(_context);
         if (model.Ssl && !_context.Config.SslManagedLetsEncrypt)
         {
-            var sslPath = _context.Install.SelfSignedCert ?
-                $"/etc/ssl/self/{model.Domain}" : $"/etc/ssl/{model.Domain}";
-            _context.Config.SslCertificatePath = model.CertificatePath =
-                string.Concat(sslPath, "/", "certificate.crt");
-            _context.Config.SslKeyPath = model.KeyPath =
-                string.Concat(sslPath, "/", "private.key");
+            var sslPath = _context.Install.SelfSignedCert
+                ? $"/etc/ssl/self/{model.Domain}"
+                : $"/etc/ssl/{model.Domain}";
+            _context.Config.SslCertificatePath = model.CertificatePath = string.Concat(
+                sslPath,
+                "/",
+                "certificate.crt"
+            );
+            _context.Config.SslKeyPath = model.KeyPath = string.Concat(sslPath, "/", "private.key");
             if (_context.Install.Trusted)
             {
-                _context.Config.SslCaPath = model.CaPath =
-                    string.Concat(sslPath, "/", "ca.crt");
+                _context.Config.SslCaPath = model.CaPath = string.Concat(sslPath, "/", "ca.crt");
             }
             if (_context.Install.DiffieHellman)
             {
-                _context.Config.SslDiffieHellmanPath = model.DiffieHellmanPath =
-                    string.Concat(sslPath, "/", "dhparam.pem");
+                _context.Config.SslDiffieHellmanPath = model.DiffieHellmanPath = string.Concat(
+                    sslPath,
+                    "/",
+                    "dhparam.pem"
+                );
             }
         }
         Build(model);
@@ -111,10 +117,11 @@ public class NginxConfigBuilder
             }
             else
             {
-                SslCiphers = "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:" +
-                    "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:" +
-                    "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:" +
-                    "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
+                SslCiphers =
+                    "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"
+                    + "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:"
+                    + "ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA384:"
+                    + "ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256";
             }
 
             if (!string.IsNullOrWhiteSpace(context.Config.SslVersions))

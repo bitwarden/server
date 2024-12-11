@@ -43,7 +43,9 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                 }
                 else
                 {
-                    internalErrorModel = new InternalApi.ErrorResponseModel(badRequestException.ModelState);
+                    internalErrorModel = new InternalApi.ErrorResponseModel(
+                        badRequestException.ModelState
+                    );
                 }
             }
             else
@@ -51,18 +53,24 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                 errorMessage = badRequestException.Message;
             }
         }
-        else if (exception is StripeException { StripeError.Type: "card_error" } stripeCardErrorException)
+        else if (
+            exception is StripeException { StripeError.Type: "card_error" } stripeCardErrorException
+        )
         {
             context.HttpContext.Response.StatusCode = 400;
             if (_publicApi)
             {
-                publicErrorModel = new ErrorResponseModel(stripeCardErrorException.StripeError.Param,
-                    stripeCardErrorException.Message);
+                publicErrorModel = new ErrorResponseModel(
+                    stripeCardErrorException.StripeError.Param,
+                    stripeCardErrorException.Message
+                );
             }
             else
             {
-                internalErrorModel = new InternalApi.ErrorResponseModel(stripeCardErrorException.StripeError.Param,
-                    stripeCardErrorException.Message);
+                internalErrorModel = new InternalApi.ErrorResponseModel(
+                    stripeCardErrorException.StripeError.Param,
+                    stripeCardErrorException.Message
+                );
             }
         }
         else if (exception is GatewayException)
@@ -77,7 +85,9 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is StripeException stripeException)
         {
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+            var logger = context.HttpContext.RequestServices.GetRequiredService<
+                ILogger<ExceptionHandlerFilterAttribute>
+            >();
 
             var error = stripeException.Message;
 
@@ -100,11 +110,17 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                 error = stringBuilder.ToString();
             }
 
-            logger.LogError("An unhandled error occurred while communicating with Stripe: {Error}", error);
+            logger.LogError(
+                "An unhandled error occurred while communicating with Stripe: {Error}",
+                error
+            );
             errorMessage = "Something went wrong with your request. Please contact support.";
             context.HttpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         }
-        else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
+        else if (
+            exception is NotSupportedException
+            && !string.IsNullOrWhiteSpace(exception.Message)
+        )
         {
             errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
@@ -148,7 +164,9 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else
         {
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+            var logger = context.HttpContext.RequestServices.GetRequiredService<
+                ILogger<ExceptionHandlerFilterAttribute>
+            >();
             logger.LogError(0, exception, exception.Message);
             errorMessage = "An unhandled server error has occurred.";
             context.HttpContext.Response.StatusCode = 500;

@@ -12,14 +12,19 @@ public class SqliteDbMigrator : IDbMigrator
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<SqliteDbMigrator> _logger;
 
-    public SqliteDbMigrator(IServiceScopeFactory serviceScopeFactory, ILogger<SqliteDbMigrator> logger)
+    public SqliteDbMigrator(
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<SqliteDbMigrator> logger
+    )
     {
         _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
     }
 
-    public bool MigrateDatabase(bool enableLogging = true,
-        CancellationToken cancellationToken = default(CancellationToken))
+    public bool MigrateDatabase(
+        bool enableLogging = true,
+        CancellationToken cancellationToken = default(CancellationToken)
+    )
     {
         if (enableLogging && _logger != null)
         {

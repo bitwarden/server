@@ -5,7 +5,8 @@ using InternalApi = Bit.Core.Models.Api;
 
 namespace Bit.Api.Utilities;
 
-public class ModelStateValidationFilterAttribute : SharedWeb.Utilities.ModelStateValidationFilterAttribute
+public class ModelStateValidationFilterAttribute
+    : SharedWeb.Utilities.ModelStateValidationFilterAttribute
 {
     private readonly bool _publicApi;
 
@@ -22,7 +23,9 @@ public class ModelStateValidationFilterAttribute : SharedWeb.Utilities.ModelStat
         }
         else
         {
-            context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
+            context.Result = new BadRequestObjectResult(
+                new InternalApi.ErrorResponseModel(context.ModelState)
+            );
         }
     }
 }

@@ -9,7 +9,8 @@ public class BillingPaymentResponseModel : ResponseModel
         : base("billingPayment")
     {
         Balance = billing.Balance;
-        PaymentSource = billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
+        PaymentSource =
+            billing.PaymentSource != null ? new BillingSource(billing.PaymentSource) : null;
     }
 
     public decimal Balance { get; set; }

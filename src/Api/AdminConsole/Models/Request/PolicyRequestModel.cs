@@ -11,16 +11,24 @@ public class PolicyRequestModel
 {
     [Required]
     public PolicyType? Type { get; set; }
+
     [Required]
     public bool? Enabled { get; set; }
     public Dictionary<string, object> Data { get; set; }
 
-    public async Task<PolicyUpdate> ToPolicyUpdateAsync(Guid organizationId, ICurrentContext currentContext) => new()
-    {
-        Type = Type!.Value,
-        OrganizationId = organizationId,
-        Data = Data != null ? JsonSerializer.Serialize(Data) : null,
-        Enabled = Enabled.GetValueOrDefault(),
-        PerformedBy = new StandardUser(currentContext.UserId!.Value, await currentContext.OrganizationOwner(organizationId))
-    };
+    public async Task<PolicyUpdate> ToPolicyUpdateAsync(
+        Guid organizationId,
+        ICurrentContext currentContext
+    ) =>
+        new()
+        {
+            Type = Type!.Value,
+            OrganizationId = organizationId,
+            Data = Data != null ? JsonSerializer.Serialize(Data) : null,
+            Enabled = Enabled.GetValueOrDefault(),
+            PerformedBy = new StandardUser(
+                currentContext.UserId!.Value,
+                await currentContext.OrganizationOwner(organizationId)
+            ),
+        };
 }

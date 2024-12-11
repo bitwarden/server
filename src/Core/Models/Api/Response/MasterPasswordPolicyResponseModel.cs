@@ -4,7 +4,8 @@ namespace Bit.Core.Models.Api.Response;
 
 public class MasterPasswordPolicyResponseModel : ResponseModel
 {
-    public MasterPasswordPolicyResponseModel(MasterPasswordPolicyData data) : base("masterPasswordPolicy")
+    public MasterPasswordPolicyResponseModel(MasterPasswordPolicyData data)
+        : base("masterPasswordPolicy")
     {
         if (data == null)
         {

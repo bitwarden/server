@@ -15,11 +15,16 @@ public class SameOrganizationQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task OrgUsersInTheSameOrg_NoOrgUsers_ReturnsFalse(SutProvider<SameOrganizationQuery> sutProvider,
-        List<OrganizationUser> orgUsers, Guid organizationId)
+    public async Task OrgUsersInTheSameOrg_NoOrgUsers_ReturnsFalse(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<OrganizationUser> orgUsers,
+        Guid organizationId
+    )
     {
         var orgUserIds = orgUsers.Select(ou => ou.Id).ToList();
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(orgUserIds)
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(orgUserIds)
             .ReturnsForAnyArgs(new List<OrganizationUser>());
 
         var result = await sutProvider.Sut.OrgUsersInTheSameOrgAsync(orgUserIds, organizationId);
@@ -29,11 +34,16 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task OrgUsersInTheSameOrg_OrgMismatch_ReturnsFalse(SutProvider<SameOrganizationQuery> sutProvider,
-        List<OrganizationUser> orgUsers, Guid organizationId)
+    public async Task OrgUsersInTheSameOrg_OrgMismatch_ReturnsFalse(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<OrganizationUser> orgUsers,
+        Guid organizationId
+    )
     {
         var orgUserIds = orgUsers.Select(ou => ou.Id).ToList();
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(orgUserIds)
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(orgUserIds)
             .ReturnsForAnyArgs(orgUsers);
 
         var result = await sutProvider.Sut.OrgUsersInTheSameOrgAsync(orgUserIds, organizationId);
@@ -43,8 +53,11 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task OrgUsersInTheSameOrg_CountMismatch_ReturnsFalse(SutProvider<SameOrganizationQuery> sutProvider,
-        List<OrganizationUser> orgUsers, Guid organizationId)
+    public async Task OrgUsersInTheSameOrg_CountMismatch_ReturnsFalse(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<OrganizationUser> orgUsers,
+        Guid organizationId
+    )
     {
         var orgUserIds = orgUsers.Select(ou => ou.Id).ToList();
         foreach (var organizationUser in orgUsers)
@@ -53,7 +66,9 @@ public class SameOrganizationQueryTests
         }
 
         orgUsers.RemoveAt(0);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(orgUserIds)
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(orgUserIds)
             .ReturnsForAnyArgs(orgUsers);
 
         var result = await sutProvider.Sut.OrgUsersInTheSameOrgAsync(orgUserIds, organizationId);
@@ -63,8 +78,11 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task OrgUsersInTheSameOrg_Success_ReturnsTrue(SutProvider<SameOrganizationQuery> sutProvider,
-        List<OrganizationUser> orgUsers, Guid organizationId)
+    public async Task OrgUsersInTheSameOrg_Success_ReturnsTrue(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<OrganizationUser> orgUsers,
+        Guid organizationId
+    )
     {
         var orgUserIds = orgUsers.Select(ou => ou.Id).ToList();
         foreach (var organizationUser in orgUsers)
@@ -72,7 +90,9 @@ public class SameOrganizationQueryTests
             organizationUser.OrganizationId = organizationId;
         }
 
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(orgUserIds)
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(orgUserIds)
             .ReturnsForAnyArgs(orgUsers);
 
         var result = await sutProvider.Sut.OrgUsersInTheSameOrgAsync(orgUserIds, organizationId);
@@ -82,11 +102,16 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GroupsInTheSameOrg_NoGroups_ReturnsFalse(SutProvider<SameOrganizationQuery> sutProvider,
-        List<Group> groups, Guid organizationId)
+    public async Task GroupsInTheSameOrg_NoGroups_ReturnsFalse(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<Group> groups,
+        Guid organizationId
+    )
     {
         var groupIds = groups.Select(ou => ou.Id).ToList();
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(groupIds)
+        sutProvider
+            .GetDependency<IGroupRepository>()
+            .GetManyByManyIds(groupIds)
             .ReturnsForAnyArgs(new List<Group>());
 
         var result = await sutProvider.Sut.GroupsInTheSameOrgAsync(groupIds, organizationId);
@@ -96,11 +121,16 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GroupsInTheSameOrg_OrgMismatch_ReturnsFalse(SutProvider<SameOrganizationQuery> sutProvider,
-        List<Group> groups, Guid organizationId)
+    public async Task GroupsInTheSameOrg_OrgMismatch_ReturnsFalse(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<Group> groups,
+        Guid organizationId
+    )
     {
         var groupIds = groups.Select(ou => ou.Id).ToList();
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(groupIds)
+        sutProvider
+            .GetDependency<IGroupRepository>()
+            .GetManyByManyIds(groupIds)
             .ReturnsForAnyArgs(groups);
 
         var result = await sutProvider.Sut.GroupsInTheSameOrgAsync(groupIds, organizationId);
@@ -110,8 +140,11 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GroupsInTheSameOrg_CountMismatch_ReturnsFalse(SutProvider<SameOrganizationQuery> sutProvider,
-        List<Group> groups, Guid organizationId)
+    public async Task GroupsInTheSameOrg_CountMismatch_ReturnsFalse(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<Group> groups,
+        Guid organizationId
+    )
     {
         var groupIds = groups.Select(ou => ou.Id).ToList();
         foreach (var group in groups)
@@ -121,7 +154,9 @@ public class SameOrganizationQueryTests
 
         groups.RemoveAt(0);
 
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(groupIds)
+        sutProvider
+            .GetDependency<IGroupRepository>()
+            .GetManyByManyIds(groupIds)
             .ReturnsForAnyArgs(groups);
 
         var result = await sutProvider.Sut.GroupsInTheSameOrgAsync(groupIds, organizationId);
@@ -131,8 +166,11 @@ public class SameOrganizationQueryTests
 
     [Theory]
     [BitAutoData]
-    public async Task GroupsInTheSameOrg_Success_ReturnsTrue(SutProvider<SameOrganizationQuery> sutProvider,
-        List<Group> groups, Guid organizationId)
+    public async Task GroupsInTheSameOrg_Success_ReturnsTrue(
+        SutProvider<SameOrganizationQuery> sutProvider,
+        List<Group> groups,
+        Guid organizationId
+    )
     {
         var groupIds = groups.Select(ou => ou.Id).ToList();
         foreach (var group in groups)
@@ -140,9 +178,10 @@ public class SameOrganizationQueryTests
             group.OrganizationId = organizationId;
         }
 
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(groupIds)
+        sutProvider
+            .GetDependency<IGroupRepository>()
+            .GetManyByManyIds(groupIds)
             .ReturnsForAnyArgs(groups);
-
 
         var result = await sutProvider.Sut.GroupsInTheSameOrgAsync(groupIds, organizationId);
 

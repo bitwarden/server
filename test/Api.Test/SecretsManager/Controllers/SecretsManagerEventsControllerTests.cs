@@ -20,60 +20,113 @@ public class SecretsManagerEventsControllerTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetServiceAccountEvents_NoAccess_Throws(SutProvider<SecretsManagerEventsController> sutProvider,
-        ServiceAccount data)
+    public async Task GetServiceAccountEvents_NoAccess_Throws(
+        SutProvider<SecretsManagerEventsController> sutProvider,
+        ServiceAccount data
+    )
     {
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetByIdAsync(default)
+            .ReturnsForAnyArgs(data);
+        sutProvider
+            .GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()
+            )
+            .ReturnsForAnyArgs(AuthorizationResult.Failed());
 
-
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetServiceAccountEventsAsync(data.Id));
-        await sutProvider.GetDependency<IEventRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(),
-                Arg.Any<DateTime>(), Arg.Any<PageOptions>());
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetServiceAccountEventsAsync(data.Id)
+        );
+        await sutProvider
+            .GetDependency<IEventRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationServiceAccountAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<Guid>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<PageOptions>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetServiceAccountEvents_DateRangeOver_Throws(
         SutProvider<SecretsManagerEventsController> sutProvider,
-        ServiceAccount data)
+        ServiceAccount data
+    )
     {
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetByIdAsync(default)
+            .ReturnsForAnyArgs(data);
+        sutProvider
+            .GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()
+            )
+            .ReturnsForAnyArgs(AuthorizationResult.Success());
 
         var start = DateTime.UtcNow.AddYears(-1);
         var end = DateTime.UtcNow.AddYears(1);
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.GetServiceAccountEventsAsync(data.Id, start, end));
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.GetServiceAccountEventsAsync(data.Id, start, end)
+        );
 
-        await sutProvider.GetDependency<IEventRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationServiceAccountAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<DateTime>(),
-                Arg.Any<DateTime>(), Arg.Any<PageOptions>());
+        await sutProvider
+            .GetDependency<IEventRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationServiceAccountAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<Guid>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<PageOptions>()
+            );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetServiceAccountEvents_Success(SutProvider<SecretsManagerEventsController> sutProvider,
-        ServiceAccount data)
+    public async Task GetServiceAccountEvents_Success(
+        SutProvider<SecretsManagerEventsController> sutProvider,
+        ServiceAccount data
+    )
     {
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
-        sutProvider.GetDependency<IEventRepository>()
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetByIdAsync(default)
+            .ReturnsForAnyArgs(data);
+        sutProvider
+            .GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()
+            )
+            .ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider
+            .GetDependency<IEventRepository>()
             .GetManyByOrganizationServiceAccountAsync(default, default, default, default, default)
             .ReturnsForAnyArgs(new PagedResult<IEvent>());
 
         await sutProvider.Sut.GetServiceAccountEventsAsync(data.Id);
 
-        await sutProvider.GetDependency<IEventRepository>().Received(1)
-            .GetManyByOrganizationServiceAccountAsync(data.OrganizationId, data.Id, Arg.Any<DateTime>(),
-                Arg.Any<DateTime>(), Arg.Any<PageOptions>());
+        await sutProvider
+            .GetDependency<IEventRepository>()
+            .Received(1)
+            .GetManyByOrganizationServiceAccountAsync(
+                data.OrganizationId,
+                data.Id,
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<PageOptions>()
+            );
     }
 }

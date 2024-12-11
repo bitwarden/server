@@ -23,7 +23,9 @@ public class IconUri
             }
 
             // Prevent non-http(s) and non-default ports
-            if ((InnerUri.Scheme != "http" && InnerUri.Scheme != "https") || !InnerUri.IsDefaultPort)
+            if (
+                (InnerUri.Scheme != "http" && InnerUri.Scheme != "https") || !InnerUri.IsDefaultPort
+            )
             {
                 return false;
             }

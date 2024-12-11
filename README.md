@@ -33,7 +33,7 @@ Please refer to the [Server Setup Guide](https://contributing.bitwarden.com/gett
 
 You can deploy Bitwarden using Docker containers on Windows, macOS, and Linux distributions. Use the provided PowerShell and Bash scripts to get started quickly. Find all of the Bitwarden images on [Docker Hub](https://hub.docker.com/u/bitwarden/).
 
-Full documentation for deploying Bitwarden with Docker can be found in our help center at: https://help.bitwarden.com/article/install-on-premise/
+Full documentation for deploying Bitwarden with Docker can be found in our help center at: <https://help.bitwarden.com/article/install-on-premise/>
 
 ### Requirements
 
@@ -61,7 +61,7 @@ Invoke-RestMethod -OutFile bitwarden.ps1 `
 .\bitwarden.ps1 -start
 ```
 
-## We're Hiring!
+## We're Hiring
 
 Interested in contributing in a big way? Consider joining our team! We're hiring for many positions. Please take a look at our [Careers page](https://bitwarden.com/careers/) to see what opportunities are currently open as well as what it's like to work at Bitwarden.
 

@@ -14,34 +14,42 @@ namespace Bit.Api.IntegrationTest.Helpers;
 
 public static class OrganizationTestHelpers
 {
-    public static async Task<Tuple<Organization, OrganizationUser>> SignUpAsync<T>(WebApplicationFactoryBase<T> factory,
+    public static async Task<Tuple<Organization, OrganizationUser>> SignUpAsync<T>(
+        WebApplicationFactoryBase<T> factory,
         PlanType plan = PlanType.Free,
         string ownerEmail = "integration-test@bitwarden.com",
         string name = "Integration Test Org",
         string billingEmail = "integration-test@bitwarden.com",
         string ownerKey = "test-key",
         int passwordManagerSeats = 0,
-        PaymentMethodType paymentMethod = PaymentMethodType.None) where T : class
+        PaymentMethodType paymentMethod = PaymentMethodType.None
+    )
+        where T : class
     {
         var userRepository = factory.GetService<IUserRepository>();
         var organizationSignUpCommand = factory.GetService<ICloudOrganizationSignUpCommand>();
 
         var owner = await userRepository.GetByEmailAsync(ownerEmail);
 
-        var signUpResult = await organizationSignUpCommand.SignUpOrganizationAsync(new OrganizationSignup
-        {
-            Name = name,
-            BillingEmail = billingEmail,
-            Plan = plan,
-            OwnerKey = ownerKey,
-            Owner = owner,
-            AdditionalSeats = passwordManagerSeats,
-            PaymentMethodType = paymentMethod
-        });
+        var signUpResult = await organizationSignUpCommand.SignUpOrganizationAsync(
+            new OrganizationSignup
+            {
+                Name = name,
+                BillingEmail = billingEmail,
+                Plan = plan,
+                OwnerKey = ownerKey,
+                Owner = owner,
+                AdditionalSeats = passwordManagerSeats,
+                PaymentMethodType = paymentMethod,
+            }
+        );
 
         Debug.Assert(signUpResult.OrganizationUser is not null);
 
-        return new Tuple<Organization, OrganizationUser>(signUpResult.Organization, signUpResult.OrganizationUser);
+        return new Tuple<Organization, OrganizationUser>(
+            signUpResult.Organization,
+            signUpResult.OrganizationUser
+        );
     }
 
     /// <summary>
@@ -54,7 +62,8 @@ public static class OrganizationTestHelpers
         OrganizationUserType type,
         bool accessSecretsManager = false,
         Permissions? permissions = null
-    ) where T : class
+    )
+        where T : class
     {
         var userRepository = factory.GetService<IUserRepository>();
         var organizationUserRepository = factory.GetService<IOrganizationUserRepository>();
@@ -100,8 +109,13 @@ public static class OrganizationTestHelpers
         await factory.LoginWithNewAccount(email);
 
         // Create organizationUser
-        var organizationUser = await OrganizationTestHelpers.CreateUserAsync(factory, organizationId, email, userType,
-            permissions: permissions);
+        var organizationUser = await OrganizationTestHelpers.CreateUserAsync(
+            factory,
+            organizationId,
+            email,
+            userType,
+            permissions: permissions
+        );
 
         return (email, organizationUser);
     }
@@ -109,7 +123,11 @@ public static class OrganizationTestHelpers
     /// <summary>
     /// Creates a VerifiedDomain for the specified organization.
     /// </summary>
-    public static async Task CreateVerifiedDomainAsync(ApiApplicationFactory factory, Guid organizationId, string domain)
+    public static async Task CreateVerifiedDomainAsync(
+        ApiApplicationFactory factory,
+        Guid organizationId,
+        string domain
+    )
     {
         var organizationDomainRepository = factory.GetService<IOrganizationDomainRepository>();
 
@@ -117,7 +135,7 @@ public static class OrganizationTestHelpers
         {
             OrganizationId = organizationId,
             DomainName = domain,
-            Txt = "btw+test18383838383"
+            Txt = "btw+test18383838383",
         };
         verifiedDomain.SetVerifiedDate();
 

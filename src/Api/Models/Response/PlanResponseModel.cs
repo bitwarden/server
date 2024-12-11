@@ -9,10 +9,7 @@ public class PlanResponseModel : ResponseModel
     public PlanResponseModel(Plan plan, string obj = "plan")
         : base(obj)
     {
-        if (plan == null)
-        {
-            throw new ArgumentNullException(nameof(plan));
-        }
+        ArgumentNullException.ThrowIfNull(plan);
 
         Type = plan.Type;
         ProductTier = plan.ProductTier;
@@ -93,6 +90,7 @@ public class PlanResponseModel : ResponseModel
             AllowSeatAutoscale = plan.AllowSeatAutoscale;
             MaxProjects = plan.MaxProjects;
         }
+
         // Service accounts
         public short? MaxServiceAccounts { get; init; }
         public bool AllowServiceAccountsAutoscale { get; init; }
@@ -101,6 +99,7 @@ public class PlanResponseModel : ResponseModel
         public short? BaseServiceAccount { get; init; }
         public short? MaxAdditionalServiceAccount { get; init; }
         public bool HasAdditionalServiceAccountOption { get; init; }
+
         // Seats
         public string StripeSeatPlanId { get; init; }
         public bool HasAdditionalSeatsOption { get; init; }
@@ -140,6 +139,7 @@ public class PlanResponseModel : ResponseModel
             MaxAdditionalStorage = plan.MaxAdditionalStorage;
             MaxCollections = plan.MaxCollections;
         }
+
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
@@ -155,12 +155,14 @@ public class PlanResponseModel : ResponseModel
         public string StripePremiumAccessPlanId { get; init; }
         public decimal PremiumAccessOptionPrice { get; init; }
         public short? MaxSeats { get; init; }
+
         // Storage
         public short? BaseStorageGb { get; init; }
         public bool HasAdditionalStorageOption { get; init; }
         public decimal AdditionalStoragePricePerGb { get; init; }
         public string StripeStoragePlanId { get; init; }
         public short? MaxAdditionalStorage { get; init; }
+
         // Feature
         public short? MaxCollections { get; init; }
     }

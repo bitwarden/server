@@ -5,5 +5,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfa
 
 public interface IGetOrganizationApiKeyQuery
 {
-    Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType);
+    Task<OrganizationApiKey> GetOrganizationApiKeyAsync(
+        Guid organizationId,
+        OrganizationApiKeyType organizationApiKeyType
+    );
 }

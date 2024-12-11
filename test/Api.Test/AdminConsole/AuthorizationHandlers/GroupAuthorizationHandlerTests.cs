@@ -23,8 +23,10 @@ public class GroupAuthorizationHandlerTests
     public async Task CanReadAllAsync_WhenMemberOfOrg_Success(
         OrganizationUserType userType,
         OrganizationScope scope,
-        Guid userId, SutProvider<GroupAuthorizationHandler> sutProvider,
-        CurrentContextOrganization organization)
+        Guid userId,
+        SutProvider<GroupAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization
+    )
     {
         organization.Type = userType;
         organization.Permissions = new Permissions();
@@ -32,7 +34,8 @@ public class GroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll },
             new ClaimsPrincipal(),
-            scope);
+            scope
+        );
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(scope).Returns(organization);
@@ -46,7 +49,9 @@ public class GroupAuthorizationHandlerTests
     public async Task CanReadAllAsync_WithProviderUser_Success(
         Guid userId,
         OrganizationScope scope,
-        SutProvider<GroupAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
+        SutProvider<GroupAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization
+    )
     {
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
@@ -54,14 +59,11 @@ public class GroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll },
             new ClaimsPrincipal(),
-            scope);
+            scope
+        );
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>()
-            .ProviderUserForOrgAsync(scope)
-            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(scope).Returns(true);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -72,9 +74,9 @@ public class GroupAuthorizationHandlerTests
     public async Task CanReadAllAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         OrganizationScope scope,
-        SutProvider<GroupAuthorizationHandler> sutProvider)
+        SutProvider<GroupAuthorizationHandler> sutProvider
+    )
     {
-
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll },
             new ClaimsPrincipal(),
@@ -82,8 +84,14 @@ public class GroupAuthorizationHandlerTests
         );
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .GetOrganization(Arg.Any<Guid>())
+            .Returns((CurrentContextOrganization)null);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.False(context.HasSucceeded);
@@ -92,9 +100,12 @@ public class GroupAuthorizationHandlerTests
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsAdminOwner_ThenShouldSucceed(OrganizationUserType userType,
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsAdminOwner_ThenShouldSucceed(
+        OrganizationUserType userType,
         OrganizationScope scope,
-        CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+        CurrentContextOrganization organization,
+        SutProvider<GroupAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = userType;
         organization.Permissions = new Permissions();
@@ -114,9 +125,12 @@ public class GroupAuthorizationHandlerTests
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsNotOwnerOrAdmin_ThenShouldFail(OrganizationUserType userType,
+    public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsNotOwnerOrAdmin_ThenShouldFail(
+        OrganizationUserType userType,
         OrganizationScope scope,
-        CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+        CurrentContextOrganization organization,
+        SutProvider<GroupAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = userType;
         organization.Permissions = new Permissions();
@@ -136,13 +150,12 @@ public class GroupAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserHasManageGroupPermission_ThenShouldSucceed(
         OrganizationScope scope,
-        CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+        CurrentContextOrganization organization,
+        SutProvider<GroupAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            ManageGroups = true
-        };
+        organization.Permissions = new Permissions { ManageGroups = true };
 
         var context = new AuthorizationHandlerContext(
             [GroupOperations.ReadAllDetails],
@@ -159,13 +172,12 @@ public class GroupAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserHasManageUserPermission_ThenShouldSucceed(
         OrganizationScope scope,
-        CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+        CurrentContextOrganization organization,
+        SutProvider<GroupAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions = new Permissions
-        {
-            ManageUsers = true
-        };
+        organization.Permissions = new Permissions { ManageUsers = true };
 
         var context = new AuthorizationHandlerContext(
             [GroupOperations.ReadAllDetails],
@@ -182,7 +194,9 @@ public class GroupAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenUserIsStandardUserTypeWithoutElevatedPermissions_ThenShouldFail(
         OrganizationScope scope,
-        CurrentContextOrganization organization, SutProvider<GroupAuthorizationHandler> sutProvider)
+        CurrentContextOrganization organization,
+        SutProvider<GroupAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
@@ -203,7 +217,9 @@ public class GroupAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementsAsync_GivenViewDetailsOperation_WhenIsProviderUser_ThenShouldSucceed(
         OrganizationScope scope,
-        SutProvider<GroupAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
+        SutProvider<GroupAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization
+    )
     {
         organization.Type = OrganizationUserType.User;
         organization.Permissions = new Permissions();
@@ -211,7 +227,8 @@ public class GroupAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll },
             new ClaimsPrincipal(),
-            scope);
+            scope
+        );
 
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(scope).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(scope).Returns(true);

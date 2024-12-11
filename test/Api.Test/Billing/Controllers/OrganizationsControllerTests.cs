@@ -64,9 +64,11 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _licensingService = Substitute.For<ILicensingService>();
-        _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
+        _updateSecretsManagerSubscriptionCommand =
+            Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
-        _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
+        _addSecretsManagerSubscriptionCommand =
+            Substitute.For<IAddSecretsManagerSubscriptionCommand>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _subscriberService = Substitute.For<ISubscriberService>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
@@ -85,7 +87,8 @@ public class OrganizationsControllerTests : IDisposable
             _upgradeOrganizationPlanCommand,
             _addSecretsManagerSubscriptionCommand,
             _referenceEventService,
-            _subscriberService);
+            _subscriberService
+        );
     }
 
     public void Dispose()
@@ -96,7 +99,8 @@ public class OrganizationsControllerTests : IDisposable
     [Theory, AutoData]
     public async Task OrganizationsController_PostUpgrade_UserCannotEditSubscription_ThrowsNotFoundException(
         Guid organizationId,
-        OrganizationUpgradeRequestModel model)
+        OrganizationUpgradeRequestModel model
+    )
     {
         _currentContext.EditSubscription(organizationId).Returns(false);
 
@@ -108,13 +112,15 @@ public class OrganizationsControllerTests : IDisposable
         Guid organizationId,
         OrganizationUpgradeRequestModel model,
         bool success,
-        string paymentIntentClientSecret)
+        string paymentIntentClientSecret
+    )
     {
         model.UseSecretsManager = false;
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand
+            .UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         var response = await _sut.PostUpgrade(organizationId, model);
@@ -130,27 +136,36 @@ public class OrganizationsControllerTests : IDisposable
         OrganizationUpgradeRequestModel model,
         bool success,
         string paymentIntentClientSecret,
-        OrganizationUser organizationUser)
+        OrganizationUser organizationUser
+    )
     {
         model.UseSecretsManager = true;
         organizationUser.AccessSecretsManager = false;
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand
+            .UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        _organizationUserRepository.GetByOrganizationAsync(organizationId, userId).Returns(organizationUser);
+        _organizationUserRepository
+            .GetByOrganizationAsync(organizationId, userId)
+            .Returns(organizationUser);
 
         var response = await _sut.PostUpgrade(organizationId, model);
 
         Assert.Equal(success, response.Success);
         Assert.Equal(paymentIntentClientSecret, response.PaymentIntentClientSecret);
 
-        await _organizationUserRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationUser>(orgUser =>
-            orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true));
+        await _organizationUserRepository
+            .Received(1)
+            .ReplaceAsync(
+                Arg.Is<OrganizationUser>(orgUser =>
+                    orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true
+                )
+            );
     }
 
     [Theory, AutoData]
@@ -159,13 +174,15 @@ public class OrganizationsControllerTests : IDisposable
         Guid userId,
         OrganizationUpgradeRequestModel model,
         bool success,
-        string paymentIntentClientSecret)
+        string paymentIntentClientSecret
+    )
     {
         model.UseSecretsManager = true;
 
         _currentContext.EditSubscription(organizationId).Returns(true);
 
-        _upgradeOrganizationPlanCommand.UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
+        _upgradeOrganizationPlanCommand
+            .UpgradePlanAsync(organizationId, Arg.Any<OrganizationUpgrade>())
             .Returns(new Tuple<bool, string>(success, paymentIntentClientSecret));
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
@@ -177,30 +194,38 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(success, response.Success);
         Assert.Equal(paymentIntentClientSecret, response.PaymentIntentClientSecret);
 
-        await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+        await _organizationUserRepository
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
     }
 
     [Theory, AutoData]
     public async Task OrganizationsController_PostSubscribeSecretsManagerAsync_NullOrg_ThrowsNotFoundException(
         Guid organizationId,
-        SecretsManagerSubscribeRequestModel model)
+        SecretsManagerSubscribeRequestModel model
+    )
     {
         _organizationRepository.GetByIdAsync(organizationId).ReturnsNull();
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostSubscribeSecretsManagerAsync(organizationId, model));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _sut.PostSubscribeSecretsManagerAsync(organizationId, model)
+        );
     }
 
     [Theory, AutoData]
     public async Task OrganizationsController_PostSubscribeSecretsManagerAsync_UserCannotEditSubscription_ThrowsNotFoundException(
         Guid organizationId,
         SecretsManagerSubscribeRequestModel model,
-        Organization organization)
+        Organization organization
+    )
     {
         _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
 
         _currentContext.EditSubscription(organizationId).Returns(false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostSubscribeSecretsManagerAsync(organizationId, model));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => _sut.PostSubscribeSecretsManagerAsync(organizationId, model)
+        );
     }
 
     [Theory, AutoData]
@@ -210,14 +235,15 @@ public class OrganizationsControllerTests : IDisposable
         Organization organization,
         Guid userId,
         OrganizationUser organizationUser,
-        OrganizationUserOrganizationDetails organizationUserOrganizationDetails)
+        OrganizationUserOrganizationDetails organizationUserOrganizationDetails
+    )
     {
         organizationUser.AccessSecretsManager = false;
 
         var ssoConfigurationData = new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.KeyConnector,
-            KeyConnectorUrl = "https://example.com"
+            KeyConnectorUrl = "https://example.com",
         };
 
         organizationUserOrganizationDetails.Permissions = string.Empty;
@@ -229,9 +255,12 @@ public class OrganizationsControllerTests : IDisposable
 
         _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
 
-        _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId).Returns(organizationUser);
+        _organizationUserRepository
+            .GetByOrganizationAsync(organization.Id, userId)
+            .Returns(organizationUser);
 
-        _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
+        _organizationUserRepository
+            .GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
             .Returns(organizationUserOrganizationDetails);
 
         var response = await _sut.PostSubscribeSecretsManagerAsync(organizationId, model);
@@ -239,10 +268,16 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(response.Id, organizationUserOrganizationDetails.OrganizationId);
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
-        await _addSecretsManagerSubscriptionCommand.Received(1)
+        await _addSecretsManagerSubscriptionCommand
+            .Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
-        await _organizationUserRepository.Received(1).ReplaceAsync(Arg.Is<OrganizationUser>(orgUser =>
-            orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true));
+        await _organizationUserRepository
+            .Received(1)
+            .ReplaceAsync(
+                Arg.Is<OrganizationUser>(orgUser =>
+                    orgUser.Id == organizationUser.Id && orgUser.AccessSecretsManager == true
+                )
+            );
     }
 
     [Theory, AutoData]
@@ -251,12 +286,13 @@ public class OrganizationsControllerTests : IDisposable
         SecretsManagerSubscribeRequestModel model,
         Organization organization,
         Guid userId,
-        OrganizationUserOrganizationDetails organizationUserOrganizationDetails)
+        OrganizationUserOrganizationDetails organizationUserOrganizationDetails
+    )
     {
         var ssoConfigurationData = new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.KeyConnector,
-            KeyConnectorUrl = "https://example.com"
+            KeyConnectorUrl = "https://example.com",
         };
 
         organizationUserOrganizationDetails.Permissions = string.Empty;
@@ -270,7 +306,8 @@ public class OrganizationsControllerTests : IDisposable
 
         _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId).ReturnsNull();
 
-        _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
+        _organizationUserRepository
+            .GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
             .Returns(organizationUserOrganizationDetails);
 
         var response = await _sut.PostSubscribeSecretsManagerAsync(organizationId, model);
@@ -278,8 +315,11 @@ public class OrganizationsControllerTests : IDisposable
         Assert.Equal(response.Id, organizationUserOrganizationDetails.OrganizationId);
         Assert.Equal(response.Name, organizationUserOrganizationDetails.Name);
 
-        await _addSecretsManagerSubscriptionCommand.Received(1)
+        await _addSecretsManagerSubscriptionCommand
+            .Received(1)
             .SignUpAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
-        await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+        await _organizationUserRepository
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>());
     }
 }

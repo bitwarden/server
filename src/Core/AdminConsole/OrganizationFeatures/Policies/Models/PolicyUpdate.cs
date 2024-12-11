@@ -18,12 +18,14 @@ public record PolicyUpdate
     public bool Enabled { get; set; }
     public IActingUser? PerformedBy { get; set; }
 
-    public T GetDataModel<T>() where T : IPolicyDataModel, new()
+    public T GetDataModel<T>()
+        where T : IPolicyDataModel, new()
     {
         return CoreHelpers.LoadClassFromJsonData<T>(Data);
     }
 
-    public void SetDataModel<T>(T dataModel) where T : IPolicyDataModel, new()
+    public void SetDataModel<T>(T dataModel)
+        where T : IPolicyDataModel, new()
     {
         Data = CoreHelpers.ClassToJsonData(dataModel);
     }

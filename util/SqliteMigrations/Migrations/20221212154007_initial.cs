@@ -31,12 +31,13 @@ public partial class initial : Migration
                 DeviceType = table.Column<byte>(type: "INTEGER", nullable: true),
                 IpAddress = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                 ActingUserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                SystemUser = table.Column<byte>(type: "INTEGER", nullable: true)
+                SystemUser = table.Column<byte>(type: "INTEGER", nullable: true),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_Event", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Grant",
@@ -51,12 +52,13 @@ public partial class initial : Migration
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 ExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                 ConsumedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Data = table.Column<string>(type: "TEXT", nullable: true)
+                Data = table.Column<string>(type: "TEXT", nullable: true),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_Grant", x => x.Key);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Installation",
@@ -66,12 +68,13 @@ public partial class initial : Migration
                 Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                 Key = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
                 Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_Installation", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Organization",
@@ -81,11 +84,27 @@ public partial class initial : Migration
                 Identifier = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                 Name = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                 BusinessName = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessAddress1 = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessAddress2 = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                BusinessAddress3 = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                BusinessAddress1 = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
+                BusinessAddress2 = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
+                BusinessAddress3 = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
                 BusinessCountry = table.Column<string>(type: "TEXT", maxLength: 2, nullable: true),
-                BusinessTaxNumber = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
+                BusinessTaxNumber = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 30,
+                    nullable: true
+                ),
                 BillingEmail = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                 Plan = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                 PlanType = table.Column<byte>(type: "INTEGER", nullable: false),
@@ -108,8 +127,16 @@ public partial class initial : Migration
                 Storage = table.Column<long>(type: "INTEGER", nullable: true),
                 MaxStorageGb = table.Column<short>(type: "INTEGER", nullable: true),
                 Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                GatewaySubscriptionId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                GatewayCustomerId = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
+                GatewaySubscriptionId = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
                 ReferenceData = table.Column<string>(type: "TEXT", nullable: true),
                 Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                 LicenseKey = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
@@ -120,12 +147,13 @@ public partial class initial : Migration
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 MaxAutoscaleSeats = table.Column<int>(type: "INTEGER", nullable: true),
-                OwnersNotifiedOfAutoscaling = table.Column<DateTime>(type: "TEXT", nullable: true)
+                OwnersNotifiedOfAutoscaling = table.Column<DateTime>(type: "TEXT", nullable: true),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_Organization", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Provider",
@@ -144,12 +172,13 @@ public partial class initial : Migration
                 UseEvents = table.Column<bool>(type: "INTEGER", nullable: false),
                 Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_Provider", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "TaxRate",
@@ -160,12 +189,13 @@ public partial class initial : Migration
                 State = table.Column<string>(type: "TEXT", maxLength: 2, nullable: true),
                 PostalCode = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
                 Rate = table.Column<decimal>(type: "TEXT", nullable: false),
-                Active = table.Column<bool>(type: "INTEGER", nullable: false)
+                Active = table.Column<bool>(type: "INTEGER", nullable: false),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_TaxRate", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "User",
@@ -176,13 +206,24 @@ public partial class initial : Migration
                 Email = table.Column<string>(type: "TEXT", maxLength: 256, nullable: false),
                 EmailVerified = table.Column<bool>(type: "INTEGER", nullable: false),
                 MasterPassword = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
-                MasterPasswordHint = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                MasterPasswordHint = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
                 Culture = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
                 SecurityStamp = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                 TwoFactorProviders = table.Column<string>(type: "TEXT", nullable: true),
-                TwoFactorRecoveryCode = table.Column<string>(type: "TEXT", maxLength: 32, nullable: true),
+                TwoFactorRecoveryCode = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 32,
+                    nullable: true
+                ),
                 EquivalentDomains = table.Column<string>(type: "TEXT", nullable: true),
-                ExcludedGlobalEquivalentDomains = table.Column<string>(type: "TEXT", nullable: true),
+                ExcludedGlobalEquivalentDomains = table.Column<string>(
+                    type: "TEXT",
+                    nullable: true
+                ),
                 AccountRevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 Key = table.Column<string>(type: "TEXT", nullable: true),
                 PublicKey = table.Column<string>(type: "TEXT", nullable: true),
@@ -193,8 +234,16 @@ public partial class initial : Migration
                 Storage = table.Column<long>(type: "INTEGER", nullable: true),
                 MaxStorageGb = table.Column<short>(type: "INTEGER", nullable: true),
                 Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                GatewaySubscriptionId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                GatewayCustomerId = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
+                GatewaySubscriptionId = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
                 ReferenceData = table.Column<string>(type: "TEXT", nullable: true),
                 LicenseKey = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                 ApiKey = table.Column<string>(type: "TEXT", maxLength: 30, nullable: false),
@@ -206,12 +255,16 @@ public partial class initial : Migration
                 UsesKeyConnector = table.Column<bool>(type: "INTEGER", nullable: false),
                 FailedLoginCount = table.Column<int>(type: "INTEGER", nullable: false),
                 LastFailedLoginDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                UnknownDeviceVerificationEnabled = table.Column<bool>(type: "INTEGER", nullable: false)
+                UnknownDeviceVerificationEnabled = table.Column<bool>(
+                    type: "INTEGER",
+                    nullable: false
+                ),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_User", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Collection",
@@ -222,7 +275,7 @@ public partial class initial : Migration
                 Name = table.Column<string>(type: "TEXT", nullable: true),
                 ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -232,8 +285,10 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Group",
@@ -245,7 +300,7 @@ public partial class initial : Migration
                 AccessAll = table.Column<bool>(type: "INTEGER", nullable: false),
                 ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -255,8 +310,10 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "OrganizationApiKey",
@@ -266,7 +323,7 @@ public partial class initial : Migration
                 OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Type = table.Column<byte>(type: "INTEGER", nullable: false),
                 ApiKey = table.Column<string>(type: "TEXT", maxLength: 30, nullable: true),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -276,8 +333,10 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "OrganizationConnection",
@@ -287,7 +346,7 @@ public partial class initial : Migration
                 Type = table.Column<byte>(type: "INTEGER", nullable: false),
                 OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                Config = table.Column<string>(type: "TEXT", nullable: true)
+                Config = table.Column<string>(type: "TEXT", nullable: true),
             },
             constraints: table =>
             {
@@ -297,8 +356,10 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "OrganizationSponsorship",
@@ -313,7 +374,7 @@ public partial class initial : Migration
                 PlanSponsorshipType = table.Column<byte>(type: "INTEGER", nullable: true),
                 LastSyncDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                 ValidUntil = table.Column<DateTime>(type: "TEXT", nullable: true),
-                ToDelete = table.Column<bool>(type: "INTEGER", nullable: false)
+                ToDelete = table.Column<bool>(type: "INTEGER", nullable: false),
             },
             constraints: table =>
             {
@@ -322,13 +383,16 @@ public partial class initial : Migration
                     name: "FK_OrganizationSponsorship_Organization_SponsoredOrganizationId",
                     column: x => x.SponsoredOrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_OrganizationSponsorship_Organization_SponsoringOrganizationId",
                     column: x => x.SponsoringOrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Policy",
@@ -340,7 +404,7 @@ public partial class initial : Migration
                 Data = table.Column<string>(type: "TEXT", nullable: true),
                 Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -350,20 +414,23 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "SsoConfig",
             columns: table => new
             {
-                Id = table.Column<long>(type: "INTEGER", nullable: false)
+                Id = table
+                    .Column<long>(type: "INTEGER", nullable: false)
                     .Annotation("Sqlite:Autoincrement", true),
                 Enabled = table.Column<bool>(type: "INTEGER", nullable: false),
                 OrganizationId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Data = table.Column<string>(type: "TEXT", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -373,8 +440,10 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "ProviderOrganization",
@@ -386,7 +455,7 @@ public partial class initial : Migration
                 Key = table.Column<string>(type: "TEXT", nullable: true),
                 Settings = table.Column<string>(type: "TEXT", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -396,14 +465,17 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_ProviderOrganization_Provider_ProviderId",
                     column: x => x.ProviderId,
                     principalTable: "Provider",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Cipher",
@@ -420,7 +492,7 @@ public partial class initial : Migration
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 DeletedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Reprompt = table.Column<byte>(type: "INTEGER", nullable: true)
+                Reprompt = table.Column<byte>(type: "INTEGER", nullable: true),
             },
             constraints: table =>
             {
@@ -429,13 +501,16 @@ public partial class initial : Migration
                     name: "FK_Cipher_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_Cipher_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Device",
@@ -448,7 +523,7 @@ public partial class initial : Migration
                 Identifier = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                 PushToken = table.Column<string>(type: "TEXT", maxLength: 255, nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -458,8 +533,10 @@ public partial class initial : Migration
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "EmergencyAccess",
@@ -476,7 +553,7 @@ public partial class initial : Migration
                 RecoveryInitiatedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                 LastNotificationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -485,14 +562,17 @@ public partial class initial : Migration
                     name: "FK_EmergencyAccess_User_GranteeId",
                     column: x => x.GranteeId,
                     principalTable: "User",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_EmergencyAccess_User_GrantorId",
                     column: x => x.GrantorId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Folder",
@@ -502,7 +582,7 @@ public partial class initial : Migration
                 UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Name = table.Column<string>(type: "TEXT", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -512,8 +592,10 @@ public partial class initial : Migration
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "OrganizationUser",
@@ -531,7 +613,7 @@ public partial class initial : Migration
                 ExternalId = table.Column<string>(type: "TEXT", maxLength: 300, nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Permissions = table.Column<string>(type: "TEXT", nullable: true)
+                Permissions = table.Column<string>(type: "TEXT", nullable: true),
             },
             constraints: table =>
             {
@@ -541,13 +623,16 @@ public partial class initial : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_OrganizationUser_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "ProviderUser",
@@ -562,7 +647,7 @@ public partial class initial : Migration
                 Type = table.Column<byte>(type: "INTEGER", nullable: false),
                 Permissions = table.Column<string>(type: "TEXT", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -572,13 +657,16 @@ public partial class initial : Migration
                     column: x => x.ProviderId,
                     principalTable: "Provider",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_ProviderUser_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Send",
@@ -598,7 +686,7 @@ public partial class initial : Migration
                 ExpirationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                 DeletionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 Disabled = table.Column<bool>(type: "INTEGER", nullable: false),
-                HideEmail = table.Column<bool>(type: "INTEGER", nullable: true)
+                HideEmail = table.Column<bool>(type: "INTEGER", nullable: true),
             },
             constraints: table =>
             {
@@ -607,24 +695,28 @@ public partial class initial : Migration
                     name: "FK_Send_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_Send_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "SsoUser",
             columns: table => new
             {
-                Id = table.Column<long>(type: "INTEGER", nullable: false)
+                Id = table
+                    .Column<long>(type: "INTEGER", nullable: false)
                     .Annotation("Sqlite:Autoincrement", true),
                 UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
                 ExternalId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -633,14 +725,17 @@ public partial class initial : Migration
                     name: "FK_SsoUser_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_SsoUser_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "Transaction",
@@ -657,7 +752,7 @@ public partial class initial : Migration
                 PaymentMethodType = table.Column<byte>(type: "INTEGER", nullable: true),
                 Gateway = table.Column<byte>(type: "INTEGER", nullable: true),
                 GatewayId = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -666,13 +761,16 @@ public partial class initial : Migration
                     name: "FK_Transaction_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_Transaction_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "CollectionGroups",
@@ -681,7 +779,7 @@ public partial class initial : Migration
                 CollectionId = table.Column<Guid>(type: "TEXT", nullable: false),
                 GroupId = table.Column<Guid>(type: "TEXT", nullable: false),
                 ReadOnly = table.Column<bool>(type: "INTEGER", nullable: false),
-                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: false)
+                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: false),
             },
             constraints: table =>
             {
@@ -691,21 +789,24 @@ public partial class initial : Migration
                     column: x => x.CollectionId,
                     principalTable: "Collection",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_CollectionGroups_Group_GroupId",
                     column: x => x.GroupId,
                     principalTable: "Group",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "CollectionCipher",
             columns: table => new
             {
                 CollectionId = table.Column<Guid>(type: "TEXT", nullable: false),
-                CipherId = table.Column<Guid>(type: "TEXT", nullable: false)
+                CipherId = table.Column<Guid>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -715,14 +816,17 @@ public partial class initial : Migration
                     column: x => x.CipherId,
                     principalTable: "Cipher",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_CollectionCipher_Collection_CollectionId",
                     column: x => x.CollectionId,
                     principalTable: "Collection",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "AuthRequest",
@@ -731,9 +835,17 @@ public partial class initial : Migration
                 Id = table.Column<Guid>(type: "TEXT", nullable: false),
                 UserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 Type = table.Column<byte>(type: "INTEGER", nullable: false),
-                RequestDeviceIdentifier = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                RequestDeviceIdentifier = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
                 RequestDeviceType = table.Column<byte>(type: "INTEGER", nullable: false),
-                RequestIpAddress = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                RequestIpAddress = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 50,
+                    nullable: true
+                ),
                 RequestFingerprint = table.Column<string>(type: "TEXT", nullable: true),
                 ResponseDeviceId = table.Column<Guid>(type: "TEXT", nullable: true),
                 AccessCode = table.Column<string>(type: "TEXT", maxLength: 25, nullable: true),
@@ -743,7 +855,7 @@ public partial class initial : Migration
                 Approved = table.Column<bool>(type: "INTEGER", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 ResponseDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                AuthenticationDate = table.Column<DateTime>(type: "TEXT", nullable: true)
+                AuthenticationDate = table.Column<DateTime>(type: "TEXT", nullable: true),
             },
             constraints: table =>
             {
@@ -752,14 +864,17 @@ public partial class initial : Migration
                     name: "FK_AuthRequest_Device_ResponseDeviceId",
                     column: x => x.ResponseDeviceId,
                     principalTable: "Device",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_AuthRequest_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "CollectionUsers",
@@ -769,29 +884,36 @@ public partial class initial : Migration
                 OrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: false),
                 UserId = table.Column<Guid>(type: "TEXT", nullable: true),
                 ReadOnly = table.Column<bool>(type: "INTEGER", nullable: false),
-                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: false)
+                HidePasswords = table.Column<bool>(type: "INTEGER", nullable: false),
             },
             constraints: table =>
             {
-                table.PrimaryKey("PK_CollectionUsers", x => new { x.CollectionId, x.OrganizationUserId });
+                table.PrimaryKey(
+                    "PK_CollectionUsers",
+                    x => new { x.CollectionId, x.OrganizationUserId }
+                );
                 table.ForeignKey(
                     name: "FK_CollectionUsers_Collection_CollectionId",
                     column: x => x.CollectionId,
                     principalTable: "Collection",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_CollectionUsers_OrganizationUser_OrganizationUserId",
                     column: x => x.OrganizationUserId,
                     principalTable: "OrganizationUser",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_CollectionUsers_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "GroupUser",
@@ -799,7 +921,7 @@ public partial class initial : Migration
             {
                 GroupId = table.Column<Guid>(type: "TEXT", nullable: false),
                 OrganizationUserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                UserId = table.Column<Guid>(type: "TEXT", nullable: true)
+                UserId = table.Column<Guid>(type: "TEXT", nullable: true),
             },
             constraints: table =>
             {
@@ -809,278 +931,267 @@ public partial class initial : Migration
                     column: x => x.GroupId,
                     principalTable: "Group",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_GroupUser_OrganizationUser_OrganizationUserId",
                     column: x => x.OrganizationUserId,
                     principalTable: "OrganizationUser",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_GroupUser_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_AuthRequest_ResponseDeviceId",
             table: "AuthRequest",
-            column: "ResponseDeviceId");
+            column: "ResponseDeviceId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_AuthRequest_UserId",
             table: "AuthRequest",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Cipher_OrganizationId",
             table: "Cipher",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
-        migrationBuilder.CreateIndex(
-            name: "IX_Cipher_UserId",
-            table: "Cipher",
-            column: "UserId");
+        migrationBuilder.CreateIndex(name: "IX_Cipher_UserId", table: "Cipher", column: "UserId");
 
         migrationBuilder.CreateIndex(
             name: "IX_Collection_OrganizationId",
             table: "Collection",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_CollectionCipher_CipherId",
             table: "CollectionCipher",
-            column: "CipherId");
+            column: "CipherId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_CollectionGroups_GroupId",
             table: "CollectionGroups",
-            column: "GroupId");
+            column: "GroupId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_CollectionUsers_OrganizationUserId",
             table: "CollectionUsers",
-            column: "OrganizationUserId");
+            column: "OrganizationUserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_CollectionUsers_UserId",
             table: "CollectionUsers",
-            column: "UserId");
+            column: "UserId"
+        );
 
-        migrationBuilder.CreateIndex(
-            name: "IX_Device_UserId",
-            table: "Device",
-            column: "UserId");
+        migrationBuilder.CreateIndex(name: "IX_Device_UserId", table: "Device", column: "UserId");
 
         migrationBuilder.CreateIndex(
             name: "IX_EmergencyAccess_GranteeId",
             table: "EmergencyAccess",
-            column: "GranteeId");
+            column: "GranteeId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_EmergencyAccess_GrantorId",
             table: "EmergencyAccess",
-            column: "GrantorId");
+            column: "GrantorId"
+        );
 
-        migrationBuilder.CreateIndex(
-            name: "IX_Folder_UserId",
-            table: "Folder",
-            column: "UserId");
+        migrationBuilder.CreateIndex(name: "IX_Folder_UserId", table: "Folder", column: "UserId");
 
         migrationBuilder.CreateIndex(
             name: "IX_Group_OrganizationId",
             table: "Group",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_GroupUser_OrganizationUserId",
             table: "GroupUser",
-            column: "OrganizationUserId");
+            column: "OrganizationUserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_GroupUser_UserId",
             table: "GroupUser",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationApiKey_OrganizationId",
             table: "OrganizationApiKey",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationConnection_OrganizationId",
             table: "OrganizationConnection",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationSponsorship_SponsoredOrganizationId",
             table: "OrganizationSponsorship",
-            column: "SponsoredOrganizationId");
+            column: "SponsoredOrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationSponsorship_SponsoringOrganizationId",
             table: "OrganizationSponsorship",
-            column: "SponsoringOrganizationId");
+            column: "SponsoringOrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationUser_OrganizationId",
             table: "OrganizationUser",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationUser_UserId",
             table: "OrganizationUser",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Policy_OrganizationId",
             table: "Policy",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderOrganization_OrganizationId",
             table: "ProviderOrganization",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderOrganization_ProviderId",
             table: "ProviderOrganization",
-            column: "ProviderId");
+            column: "ProviderId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderUser_ProviderId",
             table: "ProviderUser",
-            column: "ProviderId");
+            column: "ProviderId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderUser_UserId",
             table: "ProviderUser",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Send_OrganizationId",
             table: "Send",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
-        migrationBuilder.CreateIndex(
-            name: "IX_Send_UserId",
-            table: "Send",
-            column: "UserId");
+        migrationBuilder.CreateIndex(name: "IX_Send_UserId", table: "Send", column: "UserId");
 
         migrationBuilder.CreateIndex(
             name: "IX_SsoConfig_OrganizationId",
             table: "SsoConfig",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_SsoUser_OrganizationId",
             table: "SsoUser",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
-        migrationBuilder.CreateIndex(
-            name: "IX_SsoUser_UserId",
-            table: "SsoUser",
-            column: "UserId");
+        migrationBuilder.CreateIndex(name: "IX_SsoUser_UserId", table: "SsoUser", column: "UserId");
 
         migrationBuilder.CreateIndex(
             name: "IX_Transaction_OrganizationId",
             table: "Transaction",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Transaction_UserId",
             table: "Transaction",
-            column: "UserId");
+            column: "UserId"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "AuthRequest");
+        migrationBuilder.DropTable(name: "AuthRequest");
 
-        migrationBuilder.DropTable(
-            name: "CollectionCipher");
+        migrationBuilder.DropTable(name: "CollectionCipher");
 
-        migrationBuilder.DropTable(
-            name: "CollectionGroups");
+        migrationBuilder.DropTable(name: "CollectionGroups");
 
-        migrationBuilder.DropTable(
-            name: "CollectionUsers");
+        migrationBuilder.DropTable(name: "CollectionUsers");
 
-        migrationBuilder.DropTable(
-            name: "EmergencyAccess");
+        migrationBuilder.DropTable(name: "EmergencyAccess");
 
-        migrationBuilder.DropTable(
-            name: "Event");
+        migrationBuilder.DropTable(name: "Event");
 
-        migrationBuilder.DropTable(
-            name: "Folder");
+        migrationBuilder.DropTable(name: "Folder");
 
-        migrationBuilder.DropTable(
-            name: "Grant");
+        migrationBuilder.DropTable(name: "Grant");
 
-        migrationBuilder.DropTable(
-            name: "GroupUser");
+        migrationBuilder.DropTable(name: "GroupUser");
 
-        migrationBuilder.DropTable(
-            name: "Installation");
+        migrationBuilder.DropTable(name: "Installation");
 
-        migrationBuilder.DropTable(
-            name: "OrganizationApiKey");
+        migrationBuilder.DropTable(name: "OrganizationApiKey");
 
-        migrationBuilder.DropTable(
-            name: "OrganizationConnection");
+        migrationBuilder.DropTable(name: "OrganizationConnection");
 
-        migrationBuilder.DropTable(
-            name: "OrganizationSponsorship");
+        migrationBuilder.DropTable(name: "OrganizationSponsorship");
 
-        migrationBuilder.DropTable(
-            name: "Policy");
+        migrationBuilder.DropTable(name: "Policy");
 
-        migrationBuilder.DropTable(
-            name: "ProviderOrganization");
+        migrationBuilder.DropTable(name: "ProviderOrganization");
 
-        migrationBuilder.DropTable(
-            name: "ProviderUser");
+        migrationBuilder.DropTable(name: "ProviderUser");
 
-        migrationBuilder.DropTable(
-            name: "Send");
+        migrationBuilder.DropTable(name: "Send");
 
-        migrationBuilder.DropTable(
-            name: "SsoConfig");
+        migrationBuilder.DropTable(name: "SsoConfig");
 
-        migrationBuilder.DropTable(
-            name: "SsoUser");
+        migrationBuilder.DropTable(name: "SsoUser");
 
-        migrationBuilder.DropTable(
-            name: "TaxRate");
+        migrationBuilder.DropTable(name: "TaxRate");
 
-        migrationBuilder.DropTable(
-            name: "Transaction");
+        migrationBuilder.DropTable(name: "Transaction");
 
-        migrationBuilder.DropTable(
-            name: "Device");
+        migrationBuilder.DropTable(name: "Device");
 
-        migrationBuilder.DropTable(
-            name: "Cipher");
+        migrationBuilder.DropTable(name: "Cipher");
 
-        migrationBuilder.DropTable(
-            name: "Collection");
+        migrationBuilder.DropTable(name: "Collection");
 
-        migrationBuilder.DropTable(
-            name: "Group");
+        migrationBuilder.DropTable(name: "Group");
 
-        migrationBuilder.DropTable(
-            name: "OrganizationUser");
+        migrationBuilder.DropTable(name: "OrganizationUser");
 
-        migrationBuilder.DropTable(
-            name: "Provider");
+        migrationBuilder.DropTable(name: "Provider");
 
-        migrationBuilder.DropTable(
-            name: "Organization");
+        migrationBuilder.DropTable(name: "Organization");
 
-        migrationBuilder.DropTable(
-            name: "User");
+        migrationBuilder.DropTable(name: "User");
     }
 }

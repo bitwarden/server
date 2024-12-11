@@ -18,12 +18,13 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     public MemberResponseModel() { }
 
     [SetsRequiredMembers]
-    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections) : base(user)
+    public MemberResponseModel(
+        OrganizationUser user,
+        IEnumerable<CollectionAccessSelection> collections
+    )
+        : base(user)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         Id = user.Id;
         UserId = user.UserId;
@@ -34,13 +35,14 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     }
 
     [SetsRequiredMembers]
-    public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
-        IEnumerable<CollectionAccessSelection> collections) : base(user)
+    public MemberResponseModel(
+        OrganizationUserUserDetails user,
+        bool twoFactorEnabled,
+        IEnumerable<CollectionAccessSelection> collections
+    )
+        : base(user)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         Id = user.Id;
         UserId = user.UserId;
@@ -58,34 +60,40 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// <example>member</example>
     [Required]
     public string Object => "member";
+
     /// <summary>
     /// The member's unique identifier within the organization.
     /// </summary>
     /// <example>539a36c5-e0d2-4cf9-979e-51ecf5cf6593</example>
     [Required]
     public Guid Id { get; set; }
+
     /// <summary>
     /// The member's unique identifier across Bitwarden.
     /// </summary>
     /// <example>48b47ee1-493e-4c67-aef7-014996c40eca</example>
     [Required]
     public Guid? UserId { get; set; }
+
     /// <summary>
     /// The member's name, set from their user account profile.
     /// </summary>
     /// <example>John Smith</example>
     public string Name { get; set; }
+
     /// <summary>
     /// The member's email address.
     /// </summary>
     /// <example>jsmith@example.com</example>
     [Required]
     public string Email { get; set; }
+
     /// <summary>
     /// Returns <c>true</c> if the member has a two-step login method enabled on their user account.
     /// </summary>
     [Required]
     public bool TwoFactorEnabled { get; set; }
+
     /// <summary>
     /// The member's status within the organization. All created members start with a status of "Invited".
     /// Once a member accept's their invitation to join the organization, their status changes to "Accepted".
@@ -94,6 +102,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// </summary>
     [Required]
     public OrganizationUserStatusType Status { get; set; }
+
     /// <summary>
     /// The associated collections that this member can access.
     /// </summary>

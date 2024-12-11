@@ -15,14 +15,13 @@ public partial class AddCipherIdToSend : Migration
             table: "Send",
             type: "char(36)",
             nullable: true,
-            collation: "ascii_general_ci");
+            collation: "ascii_general_ci"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "CipherId",
-            table: "Send");
+        migrationBuilder.DropColumn(name: "CipherId", table: "Send");
     }
 }

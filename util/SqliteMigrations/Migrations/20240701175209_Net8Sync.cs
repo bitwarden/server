@@ -12,7 +12,8 @@ public partial class Net8Sync : Migration
     {
         migrationBuilder.DropIndex(
             name: "IX_ProviderInvoiceItem_Id_InvoiceId",
-            table: "ProviderInvoiceItem");
+            table: "ProviderInvoiceItem"
+        );
     }
 
     /// <inheritdoc />
@@ -22,6 +23,7 @@ public partial class Net8Sync : Migration
             name: "IX_ProviderInvoiceItem_Id_InvoiceId",
             table: "ProviderInvoiceItem",
             columns: new[] { "Id", "InvoiceId" },
-            unique: true);
+            unique: true
+        );
     }
 }

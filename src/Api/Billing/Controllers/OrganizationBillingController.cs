@@ -21,7 +21,8 @@ public class OrganizationBillingController(
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
     ISubscriberService subscriberService,
-    IPaymentHistoryService paymentHistoryService) : BaseBillingController
+    IPaymentHistoryService paymentHistoryService
+) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
@@ -64,7 +65,11 @@ public class OrganizationBillingController(
     }
 
     [HttpGet("invoices")]
-    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string? status = null, [FromQuery] string? startAfter = null)
+    public async Task<IResult> GetInvoicesAsync(
+        [FromRoute] Guid organizationId,
+        [FromQuery] string? status = null,
+        [FromQuery] string? startAfter = null
+    )
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
@@ -82,13 +87,17 @@ public class OrganizationBillingController(
             organization,
             5,
             status,
-            startAfter);
+            startAfter
+        );
 
         return TypedResults.Ok(invoices);
     }
 
     [HttpGet("transactions")]
-    public async Task<IResult> GetTransactionsAsync([FromRoute] Guid organizationId, [FromQuery] DateTime? startAfter = null)
+    public async Task<IResult> GetTransactionsAsync(
+        [FromRoute] Guid organizationId,
+        [FromQuery] DateTime? startAfter = null
+    )
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
@@ -105,7 +114,8 @@ public class OrganizationBillingController(
         var transactions = await paymentHistoryService.GetTransactionHistoryAsync(
             organization,
             5,
-            startAfter);
+            startAfter
+        );
 
         return TypedResults.Ok(transactions);
     }
@@ -163,7 +173,8 @@ public class OrganizationBillingController(
     [HttpPut("payment-method")]
     public async Task<IResult> UpdatePaymentMethodAsync(
         [FromRoute] Guid organizationId,
-        [FromBody] UpdatePaymentMethodRequestBody requestBody)
+        [FromBody] UpdatePaymentMethodRequestBody requestBody
+    )
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
         {
@@ -186,7 +197,11 @@ public class OrganizationBillingController(
 
         var taxInformation = requestBody.TaxInformation.ToDomain();
 
-        await organizationBillingService.UpdatePaymentMethod(organization, tokenizedPaymentSource, taxInformation);
+        await organizationBillingService.UpdatePaymentMethod(
+            organization,
+            tokenizedPaymentSource,
+            taxInformation
+        );
 
         return TypedResults.Ok();
     }
@@ -194,7 +209,8 @@ public class OrganizationBillingController(
     [HttpPost("payment-method/verify-bank-account")]
     public async Task<IResult> VerifyBankAccountAsync(
         [FromRoute] Guid organizationId,
-        [FromBody] VerifyBankAccountRequestBody requestBody)
+        [FromBody] VerifyBankAccountRequestBody requestBody
+    )
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
         {
@@ -208,7 +224,9 @@ public class OrganizationBillingController(
 
         if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
         {
-            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
+            return Error.BadRequest(
+                "Statement descriptor should be a 6-character value that starts with 'SM'"
+            );
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
@@ -253,7 +271,8 @@ public class OrganizationBillingController(
     [HttpPut("tax-information")]
     public async Task<IResult> UpdateTaxInformationAsync(
         [FromRoute] Guid organizationId,
-        [FromBody] TaxInformationRequestBody requestBody)
+        [FromBody] TaxInformationRequestBody requestBody
+    )
     {
         if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
         {

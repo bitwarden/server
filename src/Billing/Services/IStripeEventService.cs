@@ -54,7 +54,11 @@ public interface IStripeEventService
     /// <returns>A Stripe <see cref="PaymentMethod"/>.</returns>
     /// <exception cref="Exception">Thrown when the Stripe event does not contain an payment method object.</exception>
     /// <exception cref="Exception">Thrown when <paramref name="fresh"/> is true and Stripe's API returns a null payment method object.</exception>
-    Task<PaymentMethod> GetPaymentMethod(Event stripeEvent, bool fresh = false, List<string> expand = null);
+    Task<PaymentMethod> GetPaymentMethod(
+        Event stripeEvent,
+        bool fresh = false,
+        List<string> expand = null
+    );
 
     /// <summary>
     /// Extracts the <see cref="Subscription"/> object from the Stripe <see cref="Event"/>. When <paramref name="fresh"/> is true,
@@ -67,7 +71,11 @@ public interface IStripeEventService
     /// <returns>A Stripe <see cref="Subscription"/>.</returns>
     /// <exception cref="Exception">Thrown when the Stripe event does not contain an subscription object.</exception>
     /// <exception cref="Exception">Thrown when <paramref name="fresh"/> is true and Stripe's API returns a null subscription object.</exception>
-    Task<Subscription> GetSubscription(Event stripeEvent, bool fresh = false, List<string> expand = null);
+    Task<Subscription> GetSubscription(
+        Event stripeEvent,
+        bool fresh = false,
+        List<string> expand = null
+    );
 
     /// <summary>
     /// Ensures that the customer associated with the Stripe <see cref="Event"/> is in the correct region for this server.

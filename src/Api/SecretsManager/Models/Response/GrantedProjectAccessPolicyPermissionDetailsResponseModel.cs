@@ -9,16 +9,19 @@ public class GrantedProjectAccessPolicyPermissionDetailsResponseModel : Response
     private const string _objectName = "grantedProjectAccessPolicyPermissionDetails";
 
     public GrantedProjectAccessPolicyPermissionDetailsResponseModel(
-        ServiceAccountProjectAccessPolicyPermissionDetails apPermissionDetails, string obj = _objectName) : base(obj)
+        ServiceAccountProjectAccessPolicyPermissionDetails apPermissionDetails,
+        string obj = _objectName
+    )
+        : base(obj)
     {
-        AccessPolicy = new GrantedProjectAccessPolicyResponseModel(apPermissionDetails.AccessPolicy);
+        AccessPolicy = new GrantedProjectAccessPolicyResponseModel(
+            apPermissionDetails.AccessPolicy
+        );
         HasPermission = apPermissionDetails.HasPermission;
     }
 
     public GrantedProjectAccessPolicyPermissionDetailsResponseModel()
-        : base(_objectName)
-    {
-    }
+        : base(_objectName) { }
 
     public GrantedProjectAccessPolicyResponseModel AccessPolicy { get; set; } = new();
     public bool HasPermission { get; set; }

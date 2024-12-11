@@ -14,14 +14,13 @@ public partial class AddClientIdToProviderInvoiceItem : Migration
             name: "ClientId",
             table: "ProviderInvoiceItem",
             type: "TEXT",
-            nullable: true);
+            nullable: true
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "ClientId",
-            table: "ProviderInvoiceItem");
+        migrationBuilder.DropColumn(name: "ClientId", table: "ProviderInvoiceItem");
     }
 }

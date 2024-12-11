@@ -12,14 +12,19 @@ public class PostgresDbMigrator : IDbMigrator
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<PostgresDbMigrator> _logger;
 
-    public PostgresDbMigrator(IServiceScopeFactory serviceScopeFactory, ILogger<PostgresDbMigrator> logger)
+    public PostgresDbMigrator(
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<PostgresDbMigrator> logger
+    )
     {
         _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
     }
 
-    public bool MigrateDatabase(bool enableLogging = true,
-        CancellationToken cancellationToken = default(CancellationToken))
+    public bool MigrateDatabase(
+        bool enableLogging = true,
+        CancellationToken cancellationToken = default(CancellationToken)
+    )
     {
         if (enableLogging && _logger != null)
         {

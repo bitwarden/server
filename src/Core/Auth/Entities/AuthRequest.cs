@@ -11,12 +11,15 @@ public class AuthRequest : ITableObject<Guid>
     public Guid UserId { get; set; }
     public Guid? OrganizationId { get; set; }
     public Enums.AuthRequestType Type { get; set; }
+
     [MaxLength(50)]
     public string RequestDeviceIdentifier { get; set; }
     public DeviceType RequestDeviceType { get; set; }
+
     [MaxLength(50)]
     public string RequestIpAddress { get; set; }
     public Guid? ResponseDeviceId { get; set; }
+
     [MaxLength(25)]
     public string AccessCode { get; set; }
     public string PublicKey { get; set; }
@@ -34,7 +37,9 @@ public class AuthRequest : ITableObject<Guid>
 
     public bool IsSpent()
     {
-        return ResponseDate.HasValue || AuthenticationDate.HasValue || GetExpirationDate() < DateTime.UtcNow;
+        return ResponseDate.HasValue
+            || AuthenticationDate.HasValue
+            || GetExpirationDate() < DateTime.UtcNow;
     }
 
     public DateTime GetExpirationDate()

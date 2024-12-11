@@ -39,7 +39,10 @@ namespace Bit.Core.OrganizationFeatures;
 
 public static class OrganizationServiceCollectionExtensions
 {
-    public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
+    public static void AddOrganizationServices(
+        this IServiceCollection services,
+        IGlobalSettings globalSettings
+    )
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddTokenizers();
@@ -58,17 +61,30 @@ public static class OrganizationServiceCollectionExtensions
         services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
 
-    private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
-        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+    private static IServiceCollection AddOrganizationSignUpCommands(
+        this IServiceCollection services
+    ) => services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
     {
-        services.AddScoped<ICreateOrganizationConnectionCommand, CreateOrganizationConnectionCommand>();
-        services.AddScoped<IDeleteOrganizationConnectionCommand, DeleteOrganizationConnectionCommand>();
-        services.AddScoped<IUpdateOrganizationConnectionCommand, UpdateOrganizationConnectionCommand>();
+        services.AddScoped<
+            ICreateOrganizationConnectionCommand,
+            CreateOrganizationConnectionCommand
+        >();
+        services.AddScoped<
+            IDeleteOrganizationConnectionCommand,
+            DeleteOrganizationConnectionCommand
+        >();
+        services.AddScoped<
+            IUpdateOrganizationConnectionCommand,
+            UpdateOrganizationConnectionCommand
+        >();
     }
 
-    private static void AddOrganizationSponsorshipCommands(this IServiceCollection services, IGlobalSettings globalSettings)
+    private static void AddOrganizationSponsorshipCommands(
+        this IServiceCollection services,
+        IGlobalSettings globalSettings
+    )
     {
         services.AddScoped<ICreateSponsorshipCommand, CreateSponsorshipCommand>();
         services.AddScoped<IRemoveSponsorshipCommand, RemoveSponsorshipCommand>();
@@ -77,7 +93,10 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IValidateRedemptionTokenCommand, ValidateRedemptionTokenCommand>();
         services.AddScoped<IValidateSponsorshipCommand, ValidateSponsorshipCommand>();
         services.AddScoped<IValidateBillingSyncKeyCommand, ValidateBillingSyncKeyCommand>();
-        services.AddScoped<IOrganizationSponsorshipRenewCommand, OrganizationSponsorshipRenewCommand>();
+        services.AddScoped<
+            IOrganizationSponsorshipRenewCommand,
+            OrganizationSponsorshipRenewCommand
+        >();
         services.AddScoped<ICloudSyncSponsorshipsCommand, CloudSyncSponsorshipsCommand>();
         services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
         services.AddScoped<ISelfHostedSyncSponsorshipsCommand, SelfHostedSyncSponsorshipsCommand>();
@@ -96,10 +115,19 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUserCommands(this IServiceCollection services)
     {
         services.AddScoped<IRemoveOrganizationUserCommand, RemoveOrganizationUserCommand>();
-        services.AddScoped<IRevokeNonCompliantOrganizationUserCommand, RevokeNonCompliantOrganizationUserCommand>();
+        services.AddScoped<
+            IRevokeNonCompliantOrganizationUserCommand,
+            RevokeNonCompliantOrganizationUserCommand
+        >();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
-        services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
-        services.AddScoped<IDeleteManagedOrganizationUserAccountCommand, DeleteManagedOrganizationUserAccountCommand>();
+        services.AddScoped<
+            IUpdateOrganizationUserGroupsCommand,
+            UpdateOrganizationUserGroupsCommand
+        >();
+        services.AddScoped<
+            IDeleteManagedOrganizationUserAccountCommand,
+            DeleteManagedOrganizationUserAccountCommand
+        >();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
@@ -125,7 +153,10 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
-        services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
+        services.AddScoped<
+            ISelfHostedGetOrganizationLicenseQuery,
+            SelfHostedGetOrganizationLicenseQuery
+        >();
         services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
     }
 
@@ -133,15 +164,27 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
         services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
-        services.AddScoped<IGetOrganizationDomainByIdOrganizationIdQuery, GetOrganizationDomainByIdOrganizationIdQuery>();
-        services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
+        services.AddScoped<
+            IGetOrganizationDomainByIdOrganizationIdQuery,
+            GetOrganizationDomainByIdOrganizationIdQuery
+        >();
+        services.AddScoped<
+            IGetOrganizationDomainByOrganizationIdQuery,
+            GetOrganizationDomainByOrganizationIdQuery
+        >();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
-        services.AddScoped<IOrganizationHasVerifiedDomainsQuery, OrganizationHasVerifiedDomainsQuery>();
+        services.AddScoped<
+            IOrganizationHasVerifiedDomainsQuery,
+            OrganizationHasVerifiedDomainsQuery
+        >();
     }
 
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
     {
-        services.AddScoped<IUpdateOrganizationAuthRequestCommand, UpdateOrganizationAuthRequestCommand>();
+        services.AddScoped<
+            IUpdateOrganizationAuthRequestCommand,
+            UpdateOrganizationAuthRequestCommand
+        >();
     }
 
     private static void AddOrganizationUserCommandsQueries(this IServiceCollection services)
@@ -149,28 +192,45 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
         services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
-        services.AddScoped<IGetOrganizationUsersManagementStatusQuery, GetOrganizationUsersManagementStatusQuery>();
+        services.AddScoped<
+            IGetOrganizationUsersManagementStatusQuery,
+            GetOrganizationUsersManagementStatusQuery
+        >();
 
-        services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
+        services.AddScoped<
+            IAuthorizationHandler,
+            OrganizationUserUserMiniDetailsAuthorizationHandler
+        >();
+        services.AddScoped<
+            IAuthorizationHandler,
+            OrganizationUserUserDetailsAuthorizationHandler
+        >();
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of
     // TODO: OrganizationService - see PM-1880
-    private static void AddBaseOrganizationSubscriptionCommandsQueries(this IServiceCollection services)
+    private static void AddBaseOrganizationSubscriptionCommandsQueries(
+        this IServiceCollection services
+    )
     {
-        services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
+        services.AddScoped<
+            IUpdateSecretsManagerSubscriptionCommand,
+            UpdateSecretsManagerSubscriptionCommand
+        >();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
     {
-        services.AddSingleton<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(serviceProvider =>
-            new DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>(
+        services.AddSingleton<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(
+            serviceProvider => new DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>(
                 OrganizationSponsorshipOfferTokenable.ClearTextPrefix,
                 OrganizationSponsorshipOfferTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>>())
+                serviceProvider.GetRequiredService<
+                    ILogger<DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>
+                >()
+            )
         );
     }
 }

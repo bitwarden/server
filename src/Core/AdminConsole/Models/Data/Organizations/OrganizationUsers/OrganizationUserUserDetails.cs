@@ -29,7 +29,8 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public bool HasMasterPassword { get; set; }
 
     public ICollection<Guid> Groups { get; set; } = new List<Guid>();
-    public ICollection<CollectionAccessSelection> Collections { get; set; } = new List<CollectionAccessSelection>();
+    public ICollection<CollectionAccessSelection> Collections { get; set; } =
+        new List<CollectionAccessSelection>();
 
     public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
     {
@@ -42,9 +43,9 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
         {
             if (_twoFactorProviders == null)
             {
-                _twoFactorProviders =
-                    JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
-                        TwoFactorProviders);
+                _twoFactorProviders = JsonHelpers.LegacyDeserialize<
+                    Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                >(TwoFactorProviders);
             }
 
             return _twoFactorProviders;
@@ -67,7 +68,8 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
 
     public Permissions GetPermissions()
     {
-        return string.IsNullOrWhiteSpace(Permissions) ? null
+        return string.IsNullOrWhiteSpace(Permissions)
+            ? null
             : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
     }
 }

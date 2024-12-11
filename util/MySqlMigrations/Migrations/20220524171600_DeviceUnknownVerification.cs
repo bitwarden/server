@@ -11,13 +11,12 @@ public partial class DeviceUnknownVerification : Migration
             table: "User",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: true);
+            defaultValue: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "UnknownDeviceVerificationEnabled",
-            table: "User");
+        migrationBuilder.DropColumn(name: "UnknownDeviceVerificationEnabled", table: "User");
     }
 }

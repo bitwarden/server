@@ -10,12 +10,12 @@ namespace Bit.Api.Models.Public.Response;
 /// </summary>
 public class CollectionResponseModel : CollectionBaseModel, IResponseModel
 {
-    public CollectionResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups)
+    public CollectionResponseModel(
+        Collection collection,
+        IEnumerable<CollectionAccessSelection> groups
+    )
     {
-        if (collection == null)
-        {
-            throw new ArgumentNullException(nameof(collection));
-        }
+        ArgumentNullException.ThrowIfNull(collection);
 
         Id = collection.Id;
         ExternalId = collection.ExternalId;
@@ -28,12 +28,14 @@ public class CollectionResponseModel : CollectionBaseModel, IResponseModel
     /// <example>collection</example>
     [Required]
     public string Object => "collection";
+
     /// <summary>
     /// The collection's unique identifier.
     /// </summary>
     /// <example>539a36c5-e0d2-4cf9-979e-51ecf5cf6593</example>
     [Required]
     public Guid Id { get; set; }
+
     /// <summary>
     /// The associated groups that this collection is assigned to.
     /// </summary>

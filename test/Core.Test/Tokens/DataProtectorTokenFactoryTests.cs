@@ -16,7 +16,9 @@ public class DataProtectorTokenFactoryTests
     {
         var fixture = new Fixture();
         return new SutProvider<DataProtectorTokenFactory<TestTokenable>>(fixture)
-            .SetDependency<IDataProtectionProvider>(fixture.Create<EphemeralDataProtectionProvider>())
+            .SetDependency<IDataProtectionProvider>(
+                fixture.Create<EphemeralDataProtectionProvider>()
+            )
             .Create();
     }
 
@@ -86,7 +88,6 @@ public class DataProtectorTokenFactoryTests
         Assert.False(result);
     }
 
-
     [Theory, BitAutoData]
     public void TokenValid_FalseIfTokenInvalid(TestTokenable tokenable)
     {
@@ -123,5 +124,4 @@ public class DataProtectorTokenFactoryTests
 
         Assert.True(result);
     }
-
 }

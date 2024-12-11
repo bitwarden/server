@@ -3,4 +3,5 @@
 public record SubscriptionSuspension(
     DateTime SuspensionDate,
     DateTime UnpaidPeriodEndDate,
-    int GracePeriod);
+    int GracePeriod
+);

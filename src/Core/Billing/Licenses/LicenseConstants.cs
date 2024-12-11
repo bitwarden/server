@@ -35,7 +35,9 @@ public static class OrganizationLicenseConstants
     public const string SmSeats = nameof(SmSeats);
     public const string SmServiceAccounts = nameof(SmServiceAccounts);
     public const string LimitCollectionCreationDeletion = nameof(LimitCollectionCreationDeletion);
-    public const string AllowAdminAccessToAllCollectionItems = nameof(AllowAdminAccessToAllCollectionItems);
+    public const string AllowAdminAccessToAllCollectionItems = nameof(
+        AllowAdminAccessToAllCollectionItems
+    );
     public const string Expires = nameof(Expires);
     public const string Refresh = nameof(Refresh);
     public const string ExpirationWithoutGracePeriod = nameof(ExpirationWithoutGracePeriod);

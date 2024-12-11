@@ -11,8 +11,10 @@ public class Group : ITableObject<Guid>, IExternal
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
+
     [MaxLength(100)]
     public string Name { get; set; } = null!;
+
     [MaxLength(300)]
     public string? ExternalId { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;

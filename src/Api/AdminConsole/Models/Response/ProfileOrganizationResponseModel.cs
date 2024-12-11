@@ -13,11 +13,13 @@ namespace Bit.Api.AdminConsole.Models.Response;
 
 public class ProfileOrganizationResponseModel : ResponseModel
 {
-    public ProfileOrganizationResponseModel(string str) : base(str) { }
+    public ProfileOrganizationResponseModel(string str)
+        : base(str) { }
 
     public ProfileOrganizationResponseModel(
         OrganizationUserOrganizationDetails organization,
-        IEnumerable<Guid> organizationIdsManagingUser)
+        IEnumerable<Guid> organizationIdsManagingUser
+    )
         : this("profileOrganization")
     {
         Id = organization.OrganizationId;
@@ -37,7 +39,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).ProductTier == ProductTierType.Enterprise;
+        UseActivateAutofillPolicy =
+            StaticStore.GetPlan(organization.PlanType).ProductTier == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -57,9 +60,11 @@ public class ProfileOrganizationResponseModel : ResponseModel
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
-        FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
-            StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
-            .UsersCanSponsor(organization);
+        FamilySponsorshipAvailable =
+            FamilySponsorshipFriendlyName == null
+            && StaticStore
+                .GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
+                .UsersCanSponsor(organization);
         ProductTierType = StaticStore.GetPlan(organization.PlanType).ProductTier;
         FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
@@ -68,18 +73,23 @@ public class ProfileOrganizationResponseModel : ResponseModel
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(
+            organization.OrganizationId
+        );
         UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
         {
             var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
-            KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+            KeyConnectorEnabled =
+                ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector
+                && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
         }
     }
 
     public Guid Id { get; set; }
+
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
@@ -114,6 +124,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public Guid OrganizationUserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public Guid? ProviderId { get; set; }
+
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
@@ -129,6 +140,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+
     /// <summary>
     /// Indicates if the organization manages the user.
     /// </summary>

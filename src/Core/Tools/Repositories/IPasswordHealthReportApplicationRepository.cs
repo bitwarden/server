@@ -3,7 +3,10 @@ using Bit.Core.Tools.Entities;
 
 namespace Bit.Core.Tools.Repositories;
 
-public interface IPasswordHealthReportApplicationRepository : IRepository<PasswordHealthReportApplication, Guid>
+public interface IPasswordHealthReportApplicationRepository
+    : IRepository<PasswordHealthReportApplication, Guid>
 {
-    Task<ICollection<PasswordHealthReportApplication>> GetByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<PasswordHealthReportApplication>> GetByOrganizationIdAsync(
+        Guid organizationId
+    );
 }

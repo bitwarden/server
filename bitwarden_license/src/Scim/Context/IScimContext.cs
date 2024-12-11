@@ -16,5 +16,6 @@ public interface IScimContext
         HttpContext httpContext,
         GlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
-        IOrganizationConnectionRepository organizationConnectionRepository);
+        IOrganizationConnectionRepository organizationConnectionRepository
+    );
 }

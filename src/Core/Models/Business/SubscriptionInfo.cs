@@ -37,15 +37,16 @@ public class SubscriptionInfo
             PeriodEndDate = sub.CurrentPeriodEnd;
             CancelledDate = sub.CanceledAt;
             CancelAtEndDate = sub.CancelAtPeriodEnd;
-            Cancelled = sub.Status == "canceled" || sub.Status == "unpaid" || sub.Status == "incomplete_expired";
+            Cancelled =
+                sub.Status == "canceled"
+                || sub.Status == "unpaid"
+                || sub.Status == "incomplete_expired";
             if (sub.Items?.Data != null)
             {
                 Items = sub.Items.Data.Select(i => new BillingSubscriptionItem(i));
             }
             CollectionMethod = sub.CollectionMethod;
-            GracePeriod = sub.CollectionMethod == "charge_automatically"
-                ? 14
-                : 30;
+            GracePeriod = sub.CollectionMethod == "charge_automatically" ? 14 : 30;
         }
 
         public DateTime? TrialStartDate { get; set; }
@@ -57,7 +58,8 @@ public class SubscriptionInfo
         public bool CancelAtEndDate { get; set; }
         public string Status { get; set; }
         public bool Cancelled { get; set; }
-        public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+        public IEnumerable<BillingSubscriptionItem> Items { get; set; } =
+            new List<BillingSubscriptionItem>();
         public string CollectionMethod { get; set; }
         public DateTime? SuspensionDate { get; set; }
         public DateTime? UnpaidPeriodEndDate { get; set; }
@@ -73,12 +75,15 @@ public class SubscriptionInfo
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
-                    AddonSubscriptionItem =
-                        Utilities.StaticStore.IsAddonSubscriptionItem(item.Plan.Id);
+                    AddonSubscriptionItem = Utilities.StaticStore.IsAddonSubscriptionItem(
+                        item.Plan.Id
+                    );
                 }
 
                 Quantity = (int)item.Quantity;
-                SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
+                SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p =>
+                    p.StripePlanId == item.Plan.Id
+                );
             }
 
             public bool AddonSubscriptionItem { get; set; }

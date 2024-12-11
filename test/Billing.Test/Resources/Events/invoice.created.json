@@ -48,16 +48,13 @@
       "customer_phone": null,
       "customer_shipping": null,
       "customer_tax_exempt": "none",
-      "customer_tax_ids": [
-      ],
+      "customer_tax_ids": [],
       "default_payment_method": null,
       "default_source": null,
-      "default_tax_rates": [
-      ],
+      "default_tax_rates": [],
       "description": null,
       "discount": null,
-      "discounts": [
-      ],
+      "discounts": [],
       "due_date": null,
       "effective_at": 1695910505,
       "ending_balance": 0,
@@ -77,11 +74,9 @@
             "amount_excluding_tax": 0,
             "currency": "usd",
             "description": "Trial period for Teams Organization Seat",
-            "discount_amounts": [
-            ],
+            "discount_amounts": [],
             "discountable": true,
-            "discounts": [
-            ],
+            "discounts": [],
             "livemode": false,
             "metadata": {
               "organizationId": "3fbc84ce-102d-4919-b89b-b08b00ead71a"
@@ -103,8 +98,7 @@
               "interval": "month",
               "interval_count": 1,
               "livemode": false,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "Teams Organization Seat (Monthly) 2023",
               "product": "prod_HgOooYXDr2DDAA",
               "tiers_mode": null,
@@ -122,8 +116,7 @@
               "custom_unit_amount": null,
               "livemode": false,
               "lookup_key": null,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "Teams Organization Seat (Monthly) 2023",
               "product": "prod_HgOooYXDr2DDAA",
               "recurring": {
@@ -147,10 +140,8 @@
             "quantity": 1,
             "subscription": "sub_1NvKzdIGBnsLynRrKIHQamZc",
             "subscription_item": "si_OimYNSbvuqdtTr",
-            "tax_amounts": [
-            ],
-            "tax_rates": [
-            ],
+            "tax_amounts": [],
+            "tax_rates": [],
             "type": "subscription",
             "unit_amount_excluding_tax": "0"
           }
@@ -160,8 +151,7 @@
         "url": "/v1/invoices/in_1NvKzdIGBnsLynRr8fE8cpbg/lines"
       },
       "livemode": false,
-      "metadata": {
-      },
+      "metadata": {},
       "next_payment_attempt": null,
       "number": "3E96D078-0001",
       "on_behalf_of": null,
@@ -203,11 +193,9 @@
       "tax": null,
       "test_clock": null,
       "total": 0,
-      "total_discount_amounts": [
-      ],
+      "total_discount_amounts": [],
       "total_excluding_tax": 0,
-      "total_tax_amounts": [
-      ],
+      "total_tax_amounts": [],
       "transfer_data": null,
       "webhooks_delivered_at": null
     }

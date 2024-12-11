@@ -13,54 +13,63 @@ public class OrganizationRepositoryTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
+        IOrganizationDomainRepository organizationDomainRepository
+    )
     {
         var id = Guid.NewGuid();
         var domainName = $"{id}.example.com";
 
-        var user1 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 1",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
+        var user1 = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User 1",
+                Email = $"test+{id}@{domainName}",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = 1,
+                KdfMemory = 2,
+                KdfParallelism = 3,
+            }
+        );
 
-        var user2 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@x-{domainName}", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
+        var user2 = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User 2",
+                Email = $"test+{id}@x-{domainName}", // Different domain
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = 1,
+                KdfMemory = 2,
+                KdfParallelism = 3,
+            }
+        );
 
-        var user3 = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User 2",
-            Email = $"test+{id}@{domainName}.example.com", // Different domain
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
+        var user3 = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User 2",
+                Email = $"test+{id}@{domainName}.example.com", // Different domain
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = 1,
+                KdfMemory = 2,
+                KdfParallelism = 3,
+            }
+        );
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
-            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = $"Test Org {id}",
+                BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
+                Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+                PrivateKey = "privatekey",
+            }
+        );
 
         var organizationDomain = new OrganizationDomain
         {
@@ -73,33 +82,45 @@ public class OrganizationRepositoryTests
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user1.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
+        await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                OrganizationId = organization.Id,
+                UserId = user1.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                ResetPasswordKey = "resetpasswordkey1",
+            }
+        );
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user2.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
+        await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                OrganizationId = organization.Id,
+                UserId = user2.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                ResetPasswordKey = "resetpasswordkey1",
+            }
+        );
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user3.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
+        await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                OrganizationId = organization.Id,
+                UserId = user3.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                ResetPasswordKey = "resetpasswordkey1",
+            }
+        );
 
-        var user1Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user1.Id);
-        var user2Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user2.Id);
-        var user3Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user3.Id);
+        var user1Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(
+            user1.Id
+        );
+        var user2Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(
+            user2.Id
+        );
+        var user3Response = await organizationRepository.GetByVerifiedUserEmailDomainAsync(
+            user3.Id
+        );
 
         Assert.NotEmpty(user1Response);
         Assert.Equal(organization.Id, user1Response.First().Id);
@@ -112,30 +133,35 @@ public class OrganizationRepositoryTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
+        IOrganizationDomainRepository organizationDomainRepository
+    )
     {
         var id = Guid.NewGuid();
         var domainName = $"{id}.example.com";
 
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
+        var user = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User",
+                Email = $"test+{id}@{domainName}",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = 1,
+                KdfMemory = 2,
+                KdfParallelism = 3,
+            }
+        );
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey",
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = $"Test Org {id}",
+                BillingEmail = user.Email,
+                Plan = "Test",
+                PrivateKey = "privatekey",
+            }
+        );
 
         var organizationDomain = new OrganizationDomain
         {
@@ -147,13 +173,15 @@ public class OrganizationRepositoryTests
         organizationDomain.SetJobRunCount();
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey",
-        });
+        await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                OrganizationId = organization.Id,
+                UserId = user.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                ResetPasswordKey = "resetpasswordkey",
+            }
+        );
 
         var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
@@ -165,38 +193,45 @@ public class OrganizationRepositoryTests
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationDomainRepository organizationDomainRepository)
+        IOrganizationDomainRepository organizationDomainRepository
+    )
     {
         var id = Guid.NewGuid();
         var domainName = $"{id}.example.com";
 
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{id}@{domainName}",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-            Kdf = KdfType.PBKDF2_SHA256,
-            KdfIterations = 1,
-            KdfMemory = 2,
-            KdfParallelism = 3
-        });
+        var user = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User",
+                Email = $"test+{id}@{domainName}",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = 1,
+                KdfMemory = 2,
+                KdfParallelism = 3,
+            }
+        );
 
-        var organization1 = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org 1 {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey1",
-        });
+        var organization1 = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = $"Test Org 1 {id}",
+                BillingEmail = user.Email,
+                Plan = "Test",
+                PrivateKey = "privatekey1",
+            }
+        );
 
-        var organization2 = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = $"Test Org 2 {id}",
-            BillingEmail = user.Email,
-            Plan = "Test",
-            PrivateKey = "privatekey2",
-        });
+        var organization2 = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = $"Test Org 2 {id}",
+                BillingEmail = user.Email,
+                Plan = "Test",
+                PrivateKey = "privatekey2",
+            }
+        );
 
         var organizationDomain1 = new OrganizationDomain
         {
@@ -220,21 +255,25 @@ public class OrganizationRepositoryTests
         organizationDomain2.SetVerifiedDate();
         await organizationDomainRepository.CreateAsync(organizationDomain2);
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization1.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey1",
-        });
+        await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                OrganizationId = organization1.Id,
+                UserId = user.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                ResetPasswordKey = "resetpasswordkey1",
+            }
+        );
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            OrganizationId = organization2.Id,
-            UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            ResetPasswordKey = "resetpasswordkey2",
-        });
+        await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                OrganizationId = organization2.Id,
+                UserId = user.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                ResetPasswordKey = "resetpasswordkey2",
+            }
+        );
 
         var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(user.Id);
 
@@ -245,11 +284,14 @@ public class OrganizationRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task GetByVerifiedUserEmailDomainAsync_WithNonExistentUser_ReturnsEmpty(
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository
+    )
     {
         var nonExistentUserId = Guid.NewGuid();
 
-        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(nonExistentUserId);
+        var result = await organizationRepository.GetByVerifiedUserEmailDomainAsync(
+            nonExistentUserId
+        );
 
         Assert.Empty(result);
     }

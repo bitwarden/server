@@ -12,6 +12,7 @@ public class BillingHistoryResponseModel : ResponseModel
         Transactions = billing.Transactions?.Select(t => new BillingTransaction(t));
         Invoices = billing.Invoices?.Select(i => new BillingInvoice(i));
     }
+
     public IEnumerable<BillingInvoice> Invoices { get; set; }
     public IEnumerable<BillingTransaction> Transactions { get; set; }
 }

@@ -34,7 +34,10 @@ public class SecretCreateRequestModel : IValidatableObject
             Value = Value,
             Note = Note,
             DeletedDate = null,
-            Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
+            Projects =
+                ProjectIds != null && ProjectIds.Length != 0
+                    ? ProjectIds.Select(x => new Project() { Id = x }).ToList()
+                    : null,
         };
     }
 
@@ -44,7 +47,8 @@ public class SecretCreateRequestModel : IValidatableObject
         {
             yield return new ValidationResult(
                 $"Only one project assignment is supported.",
-                new[] { nameof(ProjectIds) });
+                new[] { nameof(ProjectIds) }
+            );
         }
     }
 }

@@ -16,7 +16,8 @@ public class PatchUserCommand : IPatchUserCommand
     public PatchUserCommand(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
-        ILogger<PatchUserCommand> logger)
+        ILogger<PatchUserCommand> logger
+    )
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
@@ -48,10 +49,15 @@ public class PatchUserCommand : IPatchUserCommand
                     }
                 }
                 // Active from value object
-                else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                    operation.Value.TryGetProperty("active", out var activeProperty))
+                else if (
+                    string.IsNullOrWhiteSpace(operation.Path)
+                    && operation.Value.TryGetProperty("active", out var activeProperty)
+                )
                 {
-                    var handled = await HandleActiveOperationAsync(orgUser, activeProperty.GetBoolean());
+                    var handled = await HandleActiveOperationAsync(
+                        orgUser,
+                        activeProperty.GetBoolean()
+                    );
                     if (!operationHandled)
                     {
                         operationHandled = handled;
@@ -62,12 +68,17 @@ public class PatchUserCommand : IPatchUserCommand
 
         if (!operationHandled)
         {
-            _logger.LogWarning("User patch operation not handled: {operation} : ",
-                string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
+            _logger.LogWarning(
+                "User patch operation not handled: {operation} : ",
+                string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}"))
+            );
         }
     }
 
-    private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
+    private async Task<bool> HandleActiveOperationAsync(
+        Core.Entities.OrganizationUser orgUser,
+        bool active
+    )
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {

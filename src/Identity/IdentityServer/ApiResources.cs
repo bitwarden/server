@@ -11,21 +11,25 @@ public class ApiResources
     {
         return new List<ApiResource>
         {
-            new("api", new[] {
-                JwtClaimTypes.Name,
-                JwtClaimTypes.Email,
-                JwtClaimTypes.EmailVerified,
-                Claims.SecurityStamp,
-                Claims.Premium,
-                Claims.Device,
-                Claims.OrganizationOwner,
-                Claims.OrganizationAdmin,
-                Claims.OrganizationUser,
-                Claims.OrganizationCustom,
-                Claims.ProviderAdmin,
-                Claims.ProviderServiceUser,
-                Claims.SecretsManagerAccess,
-            }),
+            new(
+                "api",
+                new[]
+                {
+                    JwtClaimTypes.Name,
+                    JwtClaimTypes.Email,
+                    JwtClaimTypes.EmailVerified,
+                    Claims.SecurityStamp,
+                    Claims.Premium,
+                    Claims.Device,
+                    Claims.OrganizationOwner,
+                    Claims.OrganizationAdmin,
+                    Claims.OrganizationUser,
+                    Claims.OrganizationCustom,
+                    Claims.ProviderAdmin,
+                    Claims.ProviderServiceUser,
+                    Claims.SecretsManagerAccess,
+                }
+            ),
             new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiLicensing, new[] { JwtClaimTypes.Subject }),

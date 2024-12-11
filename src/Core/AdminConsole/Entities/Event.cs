@@ -50,6 +50,7 @@ public class Event : ITableObject<Guid>, IEvent
     public Guid? ProviderUserId { get; set; }
     public Guid? ProviderOrganizationId { get; set; }
     public DeviceType? DeviceType { get; set; }
+
     [MaxLength(50)]
     public string? IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }

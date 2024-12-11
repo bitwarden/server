@@ -14,11 +14,14 @@ public class DeleteServiceAccountsCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task DeleteServiceAccounts_Success(SutProvider<DeleteServiceAccountsCommand> sutProvider,
-        List<ServiceAccount> data)
+    public async Task DeleteServiceAccounts_Success(
+        SutProvider<DeleteServiceAccountsCommand> sutProvider,
+        List<ServiceAccount> data
+    )
     {
         await sutProvider.Sut.DeleteServiceAccounts(data);
-        await sutProvider.GetDependency<IServiceAccountRepository>()
+        await sutProvider
+            .GetDependency<IServiceAccountRepository>()
             .Received(1)
             .DeleteManyByIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.Select(d => d.Id))));
     }

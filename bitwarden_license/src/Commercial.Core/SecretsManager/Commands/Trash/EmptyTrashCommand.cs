@@ -15,7 +15,10 @@ public class EmptyTrashCommand : IEmptyTrashCommand
 
     public async Task EmptyTrash(Guid organizationId, List<Guid> ids)
     {
-        var secrets = await _secretRepository.GetManyByOrganizationIdInTrashByIdsAsync(organizationId, ids);
+        var secrets = await _secretRepository.GetManyByOrganizationIdInTrashByIdsAsync(
+            organizationId,
+            ids
+        );
 
         var missingId = ids.Except(secrets.Select(_ => _.Id)).Any();
         if (missingId)

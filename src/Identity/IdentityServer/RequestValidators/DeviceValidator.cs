@@ -19,6 +19,7 @@ public interface IDeviceValidator
     /// <param name="request">Duende Validated Request that contains the data to create the device object</param>
     /// <returns>Returns null if user or device is malformed; The existing device if already in DB; a new device login</returns>
     Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request);
+
     /// <summary>
     /// Check if a device is known to the user.
     /// </summary>
@@ -33,7 +34,8 @@ public class DeviceValidator(
     IDeviceRepository deviceRepository,
     GlobalSettings globalSettings,
     IMailService mailService,
-    ICurrentContext currentContext) : IDeviceValidator
+    ICurrentContext currentContext
+) : IDeviceValidator
 {
     private readonly IDeviceService _deviceService = deviceService;
     private readonly IDeviceRepository _deviceRepository = deviceRepository;
@@ -62,12 +64,20 @@ public class DeviceValidator(
                 var now = DateTime.UtcNow;
                 if (now - user.CreationDate > TimeSpan.FromMinutes(10))
                 {
-                    var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
-                        .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+                    var deviceType = device
+                        .Type.GetType()
+                        .GetMember(device.Type.ToString())
+                        .FirstOrDefault()
+                        ?.GetCustomAttribute<DisplayAttribute>()
+                        ?.GetName();
                     if (!_globalSettings.DisableEmailNewDevice)
                     {
-                        await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
-                            _currentContext.IpAddress);
+                        await _mailService.SendNewDeviceLoggedInEmail(
+                            user.Email,
+                            deviceType,
+                            now,
+                            _currentContext.IpAddress
+                        );
                     }
                 }
                 return device;
@@ -96,10 +106,12 @@ public class DeviceValidator(
         var deviceName = request.Raw["DeviceName"]?.ToString();
         var devicePushToken = request.Raw["DevicePushToken"]?.ToString();
 
-        if (string.IsNullOrWhiteSpace(deviceIdentifier) ||
-            string.IsNullOrWhiteSpace(requestDeviceType) ||
-            string.IsNullOrWhiteSpace(deviceName) ||
-            !Enum.TryParse(requestDeviceType, out DeviceType parsedDeviceType))
+        if (
+            string.IsNullOrWhiteSpace(deviceIdentifier)
+            || string.IsNullOrWhiteSpace(requestDeviceType)
+            || string.IsNullOrWhiteSpace(deviceName)
+            || !Enum.TryParse(requestDeviceType, out DeviceType parsedDeviceType)
+        )
         {
             return null;
         }
@@ -109,7 +121,7 @@ public class DeviceValidator(
             Identifier = deviceIdentifier,
             Name = deviceName,
             Type = parsedDeviceType,
-            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken
+            PushToken = string.IsNullOrWhiteSpace(devicePushToken) ? null : devicePushToken,
         };
     }
 }

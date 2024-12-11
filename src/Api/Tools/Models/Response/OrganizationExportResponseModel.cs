@@ -9,12 +9,15 @@ namespace Bit.Api.Tools.Models.Response;
 
 public class OrganizationExportResponseModel : ResponseModel
 {
-    public OrganizationExportResponseModel() : base("organizationExport")
-    {
-    }
+    public OrganizationExportResponseModel()
+        : base("organizationExport") { }
 
-    public OrganizationExportResponseModel(IEnumerable<CipherOrganizationDetailsWithCollections> ciphers,
-        IEnumerable<Collection> collections, GlobalSettings globalSettings) : this()
+    public OrganizationExportResponseModel(
+        IEnumerable<CipherOrganizationDetailsWithCollections> ciphers,
+        IEnumerable<Collection> collections,
+        GlobalSettings globalSettings
+    )
+        : this()
     {
         Ciphers = ciphers.Select(c => new CipherMiniDetailsResponseModel(c, globalSettings));
         Collections = collections.Select(c => new CollectionResponseModel(c));

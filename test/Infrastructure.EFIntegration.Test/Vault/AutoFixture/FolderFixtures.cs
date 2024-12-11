@@ -47,14 +47,12 @@ internal class EfFolder : ICustomization
 
 internal class EfFolderAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfFolderAutoDataAttribute() : base(new SutProviderCustomization(), new EfFolder())
-    { }
+    public EfFolderAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfFolder()) { }
 }
 
 internal class InlineEfFolderAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfFolderAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfFolder) }, values)
-    { }
+    public InlineEfFolderAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfFolder) }, values) { }
 }
-

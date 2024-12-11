@@ -19,28 +19,43 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     public AddSecretsManagerSubscriptionCommand(
         IPaymentService paymentService,
         IOrganizationService organizationService,
-        IProviderRepository providerRepository)
+        IProviderRepository providerRepository
+    )
     {
         _paymentService = paymentService;
         _organizationService = organizationService;
         _providerRepository = providerRepository;
     }
-    public async Task SignUpAsync(Organization organization, int additionalSmSeats,
-        int additionalServiceAccounts)
+
+    public async Task SignUpAsync(
+        Organization organization,
+        int additionalSmSeats,
+        int additionalServiceAccounts
+    )
     {
         await ValidateOrganization(organization);
 
         var plan = StaticStore.GetPlan(organization.PlanType);
-        var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
+        var signup = SetOrganizationUpgrade(
+            organization,
+            additionalSmSeats,
+            additionalServiceAccounts
+        );
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
         if (plan.ProductTier != ProductTierType.Free)
         {
-            await _paymentService.AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
+            await _paymentService.AddSecretsManagerToSubscription(
+                organization,
+                plan,
+                additionalSmSeats,
+                additionalServiceAccounts
+            );
         }
 
         organization.SmSeats = plan.SecretsManager.BaseSeats + additionalSmSeats;
-        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
+        organization.SmServiceAccounts =
+            plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
         organization.UseSecretsManager = true;
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
@@ -48,15 +63,18 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         // TODO: call ReferenceEventService - see AC-1481
     }
 
-    private static OrganizationUpgrade SetOrganizationUpgrade(Organization organization, int additionalSeats,
-        int additionalServiceAccounts)
+    private static OrganizationUpgrade SetOrganizationUpgrade(
+        Organization organization,
+        int additionalSeats,
+        int additionalServiceAccounts
+    )
     {
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
             AdditionalSmSeats = additionalSeats,
             AdditionalServiceAccounts = additionalServiceAccounts,
-            AdditionalSeats = organization.Seats.GetValueOrDefault()
+            AdditionalSeats = organization.Seats.GetValueOrDefault(),
         };
         return signup;
     }
@@ -73,13 +91,21 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new BadRequestException("Organization already uses Secrets Manager.");
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType && p.SupportsSecretsManager);
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && plan.ProductTier != ProductTierType.Free)
+        var plan = StaticStore.Plans.FirstOrDefault(p =>
+            p.Type == organization.PlanType && p.SupportsSecretsManager
+        );
+        if (
+            string.IsNullOrWhiteSpace(organization.GatewayCustomerId)
+            && plan.ProductTier != ProductTierType.Free
+        )
         {
             throw new BadRequestException("No payment method found.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) && plan.ProductTier != ProductTierType.Free)
+        if (
+            string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId)
+            && plan.ProductTier != ProductTierType.Free
+        )
         {
             throw new BadRequestException("No subscription found.");
         }
@@ -88,7 +114,8 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         if (provider is { Type: ProviderType.Msp })
         {
             throw new BadRequestException(
-                "Organizations with a Managed Service Provider do not support Secrets Manager.");
+                "Organizations with a Managed Service Provider do not support Secrets Manager."
+            );
         }
     }
 }

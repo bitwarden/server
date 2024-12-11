@@ -17,10 +17,12 @@ public class CreateNotificationStatusCommand : ICreateNotificationStatusCommand
     private readonly INotificationRepository _notificationRepository;
     private readonly INotificationStatusRepository _notificationStatusRepository;
 
-    public CreateNotificationStatusCommand(ICurrentContext currentContext,
+    public CreateNotificationStatusCommand(
+        ICurrentContext currentContext,
         IAuthorizationService authorizationService,
         INotificationRepository notificationRepository,
-        INotificationStatusRepository notificationStatusRepository)
+        INotificationStatusRepository notificationStatusRepository
+    )
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
@@ -30,17 +32,25 @@ public class CreateNotificationStatusCommand : ICreateNotificationStatusCommand
 
     public async Task<NotificationStatus> CreateAsync(NotificationStatus notificationStatus)
     {
-        var notification = await _notificationRepository.GetByIdAsync(notificationStatus.NotificationId);
+        var notification = await _notificationRepository.GetByIdAsync(
+            notificationStatus.NotificationId
+        );
         if (notification == null)
         {
             throw new NotFoundException();
         }
 
-        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notification,
-            NotificationOperations.Read);
+        await _authorizationService.AuthorizeOrThrowAsync(
+            _currentContext.HttpContext.User,
+            notification,
+            NotificationOperations.Read
+        );
 
-        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notificationStatus,
-            NotificationStatusOperations.Create);
+        await _authorizationService.AuthorizeOrThrowAsync(
+            _currentContext.HttpContext.User,
+            notificationStatus,
+            NotificationStatusOperations.Create
+        );
 
         return await _notificationStatusRepository.CreateAsync(notificationStatus);
     }

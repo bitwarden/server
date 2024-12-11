@@ -8,17 +8,17 @@ public class UserEntityTypeConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder
-            .Property(u => u.Id)
-            .ValueGeneratedNever();
+        builder.Property(u => u.Id).ValueGeneratedNever();
+
+        builder.HasIndex(u => u.Email).IsUnique().IsClustered(false);
 
         builder
-            .HasIndex(u => u.Email)
-            .IsUnique()
-            .IsClustered(false);
-
-        builder
-            .HasIndex(u => new { u.Premium, u.PremiumExpirationDate, u.RenewalReminderDate })
+            .HasIndex(u => new
+            {
+                u.Premium,
+                u.PremiumExpirationDate,
+                u.RenewalReminderDate,
+            })
             .IsClustered(false);
 
         builder.ToTable(nameof(User));

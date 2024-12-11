@@ -9,8 +9,10 @@ public abstract class CancelSponsorshipCommand
     protected readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
     protected readonly IOrganizationRepository _organizationRepository;
 
-    public CancelSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository)
+    public CancelSponsorshipCommand(
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+        IOrganizationRepository organizationRepository
+    )
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -30,7 +32,9 @@ public abstract class CancelSponsorshipCommand
     {
         if (sponsorship == null)
         {
-            throw new BadRequestException("The sponsorship you are trying to cancel does not exist");
+            throw new BadRequestException(
+                "The sponsorship you are trying to cancel does not exist"
+            );
         }
 
         sponsorship.ToDelete = true;

@@ -25,7 +25,8 @@ public class AuthRequestsController : Controller
         IUserService userService,
         IAuthRequestRepository authRequestRepository,
         IGlobalSettings globalSettings,
-        IAuthRequestService authRequestService)
+        IAuthRequestService authRequestService
+    )
     {
         _userService = userService;
         _authRequestRepository = authRequestRepository;
@@ -38,7 +39,9 @@ public class AuthRequestsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
-        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault)).ToList();
+        var responses = authRequests
+            .Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault))
+            .ToList();
         return new ListResponseModel<AuthRequestResponseModel>(responses);
     }
 
@@ -76,7 +79,9 @@ public class AuthRequestsController : Controller
     {
         if (model.Type == AuthRequestType.AdminApproval)
         {
-            throw new BadRequestException("You must be authenticated to create a request of that type.");
+            throw new BadRequestException(
+                "You must be authenticated to create a request of that type."
+            );
         }
         var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
         var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
@@ -84,7 +89,9 @@ public class AuthRequestsController : Controller
     }
 
     [HttpPost("admin-request")]
-    public async Task<AuthRequestResponseModel> PostAdminRequest([FromBody] AuthRequestCreateRequestModel model)
+    public async Task<AuthRequestResponseModel> PostAdminRequest(
+        [FromBody] AuthRequestCreateRequestModel model
+    )
     {
         var authRequest = await _authRequestService.CreateAuthRequestAsync(model);
         var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
@@ -92,7 +99,10 @@ public class AuthRequestsController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<AuthRequestResponseModel> Put(Guid id, [FromBody] AuthRequestUpdateRequestModel model)
+    public async Task<AuthRequestResponseModel> Put(
+        Guid id,
+        [FromBody] AuthRequestUpdateRequestModel model
+    )
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequest = await _authRequestService.UpdateAuthRequestAsync(id, userId, model);

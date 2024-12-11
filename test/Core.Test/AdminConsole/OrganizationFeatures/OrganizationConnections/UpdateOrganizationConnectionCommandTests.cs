@@ -17,15 +17,21 @@ public class UpdateOrganizationConnectionCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_NoId_Fails(OrganizationConnectionData<BillingSyncConfig> data,
-        SutProvider<UpdateOrganizationConnectionCommand> sutProvider)
+    public async Task UpdateAsync_NoId_Fails(
+        OrganizationConnectionData<BillingSyncConfig> data,
+        SutProvider<UpdateOrganizationConnectionCommand> sutProvider
+    )
     {
         data.Id = null;
 
-        var exception = await Assert.ThrowsAsync<Exception>(() => sutProvider.Sut.UpdateAsync(data));
+        var exception = await Assert.ThrowsAsync<Exception>(
+            () => sutProvider.Sut.UpdateAsync(data)
+        );
 
         Assert.Contains("Cannot update connection, Connection does not exist.", exception.Message);
-        await sutProvider.GetDependency<IOrganizationConnectionRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider
+            .GetDependency<IOrganizationConnectionRepository>()
+            .DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
     }
 
@@ -33,26 +39,38 @@ public class UpdateOrganizationConnectionCommandTests
     [BitAutoData]
     public async Task UpdateAsync_ConnectionDoesNotExist_ThrowsNotFound(
         OrganizationConnectionData<BillingSyncConfig> data,
-        SutProvider<UpdateOrganizationConnectionCommand> sutProvider)
+        SutProvider<UpdateOrganizationConnectionCommand> sutProvider
+    )
     {
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateAsync(data)
+        );
 
-        await sutProvider.GetDependency<IOrganizationConnectionRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider
+            .GetDependency<IOrganizationConnectionRepository>()
+            .DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_CallsUpsert(OrganizationConnectionData<BillingSyncConfig> data,
+    public async Task UpdateAsync_CallsUpsert(
+        OrganizationConnectionData<BillingSyncConfig> data,
         OrganizationConnection existing,
-        SutProvider<UpdateOrganizationConnectionCommand> sutProvider)
+        SutProvider<UpdateOrganizationConnectionCommand> sutProvider
+    )
     {
         data.Id = existing.Id;
 
-        sutProvider.GetDependency<IOrganizationConnectionRepository>().GetByIdAsync(data.Id.Value).Returns(existing);
+        sutProvider
+            .GetDependency<IOrganizationConnectionRepository>()
+            .GetByIdAsync(data.Id.Value)
+            .Returns(existing);
         await sutProvider.Sut.UpdateAsync(data);
 
-        await sutProvider.GetDependency<IOrganizationConnectionRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IOrganizationConnectionRepository>()
+            .Received(1)
             .UpsertAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.ToEntity())));
     }
 }

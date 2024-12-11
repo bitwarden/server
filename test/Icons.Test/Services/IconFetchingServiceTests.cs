@@ -33,6 +33,5 @@ public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
         Assert.Null(result);
     }
 
-    private IconFetchingService BuildSut() =>
-        GetService<IconFetchingService>();
+    private IconFetchingService BuildSut() => GetService<IconFetchingService>();
 }

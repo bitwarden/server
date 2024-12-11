@@ -32,8 +32,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         services.AddDataProtection();
         var serviceProvider = services.BuildServiceProvider();
 
-        var globalSettings = new GlobalSettingsFactory(args)
-            .GlobalSettings;
+        var globalSettings = new GlobalSettingsFactory(args).GlobalSettings;
 
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.MySql?.ConnectionString;
@@ -41,11 +40,13 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         {
             throw new Exception("No MySql connection string found.");
         }
-        optionsBuilder.UseMySql(
-            connectionString,
-            ServerVersion.AutoDetect(connectionString),
-            b => b.MigrationsAssembly("MySqlMigrations"))
-           .UseApplicationServiceProvider(serviceProvider);
+        optionsBuilder
+            .UseMySql(
+                connectionString,
+                ServerVersion.AutoDetect(connectionString),
+                b => b.MigrationsAssembly("MySqlMigrations")
+            )
+            .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

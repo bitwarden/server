@@ -38,23 +38,31 @@ public class SecretsManagerSubscriptionUpdate
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
-    public int SmSeatsExcludingBase => SmSeats.HasValue ? SmSeats.Value - Plan.SecretsManager.BaseSeats : 0;
+    public int SmSeatsExcludingBase =>
+        SmSeats.HasValue ? SmSeats.Value - Plan.SecretsManager.BaseSeats : 0;
+
     /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
-    public int SmServiceAccountsExcludingBase => SmServiceAccounts.HasValue ? SmServiceAccounts.Value - Plan.SecretsManager!.BaseServiceAccount : 0;
+    public int SmServiceAccountsExcludingBase =>
+        SmServiceAccounts.HasValue
+            ? SmServiceAccounts.Value - Plan.SecretsManager!.BaseServiceAccount
+            : 0;
     public bool SmSeatsChanged => SmSeats != Organization.SmSeats;
     public bool SmServiceAccountsChanged => SmServiceAccounts != Organization.SmServiceAccounts;
-    public bool MaxAutoscaleSmSeatsChanged => MaxAutoscaleSmSeats != Organization.MaxAutoscaleSmSeats;
+    public bool MaxAutoscaleSmSeatsChanged =>
+        MaxAutoscaleSmSeats != Organization.MaxAutoscaleSmSeats;
     public bool MaxAutoscaleSmServiceAccountsChanged =>
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
     public Plan Plan => Utilities.StaticStore.GetPlan(Organization.PlanType);
-    public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
+    public bool SmSeatAutoscaleLimitReached =>
+        SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
 
-    public bool SmServiceAccountAutoscaleLimitReached => SmServiceAccounts.HasValue &&
-                                                         MaxAutoscaleSmServiceAccounts.HasValue &&
-                                                         SmServiceAccounts == MaxAutoscaleSmServiceAccounts;
+    public bool SmServiceAccountAutoscaleLimitReached =>
+        SmServiceAccounts.HasValue
+        && MaxAutoscaleSmServiceAccounts.HasValue
+        && SmServiceAccounts == MaxAutoscaleSmServiceAccounts;
 
     public SecretsManagerSubscriptionUpdate(Organization organization, bool autoscaling)
     {

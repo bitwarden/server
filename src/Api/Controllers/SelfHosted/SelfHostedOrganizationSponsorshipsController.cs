@@ -39,27 +39,41 @@ public class SelfHostedOrganizationSponsorshipsController : Controller
     }
 
     [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
-    public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
+    public async Task CreateSponsorship(
+        Guid sponsoringOrgId,
+        [FromBody] OrganizationSponsorshipCreateRequestModel model
+    )
     {
         await _offerSponsorshipCommand.CreateSponsorshipAsync(
             await _organizationRepository.GetByIdAsync(sponsoringOrgId),
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
+            await _organizationUserRepository.GetByOrganizationAsync(
+                sponsoringOrgId,
+                _currentContext.UserId ?? default
+            ),
+            model.PlanSponsorshipType,
+            model.SponsoredEmail,
+            model.FriendlyName
+        );
     }
 
     [HttpDelete("{sponsoringOrgId}")]
     [HttpPost("{sponsoringOrgId}/delete")]
     public async Task RevokeSponsorship(Guid sponsoringOrgId)
     {
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(
+            sponsoringOrgId,
+            _currentContext.UserId ?? default
+        );
 
         if (orgUser == null)
         {
             throw new BadRequestException("Unknown Organization User");
         }
 
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+        var existingOrgSponsorship =
+            await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(
+                orgUser.Id
+            );
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
     }

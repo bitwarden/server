@@ -22,101 +22,171 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 public class UpdateOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        List<CollectionAccessSelection> collections, List<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    public async Task UpdateUserAsync_NoUserId_Throws(
+        OrganizationUser user,
+        Guid? savingUserId,
+        List<CollectionAccessSelection> collections,
+        List<Guid> groups,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider
+    )
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collections, groups)
+        );
         Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_DifferentOrganizationId_Throws(OrganizationUser user, OrganizationUser originalUser,
-        Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    public async Task UpdateUserAsync_DifferentOrganizationId_Throws(
+        OrganizationUser user,
+        OrganizationUser originalUser,
+        Guid? savingUserId,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(user.Id).Returns(originalUser);
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(user.Id)
+            .Returns(originalUser);
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, null)
+        );
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_CollectionsBelongToDifferentOrganization_Throws(OrganizationUser user, OrganizationUser originalUser,
-        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization)
+    public async Task UpdateUserAsync_CollectionsBelongToDifferentOrganization_Throws(
+        OrganizationUser user,
+        OrganizationUser originalUser,
+        List<CollectionAccessSelection> collectionAccess,
+        Guid? savingUserId,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization
+    )
     {
         Setup(sutProvider, organization, user, originalUser);
 
         // Return collections with different organizationIds from the repository
-        sutProvider.GetDependency<ICollectionRepository>()
+        sutProvider
+            .GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
+            .Returns(callInfo =>
+                callInfo
+                    .Arg<IEnumerable<Guid>>()
+                    .Select(guid => new Collection
+                    {
+                        Id = guid,
+                        OrganizationId = CoreHelpers.GenerateComb(),
+                    })
+                    .ToList()
+            );
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null)
+        );
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_CollectionsDoNotExist_Throws(OrganizationUser user, OrganizationUser originalUser,
-        List<CollectionAccessSelection> collectionAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization)
+    public async Task UpdateUserAsync_CollectionsDoNotExist_Throws(
+        OrganizationUser user,
+        OrganizationUser originalUser,
+        List<CollectionAccessSelection> collectionAccess,
+        Guid? savingUserId,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization
+    )
     {
         Setup(sutProvider, organization, user, originalUser);
 
         // Return matching collections, except that 1 is missing
-        sutProvider.GetDependency<ICollectionRepository>()
+        sutProvider
+            .GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(callInfo =>
             {
-                var result = callInfo.Arg<IEnumerable<Guid>>()
-                    .Select(guid => new Collection { Id = guid, OrganizationId = user.OrganizationId }).ToList();
+                var result = callInfo
+                    .Arg<IEnumerable<Guid>>()
+                    .Select(guid => new Collection
+                    {
+                        Id = guid,
+                        OrganizationId = user.OrganizationId,
+                    })
+                    .ToList();
                 result.RemoveAt(0);
                 return result;
             });
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collectionAccess, null)
+        );
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_GroupsBelongToDifferentOrganization_Throws(OrganizationUser user, OrganizationUser originalUser,
-        ICollection<Guid> groupAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization)
+    public async Task UpdateUserAsync_GroupsBelongToDifferentOrganization_Throws(
+        OrganizationUser user,
+        OrganizationUser originalUser,
+        ICollection<Guid> groupAccess,
+        Guid? savingUserId,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization
+    )
     {
         Setup(sutProvider, organization, user, originalUser);
 
         // Return collections with different organizationIds from the repository
-        sutProvider.GetDependency<IGroupRepository>()
+        sutProvider
+            .GetDependency<IGroupRepository>()
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Group { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList());
+            .Returns(callInfo =>
+                callInfo
+                    .Arg<IEnumerable<Guid>>()
+                    .Select(guid => new Group
+                    {
+                        Id = guid,
+                        OrganizationId = CoreHelpers.GenerateComb(),
+                    })
+                    .ToList()
+            );
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess)
+        );
     }
 
     [Theory, BitAutoData]
-    public async Task UpdateUserAsync_GroupsDoNotExist_Throws(OrganizationUser user, OrganizationUser originalUser,
-        ICollection<Guid> groupAccess, Guid? savingUserId, SutProvider<UpdateOrganizationUserCommand> sutProvider,
-        Organization organization)
+    public async Task UpdateUserAsync_GroupsDoNotExist_Throws(
+        OrganizationUser user,
+        OrganizationUser originalUser,
+        ICollection<Guid> groupAccess,
+        Guid? savingUserId,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization
+    )
     {
         Setup(sutProvider, organization, user, originalUser);
 
         // Return matching collections, except that 1 is missing
-        sutProvider.GetDependency<IGroupRepository>()
+        sutProvider
+            .GetDependency<IGroupRepository>()
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(callInfo =>
             {
-                var result = callInfo.Arg<IEnumerable<Guid>>()
-                    .Select(guid => new Group { Id = guid, OrganizationId = CoreHelpers.GenerateComb() }).ToList();
+                var result = callInfo
+                    .Arg<IEnumerable<Guid>>()
+                    .Select(guid => new Group
+                    {
+                        Id = guid,
+                        OrganizationId = CoreHelpers.GenerateComb(),
+                    })
+                    .ToList();
                 result.RemoveAt(0);
                 return result;
             });
 
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, null, groupAccess)
+        );
     }
 
     [Theory, BitAutoData]
@@ -128,7 +198,8 @@ public class UpdateOrganizationUserCommandTests
         List<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider
+    )
     {
         Setup(sutProvider, organization, newUserData, oldUserData);
 
@@ -143,40 +214,75 @@ public class UpdateOrganizationUserCommandTests
 
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+        newUserData.OrganizationId =
+            savingUser.OrganizationId =
+            oldUserData.OrganizationId =
+                organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(
+            permissions,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
 
-        sutProvider.GetDependency<ICollectionRepository>()
+        sutProvider
+            .GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Collection { Id = guid, OrganizationId = oldUserData.OrganizationId }).ToList());
+            .Returns(callInfo =>
+                callInfo
+                    .Arg<IEnumerable<Guid>>()
+                    .Select(guid => new Collection
+                    {
+                        Id = guid,
+                        OrganizationId = oldUserData.OrganizationId,
+                    })
+                    .ToList()
+            );
 
-        sutProvider.GetDependency<IGroupRepository>()
+        sutProvider
+            .GetDependency<IGroupRepository>()
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
-            .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
-                .Select(guid => new Group { Id = guid, OrganizationId = oldUserData.OrganizationId }).ToList());
+            .Returns(callInfo =>
+                callInfo
+                    .Arg<IEnumerable<Guid>>()
+                    .Select(guid => new Group
+                    {
+                        Id = guid,
+                        OrganizationId = oldUserData.OrganizationId,
+                    })
+                    .ToList()
+            );
 
         await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
 
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
-        await organizationService.Received(1).ValidateOrganizationUserUpdatePermissions(
-            newUserData.OrganizationId,
-            newUserData.Type,
-            oldUserData.Type,
-            Arg.Any<Permissions>());
-        await organizationService.Received(1).ValidateOrganizationCustomPermissionsEnabledAsync(
-            newUserData.OrganizationId,
-            newUserData.Type);
-        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1).HasConfirmedOwnersExceptAsync(
-            newUserData.OrganizationId,
-            Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id)));
+        await organizationService
+            .Received(1)
+            .ValidateOrganizationUserUpdatePermissions(
+                newUserData.OrganizationId,
+                newUserData.Type,
+                oldUserData.Type,
+                Arg.Any<Permissions>()
+            );
+        await organizationService
+            .Received(1)
+            .ValidateOrganizationCustomPermissionsEnabledAsync(
+                newUserData.OrganizationId,
+                newUserData.Type
+            );
+        await sutProvider
+            .GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .Received(1)
+            .HasConfirmedOwnersExceptAsync(
+                newUserData.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id))
+            );
     }
 
-    private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,
-        OrganizationUser newUser, OrganizationUser oldUser)
+    private void Setup(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        OrganizationUser newUser,
+        OrganizationUser oldUser
+    )
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -188,10 +294,12 @@ public class UpdateOrganizationUserCommandTests
         newUser.UserId = oldUser.UserId;
         newUser.OrganizationId = oldUser.OrganizationId = organization.Id;
         organizationUserRepository.GetByIdAsync(oldUser.Id).Returns(oldUser);
-        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+        sutProvider
+            .GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 oldUser.OrganizationId,
-                Arg.Is<IEnumerable<Guid>>(i => i.Contains(oldUser.Id)))
+                Arg.Is<IEnumerable<Guid>>(i => i.Contains(oldUser.Id))
+            )
             .Returns(true);
     }
 }

@@ -14,28 +14,40 @@ public class HasConfirmedOwnersExceptQuery : IHasConfirmedOwnersExceptQuery
 
     public HasConfirmedOwnersExceptQuery(
         IProviderUserRepository providerUserRepository,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository
+    )
     {
         _providerUserRepository = providerUserRepository;
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
+    public async Task<bool> HasConfirmedOwnersExceptAsync(
+        Guid organizationId,
+        IEnumerable<Guid> organizationUsersId,
+        bool includeProvider = true
+    )
     {
         var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
         var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
         bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
         if (!hasOtherOwner && includeProvider)
         {
-            return (await _providerUserRepository.GetManyByOrganizationAsync(organizationId, ProviderUserStatusType.Confirmed)).Any();
+            return (
+                await _providerUserRepository.GetManyByOrganizationAsync(
+                    organizationId,
+                    ProviderUserStatusType.Confirmed
+                )
+            ).Any();
         }
         return hasOtherOwner;
     }
 
     private async Task<IEnumerable<OrganizationUser>> GetConfirmedOwnersAsync(Guid organizationId)
     {
-        var owners = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId,
-            OrganizationUserType.Owner);
+        var owners = await _organizationUserRepository.GetManyByOrganizationAsync(
+            organizationId,
+            OrganizationUserType.Owner
+        );
         return owners.Where(o => o.Status == OrganizationUserStatusType.Confirmed);
     }
 }

@@ -51,12 +51,10 @@
       "customer_phone": null,
       "customer_shipping": null,
       "customer_tax_exempt": "none",
-      "customer_tax_ids": [
-      ],
+      "customer_tax_ids": [],
       "default_payment_method": null,
       "default_source": null,
-      "default_tax_rates": [
-      ],
+      "default_tax_rates": [],
       "description": null,
       "discount": {
         "id": "di_1PQa9eIGBnsLynRrwwYr2bGD",
@@ -72,8 +70,7 @@
           "duration_in_months": null,
           "livemode": false,
           "max_redemptions": null,
-          "metadata": {
-          },
+          "metadata": {},
           "name": "MSP Discount - 35%",
           "percent_off": 35,
           "redeem_by": null,
@@ -90,9 +87,7 @@
         "subscription": null,
         "subscription_item": null
       },
-      "discounts": [
-        "di_1PQa9eIGBnsLynRrwwYr2bGD"
-      ],
+      "discounts": ["di_1PQa9eIGBnsLynRrwwYr2bGD"],
       "due_date": 1720725291,
       "effective_at": 1718136893,
       "ending_balance": 0,
@@ -122,12 +117,10 @@
               }
             ],
             "discountable": true,
-            "discounts": [
-            ],
+            "discounts": [],
             "invoice": "in_1PQa9fIGBnsLynRraYIqTdBs",
             "livemode": false,
-            "metadata": {
-            },
+            "metadata": {},
             "period": {
               "end": 1720725291,
               "start": 1718133291
@@ -145,8 +138,7 @@
               "interval": "month",
               "interval_count": 1,
               "livemode": false,
-              "metadata": {
-              },
+              "metadata": {},
               "meter": null,
               "nickname": "Teams Organization Seat (Monthly)",
               "product": "prod_HgOooYXDr2DDAA",
@@ -169,8 +161,7 @@
               "custom_unit_amount": null,
               "livemode": false,
               "lookup_key": null,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "Teams Organization Seat (Monthly)",
               "product": "prod_HgOooYXDr2DDAA",
               "recurring": {
@@ -204,8 +195,7 @@
                 "taxable_amount": 32500
               }
             ],
-            "tax_rates": [
-            ],
+            "tax_rates": [],
             "type": "subscription",
             "unit_amount_excluding_tax": "500",
             "unique_id": "il_1PQa9fIGBnsLynRrSJ3cxrdU",
@@ -225,12 +215,10 @@
               }
             ],
             "discountable": true,
-            "discounts": [
-            ],
+            "discounts": [],
             "invoice": "in_1PQa9fIGBnsLynRraYIqTdBs",
             "livemode": false,
-            "metadata": {
-            },
+            "metadata": {},
             "period": {
               "end": 1720725291,
               "start": 1718133291
@@ -248,8 +236,7 @@
               "interval": "month",
               "interval_count": 1,
               "livemode": false,
-              "metadata": {
-              },
+              "metadata": {},
               "meter": null,
               "nickname": "Enterprise Organization (Monthly)",
               "product": "prod_HgSOgzUlYDFOzf",
@@ -272,8 +259,7 @@
               "custom_unit_amount": null,
               "livemode": false,
               "lookup_key": null,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "Enterprise Organization (Monthly)",
               "product": "prod_HgSOgzUlYDFOzf",
               "recurring": {
@@ -307,8 +293,7 @@
                 "taxable_amount": 45500
               }
             ],
-            "tax_rates": [
-            ],
+            "tax_rates": [],
             "type": "subscription",
             "unit_amount_excluding_tax": "700",
             "unique_id": "il_1PQa9fIGBnsLynRrVviet37m",
@@ -320,8 +305,7 @@
         "url": "/v1/invoices/in_1PQa9fIGBnsLynRraYIqTdBs/lines"
       },
       "livemode": false,
-      "metadata": {
-      },
+      "metadata": {},
       "next_payment_attempt": null,
       "number": "525EB050-0001",
       "on_behalf_of": null,

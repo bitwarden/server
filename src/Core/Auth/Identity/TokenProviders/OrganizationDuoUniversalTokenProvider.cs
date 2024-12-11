@@ -12,9 +12,11 @@ public interface IOrganizationDuoUniversalTokenProvider : IOrganizationTwoFactor
 
 public class OrganizationDuoUniversalTokenProvider(
     IDataProtectorTokenFactory<DuoUserStateTokenable> tokenDataFactory,
-    IDuoUniversalTokenService duoUniversalTokenService) : IOrganizationDuoUniversalTokenProvider
+    IDuoUniversalTokenService duoUniversalTokenService
+) : IOrganizationDuoUniversalTokenProvider
 {
-    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = tokenDataFactory;
+    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory =
+        tokenDataFactory;
     private readonly IDuoUniversalTokenService _duoUniversalTokenService = duoUniversalTokenService;
 
     public Task<bool> CanGenerateTwoFactorTokenAsync(Organization organization)
@@ -44,7 +46,12 @@ public class OrganizationDuoUniversalTokenProvider(
         {
             return false;
         }
-        return await _duoUniversalTokenService.RequestDuoValidationAsync(duoClient, _tokenDataFactory, user, token);
+        return await _duoUniversalTokenService.RequestDuoValidationAsync(
+            duoClient,
+            _tokenDataFactory,
+            user,
+            token
+        );
     }
 
     private TwoFactorProvider GetDuoTwoFactorProvider(Organization organization)

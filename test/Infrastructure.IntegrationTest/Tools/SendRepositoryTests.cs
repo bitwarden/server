@@ -13,26 +13,40 @@ public class SendRepositoryTests
     {
         var expirationDate = DateTime.UtcNow.AddDays(7);
 
-        var createdSend = await sendRepository.CreateAsync(new Send
-        {
-            Data = "{\"Text\": \"2.t|t|t\"}", // TODO: EF Should enforce this
-            Type = SendType.Text,
-            AccessCount = 0,
-            Key = "2.t|t|t", // TODO: EF should enforce this
-            ExpirationDate = expirationDate,
-            DeletionDate = expirationDate.AddDays(7),
-        });
+        var createdSend = await sendRepository.CreateAsync(
+            new Send
+            {
+                Data = "{\"Text\": \"2.t|t|t\"}", // TODO: EF Should enforce this
+                Type = SendType.Text,
+                AccessCount = 0,
+                Key = "2.t|t|t", // TODO: EF should enforce this
+                ExpirationDate = expirationDate,
+                DeletionDate = expirationDate.AddDays(7),
+            }
+        );
 
         Assert.NotNull(createdSend.ExpirationDate);
-        Assert.Equal(expirationDate, createdSend.ExpirationDate!.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(
+            expirationDate,
+            createdSend.ExpirationDate!.Value,
+            LaxDateTimeComparer.Default
+        );
 
         var sendFromDatabase = await sendRepository.GetByIdAsync(createdSend.Id);
         Assert.NotNull(sendFromDatabase);
-        Assert.Equal(expirationDate, sendFromDatabase.ExpirationDate!.Value, LaxDateTimeComparer.Default);
+        Assert.Equal(
+            expirationDate,
+            sendFromDatabase.ExpirationDate!.Value,
+            LaxDateTimeComparer.Default
+        );
         Assert.Equal(SendType.Text, sendFromDatabase.Type);
         Assert.Equal(0, sendFromDatabase.AccessCount);
         Assert.Equal("2.t|t|t", sendFromDatabase.Key);
-        Assert.Equal(expirationDate.AddDays(7), sendFromDatabase.DeletionDate, LaxDateTimeComparer.Default);
+        Assert.Equal(
+            expirationDate.AddDays(7),
+            sendFromDatabase.DeletionDate,
+            LaxDateTimeComparer.Default
+        );
         Assert.Equal("{\"Text\": \"2.t|t|t\"}", sendFromDatabase.Data);
     }
 
@@ -42,23 +56,27 @@ public class SendRepositoryTests
     {
         var deletionDate = DateTime.UtcNow.AddYears(-1);
 
-        var shouldDeleteSend = await sendRepository.CreateAsync(new Send
-        {
-            Data = "{\"Text\": \"2.t|t|t\"}", // TODO: EF Should enforce this
-            Type = SendType.Text,
-            AccessCount = 0,
-            Key = "2.t|t|t", // TODO: EF should enforce this
-            DeletionDate = deletionDate.AddSeconds(-2),
-        });
+        var shouldDeleteSend = await sendRepository.CreateAsync(
+            new Send
+            {
+                Data = "{\"Text\": \"2.t|t|t\"}", // TODO: EF Should enforce this
+                Type = SendType.Text,
+                AccessCount = 0,
+                Key = "2.t|t|t", // TODO: EF should enforce this
+                DeletionDate = deletionDate.AddSeconds(-2),
+            }
+        );
 
-        var shouldKeepSend = await sendRepository.CreateAsync(new Send
-        {
-            Data = "{\"Text\": \"2.t|t|t\"}", // TODO: EF Should enforce this
-            Type = SendType.Text,
-            AccessCount = 0,
-            Key = "2.t|t|t", // TODO: EF should enforce this
-            DeletionDate = deletionDate.AddSeconds(2),
-        });
+        var shouldKeepSend = await sendRepository.CreateAsync(
+            new Send
+            {
+                Data = "{\"Text\": \"2.t|t|t\"}", // TODO: EF Should enforce this
+                Type = SendType.Text,
+                AccessCount = 0,
+                Key = "2.t|t|t", // TODO: EF should enforce this
+                DeletionDate = deletionDate.AddSeconds(2),
+            }
+        );
 
         var toDeleteSends = await sendRepository.GetManyByDeletionDateAsync(deletionDate);
         var toDeleteSend = Assert.Single(toDeleteSends);

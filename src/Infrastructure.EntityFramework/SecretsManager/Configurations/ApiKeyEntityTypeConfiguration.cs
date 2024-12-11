@@ -8,17 +8,11 @@ public class ApiKeyEntityTypeConfiguration : IEntityTypeConfiguration<ApiKey>
 {
     public void Configure(EntityTypeBuilder<ApiKey> builder)
     {
-        builder
-            .Property(s => s.Id)
-            .ValueGeneratedNever();
+        builder.Property(s => s.Id).ValueGeneratedNever();
 
-        builder
-            .HasKey(s => s.Id)
-            .IsClustered();
+        builder.HasKey(s => s.Id).IsClustered();
 
-        builder
-            .HasIndex(s => s.ServiceAccountId)
-            .IsClustered(false);
+        builder.HasIndex(s => s.ServiceAccountId).IsClustered(false);
 
         builder.ToTable(nameof(ApiKey));
     }

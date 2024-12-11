@@ -11,7 +11,6 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 
 public class TransactionRepositoryTests
 {
-
     [CiSkippedTheory, EfUserTransactionAutoData, EfOrganizationTransactionAutoData]
     public async Task CreateAsync_Works_DataMatches(
         Transaction transaction,
@@ -24,7 +23,7 @@ public class TransactionRepositoryTests
         SqlRepo.TransactionRepository sqlTransactionRepo,
         SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo
-        )
+    )
     {
         var savedTransactions = new List<Transaction>();
         foreach (var sut in suts)

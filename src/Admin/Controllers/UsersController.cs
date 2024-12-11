@@ -36,7 +36,8 @@ public class UsersController : Controller
         IAccessControlService accessControlService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IUserService userService,
-        IFeatureService featureService)
+        IFeatureService featureService
+    )
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -64,17 +65,21 @@ public class UsersController : Controller
         var skip = (page - 1) * count;
         var users = await _userRepository.SearchAsync(email, skip, count);
 
-        var twoFactorAuthLookup = (await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))).ToList();
+        var twoFactorAuthLookup = (
+            await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(users.Select(u => u.Id))
+        ).ToList();
         var userModels = UserViewModel.MapViewModels(users, twoFactorAuthLookup).ToList();
 
-        return View(new UsersModel
-        {
-            Items = userModels,
-            Email = string.IsNullOrWhiteSpace(email) ? null : email,
-            Page = page,
-            Count = count,
-            Action = _globalSettings.SelfHosted ? "View" : "Edit"
-        });
+        return View(
+            new UsersModel
+            {
+                Items = userModels,
+                Email = string.IsNullOrWhiteSpace(email) ? null : email,
+                Page = page,
+                Count = count,
+                Action = _globalSettings.SelfHosted ? "View" : "Edit",
+            }
+        );
     }
 
     public async Task<IActionResult> View(Guid id)
@@ -107,7 +112,17 @@ public class UsersController : Controller
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
+        return View(
+            new UserEditModel(
+                user,
+                isTwoFactorEnabled,
+                ciphers,
+                billingInfo,
+                billingHistoryInfo,
+                _globalSettings,
+                verifiedDomain
+            )
+        );
     }
 
     [HttpPost]
@@ -121,10 +136,14 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var canUpgradePremium = _accessControlService.UserHasPermission(Permission.User_UpgradePremium);
+        var canUpgradePremium = _accessControlService.UserHasPermission(
+            Permission.User_UpgradePremium
+        );
 
-        if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit) ||
-            canUpgradePremium)
+        if (
+            _accessControlService.UserHasPermission(Permission.User_Premium_Edit)
+            || canUpgradePremium
+        )
         {
             user.MaxStorageGb = model.MaxStorageGb;
             user.Premium = model.Premium;
@@ -137,8 +156,10 @@ public class UsersController : Controller
             user.GatewaySubscriptionId = model.GatewaySubscriptionId;
         }
 
-        if (_accessControlService.UserHasPermission(Permission.User_Licensing_Edit) ||
-            canUpgradePremium)
+        if (
+            _accessControlService.UserHasPermission(Permission.User_Licensing_Edit)
+            || canUpgradePremium
+        )
         {
             user.LicenseKey = model.LicenseKey;
             user.PremiumExpirationDate = model.PremiumExpirationDate;

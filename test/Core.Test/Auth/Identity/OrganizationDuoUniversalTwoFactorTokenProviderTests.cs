@@ -15,14 +15,18 @@ namespace Bit.Core.Test.Auth.Identity;
 [SutProviderCustomize]
 public class OrganizationDuoUniversalTwoFactorTokenProviderTests
 {
-    private readonly IDuoUniversalTokenService _duoUniversalTokenService = Substitute.For<IDuoUniversalTokenService>();
-    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory = Substitute.For<IDataProtectorTokenFactory<DuoUserStateTokenable>>();
+    private readonly IDuoUniversalTokenService _duoUniversalTokenService =
+        Substitute.For<IDuoUniversalTokenService>();
+    private readonly IDataProtectorTokenFactory<DuoUserStateTokenable> _tokenDataFactory =
+        Substitute.For<IDataProtectorTokenFactory<DuoUserStateTokenable>>();
 
     // Happy path
     [Theory]
     [BitAutoData]
     public async Task CanGenerateTwoFactorTokenAsync_ReturnsTrue(
-        Organization organization, SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        Organization organization,
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Arrange
         organization.Enabled = true;
@@ -39,16 +43,19 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task CanGenerateTwoFactorTokenAsync_DuoTwoFactorNotEnabled_ReturnsFalse(
-        Organization organization, SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        Organization organization,
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Arrange
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderNotEnabledJson();
         organization.Use2fa = true;
         organization.Enabled = true;
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-                .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
-                .Returns(true);
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
+            .Returns(true);
         // Act
         var result = await sutProvider.Sut.CanGenerateTwoFactorTokenAsync(null);
 
@@ -59,16 +66,19 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task CanGenerateTwoFactorTokenAsync_BadMetaData_ProviderNull_ReturnsFalse(
-        Organization organization, SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        Organization organization,
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Arrange
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
         organization.Use2fa = true;
         organization.Enabled = true;
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-                .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
-                .Returns(false);
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
+            .Returns(false);
         // Act
         var result = await sutProvider.Sut.CanGenerateTwoFactorTokenAsync(null);
 
@@ -79,7 +89,8 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task GetDuoTwoFactorProvider_OrganizationNull_ReturnsNull(
-        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Act
         var result = await sutProvider.Sut.CanGenerateTwoFactorTokenAsync(null);
@@ -91,7 +102,9 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task GetDuoTwoFactorProvider_OrganizationNotEnabled_ReturnsNull(
-        Organization organization, SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        Organization organization,
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Arrange
         SetUpProperOrganizationDuoUniversalTokenService(null, organization, sutProvider);
@@ -107,7 +120,9 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task GetDuoTwoFactorProvider_OrganizationUse2FAFalse_ReturnsNull(
-        Organization organization, SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        Organization organization,
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Arrange
         SetUpProperOrganizationDuoUniversalTokenService(null, organization, sutProvider);
@@ -123,7 +138,8 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task GetDuoClient_ProviderNull_ReturnsNull(
-        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         // Act
         var result = await sutProvider.Sut.GenerateAsync(null, default);
@@ -136,18 +152,21 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [BitAutoData]
     public async Task GetDuoClient_DuoClientNull_ReturnsNull(
         SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider,
-        Organization organization)
+        Organization organization
+    )
     {
         // Arrange
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
         organization.Use2fa = true;
         organization.Enabled = true;
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
             .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
             .Returns(true);
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
             .BuildDuoTwoFactorClientAsync(Arg.Any<TwoFactorProvider>())
             .Returns(null as Duo.Client);
 
@@ -164,13 +183,23 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
         SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider,
         Organization organization,
         User user,
-        string AuthUrl)
+        string AuthUrl
+    )
     {
         // Arrange
-        SetUpProperOrganizationDuoUniversalTokenService(BuildDuoClient(), organization, sutProvider);
+        SetUpProperOrganizationDuoUniversalTokenService(
+            BuildDuoClient(),
+            organization,
+            sutProvider
+        );
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-            .GenerateAuthUrl(Arg.Any<Duo.Client>(), Arg.Any<IDataProtectorTokenFactory<DuoUserStateTokenable>>(), user)
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .GenerateAuthUrl(
+                Arg.Any<Duo.Client>(),
+                Arg.Any<IDataProtectorTokenFactory<DuoUserStateTokenable>>(),
+                user
+            )
             .Returns(AuthUrl);
 
         // Act
@@ -186,7 +215,8 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     public async Task GenerateAsync_ClientNull_ReturnsNull(
         SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider,
         Organization organization,
-        User user)
+        User user
+    )
     {
         // Arrange
         SetUpProperOrganizationDuoUniversalTokenService(null, organization, sutProvider);
@@ -204,13 +234,24 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
         SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider,
         Organization organization,
         User user,
-        string token)
+        string token
+    )
     {
         // Arrange
-        SetUpProperOrganizationDuoUniversalTokenService(BuildDuoClient(), organization, sutProvider);
+        SetUpProperOrganizationDuoUniversalTokenService(
+            BuildDuoClient(),
+            organization,
+            sutProvider
+        );
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-            .RequestDuoValidationAsync(Arg.Any<Duo.Client>(), Arg.Any<IDataProtectorTokenFactory<DuoUserStateTokenable>>(), user, token)
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .RequestDuoValidationAsync(
+                Arg.Any<Duo.Client>(),
+                Arg.Any<IDataProtectorTokenFactory<DuoUserStateTokenable>>(),
+                user,
+                token
+            )
             .Returns(true);
 
         // Act
@@ -223,16 +264,23 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_ClientNull_ReturnsFalse(
-    SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider,
-    Organization organization,
-    User user,
-    string token)
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider,
+        Organization organization,
+        User user,
+        string token
+    )
     {
         // Arrange
         SetUpProperOrganizationDuoUniversalTokenService(null, organization, sutProvider);
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-            .RequestDuoValidationAsync(Arg.Any<Duo.Client>(), Arg.Any<IDataProtectorTokenFactory<DuoUserStateTokenable>>(), user, token)
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .RequestDuoValidationAsync(
+                Arg.Any<Duo.Client>(),
+                Arg.Any<IDataProtectorTokenFactory<DuoUserStateTokenable>>(),
+                user,
+                token
+            )
             .Returns(true);
 
         // Act
@@ -253,37 +301,45 @@ public class OrganizationDuoUniversalTwoFactorTokenProviderTests
     /// <param name="user">user from calling test</param>
     /// <param name="sutProvider">self</param>
     private void SetUpProperOrganizationDuoUniversalTokenService(
-        Duo.Client client, Organization organization, SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider)
+        Duo.Client client,
+        Organization organization,
+        SutProvider<OrganizationDuoUniversalTokenProvider> sutProvider
+    )
     {
         organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
         organization.Enabled = true;
         organization.Use2fa = true;
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-                .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
-                .Returns(true);
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .HasProperDuoMetadata(Arg.Any<TwoFactorProvider>())
+            .Returns(true);
 
-        sutProvider.GetDependency<IDuoUniversalTokenService>()
-                .BuildDuoTwoFactorClientAsync(Arg.Any<TwoFactorProvider>())
-                .Returns(client);
+        sutProvider
+            .GetDependency<IDuoUniversalTokenService>()
+            .BuildDuoTwoFactorClientAsync(Arg.Any<TwoFactorProvider>())
+            .Returns(client);
     }
 
     private Duo.Client BuildDuoClient()
     {
         var clientId = new string('c', 20);
         var clientSecret = new string('s', 40);
-        return new Duo.ClientBuilder(clientId, clientSecret, "api-abcd1234.duosecurity.com", "redirectUrl").Build();
+        return new Duo.ClientBuilder(
+            clientId,
+            clientSecret,
+            "api-abcd1234.duosecurity.com",
+            "redirectUrl"
+        ).Build();
     }
 
     private string GetTwoFactorOrganizationDuoProviderJson()
     {
-        return
-            "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
+        return "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
     }
 
     private string GetTwoFactorOrganizationDuoProviderNotEnabledJson()
     {
-        return
-            "{\"6\":{\"Enabled\":false,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
+        return "{\"6\":{\"Enabled\":false,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
     }
 }

@@ -2,7 +2,8 @@
 
 namespace Bit.Api.Models.Public.Response;
 
-public class ListResponseModel<T> : IResponseModel where T : IResponseModel
+public class ListResponseModel<T> : IResponseModel
+    where T : IResponseModel
 {
     public ListResponseModel(IEnumerable<T> data, string continuationToken = null)
     {
@@ -16,11 +17,13 @@ public class ListResponseModel<T> : IResponseModel where T : IResponseModel
     /// <example>list</example>
     [Required]
     public string Object => "list";
+
     /// <summary>
     /// An array containing the actual response elements, paginated by any request parameters.
     /// </summary>
     [Required]
     public IEnumerable<T> Data { get; set; }
+
     /// <summary>
     /// A cursor for use in pagination.
     /// </summary>

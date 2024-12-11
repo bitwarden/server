@@ -44,5 +44,6 @@ public interface IOrganizationBillingService
     Task UpdatePaymentMethod(
         Organization organization,
         TokenizedPaymentSource tokenizedPaymentSource,
-        TaxInformation taxInformation);
+        TaxInformation taxInformation
+    );
 }

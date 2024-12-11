@@ -24,7 +24,9 @@ public class BulkSecretAuthorizationHandlerTests
     [Fact]
     public void BulkSecretOperations_OnlyPublicStatic()
     {
-        var publicStaticFields = typeof(BulkSecretOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var publicStaticFields = typeof(BulkSecretOperations).GetFields(
+            BindingFlags.Public | BindingFlags.Static
+        );
         var allFields = typeof(BulkSecretOperations).GetFields();
         Assert.Equal(publicStaticFields.Length, allFields.Length);
     }
@@ -32,15 +34,22 @@ public class BulkSecretAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_MisMatchedOrganizations_DoesNotSucceed(
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources[0].OrganizationId = Guid.NewGuid();
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessSecretsManager(Arg.Any<Guid>())
             .ReturnsForAnyArgs(true);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -50,15 +59,22 @@ public class BulkSecretAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_NoAccessToSecretsManager_DoesNotSucceed(
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources = SetSameOrganization(resources);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>())
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessSecretsManager(Arg.Any<Guid>())
             .ReturnsForAnyArgs(false);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -68,16 +84,23 @@ public class BulkSecretAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_UnsupportedSecretOperationRequirement_Throws(
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = new BulkSecretOperationRequirement();
         resources = SetSameOrganization(resources);
         SetupUserSubstitutes(sutProvider, AccessClientType.User, resources.First().OrganizationId);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
-        await Assert.ThrowsAsync<ArgumentException>(() => sutProvider.Sut.HandleAsync(authzContext));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => sutProvider.Sut.HandleAsync(authzContext)
+        );
     }
 
     [Theory]
@@ -86,19 +109,33 @@ public class BulkSecretAuthorizationHandlerTests
     [BitAutoData(AccessClientType.ServiceAccount)]
     public async Task Handler_NoAccessToSecrets_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources = SetSameOrganization(resources);
-        var secretIds =
-            SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
-        sutProvider.GetDependency<ISecretRepository>()
-            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
+        var secretIds = SetupSecretAccessRequest(
+            sutProvider,
+            resources,
+            accessClientType,
+            resources.First().OrganizationId
+        );
+        sutProvider
+            .GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(
+                Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<AccessClientType>()
+            )
             .Returns(secretIds.ToDictionary(id => id, _ => (false, false)));
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -111,22 +148,36 @@ public class BulkSecretAuthorizationHandlerTests
     [BitAutoData(AccessClientType.ServiceAccount)]
     public async Task Handler_HasAccessToSomeSecrets_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources = SetSameOrganization(resources);
-        var secretIds =
-            SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
+        var secretIds = SetupSecretAccessRequest(
+            sutProvider,
+            resources,
+            accessClientType,
+            resources.First().OrganizationId
+        );
 
         var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (false, false));
         accessResult[secretIds.First()] = (true, true);
-        sutProvider.GetDependency<ISecretRepository>()
-            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
+        sutProvider
+            .GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(
+                Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<AccessClientType>()
+            )
             .Returns(accessResult);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -139,22 +190,36 @@ public class BulkSecretAuthorizationHandlerTests
     [BitAutoData(AccessClientType.ServiceAccount)]
     public async Task Handler_PartialAccessReturn_DoesNotSucceed(
         AccessClientType accessClientType,
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources = SetSameOrganization(resources);
-        var secretIds =
-            SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
+        var secretIds = SetupSecretAccessRequest(
+            sutProvider,
+            resources,
+            accessClientType,
+            resources.First().OrganizationId
+        );
 
         var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (false, false));
         accessResult.Remove(secretIds.First());
-        sutProvider.GetDependency<ISecretRepository>()
-            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
+        sutProvider
+            .GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(
+                Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<AccessClientType>()
+            )
             .Returns(accessResult);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -167,21 +232,35 @@ public class BulkSecretAuthorizationHandlerTests
     [BitAutoData(AccessClientType.ServiceAccount)]
     public async Task Handler_HasAccessToAllSecrets_Success(
         AccessClientType accessClientType,
-        SutProvider<BulkSecretAuthorizationHandler> sutProvider, List<Secret> resources,
-        ClaimsPrincipal claimsPrincipal)
+        SutProvider<BulkSecretAuthorizationHandler> sutProvider,
+        List<Secret> resources,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = BulkSecretOperations.ReadAll;
         resources = SetSameOrganization(resources);
-        var secretIds =
-            SetupSecretAccessRequest(sutProvider, resources, accessClientType, resources.First().OrganizationId);
+        var secretIds = SetupSecretAccessRequest(
+            sutProvider,
+            resources,
+            accessClientType,
+            resources.First().OrganizationId
+        );
 
         var accessResult = secretIds.ToDictionary(secretId => secretId, _ => (true, true));
-        sutProvider.GetDependency<ISecretRepository>()
-            .AccessToSecretsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>())
+        sutProvider
+            .GetDependency<ISecretRepository>()
+            .AccessToSecretsAsync(
+                Arg.Any<IEnumerable<Guid>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<AccessClientType>()
+            )
             .Returns(accessResult);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resources);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resources
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -203,11 +282,16 @@ public class BulkSecretAuthorizationHandlerTests
         SutProvider<BulkSecretAuthorizationHandler> sutProvider,
         AccessClientType accessClientType,
         Guid organizationId,
-        Guid userId = new())
+        Guid userId = new()
+    )
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessSecretsManager(organizationId)
             .Returns(true);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+        sutProvider
+            .GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(default, organizationId)
             .ReturnsForAnyArgs((accessClientType, userId));
     }
 
@@ -216,7 +300,8 @@ public class BulkSecretAuthorizationHandlerTests
         IEnumerable<Secret> resources,
         AccessClientType accessClientType,
         Guid organizationId,
-        Guid userId = new())
+        Guid userId = new()
+    )
     {
         SetupUserSubstitutes(sutProvider, accessClientType, organizationId, userId);
         return resources.Select(s => s.Id).ToList();

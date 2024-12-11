@@ -13,13 +13,12 @@ public partial class OrganizationStatus : Migration
             table: "Organization",
             type: "tinyint unsigned",
             nullable: false,
-            defaultValue: (byte)1);
+            defaultValue: (byte)1
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "Status",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "Status", table: "Organization");
     }
 }

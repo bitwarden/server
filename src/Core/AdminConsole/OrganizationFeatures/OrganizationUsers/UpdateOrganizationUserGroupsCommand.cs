@@ -13,15 +13,22 @@ public class UpdateOrganizationUserGroupsCommand : IUpdateOrganizationUserGroups
 
     public UpdateOrganizationUserGroupsCommand(
         IEventService eventService,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository
+    )
     {
         _eventService = eventService;
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds)
+    public async Task UpdateUserGroupsAsync(
+        OrganizationUser organizationUser,
+        IEnumerable<Guid> groupIds
+    )
     {
         await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
+        await _eventService.LogOrganizationUserEventAsync(
+            organizationUser,
+            EventType.OrganizationUser_UpdatedGroups
+        );
     }
 }

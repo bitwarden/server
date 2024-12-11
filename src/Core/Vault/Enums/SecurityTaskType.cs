@@ -8,5 +8,5 @@ public enum SecurityTaskType : byte
     /// Task to update a cipher's password that was found to be at-risk by an administrator
     /// </summary>
     [Display(Name = "Update at-risk credential")]
-    UpdateAtRiskCredential = 0
+    UpdateAtRiskCredential = 0,
 }

@@ -14,7 +14,7 @@ public class LowerInvariantLookupNormalizer : ILookupNormalizer
         return Normalize(name);
     }
 
-    private string Normalize(string key)
+    private static string Normalize(string key)
     {
         return key?.Normalize().ToLowerInvariant();
     }

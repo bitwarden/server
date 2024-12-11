@@ -14,13 +14,17 @@ public class MaxProjectsQuery : IMaxProjectsQuery
 
     public MaxProjectsQuery(
         IOrganizationRepository organizationRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository
+    )
     {
         _organizationRepository = organizationRepository;
         _projectRepository = projectRepository;
     }
 
-    public async Task<(short? max, bool? overMax)> GetByOrgIdAsync(Guid organizationId, int projectsToAdd)
+    public async Task<(short? max, bool? overMax)> GetByOrgIdAsync(
+        Guid organizationId,
+        int projectsToAdd
+    )
     {
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
@@ -36,8 +40,14 @@ public class MaxProjectsQuery : IMaxProjectsQuery
 
         if (plan.Type == PlanType.Free)
         {
-            var projects = await _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId);
-            return ((short? max, bool? overMax))(projects + projectsToAdd > plan.SecretsManager.MaxProjects ? (plan.SecretsManager.MaxProjects, true) : (plan.SecretsManager.MaxProjects, false));
+            var projects = await _projectRepository.GetProjectCountByOrganizationIdAsync(
+                organizationId
+            );
+            return ((short? max, bool? overMax))(
+                projects + projectsToAdd > plan.SecretsManager.MaxProjects
+                    ? (plan.SecretsManager.MaxProjects, true)
+                    : (plan.SecretsManager.MaxProjects, false)
+            );
         }
 
         return (null, null);

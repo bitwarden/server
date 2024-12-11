@@ -6,10 +6,17 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public interface ISelfHostedSyncSponsorshipsCommand
 {
-    Task SyncOrganization(Guid organizationId, Guid cloudOrganizationId, OrganizationConnection billingSyncConnection);
+    Task SyncOrganization(
+        Guid organizationId,
+        Guid cloudOrganizationId,
+        OrganizationConnection billingSyncConnection
+    );
 }
 
 public interface ICloudSyncSponsorshipsCommand
 {
-    Task<(OrganizationSponsorshipSyncData, IEnumerable<OrganizationSponsorship>)> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData);
+    Task<(OrganizationSponsorshipSyncData, IEnumerable<OrganizationSponsorship>)> SyncOrganization(
+        Organization sponsoringOrg,
+        IEnumerable<OrganizationSponsorshipData> sponsorshipsData
+    );
 }

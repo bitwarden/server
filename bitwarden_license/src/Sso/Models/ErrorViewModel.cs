@@ -14,13 +14,7 @@ public class ErrorViewModel
     public string RedirectUri => Error?.RedirectUri;
     public string RequestId
     {
-        get
-        {
-            return Error?.RequestId ?? _requestId;
-        }
-        set
-        {
-            _requestId = value;
-        }
+        get { return Error?.RequestId ?? _requestId; }
+        set { _requestId = value; }
     }
 }

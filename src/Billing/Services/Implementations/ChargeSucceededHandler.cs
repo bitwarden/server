@@ -17,7 +17,8 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
         ILogger<ChargeSucceededHandler> logger,
         IStripeEventService stripeEventService,
         ITransactionRepository transactionRepository,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService
+    )
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -32,24 +33,36 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
     public async Task HandleAsync(Event parsedEvent)
     {
         var charge = await _stripeEventService.GetCharge(parsedEvent);
-        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.Stripe, charge.Id);
+        var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.Stripe,
+            charge.Id
+        );
         if (existingTransaction is not null)
         {
             _logger.LogInformation("Charge success already processed. {ChargeId}", charge.Id);
             return;
         }
 
-        var (organizationId, userId, providerId) = await _stripeEventUtilityService.GetEntityIdsFromChargeAsync(charge);
+        var (organizationId, userId, providerId) =
+            await _stripeEventUtilityService.GetEntityIdsFromChargeAsync(charge);
         if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning("Charge success has no subscriber ids. {ChargeId}", charge.Id);
             return;
         }
 
-        var transaction = _stripeEventUtilityService.FromChargeToTransaction(charge, organizationId, userId, providerId);
+        var transaction = _stripeEventUtilityService.FromChargeToTransaction(
+            charge,
+            organizationId,
+            userId,
+            providerId
+        );
         if (!transaction.PaymentMethodType.HasValue)
         {
-            _logger.LogWarning("Charge success from unsupported source/method. {ChargeId}", charge.Id);
+            _logger.LogWarning(
+                "Charge success from unsupported source/method. {ChargeId}",
+                charge.Id
+            );
             return;
         }
 
@@ -61,7 +74,8 @@ public class ChargeSucceededHandler : IChargeSucceededHandler
         {
             _logger.LogWarning(
                 "Charge success could not create transaction as entity may have been deleted. {ChargeId}",
-                charge.Id);
+                charge.Id
+            );
         }
     }
 }

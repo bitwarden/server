@@ -8,6 +8,7 @@ public class OrganizationKeysRequestModel
 {
     [Required]
     public string PublicKey { get; set; }
+
     [Required]
     public string EncryptedPrivateKey { get; set; }
 

@@ -49,7 +49,8 @@ public class SendService : ISendService
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _sendRepository = sendRepository;
         _userRepository = userRepository;
@@ -110,8 +111,7 @@ public class SendService : ISendService
             data.Id = fileId;
             data.Size = fileLength;
             data.Validated = false;
-            send.Data = JsonSerializer.Serialize(data,
-                JsonHelpers.IgnoreWritingNull);
+            send.Data = JsonSerializer.Serialize(data, JsonHelpers.IgnoreWritingNull);
             await SaveSendAsync(send);
             return await _sendFileStorageService.GetSendFileUploadUrlAsync(send, fileId);
         }
@@ -154,7 +154,12 @@ public class SendService : ISendService
     {
         var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data);
 
-        var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(send, fileData.Id, fileData.Size, _fileSizeLeeway);
+        var (valid, realSize) = await _sendFileStorageService.ValidateFileAsync(
+            send,
+            fileData.Id,
+            fileData.Size,
+            _fileSizeLeeway
+        );
 
         if (!valid || realSize > MAX_FILE_SIZE)
         {
@@ -169,8 +174,7 @@ public class SendService : ISendService
             fileData.Size = realSize.Value;
         }
         fileData.Validated = true;
-        send.Data = JsonSerializer.Serialize(fileData,
-            JsonHelpers.IgnoreWritingNull);
+        send.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
         await SaveSendAsync(send);
 
         return valid;
@@ -187,13 +191,19 @@ public class SendService : ISendService
         await _pushService.PushSyncSendDeleteAsync(send);
     }
 
-    public (bool grant, bool passwordRequiredError, bool passwordInvalidError) SendCanBeAccessed(Send send,
-        string password)
+    public (bool grant, bool passwordRequiredError, bool passwordInvalidError) SendCanBeAccessed(
+        Send send,
+        string password
+    )
     {
         var now = DateTime.UtcNow;
-        if (send == null || send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount ||
-            send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now || send.Disabled ||
-            send.DeletionDate < now)
+        if (
+            send == null
+            || send.MaxAccessCount.GetValueOrDefault(int.MaxValue) <= send.AccessCount
+            || send.ExpirationDate.GetValueOrDefault(DateTime.MaxValue) < now
+            || send.Disabled
+            || send.DeletionDate < now
+        )
         {
             return (false, false, false);
         }
@@ -203,7 +213,11 @@ public class SendService : ISendService
             {
                 return (false, true, false);
             }
-            var passwordResult = _passwordHasher.VerifyHashedPassword(new User(), send.Password, password);
+            var passwordResult = _passwordHasher.VerifyHashedPassword(
+                new User(),
+                send.Password,
+                password
+            );
             if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
             {
                 send.Password = HashPassword(password);
@@ -218,7 +232,11 @@ public class SendService : ISendService
     }
 
     // Response: Send, password required, password invalid
-    public async Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(Send send, string fileId, string password)
+    public async Task<(string, bool, bool)> GetSendFileDownloadUrlAsync(
+        Send send,
+        string fileId,
+        string password
+    )
     {
         if (send.Type != SendType.File)
         {
@@ -235,7 +253,11 @@ public class SendService : ISendService
         send.AccessCount++;
         await _sendRepository.ReplaceAsync(send);
         await _pushService.PushSyncSendUpdateAsync(send);
-        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), false, false);
+        return (
+            await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId),
+            false,
+            false
+        );
     }
 
     // Response: Send, password required, password invalid
@@ -264,18 +286,20 @@ public class SendService : ISendService
 
     private async Task RaiseReferenceEventAsync(Send send, ReferenceEventType eventType)
     {
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent
-        {
-            Id = send.UserId ?? default,
-            Type = eventType,
-            Source = ReferenceEventSource.User,
-            SendType = send.Type,
-            MaxAccessCount = send.MaxAccessCount,
-            HasPassword = !string.IsNullOrWhiteSpace(send.Password),
-            SendHasNotes = send.Data?.Contains("Notes"),
-            ClientId = _currentContext.ClientId,
-            ClientVersion = _currentContext.ClientVersion
-        });
+        await _referenceEventService.RaiseEventAsync(
+            new ReferenceEvent
+            {
+                Id = send.UserId ?? default,
+                Type = eventType,
+                Source = ReferenceEventSource.User,
+                SendType = send.Type,
+                MaxAccessCount = send.MaxAccessCount,
+                HasPassword = !string.IsNullOrWhiteSpace(send.Password),
+                SendHasNotes = send.Data?.Contains("Notes"),
+                ClientId = _currentContext.ClientId,
+                ClientVersion = _currentContext.ClientVersion,
+            }
+        );
     }
 
     public string HashPassword(string password)
@@ -290,19 +314,34 @@ public class SendService : ISendService
             return;
         }
 
-        var anyDisableSendPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value,
-            PolicyType.DisableSend);
+        var anyDisableSendPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(
+            userId.Value,
+            PolicyType.DisableSend
+        );
         if (anyDisableSendPolicies)
         {
-            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+            throw new BadRequestException(
+                "Due to an Enterprise Policy, you are only able to delete an existing Send."
+            );
         }
 
         if (send.HideEmail.GetValueOrDefault())
         {
-            var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
-            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
+            var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(
+                userId.Value,
+                PolicyType.SendOptions
+            );
+            if (
+                sendOptionsPolicies.Any(p =>
+                    CoreHelpers
+                        .LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)
+                        ?.DisableHideEmail ?? false
+                )
+            )
             {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
+                throw new BadRequestException(
+                    "Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send."
+                );
             }
         }
     }
@@ -332,7 +371,8 @@ public class SendService : ISendService
                 // Users that get access to file storage/premium from their organization get the default
                 // 1 GB max storage.
                 storageBytesRemaining = user.StorageBytesRemaining(
-                    _globalSettings.SelfHosted ? (short)10240 : (short)1);
+                    _globalSettings.SelfHosted ? (short)10240 : (short)1
+                );
             }
         }
         else if (send.OrganizationId.HasValue)

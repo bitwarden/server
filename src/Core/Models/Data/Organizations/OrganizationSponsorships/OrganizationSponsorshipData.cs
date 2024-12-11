@@ -6,6 +6,7 @@ namespace Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 public class OrganizationSponsorshipData
 {
     public OrganizationSponsorshipData() { }
+
     public OrganizationSponsorshipData(OrganizationSponsorship sponsorship)
     {
         SponsoringOrganizationUserId = sponsorship.SponsoringOrganizationUserId;
@@ -17,6 +18,7 @@ public class OrganizationSponsorshipData
         ValidUntil = sponsorship.ValidUntil;
         ToDelete = sponsorship.ToDelete;
     }
+
     public Guid SponsoringOrganizationUserId { get; set; }
     public Guid? SponsoredOrganizationId { get; set; }
     public string FriendlyName { get; set; }

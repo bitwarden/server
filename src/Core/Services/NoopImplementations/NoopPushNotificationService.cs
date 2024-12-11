@@ -82,8 +82,13 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public Task SendPayloadToOrganizationAsync(
+        string orgId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
         return Task.FromResult(0);
     }
@@ -98,8 +103,13 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public Task SendPayloadToUserAsync(
+        string userId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
         return Task.FromResult(0);
     }

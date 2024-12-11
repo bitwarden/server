@@ -20,7 +20,12 @@ public class RequestSMAccessController : Controller
     private readonly ICurrentContext _currentContext;
 
     public RequestSMAccessController(
-        IRequestSMAccessCommand requestSMAccessCommand, IUserService userService, IOrganizationRepository organizationRepository, IOrganizationUserRepository organizationUserRepository, ICurrentContext currentContext)
+        IRequestSMAccessCommand requestSMAccessCommand,
+        IUserService userService,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICurrentContext currentContext
+    )
     {
         _requestSMAccessCommand = requestSMAccessCommand;
         _userService = userService;
@@ -49,7 +54,14 @@ public class RequestSMAccessController : Controller
             throw new NotFoundException();
         }
 
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
-        await _requestSMAccessCommand.SendRequestAccessToSM(organization, orgUsers, user, model.EmailContent);
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            organization.Id
+        );
+        await _requestSMAccessCommand.SendRequestAccessToSM(
+            organization,
+            orgUsers,
+            user,
+            model.EmailContent
+        );
     }
 }

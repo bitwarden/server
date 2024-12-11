@@ -16,7 +16,7 @@ public class InstallationRepositoryTests
         InstallationCompare equalityComparer,
         List<EfRepo.InstallationRepository> suts,
         SqlRepo.InstallationRepository sqlInstallationRepo
-        )
+    )
     {
         var savedInstallations = new List<Installation>();
         foreach (var sut in suts)

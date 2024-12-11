@@ -2,11 +2,14 @@
 
 public class ProviderInitiateDeleteModel : BaseMailModel
 {
-    public string Url => string.Format("{0}/verify-recover-delete-provider?providerId={1}&token={2}&name={3}",
-        WebVaultUrl,
-        ProviderId,
-        Token,
-        ProviderNameUrlEncoded);
+    public string Url =>
+        string.Format(
+            "{0}/verify-recover-delete-provider?providerId={1}&token={2}&name={3}",
+            WebVaultUrl,
+            ProviderId,
+            Token,
+            ProviderNameUrlEncoded
+        );
 
     public string Token { get; set; }
     public Guid ProviderId { get; set; }

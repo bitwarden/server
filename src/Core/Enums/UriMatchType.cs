@@ -7,5 +7,5 @@ public enum UriMatchType : byte
     StartsWith = 2,
     Exact = 3,
     RegularExpression = 4,
-    Never = 5
+    Never = 5,
 }

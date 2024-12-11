@@ -23,7 +23,6 @@ public class StorageSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
-
     public void UpgradeItemsOptions_ReturnsCorrectOptions(PlanType planType)
     {
         var plan = StaticStore.GetPlan(planType);
@@ -33,14 +32,14 @@ public class StorageSubscriptionUpdateTests
             {
                 Data = new List<SubscriptionItem>
                 {
-                    new ()
+                    new()
                     {
                         Id = "subscription_item",
                         Price = new Price { Id = plan.PasswordManager.StripeStoragePlanId },
-                        Quantity = 1
-                    }
-                }
-            }
+                        Quantity = 1,
+                    },
+                },
+            },
         };
         var update = new StorageSubscriptionUpdate("plan_id", 100);
 
@@ -84,14 +83,14 @@ public class StorageSubscriptionUpdateTests
             {
                 Data = new List<SubscriptionItem>
                 {
-                    new ()
+                    new()
                     {
                         Id = "subscription_item",
                         Price = new Price { Id = plan.PasswordManager.StripeStoragePlanId },
-                        Quantity = 100
-                    }
-                }
-            }
+                        Quantity = 100,
+                    },
+                },
+            },
         };
         var update = new StorageSubscriptionUpdate(plan.PasswordManager.StripeStoragePlanId, 100);
         update.UpgradeItemsOptions(subscription);

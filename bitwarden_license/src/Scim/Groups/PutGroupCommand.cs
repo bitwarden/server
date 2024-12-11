@@ -19,14 +19,19 @@ public class PutGroupCommand : IPutGroupCommand
     public PutGroupCommand(
         IGroupRepository groupRepository,
         IScimContext scimContext,
-        IUpdateGroupCommand updateGroupCommand)
+        IUpdateGroupCommand updateGroupCommand
+    )
     {
         _groupRepository = groupRepository;
         _scimContext = scimContext;
         _updateGroupCommand = updateGroupCommand;
     }
 
-    public async Task<Group> PutGroupAsync(Organization organization, Guid id, ScimGroupRequestModel model)
+    public async Task<Group> PutGroupAsync(
+        Organization organization,
+        Guid id,
+        ScimGroupRequestModel model
+    )
     {
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organization.Id)
@@ -43,8 +48,10 @@ public class PutGroupCommand : IPutGroupCommand
 
     private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model)
     {
-        if (_scimContext.RequestScimProvider != ScimProviderType.Okta &&
-            _scimContext.RequestScimProvider != ScimProviderType.Ping)
+        if (
+            _scimContext.RequestScimProvider != ScimProviderType.Okta
+            && _scimContext.RequestScimProvider != ScimProviderType.Ping
+        )
         {
             return;
         }

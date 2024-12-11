@@ -8,8 +8,7 @@ public class DeleteServiceAccountsCommand : IDeleteServiceAccountsCommand
 {
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public DeleteServiceAccountsCommand(
-        IServiceAccountRepository serviceAccountRepository)
+    public DeleteServiceAccountsCommand(IServiceAccountRepository serviceAccountRepository)
     {
         _serviceAccountRepository = serviceAccountRepository;
     }

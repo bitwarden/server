@@ -14,6 +14,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
+
     [MaxLength(256)]
     public string? Email { get; set; }
     public string? Key { get; set; }
@@ -35,7 +36,8 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
 
     public Permissions? GetPermissions()
     {
-        return string.IsNullOrWhiteSpace(Permissions) ? null
+        return string.IsNullOrWhiteSpace(Permissions)
+            ? null
             : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
     }
 

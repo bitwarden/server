@@ -29,8 +29,7 @@ public class ProviderEventServiceTests
     private readonly IStripeEventService _stripeEventService =
         Substitute.For<IStripeEventService>();
 
-    private readonly IStripeFacade _stripeFacade =
-        Substitute.For<IStripeFacade>();
+    private readonly IStripeFacade _stripeFacade = Substitute.For<IStripeFacade>();
 
     private readonly ProviderEventService _providerEventService;
 
@@ -42,7 +41,8 @@ public class ProviderEventServiceTests
             _providerOrganizationRepository,
             _providerPlanRepository,
             _stripeEventService,
-            _stripeFacade);
+            _stripeFacade
+        );
     }
 
     #region TryRecordInvoiceLineItems
@@ -67,16 +67,16 @@ public class ProviderEventServiceTests
 
         const string subscriptionId = "sub_1";
 
-        var invoice = new Invoice
-        {
-            SubscriptionId = subscriptionId
-        };
+        var invoice = new Invoice { SubscriptionId = subscriptionId };
 
         _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
 
         var subscription = new Subscription
         {
-            Metadata = new Dictionary<string, string> { { "organizationId", Guid.NewGuid().ToString() } }
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", Guid.NewGuid().ToString() },
+            },
         };
 
         _stripeFacade.GetSubscription(subscriptionId).Returns(subscription);
@@ -85,7 +85,9 @@ public class ProviderEventServiceTests
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
 
         // Assert
-        await _providerOrganizationRepository.DidNotReceiveWithAnyArgs().GetManyDetailsByProviderAsync(Arg.Any<Guid>());
+        await _providerOrganizationRepository
+            .DidNotReceiveWithAnyArgs()
+            .GetManyDetailsByProviderAsync(Arg.Any<Guid>());
     }
 
     [Fact]
@@ -102,20 +104,14 @@ public class ProviderEventServiceTests
             Id = "invoice_1",
             Number = "A",
             SubscriptionId = subscriptionId,
-            Discount = new Discount
-            {
-                Coupon = new Coupon
-                {
-                    PercentOff = 35
-                }
-            }
+            Discount = new Discount { Coupon = new Coupon { PercentOff = 35 } },
         };
 
         _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
 
         var subscription = new Subscription
         {
-            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } }
+            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
         };
 
         _stripeFacade.GetSubscription(subscriptionId).Returns(subscription);
@@ -125,48 +121,48 @@ public class ProviderEventServiceTests
 
         var clients = new List<ProviderOrganizationOrganizationDetails>
         {
-            new ()
+            new()
             {
                 OrganizationId = client1Id,
                 OrganizationName = "Client 1",
                 Plan = "Teams (Monthly)",
                 Seats = 50,
                 OccupiedSeats = 30,
-                Status = OrganizationStatusType.Managed
+                Status = OrganizationStatusType.Managed,
             },
-            new ()
+            new()
             {
                 OrganizationId = client2Id,
                 OrganizationName = "Client 2",
                 Plan = "Enterprise (Monthly)",
                 Seats = 50,
                 OccupiedSeats = 30,
-                Status = OrganizationStatusType.Managed
-            }
+                Status = OrganizationStatusType.Managed,
+            },
         };
 
         _providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId).Returns(clients);
 
         var providerPlans = new List<ProviderPlan>
         {
-            new ()
+            new()
             {
                 Id = Guid.NewGuid(),
                 ProviderId = providerId,
                 PlanType = PlanType.TeamsMonthly,
                 AllocatedSeats = 50,
                 PurchasedSeats = 0,
-                SeatMinimum = 100
+                SeatMinimum = 100,
             },
-            new ()
+            new()
             {
                 Id = Guid.NewGuid(),
                 ProviderId = providerId,
                 PlanType = PlanType.EnterpriseMonthly,
                 AllocatedSeats = 50,
                 PurchasedSeats = 0,
-                SeatMinimum = 100
-            }
+                SeatMinimum = 100,
+            },
         };
 
         _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);
@@ -178,51 +174,79 @@ public class ProviderEventServiceTests
         var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
         var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
 
-        await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
-            options =>
-                options.ProviderId == providerId &&
-                options.InvoiceId == invoice.Id &&
-                options.InvoiceNumber == invoice.Number &&
-                options.ClientName == "Client 1" &&
-                options.ClientId == client1Id &&
-                options.PlanName == "Teams (Monthly)" &&
-                options.AssignedSeats == 50 &&
-                options.UsedSeats == 30 &&
-                options.Total == options.AssignedSeats * teamsPlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
+        await _providerInvoiceItemRepository
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<ProviderInvoiceItem>(options =>
+                    options.ProviderId == providerId
+                    && options.InvoiceId == invoice.Id
+                    && options.InvoiceNumber == invoice.Number
+                    && options.ClientName == "Client 1"
+                    && options.ClientId == client1Id
+                    && options.PlanName == "Teams (Monthly)"
+                    && options.AssignedSeats == 50
+                    && options.UsedSeats == 30
+                    && options.Total
+                        == options.AssignedSeats
+                            * teamsPlan.PasswordManager.ProviderPortalSeatPrice
+                            * 0.65M
+                )
+            );
 
-        await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
-            options =>
-                options.ProviderId == providerId &&
-                options.InvoiceId == invoice.Id &&
-                options.InvoiceNumber == invoice.Number &&
-                options.ClientName == "Client 2" &&
-                options.ClientId == client2Id &&
-                options.PlanName == "Enterprise (Monthly)" &&
-                options.AssignedSeats == 50 &&
-                options.UsedSeats == 30 &&
-                options.Total == options.AssignedSeats * enterprisePlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
+        await _providerInvoiceItemRepository
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<ProviderInvoiceItem>(options =>
+                    options.ProviderId == providerId
+                    && options.InvoiceId == invoice.Id
+                    && options.InvoiceNumber == invoice.Number
+                    && options.ClientName == "Client 2"
+                    && options.ClientId == client2Id
+                    && options.PlanName == "Enterprise (Monthly)"
+                    && options.AssignedSeats == 50
+                    && options.UsedSeats == 30
+                    && options.Total
+                        == options.AssignedSeats
+                            * enterprisePlan.PasswordManager.ProviderPortalSeatPrice
+                            * 0.65M
+                )
+            );
 
-        await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
-            options =>
-                options.ProviderId == providerId &&
-                options.InvoiceId == invoice.Id &&
-                options.InvoiceNumber == invoice.Number &&
-                options.ClientName == "Unassigned seats" &&
-                options.PlanName == "Teams (Monthly)" &&
-                options.AssignedSeats == 50 &&
-                options.UsedSeats == 0 &&
-                options.Total == options.AssignedSeats * teamsPlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
+        await _providerInvoiceItemRepository
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<ProviderInvoiceItem>(options =>
+                    options.ProviderId == providerId
+                    && options.InvoiceId == invoice.Id
+                    && options.InvoiceNumber == invoice.Number
+                    && options.ClientName == "Unassigned seats"
+                    && options.PlanName == "Teams (Monthly)"
+                    && options.AssignedSeats == 50
+                    && options.UsedSeats == 0
+                    && options.Total
+                        == options.AssignedSeats
+                            * teamsPlan.PasswordManager.ProviderPortalSeatPrice
+                            * 0.65M
+                )
+            );
 
-        await _providerInvoiceItemRepository.Received(1).CreateAsync(Arg.Is<ProviderInvoiceItem>(
-            options =>
-                options.ProviderId == providerId &&
-                options.InvoiceId == invoice.Id &&
-                options.InvoiceNumber == invoice.Number &&
-                options.ClientName == "Unassigned seats" &&
-                options.PlanName == "Enterprise (Monthly)" &&
-                options.AssignedSeats == 50 &&
-                options.UsedSeats == 0 &&
-                options.Total == options.AssignedSeats * enterprisePlan.PasswordManager.ProviderPortalSeatPrice * 0.65M));
+        await _providerInvoiceItemRepository
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<ProviderInvoiceItem>(options =>
+                    options.ProviderId == providerId
+                    && options.InvoiceId == invoice.Id
+                    && options.InvoiceNumber == invoice.Number
+                    && options.ClientName == "Unassigned seats"
+                    && options.PlanName == "Enterprise (Monthly)"
+                    && options.AssignedSeats == 50
+                    && options.UsedSeats == 0
+                    && options.Total
+                        == options.AssignedSeats
+                            * enterprisePlan.PasswordManager.ProviderPortalSeatPrice
+                            * 0.65M
+                )
+            );
     }
 
     [Fact]
@@ -238,30 +262,22 @@ public class ProviderEventServiceTests
         {
             Id = "invoice_1",
             Number = "A",
-            SubscriptionId = subscriptionId
+            SubscriptionId = subscriptionId,
         };
 
         _stripeEventService.GetInvoice(stripeEvent).Returns(invoice);
 
         var subscription = new Subscription
         {
-            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } }
+            Metadata = new Dictionary<string, string> { { "providerId", providerId.ToString() } },
         };
 
         _stripeFacade.GetSubscription(subscriptionId).Returns(subscription);
 
         var invoiceItems = new List<ProviderInvoiceItem>
         {
-            new ()
-            {
-                Id = Guid.NewGuid(),
-                ClientName = "Client 1"
-            },
-            new ()
-            {
-                Id = Guid.NewGuid(),
-                ClientName = "Client 2"
-            }
+            new() { Id = Guid.NewGuid(), ClientName = "Client 1" },
+            new() { Id = Guid.NewGuid(), ClientName = "Client 2" },
         };
 
         _providerInvoiceItemRepository.GetByInvoiceId(invoice.Id).Returns(invoiceItems);
@@ -270,8 +286,9 @@ public class ProviderEventServiceTests
         await _providerEventService.TryRecordInvoiceLineItems(stripeEvent);
 
         // Assert
-        await _providerInvoiceItemRepository.Received(2).ReplaceAsync(Arg.Is<ProviderInvoiceItem>(
-            options => options.InvoiceNumber == "A"));
+        await _providerInvoiceItemRepository
+            .Received(2)
+            .ReplaceAsync(Arg.Is<ProviderInvoiceItem>(options => options.InvoiceNumber == "A"));
     }
     #endregion
 }

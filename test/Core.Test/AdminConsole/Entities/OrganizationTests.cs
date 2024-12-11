@@ -9,20 +9,20 @@ namespace Bit.Core.Test.Entities;
 
 public class OrganizationTests
 {
-    private static readonly Dictionary<TwoFactorProviderType, TwoFactorProvider> _testConfig = new Dictionary<TwoFactorProviderType, TwoFactorProvider>()
-    {
-        [TwoFactorProviderType.OrganizationDuo] = new TwoFactorProvider
+    private static readonly Dictionary<TwoFactorProviderType, TwoFactorProvider> _testConfig =
+        new Dictionary<TwoFactorProviderType, TwoFactorProvider>()
         {
-            Enabled = true,
-            MetaData = new Dictionary<string, object>
+            [TwoFactorProviderType.OrganizationDuo] = new TwoFactorProvider
             {
-                ["IKey"] = "IKey_value",
-                ["SKey"] = "SKey_value",
-                ["Host"] = "Host_value",
+                Enabled = true,
+                MetaData = new Dictionary<string, object>
+                {
+                    ["IKey"] = "IKey_value",
+                    ["SKey"] = "SKey_value",
+                    ["Host"] = "Host_value",
+                },
             },
-        }
-    };
-
+        };
 
     [Fact]
     public void SetTwoFactorProviders_Success()
@@ -36,11 +36,17 @@ public class OrganizationTests
         var duo = AssertHelper.AssertJsonProperty(root, "6", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(duo, "Enabled", JsonValueKind.True);
         var duoMetaData = AssertHelper.AssertJsonProperty(duo, "MetaData", JsonValueKind.Object);
-        var iKey = AssertHelper.AssertJsonProperty(duoMetaData, "IKey", JsonValueKind.String).GetString();
+        var iKey = AssertHelper
+            .AssertJsonProperty(duoMetaData, "IKey", JsonValueKind.String)
+            .GetString();
         Assert.Equal("IKey_value", iKey);
-        var sKey = AssertHelper.AssertJsonProperty(duoMetaData, "SKey", JsonValueKind.String).GetString();
+        var sKey = AssertHelper
+            .AssertJsonProperty(duoMetaData, "SKey", JsonValueKind.String)
+            .GetString();
         Assert.Equal("SKey_value", sKey);
-        var host = AssertHelper.AssertJsonProperty(duoMetaData, "Host", JsonValueKind.String).GetString();
+        var host = AssertHelper
+            .AssertJsonProperty(duoMetaData, "Host", JsonValueKind.String)
+            .GetString();
         Assert.Equal("Host_value", host);
     }
 
@@ -58,7 +64,10 @@ public class OrganizationTests
 
         var twoFactorProviders = organization.GetTwoFactorProviders();
 
-        var duo = Assert.Contains(TwoFactorProviderType.OrganizationDuo, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+        var duo = Assert.Contains(
+            TwoFactorProviderType.OrganizationDuo,
+            (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders
+        );
         Assert.True(duo.Enabled);
         Assert.NotNull(duo.MetaData);
         var iKey = Assert.Contains("IKey", (IDictionary<string, object>)duo.MetaData);
@@ -86,7 +95,10 @@ public class OrganizationTests
         // Actual checks
         var twoFactorProviders = organization.GetTwoFactorProviders();
 
-        var duo = Assert.Contains(TwoFactorProviderType.OrganizationDuo, (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders);
+        var duo = Assert.Contains(
+            TwoFactorProviderType.OrganizationDuo,
+            (IDictionary<TwoFactorProviderType, TwoFactorProvider>)twoFactorProviders
+        );
         Assert.True(duo.Enabled);
         Assert.NotNull(duo.MetaData);
         var iKey = Assert.Contains("IKey", (IDictionary<string, object>)duo.MetaData);

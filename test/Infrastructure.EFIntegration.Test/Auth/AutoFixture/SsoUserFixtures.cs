@@ -25,13 +25,12 @@ internal class EfSsoUser : ICustomization
 
 internal class EfSsoUserAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfSsoUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfSsoUser())
-    { }
+    public EfSsoUserAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfSsoUser()) { }
 }
 
 internal class InlineEfSsoUserAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfSsoUserAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfSsoUser) }, values)
-    { }
+    public InlineEfSsoUserAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfSsoUser) }, values) { }
 }

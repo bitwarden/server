@@ -49,5 +49,5 @@ public enum Permission
     Tools_ManageStripeSubscriptions,
     Tools_CreateEditTransaction,
     Tools_ProcessStripeEvents,
-    Tools_MigrateProviders
+    Tools_MigrateProviders,
 }

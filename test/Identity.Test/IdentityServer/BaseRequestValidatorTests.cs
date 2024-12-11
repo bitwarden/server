@@ -22,7 +22,6 @@ using NSubstitute;
 using Xunit;
 using AuthFixtures = Bit.Identity.Test.AutoFixture;
 
-
 namespace Bit.Identity.Test.IdentityServer;
 
 public class BaseRequestValidatorTests
@@ -78,7 +77,8 @@ public class BaseRequestValidatorTests
             _policyService,
             _featureService,
             _ssoConfigRepository,
-            _userDecryptionOptionsBuilder);
+            _userDecryptionOptionsBuilder
+        );
     }
 
     /* Logic path
@@ -90,7 +90,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_IsBot_UserNotNull_ShouldBuildErrorResult_ShouldLogFailedLoginEvent(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -104,9 +105,12 @@ public class BaseRequestValidatorTests
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
 
         // Assert
-        await _eventService.Received(1)
-                           .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
-                                             Core.Enums.EventType.User_FailedLogIn);
+        await _eventService
+            .Received(1)
+            .LogUserEventAsync(
+                context.CustomValidatorRequestContext.User.Id,
+                Core.Enums.EventType.User_FailedLogIn
+            );
         Assert.True(context.GrantResult.IsError);
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
@@ -121,7 +125,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ContextNotValid_SelfHosted_ShouldBuildErrorResult_ShouldLogWarning(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -148,7 +153,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_ContextNotValid_MaxAttemptLogin_ShouldSendEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -159,24 +165,25 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.KnownDevice = false;
 
         _globalSettings.Captcha.Returns(
-            new GlobalSettings.CaptchaSettings
-            {
-                MaximumFailedLoginAttempts = 3
-            });
+            new GlobalSettings.CaptchaSettings { MaximumFailedLoginAttempts = 3 }
+        );
         _sut.isValid = false;
 
         // Act
         await _sut.ValidateAsync(context);
 
         // Assert
-        await _mailService.Received(1)
-                          .SendFailedLoginAttemptsEmailAsync(
-                            Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .Received(1)
+            .SendFailedLoginAttemptsEmailAsync(
+                Arg.Any<string>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }
-
 
     /* Logic path
     ValidateAsync -> IsValidAuthTypeAsync -> SaveDeviceAsync -> BuildErrorResult
@@ -185,7 +192,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_AuthCodeGrantType_DeviceNull_ShouldError(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -216,7 +224,8 @@ public class BaseRequestValidatorTests
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult,
-        Device device)
+        Device device
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -227,13 +236,15 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
-        context.CustomValidatorRequestContext.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(1);
+        context.CustomValidatorRequestContext.User.CreationDate =
+            DateTime.UtcNow - TimeSpan.FromDays(1);
         _globalSettings.DisableEmailNewDevice = false;
 
         context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device
 
-        _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-                         .Returns(device);
+        _deviceValidator
+            .SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(device);
         // Act
         await _sut.ValidateAsync(context);
 
@@ -249,7 +260,8 @@ public class BaseRequestValidatorTests
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
         GrantValidationResult grantResult,
-        Device device)
+        Device device
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -257,13 +269,15 @@ public class BaseRequestValidatorTests
         context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
         _sut.isValid = true;
 
-        context.CustomValidatorRequestContext.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(1);
+        context.CustomValidatorRequestContext.User.CreationDate =
+            DateTime.UtcNow - TimeSpan.FromDays(1);
         _globalSettings.DisableEmailNewDevice = false;
 
         context.ValidatedTokenRequest.GrantType = "client_credentials"; // This || AuthCode will allow process to continue to get device
 
-        _deviceValidator.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-                         .Returns(device);
+        _deviceValidator
+            .SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
+            .Returns(device);
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
@@ -272,7 +286,9 @@ public class BaseRequestValidatorTests
 
         // Assert
         await _eventService.LogUserEventAsync(
-            context.CustomValidatorRequestContext.User.Id, EventType.User_LoggedIn);
+            context.CustomValidatorRequestContext.User.Id,
+            EventType.User_LoggedIn
+        );
         await _userRepository.Received(1).ReplaceAsync(Arg.Any<User>());
 
         Assert.False(context.GrantResult.IsError);
@@ -285,7 +301,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_InvalidAuthType_ShouldSetSsoResult(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -299,9 +316,13 @@ public class BaseRequestValidatorTests
 
         context.ValidatedTokenRequest.GrantType = "";
 
-        _policyService.AnyPoliciesApplicableToUserAsync(
-                        Arg.Any<Guid>(), PolicyType.RequireSso, OrganizationUserStatusType.Confirmed)
-                      .Returns(Task.FromResult(true));
+        _policyService
+            .AnyPoliciesApplicableToUserAsync(
+                Arg.Any<Guid>(),
+                PolicyType.RequireSso,
+                OrganizationUserStatusType.Confirmed
+            )
+            .Returns(Task.FromResult(true));
         _twoFactorAuthenticationValidator
             .RequiresTwoFactorAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
             .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
@@ -318,7 +339,8 @@ public class BaseRequestValidatorTests
     public async Task ValidateAsync_IsLegacyUser_FailAuthForLegacyUserAsync(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
         // Arrange
         var context = CreateContext(tokenRequest, requestContext, grantResult);
@@ -339,25 +361,25 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal($"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}"
-                    , errorResponse.Message);
+        Assert.Equal(
+            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            errorResponse.Message
+        );
     }
 
     private BaseRequestValidationContextFake CreateContext(
         ValidatedTokenRequest tokenRequest,
         CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
+        GrantValidationResult grantResult
+    )
     {
-        return new BaseRequestValidationContextFake(
-            tokenRequest,
-            requestContext,
-            grantResult
-        );
+        return new BaseRequestValidationContextFake(tokenRequest, requestContext, grantResult);
     }
 
     private UserManager<User> SubstituteUserManager()
     {
-        return new UserManager<User>(Substitute.For<IUserStore<User>>(),
+        return new UserManager<User>(
+            Substitute.For<IUserStore<User>>(),
             Substitute.For<IOptions<IdentityOptions>>(),
             Substitute.For<IPasswordHasher<User>>(),
             Enumerable.Empty<IUserValidator<User>>(),
@@ -365,6 +387,7 @@ public class BaseRequestValidatorTests
             Substitute.For<ILookupNormalizer>(),
             Substitute.For<IdentityErrorDescriber>(),
             Substitute.For<IServiceProvider>(),
-            Substitute.For<ILogger<UserManager<User>>>());
+            Substitute.For<ILogger<UserManager<User>>>()
+        );
     }
 }

@@ -18,13 +18,16 @@ public class UpdateSecretCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_Success(SutProvider<UpdateSecretCommand> sutProvider, Secret data, Project project)
+    public async Task UpdateAsync_Success(
+        SutProvider<UpdateSecretCommand> sutProvider,
+        Secret data,
+        Project project
+    )
     {
         data.Projects = new List<Project> { project };
 
         await sutProvider.Sut.UpdateAsync(data, null);
 
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .UpdateAsync(data, null);
+        await sutProvider.GetDependency<ISecretRepository>().Received(1).UpdateAsync(data, null);
     }
 }

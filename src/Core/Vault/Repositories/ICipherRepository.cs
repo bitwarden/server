@@ -10,11 +10,18 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
 {
     Task<CipherDetails> GetByIdAsync(Guid id, Guid userId);
     Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
-    Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(
+        Guid organizationId
+    );
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
-    Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
+    Task<ICollection<CipherDetails>> GetManyByUserIdAsync(
+        Guid userId,
+        bool withOrganizations = true
+    );
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
-    Task<ICollection<CipherOrganizationDetails>> GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
+    Task<
+        ICollection<CipherOrganizationDetails>
+    > GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task CreateAsync(CipherDetails cipher);
     Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds);
@@ -31,8 +38,12 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
-    Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
+    Task CreateAsync(
+        IEnumerable<Cipher> ciphers,
+        IEnumerable<Collection> collections,
+        IEnumerable<CollectionCipher> collectionCiphers,
+        IEnumerable<CollectionUser> collectionUsers
+    );
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
@@ -44,6 +55,8 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="ciphers">A list of ciphers with updated data</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
-        IEnumerable<Cipher> ciphers);
+    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId,
+        IEnumerable<Cipher> ciphers
+    );
 }

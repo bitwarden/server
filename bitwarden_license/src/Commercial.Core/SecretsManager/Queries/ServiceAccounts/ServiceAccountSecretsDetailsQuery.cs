@@ -15,17 +15,26 @@ public class ServiceAccountSecretsDetailsQuery : IServiceAccountSecretsDetailsQu
     }
 
     public async Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdAsync(
-        Guid organizationId, Guid userId, AccessClientType accessClient, bool includeAccessToSecrets)
+        Guid organizationId,
+        Guid userId,
+        AccessClientType accessClient,
+        bool includeAccessToSecrets
+    )
     {
         if (includeAccessToSecrets)
         {
-            return await _serviceAccountRepository.GetManyByOrganizationIdWithSecretsDetailsAsync(organizationId,
+            return await _serviceAccountRepository.GetManyByOrganizationIdWithSecretsDetailsAsync(
+                organizationId,
                 userId,
-                accessClient);
+                accessClient
+            );
         }
 
-        var serviceAccounts =
-            await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
+        var serviceAccounts = await _serviceAccountRepository.GetManyByOrganizationIdAsync(
+            organizationId,
+            userId,
+            accessClient
+        );
 
         return serviceAccounts.Select(sa => new ServiceAccountSecretsDetails
         {

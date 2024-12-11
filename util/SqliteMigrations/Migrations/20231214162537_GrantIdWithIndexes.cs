@@ -19,7 +19,8 @@ public partial class GrantIdWithIndexes : Migration
             name: "IX_Grant_Key",
             table: "Grant",
             column: "Key",
-            unique: true);
+            unique: true
+        );
     }
 
     /// <inheritdoc />
@@ -27,8 +28,6 @@ public partial class GrantIdWithIndexes : Migration
     {
         migrationBuilder.SqlResource(_scriptLocationTemplate);
 
-        migrationBuilder.DropIndex(
-            name: "IX_Grant_Key",
-            table: "Grant");
+        migrationBuilder.DropIndex(name: "IX_Grant_Key", table: "Grant");
     }
 }

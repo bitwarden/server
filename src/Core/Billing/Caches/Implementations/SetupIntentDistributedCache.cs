@@ -4,8 +4,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.Core.Billing.Caches.Implementations;
 
 public class SetupIntentDistributedCache(
-    [FromKeyedServices("persistent")]
-    IDistributedCache distributedCache) : ISetupIntentCache
+    [FromKeyedServices("persistent")] IDistributedCache distributedCache
+) : ISetupIntentCache
 {
     public async Task<string> Get(Guid subscriberId)
     {

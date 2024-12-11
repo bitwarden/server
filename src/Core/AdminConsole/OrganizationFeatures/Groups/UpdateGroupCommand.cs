@@ -22,7 +22,8 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         IEventService eventService,
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
-        ICollectionRepository collectionRepository)
+        ICollectionRepository collectionRepository
+    )
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
@@ -30,9 +31,12 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         _collectionRepository = collectionRepository;
     }
 
-    public async Task UpdateGroupAsync(Group group, Organization organization,
+    public async Task UpdateGroupAsync(
+        Group group,
+        Organization organization,
         ICollection<CollectionAccessSelection>? collections = null,
-        IEnumerable<Guid>? userIds = null)
+        IEnumerable<Guid>? userIds = null
+    )
     {
         await ValidateAsync(organization, group, collections, userIds);
 
@@ -46,9 +50,13 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Updated);
     }
 
-    public async Task UpdateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
+    public async Task UpdateGroupAsync(
+        Group group,
+        Organization organization,
+        EventSystemUser systemUser,
         ICollection<CollectionAccessSelection>? collections = null,
-        IEnumerable<Guid>? userIds = null)
+        IEnumerable<Guid>? userIds = null
+    )
     {
         await ValidateAsync(organization, group, collections, userIds);
 
@@ -59,10 +67,17 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             await SaveGroupUsersAsync(group, userIds, systemUser);
         }
 
-        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Updated, systemUser);
+        await _eventService.LogGroupEventAsync(
+            group,
+            Core.Enums.EventType.Group_Updated,
+            systemUser
+        );
     }
 
-    private async Task SaveGroupWithCollectionsAsync(Group group, IEnumerable<CollectionAccessSelection>? collections = null)
+    private async Task SaveGroupWithCollectionsAsync(
+        Group group,
+        IEnumerable<CollectionAccessSelection>? collections = null
+    )
     {
         group.RevisionDate = DateTime.UtcNow;
 
@@ -76,7 +91,11 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         }
     }
 
-    private async Task SaveGroupUsersAsync(Group group, IEnumerable<Guid> userIds, EventSystemUser? systemUser = null)
+    private async Task SaveGroupUsersAsync(
+        Group group,
+        IEnumerable<Guid> userIds,
+        EventSystemUser? systemUser = null
+    )
     {
         var newUserIds = userIds as Guid[] ?? userIds.ToArray();
         var originalUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
@@ -94,18 +113,33 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 
         if (systemUser.HasValue)
         {
-            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
-                (u, EventType.OrganizationUser_UpdatedGroups, systemUser.Value, (DateTime?)eventDate)));
+            await _eventService.LogOrganizationUserEventsAsync(
+                users.Select(u =>
+                    (
+                        u,
+                        EventType.OrganizationUser_UpdatedGroups,
+                        systemUser.Value,
+                        (DateTime?)eventDate
+                    )
+                )
+            );
         }
         else
         {
-            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
-                (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+            await _eventService.LogOrganizationUserEventsAsync(
+                users.Select(u =>
+                    (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)
+                )
+            );
         }
     }
 
-    private async Task ValidateAsync(Organization organization, Group group, ICollection<CollectionAccessSelection>? collectionAccess,
-        IEnumerable<Guid>? memberAccess)
+    private async Task ValidateAsync(
+        Organization organization,
+        Group group,
+        ICollection<CollectionAccessSelection>? collectionAccess,
+        IEnumerable<Guid>? memberAccess
+    )
     {
         // Avoid multiple enumeration
         memberAccess = memberAccess?.ToList();
@@ -136,28 +170,38 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             await ValidateMemberAccessAsync(originalGroup, memberAccess.ToList());
         }
 
-        var invalidAssociations = collectionAccess?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+        var invalidAssociations = collectionAccess?.Where(cas =>
+            cas.Manage && (cas.ReadOnly || cas.HidePasswords)
+        );
         if (invalidAssociations?.Any() ?? false)
         {
-            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            throw new BadRequestException(
+                "The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true."
+            );
         }
     }
 
-    private async Task ValidateCollectionAccessAsync(Group originalGroup,
-        ICollection<CollectionAccessSelection> collectionAccess)
+    private async Task ValidateCollectionAccessAsync(
+        Group originalGroup,
+        ICollection<CollectionAccessSelection> collectionAccess
+    )
     {
-        var collections = await _collectionRepository
-            .GetManyByManyIdsAsync(collectionAccess.Select(c => c.Id));
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(
+            collectionAccess.Select(c => c.Id)
+        );
         var collectionIds = collections.Select(c => c.Id);
 
-        var missingCollection = collectionAccess
-            .FirstOrDefault(cas => !collectionIds.Contains(cas.Id));
+        var missingCollection = collectionAccess.FirstOrDefault(cas =>
+            !collectionIds.Contains(cas.Id)
+        );
         if (missingCollection != default)
         {
             throw new NotFoundException();
         }
 
-        var invalidCollection = collections.FirstOrDefault(c => c.OrganizationId != originalGroup.OrganizationId);
+        var invalidCollection = collections.FirstOrDefault(c =>
+            c.OrganizationId != originalGroup.OrganizationId
+        );
         if (invalidCollection != default)
         {
             // Use generic error message to avoid enumeration
@@ -165,8 +209,10 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         }
     }
 
-    private async Task ValidateMemberAccessAsync(Group originalGroup,
-        ICollection<Guid> memberAccess)
+    private async Task ValidateMemberAccessAsync(
+        Group originalGroup,
+        ICollection<Guid> memberAccess
+    )
     {
         var members = await _organizationUserRepository.GetManyAsync(memberAccess);
         var memberIds = members.Select(g => g.Id);
@@ -177,7 +223,9 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             throw new NotFoundException();
         }
 
-        var invalidMember = members.FirstOrDefault(m => m.OrganizationId != originalGroup.OrganizationId);
+        var invalidMember = members.FirstOrDefault(m =>
+            m.OrganizationId != originalGroup.OrganizationId
+        );
         if (invalidMember != default)
         {
             // Use generic error message to avoid enumeration

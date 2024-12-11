@@ -25,8 +25,7 @@ public class DistributedCacheTicketStore : ITicketStore
     public Task RenewAsync(string key, AuthenticationTicket ticket)
     {
         var options = new DistributedCacheEntryOptions();
-        var expiresUtc = ticket.Properties.ExpiresUtc ??
-            DateTimeOffset.UtcNow.AddMinutes(15);
+        var expiresUtc = ticket.Properties.ExpiresUtc ?? DateTimeOffset.UtcNow.AddMinutes(15);
         options.SetAbsoluteExpiration(expiresUtc);
 
         var val = SerializeToBytes(ticket);

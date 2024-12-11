@@ -15,7 +15,10 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> UpdateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPolicyUpdates)
+    public async Task<Secret> UpdateAsync(
+        Secret secret,
+        SecretAccessPoliciesUpdates? accessPolicyUpdates
+    )
     {
         return await _secretRepository.UpdateAsync(secret, accessPolicyUpdates);
     }

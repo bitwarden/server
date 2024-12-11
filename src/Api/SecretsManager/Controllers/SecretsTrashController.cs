@@ -20,7 +20,8 @@ public class TrashController : Controller
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IEmptyTrashCommand emptyTrashCommand,
-        IRestoreTrashCommand restoreTrashCommand)
+        IRestoreTrashCommand restoreTrashCommand
+    )
     {
         _currentContext = currentContext;
         _secretRepository = secretRepository;
@@ -29,7 +30,9 @@ public class TrashController : Controller
     }
 
     [HttpGet("secrets/{organizationId}/trash")]
-    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync(Guid organizationId)
+    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync(
+        Guid organizationId
+    )
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -41,7 +44,9 @@ public class TrashController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var secrets = await _secretRepository.GetManyDetailsByOrganizationIdInTrashAsync(organizationId);
+        var secrets = await _secretRepository.GetManyDetailsByOrganizationIdInTrashAsync(
+            organizationId
+        );
         return new SecretWithProjectsListResponseModel(secrets);
     }
 

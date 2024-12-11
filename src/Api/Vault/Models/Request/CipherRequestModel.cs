@@ -19,17 +19,21 @@ public class CipherRequestModel
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
+
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(10000)]
     public string Notes { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
+
     [Obsolete]
     public Dictionary<string, string> Attachments { get; set; }
+
     // TODO: Rename to Attachments whenever the above is finally removed.
     public Dictionary<string, CipherAttachmentModel> Attachments2 { get; set; }
 
@@ -57,7 +61,9 @@ public class CipherRequestModel
 
     public CipherDetails ToCipherDetails(CipherDetails existingCipher)
     {
-        existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId) ? null : (Guid?)new Guid(FolderId);
+        existingCipher.FolderId = string.IsNullOrWhiteSpace(FolderId)
+            ? null
+            : (Guid?)new Guid(FolderId);
         existingCipher.Favorite = Favorite;
         ToCipher(existingCipher);
         return existingCipher;
@@ -68,23 +74,37 @@ public class CipherRequestModel
         switch (existingCipher.Type)
         {
             case CipherType.Login:
-                var loginObj = NSL.JObject.FromObject(ToCipherLoginData(),
-                    new NS.JsonSerializer { NullValueHandling = NS.NullValueHandling.Ignore });
+                var loginObj = NSL.JObject.FromObject(
+                    ToCipherLoginData(),
+                    new NS.JsonSerializer { NullValueHandling = NS.NullValueHandling.Ignore }
+                );
                 // TODO: Switch to JsonNode in .NET 6 https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-use-dom-utf8jsonreader-utf8jsonwriter?pivots=dotnet-6-0
                 loginObj[nameof(CipherLoginData.Uri)]?.Parent?.Remove();
                 existingCipher.Data = loginObj.ToString(NS.Formatting.None);
                 break;
             case CipherType.Card:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherCardData(), JsonHelpers.IgnoreWritingNull);
+                existingCipher.Data = JsonSerializer.Serialize(
+                    ToCipherCardData(),
+                    JsonHelpers.IgnoreWritingNull
+                );
                 break;
             case CipherType.Identity:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherIdentityData(), JsonHelpers.IgnoreWritingNull);
+                existingCipher.Data = JsonSerializer.Serialize(
+                    ToCipherIdentityData(),
+                    JsonHelpers.IgnoreWritingNull
+                );
                 break;
             case CipherType.SecureNote:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                existingCipher.Data = JsonSerializer.Serialize(
+                    ToCipherSecureNoteData(),
+                    JsonHelpers.IgnoreWritingNull
+                );
                 break;
             case CipherType.SSHKey:
-                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
+                existingCipher.Data = JsonSerializer.Serialize(
+                    ToCipherSSHKeyData(),
+                    JsonHelpers.IgnoreWritingNull
+                );
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -136,21 +156,19 @@ public class CipherRequestModel
             throw new ArgumentNullException(nameof(OrganizationId));
         }
 
-        return ToCipher(new Cipher
-        {
-            Type = Type,
-            OrganizationId = new Guid(OrganizationId)
-        });
+        return ToCipher(new Cipher { Type = Type, OrganizationId = new Guid(OrganizationId) });
     }
 
     public CipherDetails ToOrganizationCipherDetails(Guid orgId)
     {
-        return ToCipherDetails(new CipherDetails
-        {
-            Type = Type,
-            OrganizationId = orgId,
-            Edit = true
-        });
+        return ToCipherDetails(
+            new CipherDetails
+            {
+                Type = Type,
+                OrganizationId = orgId,
+                Edit = true,
+            }
+        );
     }
 
     private CipherLoginData ToCipherLoginData()
@@ -162,15 +180,16 @@ public class CipherRequestModel
             Fields = Fields?.Select(f => f.ToCipherFieldData()),
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
-            Uris =
-                Login.Uris?.Where(u => u != null)
-                    .Select(u => u.ToCipherLoginUriData()),
+            Uris = Login.Uris?.Where(u => u != null).Select(u => u.ToCipherLoginUriData()),
             Username = Login.Username,
             Password = Login.Password,
             PasswordRevisionDate = Login.PasswordRevisionDate,
             Totp = Login.Totp,
             AutofillOnPageLoad = Login.AutofillOnPageLoad,
-            Fido2Credentials = Login.Fido2Credentials == null ? null : Login.Fido2Credentials.ToCipherLoginFido2CredentialData(),
+            Fido2Credentials =
+                Login.Fido2Credentials == null
+                    ? null
+                    : Login.Fido2Credentials.ToCipherLoginFido2CredentialData(),
         };
     }
 
@@ -260,6 +279,7 @@ public class CipherWithIdRequestModel : CipherRequestModel
 public class CipherCreateRequestModel : IValidatableObject
 {
     public IEnumerable<Guid> CollectionIds { get; set; }
+
     [Required]
     public CipherRequestModel Cipher { get; set; }
 
@@ -267,8 +287,10 @@ public class CipherCreateRequestModel : IValidatableObject
     {
         if (!string.IsNullOrWhiteSpace(Cipher.OrganizationId) && (!CollectionIds?.Any() ?? true))
         {
-            yield return new ValidationResult("You must select at least one collection.",
-               new string[] { nameof(CollectionIds) });
+            yield return new ValidationResult(
+                "You must select at least one collection.",
+                new string[] { nameof(CollectionIds) }
+            );
         }
     }
 }
@@ -277,6 +299,7 @@ public class CipherShareRequestModel : IValidatableObject
 {
     [Required]
     public IEnumerable<string> CollectionIds { get; set; }
+
     [Required]
     public CipherRequestModel Cipher { get; set; }
 
@@ -284,14 +307,18 @@ public class CipherShareRequestModel : IValidatableObject
     {
         if (string.IsNullOrWhiteSpace(Cipher.OrganizationId))
         {
-            yield return new ValidationResult("Cipher OrganizationId is required.",
-                new string[] { nameof(Cipher.OrganizationId) });
+            yield return new ValidationResult(
+                "Cipher OrganizationId is required.",
+                new string[] { nameof(Cipher.OrganizationId) }
+            );
         }
 
         if (!CollectionIds?.Any() ?? true)
         {
-            yield return new ValidationResult("You must select at least one collection.",
-                new string[] { nameof(CollectionIds) });
+            yield return new ValidationResult(
+                "You must select at least one collection.",
+                new string[] { nameof(CollectionIds) }
+            );
         }
     }
 }
@@ -327,6 +354,7 @@ public class CipherBulkShareRequestModel : IValidatableObject
 {
     [Required]
     public IEnumerable<string> CollectionIds { get; set; }
+
     [Required]
     public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
 
@@ -334,8 +362,10 @@ public class CipherBulkShareRequestModel : IValidatableObject
     {
         if (!Ciphers?.Any() ?? true)
         {
-            yield return new ValidationResult("You must select at least one cipher.",
-                new string[] { nameof(Ciphers) });
+            yield return new ValidationResult(
+                "You must select at least one cipher.",
+                new string[] { nameof(Ciphers) }
+            );
         }
         else
         {
@@ -352,8 +382,10 @@ public class CipherBulkShareRequestModel : IValidatableObject
 
             if (!allHaveIds)
             {
-                yield return new ValidationResult("All Ciphers must have an Id and OrganizationId.",
-                    new string[] { nameof(Ciphers) });
+                yield return new ValidationResult(
+                    "All Ciphers must have an Id and OrganizationId.",
+                    new string[] { nameof(Ciphers) }
+                );
             }
             else if (organizationIds.Count != 1)
             {
@@ -363,8 +395,10 @@ public class CipherBulkShareRequestModel : IValidatableObject
 
         if (!CollectionIds?.Any() ?? true)
         {
-            yield return new ValidationResult("You must select at least one collection.",
-                new string[] { nameof(CollectionIds) });
+            yield return new ValidationResult(
+                "You must select at least one collection.",
+                new string[] { nameof(CollectionIds) }
+            );
         }
     }
 }

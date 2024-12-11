@@ -10,15 +10,26 @@ namespace Bit.Core.Test.Utilities;
 public class PermissiveStringConverterTests
 {
     private const string numberJson = "{ \"StringProp\": 1, \"EnumerableStringProp\": [ 2, 3 ]}";
-    private const string stringJson = "{ \"StringProp\": \"1\", \"EnumerableStringProp\": [ \"2\", \"3\" ]}";
-    private const string nullAndEmptyJson = "{ \"StringProp\": null, \"EnumerableStringProp\": [] }";
-    private const string singleValueJson = "{ \"StringProp\": 1, \"EnumerableStringProp\": \"Hello!\" }";
+    private const string stringJson =
+        "{ \"StringProp\": \"1\", \"EnumerableStringProp\": [ \"2\", \"3\" ]}";
+    private const string nullAndEmptyJson =
+        "{ \"StringProp\": null, \"EnumerableStringProp\": [] }";
+    private const string singleValueJson =
+        "{ \"StringProp\": 1, \"EnumerableStringProp\": \"Hello!\" }";
     private const string nullJson = "{ \"StringProp\": null, \"EnumerableStringProp\": null }";
-    private const string boolJson = "{ \"StringProp\": true, \"EnumerableStringProp\": [ false, 1.2]}";
-    private const string objectJsonOne = "{ \"StringProp\": { \"Message\": \"Hi\"}, \"EnumerableStringProp\": []}";
+    private const string boolJson =
+        "{ \"StringProp\": true, \"EnumerableStringProp\": [ false, 1.2]}";
+    private const string objectJsonOne =
+        "{ \"StringProp\": { \"Message\": \"Hi\"}, \"EnumerableStringProp\": []}";
     private const string objectJsonTwo = "{ \"StringProp\": \"Hi\", \"EnumerableStringProp\": {}}";
     private readonly string bigNumbersJson =
-    "{ \"StringProp\":" + decimal.MinValue + ", \"EnumerableStringProp\": [" + ulong.MaxValue + ", " + long.MinValue + "]}";
+        "{ \"StringProp\":"
+        + decimal.MinValue
+        + ", \"EnumerableStringProp\": ["
+        + ulong.MaxValue
+        + ", "
+        + long.MinValue
+        + "]}";
 
     [Theory]
     [InlineData(numberJson)]
@@ -93,27 +104,35 @@ public class PermissiveStringConverterTests
     [InlineData(objectJsonTwo)]
     public void Read_Object_Throws(string json)
     {
-        var exception = Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<TestObject>(json));
+        var exception = Assert.Throws<JsonException>(
+            () => JsonSerializer.Deserialize<TestObject>(json)
+        );
     }
 
     [Fact]
     public void Write_Success()
     {
-        var json = JsonSerializer.Serialize(new TestObject
-        {
-            StringProp = "1",
-            EnumerableStringProp = new List<string>
+        var json = JsonSerializer.Serialize(
+            new TestObject
             {
-                "2",
-                "3",
-            },
-        });
+                StringProp = "1",
+                EnumerableStringProp = new List<string> { "2", "3" },
+            }
+        );
 
         var jsonElement = JsonDocument.Parse(json).RootElement;
 
-        var stringProp = AssertHelper.AssertJsonProperty(jsonElement, "StringProp", JsonValueKind.String);
+        var stringProp = AssertHelper.AssertJsonProperty(
+            jsonElement,
+            "StringProp",
+            JsonValueKind.String
+        );
         Assert.Equal("1", stringProp.GetString());
-        var list = AssertHelper.AssertJsonProperty(jsonElement, "EnumerableStringProp", JsonValueKind.Array);
+        var list = AssertHelper.AssertJsonProperty(
+            jsonElement,
+            "EnumerableStringProp",
+            JsonValueKind.Array
+        );
         Assert.Equal(2, list.GetArrayLength());
         var firstElement = list[0];
         Assert.Equal(JsonValueKind.String, firstElement.ValueKind);
@@ -127,11 +146,9 @@ public class PermissiveStringConverterTests
     public void Write_Null()
     {
         // When the values are null the converters aren't actually ran and it automatically serializes null
-        var json = JsonSerializer.Serialize(new TestObject
-        {
-            StringProp = null,
-            EnumerableStringProp = null,
-        });
+        var json = JsonSerializer.Serialize(
+            new TestObject { StringProp = null, EnumerableStringProp = null }
+        );
 
         var jsonElement = JsonDocument.Parse(json).RootElement;
 
@@ -143,17 +160,21 @@ public class PermissiveStringConverterTests
     public void Write_Empty()
     {
         // When the values are null the converters aren't actually ran and it automatically serializes null
-        var json = JsonSerializer.Serialize(new TestObject
-        {
-            StringProp = "",
-            EnumerableStringProp = Enumerable.Empty<string>(),
-        });
+        var json = JsonSerializer.Serialize(
+            new TestObject { StringProp = "", EnumerableStringProp = Enumerable.Empty<string>() }
+        );
 
         var jsonElement = JsonDocument.Parse(json).RootElement;
 
-        var stringVal = AssertHelper.AssertJsonProperty(jsonElement, "StringProp", JsonValueKind.String).GetString();
+        var stringVal = AssertHelper
+            .AssertJsonProperty(jsonElement, "StringProp", JsonValueKind.String)
+            .GetString();
         Assert.Equal("", stringVal);
-        var array = AssertHelper.AssertJsonProperty(jsonElement, "EnumerableStringProp", JsonValueKind.Array);
+        var array = AssertHelper.AssertJsonProperty(
+            jsonElement,
+            "EnumerableStringProp",
+            JsonValueKind.Array
+        );
         Assert.Equal(0, array.GetArrayLength());
     }
 }

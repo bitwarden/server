@@ -13,13 +13,12 @@ public partial class AvatarColor : Migration
             table: "User",
             type: "TEXT",
             maxLength: 7,
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "AvatarColor",
-            table: "User");
+        migrationBuilder.DropColumn(name: "AvatarColor", table: "User");
     }
 }

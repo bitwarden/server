@@ -5,11 +5,14 @@ using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 
-public class UpdateServiceAccountGrantedPoliciesCommand : IUpdateServiceAccountGrantedPoliciesCommand
+public class UpdateServiceAccountGrantedPoliciesCommand
+    : IUpdateServiceAccountGrantedPoliciesCommand
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
 
-    public UpdateServiceAccountGrantedPoliciesCommand(IAccessPolicyRepository accessPolicyRepository)
+    public UpdateServiceAccountGrantedPoliciesCommand(
+        IAccessPolicyRepository accessPolicyRepository
+    )
     {
         _accessPolicyRepository = accessPolicyRepository;
     }
@@ -21,6 +24,8 @@ public class UpdateServiceAccountGrantedPoliciesCommand : IUpdateServiceAccountG
             return;
         }
 
-        await _accessPolicyRepository.UpdateServiceAccountGrantedPoliciesAsync(grantedPoliciesUpdates);
+        await _accessPolicyRepository.UpdateServiceAccountGrantedPoliciesAsync(
+            grantedPoliciesUpdates
+        );
     }
 }

@@ -1,17 +1,16 @@
 ﻿using System.Globalization;
 using Bit.Admin.IdentityServer;
+using Bit.Admin.Services;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Migration;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
-using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Admin.Services;
-using Bit.Core.Billing.Extensions;
-using Bit.Core.Billing.Migration;
-
+using Stripe;
 #if !OSS
 using Bit.Commercial.Core.Utilities;
 using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
@@ -109,11 +108,11 @@ public class Startup
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
         services.Configure<RazorViewEngineOptions>(o =>
-         {
-             o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
-             o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
-             o.ViewLocationFormats.Add("/Billing/Views/{1}/{0}.cshtml");
-         });
+        {
+            o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
+            o.ViewLocationFormats.Add("/AdminConsole/Views/{1}/{0}.cshtml");
+            o.ViewLocationFormats.Add("/Billing/Views/{1}/{0}.cshtml");
+        });
 
         // Jobs service
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
@@ -135,7 +134,8 @@ public class Startup
         IApplicationBuilder app,
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         app.UseSerilog(env, appLifetime, globalSettings);
 

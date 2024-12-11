@@ -5,7 +5,8 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class SMImportResponseModel : ResponseModel
 {
-    public SMImportResponseModel(SMImport import, string obj = "SecretsManagerImportResponseModel") : base(obj)
+    public SMImportResponseModel(SMImport import, string obj = "SecretsManagerImportResponseModel")
+        : base(obj)
     {
         Projects = import.Projects?.Select(p => new InnerProjectImportResponseModel(p));
         Secrets = import.Secrets?.Select(s => new InnerSecretImportResponseModel(s));

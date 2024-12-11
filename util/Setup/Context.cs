@@ -10,36 +10,40 @@ public class Context
 
     // These track of old CSP default values to correct.
     // Do not change these values.
-    private const string Dec2020ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
-        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
-        "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
-        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-        "https://twofactorauth.org; object-src 'self' blob:;";
-    private const string Jan2021ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
-        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
-        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-        "https://twofactorauth.org; object-src 'self' blob:;";
-    private const string Feb2021ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
-        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
-        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-        "https://2fa.directory; object-src 'self' blob:;";
-    private const string Jan2023ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
-        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
-        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
-        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-        "https://api.2fa.directory; object-src 'self' blob:;";
+    private const string Dec2020ContentSecurityPolicy =
+        "default-src 'self'; style-src 'self' "
+        + "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; "
+        + "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; "
+        + "connect-src 'self' wss://{0} https://api.pwnedpasswords.com "
+        + "https://twofactorauth.org; object-src 'self' blob:;";
+    private const string Jan2021ContentSecurityPolicy =
+        "default-src 'self'; style-src 'self' "
+        + "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; "
+        + "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "connect-src 'self' wss://{0} https://api.pwnedpasswords.com "
+        + "https://twofactorauth.org; object-src 'self' blob:;";
+    private const string Feb2021ContentSecurityPolicy =
+        "default-src 'self'; style-src 'self' "
+        + "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; "
+        + "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "connect-src 'self' wss://{0} https://api.pwnedpasswords.com "
+        + "https://2fa.directory; object-src 'self' blob:;";
+    private const string Jan2023ContentSecurityPolicy =
+        "default-src 'self'; style-src 'self' "
+        + "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; "
+        + "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; "
+        + "connect-src 'self' wss://{0} https://api.pwnedpasswords.com "
+        + "https://api.2fa.directory; object-src 'self' blob:;";
 
     private string[] _oldCspDefaults =
     {
         Dec2020ContentSecurityPolicy,
         Jan2021ContentSecurityPolicy,
         Feb2021ContentSecurityPolicy,
-        Jan2023ContentSecurityPolicy
+        Jan2023ContentSecurityPolicy,
     };
 
     public string[] Args { get; set; }
@@ -66,7 +70,10 @@ public class Context
             Helpers.WriteLine(this, "No existing `config.yml` detected. Let's generate one.");
 
             // Looks like updating from older version. Try to create config file.
-            var url = Helpers.GetValueFromEnvFile("global", "globalSettings__baseServiceUri__vault");
+            var url = Helpers.GetValueFromEnvFile(
+                "global",
+                "globalSettings__baseServiceUri__vault"
+            );
             if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
                 Helpers.WriteLine(this, "Unable to determine existing installation url.");
@@ -94,20 +101,28 @@ public class Context
                         continue;
                     }
 
-                    if (paramParts[0] == "# Parameter:MssqlDataDockerVolume" &&
-                        bool.TryParse(paramParts[1], out var mssqlDataDockerVolume))
+                    if (
+                        paramParts[0] == "# Parameter:MssqlDataDockerVolume"
+                        && bool.TryParse(paramParts[1], out var mssqlDataDockerVolume)
+                    )
                     {
                         Config.DatabaseDockerVolume = mssqlDataDockerVolume;
                         continue;
                     }
 
-                    if (paramParts[0] == "# Parameter:HttpPort" && int.TryParse(paramParts[1], out var httpPort))
+                    if (
+                        paramParts[0] == "# Parameter:HttpPort"
+                        && int.TryParse(paramParts[1], out var httpPort)
+                    )
                     {
                         Config.HttpPort = httpPort == 0 ? null : httpPort.ToString();
                         continue;
                     }
 
-                    if (paramParts[0] == "# Parameter:HttpsPort" && int.TryParse(paramParts[1], out var httpsPort))
+                    if (
+                        paramParts[0] == "# Parameter:HttpsPort"
+                        && int.TryParse(paramParts[1], out var httpsPort)
+                    )
                     {
                         Config.HttpsPort = httpsPort == 0 ? null : httpsPort.ToString();
                         continue;
@@ -121,7 +136,8 @@ public class Context
                 var confContent = File.ReadAllText(nginxFile);
                 var selfSigned = confContent.Contains("/etc/ssl/self/");
                 Config.Ssl = confContent.Contains("ssl http2;");
-                Config.SslManagedLetsEncrypt = !selfSigned && confContent.Contains("/etc/letsencrypt/live/");
+                Config.SslManagedLetsEncrypt =
+                    !selfSigned && confContent.Contains("/etc/letsencrypt/live/");
                 var diffieHellman = confContent.Contains("/dhparam.pem;");
                 var trusted = confContent.Contains("ssl_trusted_certificate ");
                 if (Config.SslManagedLetsEncrypt)
@@ -130,7 +146,9 @@ public class Context
                 }
                 else if (Config.Ssl)
                 {
-                    var sslPath = selfSigned ? $"/etc/ssl/self/{Config.Domain}" : $"/etc/ssl/{Config.Domain}";
+                    var sslPath = selfSigned
+                        ? $"/etc/ssl/self/{Config.Domain}"
+                        : $"/etc/ssl/{Config.Domain}";
                     Config.SslCertificatePath = string.Concat(sslPath, "/", "certificate.crt");
                     Config.SslKeyPath = string.Concat(sslPath, "/", "private.key");
                     if (trusted)
@@ -171,7 +189,9 @@ public class Context
         var serializer = new SerializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .WithTypeInspector(inner => new CommentGatheringTypeInspector(inner))
-            .WithEmissionPhaseObjectGraphVisitor(args => new CommentsObjectGraphVisitor(args.InnerVisitor))
+            .WithEmissionPhaseObjectGraphVisitor(args => new CommentsObjectGraphVisitor(
+                args.InnerVisitor
+            ))
             .Build();
         var yaml = serializer.Serialize(Config);
         Directory.CreateDirectory("/bitwarden/");

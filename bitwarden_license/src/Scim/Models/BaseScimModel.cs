@@ -2,8 +2,7 @@
 
 public abstract class BaseScimModel
 {
-    public BaseScimModel()
-    { }
+    public BaseScimModel() { }
 
     public BaseScimModel(string schema)
     {

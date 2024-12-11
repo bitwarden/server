@@ -14,8 +14,7 @@ public class InstallationsController : Controller
 {
     private readonly IInstallationRepository _installationRepository;
 
-    public InstallationsController(
-        IInstallationRepository installationRepository)
+    public InstallationsController(IInstallationRepository installationRepository)
     {
         _installationRepository = installationRepository;
     }

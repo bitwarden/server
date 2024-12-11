@@ -19,21 +19,19 @@ public abstract class BaseTokenProviderTests<T>
 {
     public abstract TwoFactorProviderType TwoFactorProviderType { get; }
 
-    protected static IEnumerable<object[]> SetupCanGenerateData(params (Dictionary<string, object> MetaData, bool ExpectedResponse)[] data)
+    protected static IEnumerable<object[]> SetupCanGenerateData(
+        params (Dictionary<string, object> MetaData, bool ExpectedResponse)[] data
+    )
     {
-        return data.Select(d =>
-            new object[]
-            {
-                d.MetaData,
-                d.ExpectedResponse,
-            });
+        return data.Select(d => new object[] { d.MetaData, d.ExpectedResponse });
     }
 
     protected virtual IUserService AdditionalSetup(SutProvider<T> sutProvider, User user)
     {
         var userService = Substitute.For<IUserService>();
 
-        sutProvider.GetDependency<IServiceProvider>()
+        sutProvider
+            .GetDependency<IServiceProvider>()
             .GetService(typeof(IUserService))
             .Returns(userService);
 
@@ -44,17 +42,14 @@ public abstract class BaseTokenProviderTests<T>
 
     protected virtual void SetupUserService(IUserService userService, User user)
     {
-        userService
-            .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user)
-            .Returns(true);
-        userService
-            .CanAccessPremium(user)
-            .Returns(true);
+        userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType, user).Returns(true);
+        userService.CanAccessPremium(user).Returns(true);
     }
 
     protected static UserManager<User> SubstituteUserManager()
     {
-        return new UserManager<User>(Substitute.For<IUserStore<User>>(),
+        return new UserManager<User>(
+            Substitute.For<IUserStore<User>>(),
             Substitute.For<IOptions<IdentityOptions>>(),
             Substitute.For<IPasswordHasher<User>>(),
             Enumerable.Empty<IUserValidator<User>>(),
@@ -62,25 +57,26 @@ public abstract class BaseTokenProviderTests<T>
             Substitute.For<ILookupNormalizer>(),
             Substitute.For<IdentityErrorDescriber>(),
             Substitute.For<IServiceProvider>(),
-            Substitute.For<ILogger<UserManager<User>>>());
+            Substitute.For<ILogger<UserManager<User>>>()
+        );
     }
 
     protected void MockDatabase(User user, Dictionary<string, object> metaData)
     {
         var providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
-            [TwoFactorProviderType] = new TwoFactorProvider
-            {
-                Enabled = true,
-                MetaData = metaData,
-            },
+            [TwoFactorProviderType] = new TwoFactorProvider { Enabled = true, MetaData = metaData },
         };
 
         user.TwoFactorProviders = JsonHelpers.LegacySerialize(providers);
     }
 
-    public virtual async Task RunCanGenerateTwoFactorTokenAsync(Dictionary<string, object> metaData, bool expectedResponse,
-        User user, SutProvider<T> sutProvider)
+    public virtual async Task RunCanGenerateTwoFactorTokenAsync(
+        Dictionary<string, object> metaData,
+        bool expectedResponse,
+        User user,
+        SutProvider<T> sutProvider
+    )
     {
         var userManager = SubstituteUserManager();
         MockDatabase(user, metaData);

@@ -12,7 +12,8 @@ public class PaymentFailedHandler : IPaymentFailedHandler
     public PaymentFailedHandler(
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService
+    )
     {
         _stripeEventService = stripeEventService;
         _stripeFacade = stripeFacade;
@@ -33,15 +34,22 @@ public class PaymentFailedHandler : IPaymentFailedHandler
 
         var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
         // attempt count 4 = 11 days after initial failure
-        if (invoice.AttemptCount <= 3 ||
-            !subscription.Items.Any(i => i.Price.Id is IStripeEventUtilityService.PremiumPlanId or IStripeEventUtilityService.PremiumPlanIdAppStore))
+        if (
+            invoice.AttemptCount <= 3
+            || !subscription.Items.Any(i =>
+                i.Price.Id
+                    is IStripeEventUtilityService.PremiumPlanId
+                        or IStripeEventUtilityService.PremiumPlanIdAppStore
+            )
+        )
         {
             await _stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
         }
     }
 
     private static bool ShouldAttemptToPayInvoice(Invoice invoice) =>
-        invoice is
+        invoice
+            is
         {
             AmountDue: > 0,
             Paid: false,

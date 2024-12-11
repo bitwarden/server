@@ -23,7 +23,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 public record SignUpOrganizationResponse(
     Organization Organization,
     OrganizationUser OrganizationUser,
-    Collection DefaultCollection);
+    Collection DefaultCollection
+);
 
 public interface ICloudOrganizationSignUpCommand
 {
@@ -44,7 +45,8 @@ public class CloudOrganizationSignUpCommand(
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
-    IDeviceRepository deviceRepository) : ICloudOrganizationSignUpCommand
+    IDeviceRepository deviceRepository
+) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -57,7 +59,8 @@ public class CloudOrganizationSignUpCommand(
             if (signup.IsFromProvider)
             {
                 throw new BadRequestException(
-                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
+                    "Organizations with a Managed Service Provider do not support Secrets Manager."
+                );
             }
             ValidateSecretsManagerPlan(plan, signup);
         }
@@ -77,8 +80,9 @@ public class CloudOrganizationSignUpCommand(
             PlanType = plan!.Type,
             Seats = (short)(plan.PasswordManager.BaseSeats + signup.AdditionalSeats),
             MaxCollections = plan.PasswordManager.MaxCollections,
-            MaxStorageGb = !plan.PasswordManager.BaseStorageGb.HasValue ?
-                (short?)null : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
+            MaxStorageGb = !plan.PasswordManager.BaseStorageGb.HasValue
+                ? (short?)null
+                : (short)(plan.PasswordManager.BaseStorageGb.Value + signup.AdditionalStorageGb),
             UsePolicies = plan.HasPolicies,
             UseSso = plan.HasSso,
             UseGroups = plan.HasGroups,
@@ -103,20 +107,24 @@ public class CloudOrganizationSignUpCommand(
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            UseSecretsManager = signup.UseSecretsManager
+            UseSecretsManager = signup.UseSecretsManager,
         };
 
         if (signup.UseSecretsManager)
         {
-            organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount +
-                                             signup.AdditionalServiceAccounts.GetValueOrDefault();
+            organization.SmSeats =
+                plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
+            organization.SmServiceAccounts =
+                plan.SecretsManager.BaseServiceAccount
+                + signup.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
         if (plan.Type == PlanType.Free && !signup.IsFromProvider)
         {
             var adminCount =
-                await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
+                await organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
+                    signup.Owner.Id
+                );
             if (adminCount > 0)
             {
                 throw new BadRequestException("You can only be an admin of one free organization.");
@@ -133,23 +141,44 @@ public class CloudOrganizationSignUpCommand(
             {
                 if (signup.PaymentMethodType != null)
                 {
-                    await paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                    await paymentService.PurchaseOrganizationAsync(
+                        organization,
+                        signup.PaymentMethodType.Value,
+                        signup.PaymentToken,
+                        plan,
+                        signup.AdditionalStorageGb,
+                        signup.AdditionalSeats,
+                        signup.PremiumAccessAddon,
+                        signup.TaxInfo,
+                        signup.IsFromProvider,
+                        signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(),
+                        signup.IsFromSecretsManagerTrial
+                    );
                 }
                 else
                 {
-                    await paymentService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
+                    await paymentService.PurchaseOrganizationNoPaymentMethod(
+                        organization,
+                        plan,
+                        signup.AdditionalSeats,
+                        signup.PremiumAccessAddon,
+                        signup.AdditionalSmSeats.GetValueOrDefault(),
+                        signup.AdditionalServiceAccounts.GetValueOrDefault(),
+                        signup.IsFromSecretsManagerTrial
+                    );
                 }
-
             }
         }
 
         var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;
-        var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
+        var returnValue = await SignUpAsync(
+            organization,
+            ownerId,
+            signup.OwnerKey,
+            signup.CollectionName,
+            true
+        );
         await referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.Signup, organization, currentContext)
             {
@@ -159,12 +188,17 @@ public class CloudOrganizationSignUpCommand(
                 SignupInitiationPath = signup.InitiationPath,
                 Storage = returnValue.Item1.MaxStorageGb,
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-            });
+            }
+        );
 
-        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser, returnValue.defaultCollection);
+        return new SignUpOrganizationResponse(
+            returnValue.organization,
+            returnValue.organizationUser,
+            returnValue.defaultCollection
+        );
     }
 
-    public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)
+    public static void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)
     {
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
@@ -190,7 +224,9 @@ public class CloudOrganizationSignUpCommand(
 
         if (!plan.PasswordManager.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
         {
-            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+            throw new BadRequestException(
+                "This plan does not allow you to buy the premium access addon."
+            );
         }
 
         if (!plan.PasswordManager.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
@@ -198,15 +234,20 @@ public class CloudOrganizationSignUpCommand(
             throw new BadRequestException("Plan does not allow additional users.");
         }
 
-        if (plan.PasswordManager.HasAdditionalSeatsOption && plan.PasswordManager.MaxAdditionalSeats.HasValue &&
-            upgrade.AdditionalSeats > plan.PasswordManager.MaxAdditionalSeats.Value)
+        if (
+            plan.PasswordManager.HasAdditionalSeatsOption
+            && plan.PasswordManager.MaxAdditionalSeats.HasValue
+            && upgrade.AdditionalSeats > plan.PasswordManager.MaxAdditionalSeats.Value
+        )
         {
-            throw new BadRequestException($"Selected plan allows a maximum of " +
-                                          $"{plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            throw new BadRequestException(
+                $"Selected plan allows a maximum of "
+                    + $"{plan.PasswordManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users."
+            );
         }
     }
 
-    public void ValidateSecretsManagerPlan(Plan plan, OrganizationUpgrade upgrade)
+    public static void ValidateSecretsManagerPlan(Plan plan, OrganizationUpgrade upgrade)
     {
         if (plan.SupportsSecretsManager == false)
         {
@@ -220,17 +261,28 @@ public class CloudOrganizationSignUpCommand(
             throw new BadRequestException($"You do not have any Secrets Manager seats!");
         }
 
-        if (!plan.SecretsManager.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
+        if (
+            !plan.SecretsManager.HasAdditionalServiceAccountOption
+            && upgrade.AdditionalServiceAccounts > 0
+        )
         {
             throw new BadRequestException("Plan does not allow additional Machine Accounts.");
         }
 
-        if ((plan.ProductTier == ProductTierType.TeamsStarter &&
-            upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
-            (plan.ProductTier != ProductTierType.TeamsStarter &&
-             upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
+        if (
+            (
+                plan.ProductTier == ProductTierType.TeamsStarter
+                && upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats
+            )
+            || (
+                plan.ProductTier != ProductTierType.TeamsStarter
+                && upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats
+            )
+        )
         {
-            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+            throw new BadRequestException(
+                "You cannot have more Secrets Manager seats than Password Manager seats."
+            );
         }
 
         if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
@@ -242,10 +294,13 @@ public class CloudOrganizationSignUpCommand(
         {
             case false when upgrade.AdditionalSmSeats > 0:
                 throw new BadRequestException("Plan does not allow additional users.");
-            case true when plan.SecretsManager.MaxAdditionalSeats.HasValue &&
-                           upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                                              $"{plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+            case true
+                when plan.SecretsManager.MaxAdditionalSeats.HasValue
+                    && upgrade.AdditionalSmSeats > plan.SecretsManager.MaxAdditionalSeats.Value:
+                throw new BadRequestException(
+                    $"Selected plan allows a maximum of "
+                        + $"{plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault(0)} additional users."
+                );
         }
     }
 
@@ -269,27 +324,43 @@ public class CloudOrganizationSignUpCommand(
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
-        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
+        var anySingleOrgPolicies = await policyService.AnyPoliciesApplicableToUserAsync(
+            ownerId,
+            PolicyType.SingleOrg
+        );
         if (anySingleOrgPolicies)
         {
-            throw new BadRequestException("You may not create an organization. You belong to an organization " +
-                                          "which has a policy that prohibits you from being a member of any other organization.");
+            throw new BadRequestException(
+                "You may not create an organization. You belong to an organization "
+                    + "which has a policy that prohibits you from being a member of any other organization."
+            );
         }
     }
 
-    private async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignUpAsync(Organization organization,
-    Guid ownerId, string ownerKey, string collectionName, bool withPayment)
+    private async Task<(
+        Organization organization,
+        OrganizationUser organizationUser,
+        Collection defaultCollection
+    )> SignUpAsync(
+        Organization organization,
+        Guid ownerId,
+        string ownerKey,
+        string collectionName,
+        bool withPayment
+    )
     {
         try
         {
             await organizationRepository.CreateAsync(organization);
-            await organizationApiKeyRepository.CreateAsync(new OrganizationApiKey
-            {
-                OrganizationId = organization.Id,
-                ApiKey = CoreHelpers.SecureRandomString(30),
-                Type = OrganizationApiKeyType.Default,
-                RevisionDate = DateTime.UtcNow,
-            });
+            await organizationApiKeyRepository.CreateAsync(
+                new OrganizationApiKey
+                {
+                    OrganizationId = organization.Id,
+                    ApiKey = CoreHelpers.SecureRandomString(30),
+                    Type = OrganizationApiKeyType.Default,
+                    RevisionDate = DateTime.UtcNow,
+                }
+            );
             await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
             // ownerId == default if the org is created by a provider - in this case it's created without an
@@ -306,14 +377,17 @@ public class CloudOrganizationSignUpCommand(
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
                     CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
+                    RevisionDate = organization.CreationDate,
                 };
                 orgUser.SetNewId();
 
                 await organizationUserRepository.CreateAsync(orgUser);
 
                 var devices = await GetUserDeviceIdsAsync(orgUser.UserId.Value);
-                await pushRegistrationService.AddUserRegistrationOrganizationAsync(devices, organization.Id.ToString());
+                await pushRegistrationService.AddUserRegistrationOrganizationAsync(
+                    devices,
+                    organization.Id.ToString()
+                );
                 await pushNotificationService.PushSyncOrgKeysAsync(ownerId);
             }
 
@@ -325,7 +399,7 @@ public class CloudOrganizationSignUpCommand(
                     Name = collectionName,
                     OrganizationId = organization.Id,
                     CreationDate = organization.CreationDate,
-                    RevisionDate = organization.CreationDate
+                    RevisionDate = organization.CreationDate,
                 };
 
                 // Give the owner Can Manage access over the default collection
@@ -333,7 +407,15 @@ public class CloudOrganizationSignUpCommand(
                 if (orgUser != null)
                 {
                     defaultOwnerAccess =
-                        [new CollectionAccessSelection { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = true }];
+                    [
+                        new CollectionAccessSelection
+                        {
+                            Id = orgUser.Id,
+                            HidePasswords = false,
+                            ReadOnly = false,
+                            Manage = true,
+                        },
+                    ];
                 }
 
                 await collectionRepository.CreateAsync(defaultCollection, null, defaultOwnerAccess);

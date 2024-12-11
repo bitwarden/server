@@ -5,13 +5,13 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationDomainResponseModel : ResponseModel
 {
-    public OrganizationDomainResponseModel(OrganizationDomain organizationDomain, string obj = "organizationDomain")
+    public OrganizationDomainResponseModel(
+        OrganizationDomain organizationDomain,
+        string obj = "organizationDomain"
+    )
         : base(obj)
     {
-        if (organizationDomain == null)
-        {
-            throw new ArgumentNullException(nameof(organizationDomain));
-        }
+        ArgumentNullException.ThrowIfNull(organizationDomain);
 
         Id = organizationDomain.Id;
         OrganizationId = organizationDomain.OrganizationId;

@@ -14,15 +14,19 @@ public class OrganizationHasVerifiedDomainsQueryTests
     [Theory, BitAutoData]
     public async Task HasVerifiedDomainsAsync_WithVerifiedDomain_ReturnsTrue(
         OrganizationDomain organizationDomain,
-        SutProvider<OrganizationHasVerifiedDomainsQuery> sutProvider)
+        SutProvider<OrganizationHasVerifiedDomainsQuery> sutProvider
+    )
     {
         organizationDomain.SetVerifiedDate(); // Set the verified date to make it verified
 
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetDomainsByOrganizationIdAsync(organizationDomain.OrganizationId)
             .Returns(new List<OrganizationDomain> { organizationDomain });
 
-        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(organizationDomain.OrganizationId);
+        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(
+            organizationDomain.OrganizationId
+        );
 
         Assert.True(result);
     }
@@ -30,13 +34,17 @@ public class OrganizationHasVerifiedDomainsQueryTests
     [Theory, BitAutoData]
     public async Task HasVerifiedDomainsAsync_WithoutVerifiedDomain_ReturnsFalse(
         OrganizationDomain organizationDomain,
-        SutProvider<OrganizationHasVerifiedDomainsQuery> sutProvider)
+        SutProvider<OrganizationHasVerifiedDomainsQuery> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetDomainsByOrganizationIdAsync(organizationDomain.OrganizationId)
             .Returns(new List<OrganizationDomain> { organizationDomain });
 
-        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(organizationDomain.OrganizationId);
+        var result = await sutProvider.Sut.HasVerifiedDomainsAsync(
+            organizationDomain.OrganizationId
+        );
 
         Assert.False(result);
     }
@@ -44,9 +52,11 @@ public class OrganizationHasVerifiedDomainsQueryTests
     [Theory, BitAutoData]
     public async Task HasVerifiedDomainsAsync_WithoutOrganizationDomains_ReturnsFalse(
         Guid organizationId,
-        SutProvider<OrganizationHasVerifiedDomainsQuery> sutProvider)
+        SutProvider<OrganizationHasVerifiedDomainsQuery> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetDomainsByOrganizationIdAsync(organizationId)
             .Returns(new List<OrganizationDomain>());
 

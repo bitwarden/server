@@ -24,11 +24,11 @@ public class AmazonSesMailDeliveryServiceTests : IDisposable
         _globalSettings = new GlobalSettings
         {
             Amazon =
-                    {
-                        AccessKeyId = "AccessKeyId-AmazonSesMailDeliveryServiceTests",
-                        AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
-                        Region = "Region-AmazonSesMailDeliveryServiceTests"
-                    }
+            {
+                AccessKeyId = "AccessKeyId-AmazonSesMailDeliveryServiceTests",
+                AccessKeySecret = "AccessKeySecret-AmazonSesMailDeliveryServiceTests",
+                Region = "Region-AmazonSesMailDeliveryServiceTests",
+            },
         };
 
         _hostingEnvironment = Substitute.For<IWebHostEnvironment>();
@@ -58,29 +58,38 @@ public class AmazonSesMailDeliveryServiceTests : IDisposable
             Subject = "Subject",
             HtmlContent = "HtmlContent",
             TextContent = "TextContent",
-            Category = "Category"
+            Category = "Category",
         };
 
         await _sut.SendEmailAsync(mailMessage);
 
-        await _amazonSimpleEmailService.Received(1).SendEmailAsync(
-            Arg.Do<SendEmailRequest>(request =>
-            {
-                Assert.False(string.IsNullOrEmpty(request.Source));
+        await _amazonSimpleEmailService
+            .Received(1)
+            .SendEmailAsync(
+                Arg.Do<SendEmailRequest>(request =>
+                {
+                    Assert.False(string.IsNullOrEmpty(request.Source));
 
-                Assert.Single(request.Destination.ToAddresses);
-                Assert.Equal(mailMessage.ToEmails.First(), request.Destination.ToAddresses.First());
+                    Assert.Single(request.Destination.ToAddresses);
+                    Assert.Equal(
+                        mailMessage.ToEmails.First(),
+                        request.Destination.ToAddresses.First()
+                    );
 
-                Assert.Equal(mailMessage.Subject, request.Message.Subject.Data);
-                Assert.Equal(mailMessage.HtmlContent, request.Message.Body.Html.Data);
-                Assert.Equal(mailMessage.TextContent, request.Message.Body.Text.Data);
+                    Assert.Equal(mailMessage.Subject, request.Message.Subject.Data);
+                    Assert.Equal(mailMessage.HtmlContent, request.Message.Body.Html.Data);
+                    Assert.Equal(mailMessage.TextContent, request.Message.Body.Text.Data);
 
-                Assert.Single(request.Destination.BccAddresses);
-                Assert.Equal(mailMessage.BccEmails.First(), request.Destination.BccAddresses.First());
+                    Assert.Single(request.Destination.BccAddresses);
+                    Assert.Equal(
+                        mailMessage.BccEmails.First(),
+                        request.Destination.BccAddresses.First()
+                    );
 
-                Assert.Contains(request.Tags, x => x.Name == "Environment");
-                Assert.Contains(request.Tags, x => x.Name == "Sender");
-                Assert.Contains(request.Tags, x => x.Name == "Category");
-            }));
+                    Assert.Contains(request.Tags, x => x.Name == "Environment");
+                    Assert.Contains(request.Tags, x => x.Name == "Sender");
+                    Assert.Contains(request.Tags, x => x.Name == "Category");
+                })
+            );
     }
 }

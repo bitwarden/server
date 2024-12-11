@@ -16,24 +16,38 @@ public class FolderRotationValidatorTests
 {
     [Theory]
     [BitAutoData]
-    public async Task ValidateAsync_MissingFolder_Throws(SutProvider<FolderRotationValidator> sutProvider, User user,
-        IEnumerable<FolderWithIdRequestModel> folders)
+    public async Task ValidateAsync_MissingFolder_Throws(
+        SutProvider<FolderRotationValidator> sutProvider,
+        User user,
+        IEnumerable<FolderWithIdRequestModel> folders
+    )
     {
         var userFolders = folders.Select(f => f.ToFolder(new Folder())).ToList();
         userFolders.Add(new Folder { Id = Guid.NewGuid(), Name = "Missing Folder" });
-        sutProvider.GetDependency<IFolderRepository>().GetManyByUserIdAsync(user.Id).Returns(userFolders);
+        sutProvider
+            .GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(userFolders);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, folders));
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.ValidateAsync(user, folders)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_FolderDoesNotBelongToUser_NotReturned(
-        SutProvider<FolderRotationValidator> sutProvider, User user, IEnumerable<FolderWithIdRequestModel> folders)
+        SutProvider<FolderRotationValidator> sutProvider,
+        User user,
+        IEnumerable<FolderWithIdRequestModel> folders
+    )
     {
         var userFolders = folders.Select(f => f.ToFolder(new Folder())).ToList();
         userFolders.RemoveAt(0);
-        sutProvider.GetDependency<IFolderRepository>().GetManyByUserIdAsync(user.Id).Returns(userFolders);
+        sutProvider
+            .GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(userFolders);
 
         var result = await sutProvider.Sut.ValidateAsync(user, folders);
 
@@ -42,11 +56,23 @@ public class FolderRotationValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_SentFoldersAreEmptyButDatabaseFoldersAreNot_Throws(
-        SutProvider<FolderRotationValidator> sutProvider, User user, IEnumerable<FolderWithIdRequestModel> folders)
+        SutProvider<FolderRotationValidator> sutProvider,
+        User user,
+        IEnumerable<FolderWithIdRequestModel> folders
+    )
     {
         var userFolders = folders.Select(f => f.ToFolder(new Folder())).ToList();
-        sutProvider.GetDependency<IFolderRepository>().GetManyByUserIdAsync(user.Id).Returns(userFolders);
+        sutProvider
+            .GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(userFolders);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<FolderWithIdRequestModel>()));
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () =>
+                await sutProvider.Sut.ValidateAsync(
+                    user,
+                    Enumerable.Empty<FolderWithIdRequestModel>()
+                )
+        );
     }
 }

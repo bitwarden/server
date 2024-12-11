@@ -26,7 +26,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationsApiPushNotificationService> logger
+    )
     {
         _installationDeviceRepository = installationDeviceRepository;
         _httpContextAccessor = httpContextAccessor;
@@ -49,7 +50,11 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(
+        Cipher cipher,
+        PushType type,
+        IEnumerable<Guid> collectionIds
+    )
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -96,7 +101,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         {
             Id = folder.Id,
             UserId = folder.UserId,
-            RevisionDate = folder.RevisionDate
+            RevisionDate = folder.RevisionDate,
         };
 
         await SendPayloadToUserAsync(folder.UserId, type, message, true);
@@ -134,11 +139,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification
-        {
-            UserId = userId,
-            Date = DateTime.UtcNow
-        };
+        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
 
         await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
     }
@@ -166,7 +167,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             {
                 Id = send.Id,
                 UserId = send.UserId.Value,
-                RevisionDate = send.RevisionDate
+                RevisionDate = send.RevisionDate,
             };
 
             await SendPayloadToUserAsync(message.UserId, type, message, true);
@@ -188,24 +189,49 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         var message = new AuthRequestPushNotification
         {
             Id = authRequest.Id,
-            UserId = authRequest.UserId
+            UserId = authRequest.UserId,
         };
 
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
     }
 
-    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
+    private async Task SendPayloadToUserAsync(
+        Guid userId,
+        PushType type,
+        object payload,
+        bool excludeCurrentContext
+    )
     {
-        await SendPayloadToUserAsync(userId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
+        await SendPayloadToUserAsync(
+            userId.ToString(),
+            type,
+            payload,
+            GetContextIdentifier(excludeCurrentContext)
+        );
     }
 
-    private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
+    private async Task SendPayloadToOrganizationAsync(
+        Guid orgId,
+        PushType type,
+        object payload,
+        bool excludeCurrentContext
+    )
     {
-        await SendPayloadToUserAsync(orgId.ToString(), type, payload, GetContextIdentifier(excludeCurrentContext));
+        await SendPayloadToUserAsync(
+            orgId.ToString(),
+            type,
+            payload,
+            GetContextIdentifier(excludeCurrentContext)
+        );
     }
 
-    public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public async Task SendPayloadToUserAsync(
+        string userId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
         var tag = BuildTag($"template:payload_userId:{SanitizeTagInput(userId)}", identifier);
         await SendPayloadAsync(tag, type, payload);
@@ -215,10 +241,18 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         }
     }
 
-    public async Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public async Task SendPayloadToOrganizationAsync(
+        string orgId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
-        var tag = BuildTag($"template:payload && organizationId:{SanitizeTagInput(orgId)}", identifier);
+        var tag = BuildTag(
+            $"template:payload && organizationId:{SanitizeTagInput(orgId)}",
+            identifier
+        );
         await SendPayloadAsync(tag, type, payload);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
         {
@@ -233,8 +267,9 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             return null;
         }
 
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        var currentContext =
+            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext))
+            as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
@@ -253,9 +288,11 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         var results = await _notificationHubPool.AllClients.SendTemplateNotificationAsync(
             new Dictionary<string, string>
             {
-                { "type",  ((byte)type).ToString() },
-                { "payload", JsonSerializer.Serialize(payload) }
-            }, tag);
+                { "type", ((byte)type).ToString() },
+                { "payload", JsonSerializer.Serialize(payload) },
+            },
+            tag
+        );
 
         if (_enableTracing)
         {
@@ -265,13 +302,20 @@ public class NotificationHubPushNotificationService : IPushNotificationService
                 {
                     continue;
                 }
-                _logger.LogInformation("Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
-                    outcome.TrackingId, type, outcome.Success, outcome.Failure, payload, outcome.Results);
+                _logger.LogInformation(
+                    "Azure Notification Hub Tracking ID: {Id} | {Type} push notification with {Success} successes and {Failure} failures with a payload of {@Payload} and result of {@Results}",
+                    outcome.TrackingId,
+                    type,
+                    outcome.Success,
+                    outcome.Failure,
+                    payload,
+                    outcome.Results
+                );
             }
         }
     }
 
-    private string SanitizeTagInput(string input)
+    private static string SanitizeTagInput(string input)
     {
         // Only allow a-z, A-Z, 0-9, and special characters -_:
         return Regex.Replace(input, "[^a-zA-Z0-9-_:]", string.Empty);

@@ -13,10 +13,6 @@ public class ServiceAccountCreateRequestModel
 
     public ServiceAccount ToServiceAccount(Guid organizationId)
     {
-        return new ServiceAccount()
-        {
-            OrganizationId = organizationId,
-            Name = Name,
-        };
+        return new ServiceAccount() { OrganizationId = organizationId, Name = Name };
     }
 }

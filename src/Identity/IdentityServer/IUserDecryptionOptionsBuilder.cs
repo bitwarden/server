@@ -3,6 +3,7 @@ using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
 
 namespace Bit.Identity.IdentityServer;
+
 public interface IUserDecryptionOptionsBuilder
 {
     IUserDecryptionOptionsBuilder ForUser(User user);

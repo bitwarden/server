@@ -10,12 +10,14 @@ public class JobsHostedService : BaseJobsHostedService
         GlobalSettings globalSettings,
         IServiceProvider serviceProvider,
         ILogger<JobsHostedService> logger,
-        ILogger<JobListener> listenerLogger)
+        ILogger<JobListener> listenerLogger
+    )
         : base(globalSettings, serviceProvider, logger, listenerLogger) { }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        var everyFiveMinutesTrigger = TriggerBuilder.Create()
+        var everyFiveMinutesTrigger = TriggerBuilder
+            .Create()
             .WithIdentity("EveryFiveMinutesTrigger")
             .StartNow()
             .WithCronSchedule("0 */30 * * * ?")
@@ -23,7 +25,7 @@ public class JobsHostedService : BaseJobsHostedService
 
         Jobs = new List<Tuple<Type, ITrigger>>
         {
-            new Tuple<Type, ITrigger>(typeof(LogConnectionCounterJob), everyFiveMinutesTrigger)
+            new Tuple<Type, ITrigger>(typeof(LogConnectionCounterJob), everyFiveMinutesTrigger),
         };
 
         await base.StartAsync(cancellationToken);

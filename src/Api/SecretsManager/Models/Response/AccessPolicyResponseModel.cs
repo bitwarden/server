@@ -7,7 +7,8 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public abstract class BaseAccessPolicyResponseModel : ResponseModel
 {
-    protected BaseAccessPolicyResponseModel(BaseAccessPolicy baseAccessPolicy, string obj) : base(obj)
+    protected BaseAccessPolicyResponseModel(BaseAccessPolicy baseAccessPolicy, string obj)
+        : base(obj)
     {
         Read = baseAccessPolicy.Read;
         Write = baseAccessPolicy.Write;
@@ -26,30 +27,35 @@ public class UserAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
     private const string _objectName = "userAccessPolicy";
 
-    public UserAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy, Guid currentUserId) : base(accessPolicy, _objectName)
+    public UserAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy, Guid currentUserId)
+        : base(accessPolicy, _objectName)
     {
         CurrentUser = currentUserId == accessPolicy.User?.Id;
         OrganizationUserId = accessPolicy.OrganizationUserId;
         OrganizationUserName = GetUserDisplayName(accessPolicy.User);
     }
 
-    public UserAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy, Guid currentUserId) : base(accessPolicy, _objectName)
+    public UserAccessPolicyResponseModel(
+        UserServiceAccountAccessPolicy accessPolicy,
+        Guid currentUserId
+    )
+        : base(accessPolicy, _objectName)
     {
         CurrentUser = currentUserId == accessPolicy.User?.Id;
         OrganizationUserId = accessPolicy.OrganizationUserId;
         OrganizationUserName = GetUserDisplayName(accessPolicy.User);
     }
 
-    public UserAccessPolicyResponseModel(UserSecretAccessPolicy accessPolicy, Guid currentUserId) : base(accessPolicy, _objectName)
+    public UserAccessPolicyResponseModel(UserSecretAccessPolicy accessPolicy, Guid currentUserId)
+        : base(accessPolicy, _objectName)
     {
         CurrentUser = currentUserId == accessPolicy.User?.Id;
         OrganizationUserId = accessPolicy.OrganizationUserId;
         OrganizationUserName = GetUserDisplayName(accessPolicy.User);
     }
 
-    public UserAccessPolicyResponseModel() : base(new UserProjectAccessPolicy(), _objectName)
-    {
-    }
+    public UserAccessPolicyResponseModel()
+        : base(new UserProjectAccessPolicy(), _objectName) { }
 
     public Guid? OrganizationUserId { get; set; }
     public string? OrganizationUserName { get; set; }
@@ -84,9 +90,8 @@ public class GroupAccessPolicyResponseModel : BaseAccessPolicyResponseModel
         CurrentUserInGroup = accessPolicy.CurrentUserInGroup;
     }
 
-    public GroupAccessPolicyResponseModel() : base(new GroupProjectAccessPolicy(), _objectName)
-    {
-    }
+    public GroupAccessPolicyResponseModel()
+        : base(new GroupProjectAccessPolicy(), _objectName) { }
 
     public Guid? GroupId { get; set; }
     public string? GroupName { get; set; }
@@ -112,9 +117,7 @@ public class ServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResponseM
     }
 
     public ServiceAccountAccessPolicyResponseModel()
-        : base(new ServiceAccountProjectAccessPolicy(), _objectName)
-    {
-    }
+        : base(new ServiceAccountProjectAccessPolicy(), _objectName) { }
 
     public Guid? ServiceAccountId { get; set; }
     public string? ServiceAccountName { get; set; }
@@ -132,9 +135,7 @@ public class GrantedProjectAccessPolicyResponseModel : BaseAccessPolicyResponseM
     }
 
     public GrantedProjectAccessPolicyResponseModel()
-        : base(new ServiceAccountProjectAccessPolicy(), _objectName)
-    {
-    }
+        : base(new ServiceAccountProjectAccessPolicy(), _objectName) { }
 
     public Guid? GrantedProjectId { get; set; }
     public string? GrantedProjectName { get; set; }

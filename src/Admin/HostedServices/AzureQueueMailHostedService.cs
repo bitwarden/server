@@ -21,7 +21,8 @@ public class AzureQueueMailHostedService : IHostedService
     public AzureQueueMailHostedService(
         ILogger<AzureQueueMailHostedService> logger,
         IMailService mailService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _logger = logger;
         _mailService = mailService;
@@ -53,9 +54,9 @@ public class AzureQueueMailHostedService : IHostedService
         QueueMessage[] mailMessages;
         while (!cancellationToken.IsCancellationRequested)
         {
-            if (!(mailMessages = await RetrieveMessagesAsync()).Any())
+            if ((mailMessages = await RetrieveMessagesAsync()).Length == 0)
             {
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
             }
 
             foreach (var message in mailMessages)
@@ -84,7 +85,7 @@ public class AzureQueueMailHostedService : IHostedService
                     // TODO: retries?
                 }
 
-                await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt, cancellationToken);
 
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -96,6 +97,7 @@ public class AzureQueueMailHostedService : IHostedService
 
     private async Task<QueueMessage[]> RetrieveMessagesAsync()
     {
-        return (await _mailQueueClient.ReceiveMessagesAsync(maxMessages: 32))?.Value ?? new QueueMessage[] { };
+        return (await _mailQueueClient.ReceiveMessagesAsync(maxMessages: 32))?.Value
+            ?? Array.Empty<QueueMessage>();
     }
 }

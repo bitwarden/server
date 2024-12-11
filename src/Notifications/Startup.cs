@@ -30,34 +30,54 @@ public class Startup
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
 
         // Identity
-        services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
-        {
-            config.AddPolicy("Application", policy =>
+        services.AddIdentityAuthenticationServices(
+            globalSettings,
+            Environment,
+            config =>
             {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
-            });
-            config.AddPolicy("Internal", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Internal);
-            });
-        });
+                config.AddPolicy(
+                    "Application",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(
+                            JwtClaimTypes.AuthenticationMethod,
+                            "Application",
+                            "external"
+                        );
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
+                    }
+                );
+                config.AddPolicy(
+                    "Internal",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Internal);
+                    }
+                );
+            }
+        );
 
         // SignalR
-        var signalRServerBuilder = services.AddSignalR().AddMessagePackProtocol(options =>
-        {
-            options.SerializerOptions = MessagePack.MessagePackSerializerOptions.Standard
-                .WithResolver(MessagePack.Resolvers.ContractlessStandardResolver.Instance);
-        });
+        var signalRServerBuilder = services
+            .AddSignalR()
+            .AddMessagePackProtocol(options =>
+            {
+                options.SerializerOptions =
+                    MessagePack.MessagePackSerializerOptions.Standard.WithResolver(
+                        MessagePack.Resolvers.ContractlessStandardResolver.Instance
+                    );
+            });
         if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.RedisConnectionString))
         {
-            signalRServerBuilder.AddStackExchangeRedis(globalSettings.Notifications.RedisConnectionString,
+            signalRServerBuilder.AddStackExchangeRedis(
+                globalSettings.Notifications.RedisConnectionString,
                 options =>
                 {
                     options.Configuration.ChannelPrefix = "Notifications";
-                });
+                }
+            );
         }
         services.AddSingleton<IUserIdProvider, SubjectUserIdProvider>();
         services.AddSingleton<ConnectionCounter>();
@@ -82,7 +102,8 @@ public class Startup
         IApplicationBuilder app,
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         IdentityModelEventSource.ShowPII = true;
         app.UseSerilog(env, appLifetime, globalSettings);
@@ -105,8 +126,13 @@ public class Startup
         app.UseRouting();
 
         // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
-            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+        app.UseCors(policy =>
+            policy
+                .SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+        );
 
         // Add authentication to the request pipeline.
         app.UseAuthentication();
@@ -115,16 +141,22 @@ public class Startup
         // Add endpoints to the request pipeline.
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapHub<NotificationsHub>("/hub", options =>
-            {
-                options.ApplicationMaxBufferSize = 2048;
-                options.TransportMaxBufferSize = 4096;
-            });
-            endpoints.MapHub<AnonymousNotificationsHub>("/anonymous-hub", options =>
-            {
-                options.ApplicationMaxBufferSize = 2048;
-                options.TransportMaxBufferSize = 4096;
-            });
+            endpoints.MapHub<NotificationsHub>(
+                "/hub",
+                options =>
+                {
+                    options.ApplicationMaxBufferSize = 2048;
+                    options.TransportMaxBufferSize = 4096;
+                }
+            );
+            endpoints.MapHub<AnonymousNotificationsHub>(
+                "/anonymous-hub",
+                options =>
+                {
+                    options.ApplicationMaxBufferSize = 2048;
+                    options.TransportMaxBufferSize = 4096;
+                }
+            );
             endpoints.MapDefaultControllerRoute();
         });
     }

@@ -42,11 +42,10 @@ public class HandlebarsMailServiceTests
         {
             // TODO: Switch to use env variable
             { ("email", typeof(string)), "test@bitwarden.com" },
-            { ("user", typeof(User)), new User
             {
-                Id = Guid.NewGuid(),
-                Email = "test@bitwarden.com",
-            }},
+                ("user", typeof(User)),
+                new User { Id = Guid.NewGuid(), Email = "test@bitwarden.com" }
+            },
             { ("userId", typeof(Guid)), Guid.NewGuid() },
             { ("token", typeof(string)), "test_token" },
             { ("fromEmail", typeof(string)), "test@bitwarden.com" },
@@ -54,68 +53,76 @@ public class HandlebarsMailServiceTests
             { ("newEmailAddress", typeof(string)), "test@bitwarden.com" },
             { ("hint", typeof(string)), "Test Hint" },
             { ("organizationName", typeof(string)), "Test Organization Name" },
-            { ("orgUser", typeof(OrganizationUser)), new OrganizationUser
             {
-                Id = Guid.NewGuid(),
-                Email = "test@bitwarden.com",
-                OrganizationId = Guid.NewGuid(),
-
-            }},
-            { ("token", typeof(ExpiringToken)), new ExpiringToken("test_token", DateTime.UtcNow.AddDays(1))},
-            { ("organization", typeof(Organization)), new Organization
+                ("orgUser", typeof(OrganizationUser)),
+                new OrganizationUser
+                {
+                    Id = Guid.NewGuid(),
+                    Email = "test@bitwarden.com",
+                    OrganizationId = Guid.NewGuid(),
+                }
+            },
             {
-                Id = Guid.NewGuid(),
-                Name = "Test Organization Name",
-                Seats = 5
-            }},
-            { ("initialSeatCount", typeof(int)), 5},
-            { ("ownerEmails", typeof(IEnumerable<string>)), new [] { "test@bitwarden.com" }},
+                ("token", typeof(ExpiringToken)),
+                new ExpiringToken("test_token", DateTime.UtcNow.AddDays(1))
+            },
+            {
+                ("organization", typeof(Organization)),
+                new Organization
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Test Organization Name",
+                    Seats = 5,
+                }
+            },
+            { ("initialSeatCount", typeof(int)), 5 },
+            { ("ownerEmails", typeof(IEnumerable<string>)), new[] { "test@bitwarden.com" } },
             { ("maxSeatCount", typeof(int)), 5 },
             { ("userIdentifier", typeof(string)), "test_user" },
-            { ("adminEmails", typeof(IEnumerable<string>)), new [] { "test@bitwarden.com" }},
+            { ("adminEmails", typeof(IEnumerable<string>)), new[] { "test@bitwarden.com" } },
             { ("returnUrl", typeof(string)), "https://bitwarden.com/" },
             { ("amount", typeof(decimal)), 1.00M },
             { ("dueDate", typeof(DateTime)), DateTime.UtcNow.AddDays(1) },
-            { ("items", typeof(List<string>)), new List<string> { "test@bitwarden.com" }},
-            { ("mentionInvoices", typeof(bool)), true },
-            { ("emails", typeof(IEnumerable<string>)), new [] { "test@bitwarden.com" }},
-            { ("deviceType", typeof(string)), "Mobile" },
-            { ("timestamp", typeof(DateTime)), DateTime.UtcNow.AddDays(1)},
-            { ("ip", typeof(string)), "127.0.0.1" },
-            { ("emergencyAccess", typeof(EmergencyAccess)), new EmergencyAccess
             {
-                Id = Guid.NewGuid(),
-                Email = "test@bitwarden.com",
-            }},
+                ("items", typeof(List<string>)),
+                new List<string> { "test@bitwarden.com" }
+            },
+            { ("mentionInvoices", typeof(bool)), true },
+            { ("emails", typeof(IEnumerable<string>)), new[] { "test@bitwarden.com" } },
+            { ("deviceType", typeof(string)), "Mobile" },
+            { ("timestamp", typeof(DateTime)), DateTime.UtcNow.AddDays(1) },
+            { ("ip", typeof(string)), "127.0.0.1" },
+            {
+                ("emergencyAccess", typeof(EmergencyAccess)),
+                new EmergencyAccess { Id = Guid.NewGuid(), Email = "test@bitwarden.com" }
+            },
             { ("granteeEmail", typeof(string)), "test@bitwarden.com" },
             { ("grantorName", typeof(string)), "Test User" },
             { ("initiatingName", typeof(string)), "Test" },
             { ("approvingName", typeof(string)), "Test Name" },
             { ("rejectingName", typeof(string)), "Test Name" },
-            { ("provider", typeof(Provider)), new Provider
             {
-                Id = Guid.NewGuid(),
-            }},
+                ("provider", typeof(Provider)),
+                new Provider { Id = Guid.NewGuid() }
+            },
             { ("name", typeof(string)), "Test Name" },
-            { ("ea", typeof(EmergencyAccess)), new EmergencyAccess
             {
-                Id = Guid.NewGuid(),
-                Email = "test@bitwarden.com",
-            }},
+                ("ea", typeof(EmergencyAccess)),
+                new EmergencyAccess { Id = Guid.NewGuid(), Email = "test@bitwarden.com" }
+            },
             { ("userName", typeof(string)), "testUser" },
             { ("orgName", typeof(string)), "Test Org Name" },
             { ("providerName", typeof(string)), "testProvider" },
-            { ("providerUser", typeof(ProviderUser)), new ProviderUser
             {
-                ProviderId = Guid.NewGuid(),
-                Id = Guid.NewGuid(),
-            }},
+                ("providerUser", typeof(ProviderUser)),
+                new ProviderUser { ProviderId = Guid.NewGuid(), Id = Guid.NewGuid() }
+            },
             { ("familyUserEmail", typeof(string)), "test@bitwarden.com" },
             { ("sponsorEmail", typeof(string)), "test@bitwarden.com" },
             { ("familyOrgName", typeof(string)), "Test Org Name" },
             // Swap existingAccount to true or false to generate different versions of the SendFamiliesForEnterpriseOfferEmailAsync emails.
             { ("existingAccount", typeof(bool)), false },
-            { ("sponsorshipEndDate", typeof(DateTime)), DateTime.UtcNow.AddDays(1)},
+            { ("sponsorshipEndDate", typeof(DateTime)), DateTime.UtcNow.AddDays(1) },
             { ("sponsorOrgName", typeof(string)), "Sponsor Test Org Name" },
             { ("expirationDate", typeof(DateTime)), DateTime.Now.AddDays(3) },
             { ("utcNow", typeof(DateTime)), DateTime.UtcNow },
@@ -136,11 +143,19 @@ public class HandlebarsMailServiceTests
             SiteName = "Bitwarden",
         };
 
-        var mailDeliveryService = new MailKitSmtpMailDeliveryService(globalSettings, Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>());
+        var mailDeliveryService = new MailKitSmtpMailDeliveryService(
+            globalSettings,
+            Substitute.For<ILogger<MailKitSmtpMailDeliveryService>>()
+        );
 
-        var handlebarsService = new HandlebarsMailService(globalSettings, mailDeliveryService, new BlockingMailEnqueuingService());
+        var handlebarsService = new HandlebarsMailService(
+            globalSettings,
+            mailDeliveryService,
+            new BlockingMailEnqueuingService()
+        );
 
-        var sendMethods = typeof(IMailService).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+        var sendMethods = typeof(IMailService)
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.Name.StartsWith("Send") && m.Name != "SendEnqueuedMailMessageAsync");
 
         foreach (var sendMethod in sendMethods)
@@ -155,9 +170,16 @@ public class HandlebarsMailServiceTests
 
             for (var i = 0; i < parameters.Length; i++)
             {
-                if (!namedParameters.TryGetValue((parameters[i].Name, parameters[i].ParameterType), out var value))
+                if (
+                    !namedParameters.TryGetValue(
+                        (parameters[i].Name, parameters[i].ParameterType),
+                        out var value
+                    )
+                )
                 {
-                    throw new InvalidOperationException($"Couldn't find a parameter for name '{parameters[i].Name}' and type '{parameters[i].ParameterType.FullName}'");
+                    throw new InvalidOperationException(
+                        $"Couldn't find a parameter for name '{parameters[i].Name}' and type '{parameters[i].ParameterType.FullName}'"
+                    );
                 }
 
                 args[i] = value;

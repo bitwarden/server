@@ -3,8 +3,5 @@
 public class InvalidEmailException : Exception
 {
     public InvalidEmailException()
-        : base("Invalid email.")
-    {
-
-    }
+        : base("Invalid email.") { }
 }

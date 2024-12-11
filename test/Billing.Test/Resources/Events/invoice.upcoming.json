@@ -41,16 +41,13 @@
       "customer_phone": null,
       "customer_shipping": null,
       "customer_tax_exempt": "none",
-      "customer_tax_ids": [
-      ],
+      "customer_tax_ids": [],
       "default_payment_method": null,
       "default_source": null,
-      "default_tax_rates": [
-      ],
+      "default_tax_rates": [],
       "description": null,
       "discount": null,
-      "discounts": [
-      ],
+      "discounts": [],
       "due_date": null,
       "effective_at": null,
       "ending_balance": -6779,
@@ -68,14 +65,11 @@
             "amount_excluding_tax": 2000,
             "currency": "usd",
             "description": "5 × 2019 Enterprise Seat (Monthly) (at $4.00 / month)",
-            "discount_amounts": [
-            ],
+            "discount_amounts": [],
             "discountable": true,
-            "discounts": [
-            ],
+            "discounts": [],
             "livemode": false,
-            "metadata": {
-            },
+            "metadata": {},
             "period": {
               "end": 1699807081,
               "start": 1697128681
@@ -93,8 +87,7 @@
               "interval": "month",
               "interval_count": 1,
               "livemode": false,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "2019 Enterprise Seat (Monthly)",
               "product": "prod_BVButYytPSlgs6",
               "tiers_mode": null,
@@ -112,8 +105,7 @@
               "custom_unit_amount": null,
               "livemode": false,
               "lookup_key": null,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "2019 Enterprise Seat (Monthly)",
               "product": "prod_BVButYytPSlgs6",
               "recurring": {
@@ -146,8 +138,7 @@
                 "taxable_amount": 0
               }
             ],
-            "tax_rates": [
-            ],
+            "tax_rates": [],
             "type": "subscription",
             "unit_amount_excluding_tax": "400"
           }
@@ -157,8 +148,7 @@
         "url": "/v1/invoices/upcoming/lines?customer=cus_M8DV9wiyNa2JxQ&subscription=sub_1NQxz4IGBnsLynRr1KbitG7v"
       },
       "livemode": false,
-      "metadata": {
-      },
+      "metadata": {},
       "next_payment_attempt": 1697132281,
       "number": null,
       "on_behalf_of": null,
@@ -191,16 +181,14 @@
       },
       "subscription": "sub_1NQxz4IGBnsLynRr1KbitG7v",
       "subscription_details": {
-        "metadata": {
-        }
+        "metadata": {}
       },
       "subtotal": 2000,
       "subtotal_excluding_tax": 2000,
       "tax": 0,
       "test_clock": null,
       "total": 2000,
-      "total_discount_amounts": [
-      ],
+      "total_discount_amounts": [],
       "total_excluding_tax": 2000,
       "total_tax_amounts": [
         {

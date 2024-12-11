@@ -15,4 +15,3 @@ public class GroupUserMapperProfile : Profile
         CreateMap<Core.AdminConsole.Entities.GroupUser, GroupUser>().ReverseMap();
     }
 }
-

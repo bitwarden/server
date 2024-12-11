@@ -14,7 +14,11 @@ public class DuoUniversalTokenServiceTests
     [BitAutoData("api-valid.duosecurity.com", "", "ClientSecret")]
     [BitAutoData("api-valid.duosecurity.com", "ClientId", "")]
     public async void ValidateDuoConfiguration_InvalidConfig_ReturnsFalse(
-        string host, string clientId, string clientSecret, SutProvider<DuoUniversalTokenService> sutProvider)
+        string host,
+        string clientId,
+        string clientSecret,
+        SutProvider<DuoUniversalTokenService> sutProvider
+    )
     {
         // Arrange
         /* AutoData handles arrangement */
@@ -33,8 +37,12 @@ public class DuoUniversalTokenServiceTests
     [BitAutoData(false, "api-valid.duosecurity.com", "ClientId", null)]
     [BitAutoData(false, "api-valid.duosecurity.com", null, null)]
     public void HasProperDuoMetadata_ReturnMatchesExpected(
-        bool expectedResponse, string host, string clientId,
-        string clientSecret, SutProvider<DuoUniversalTokenService> sutProvider)
+        bool expectedResponse,
+        string host,
+        string clientId,
+        string clientSecret,
+        SutProvider<DuoUniversalTokenService> sutProvider
+    )
     {
         // Arrange
         var metaData = new Dictionary<string, object> { ["Host"] = host };
@@ -49,10 +57,7 @@ public class DuoUniversalTokenServiceTests
             metaData.Add("ClientSecret", clientSecret);
         }
 
-        var provider = new TwoFactorProvider
-        {
-            MetaData = metaData
-        };
+        var provider = new TwoFactorProvider { MetaData = metaData };
 
         // Act
         var result = sutProvider.Sut.HasProperDuoMetadata(provider);
@@ -64,7 +69,8 @@ public class DuoUniversalTokenServiceTests
     [Theory]
     [BitAutoData]
     public void HasProperDuoMetadata_ProviderIsNull_ReturnsFalse(
-        SutProvider<DuoUniversalTokenService> sutProvider)
+        SutProvider<DuoUniversalTokenService> sutProvider
+    )
     {
         // Act
         var result = sutProvider.Sut.HasProperDuoMetadata(null);
@@ -77,8 +83,7 @@ public class DuoUniversalTokenServiceTests
     [BitAutoData("api-valid.duosecurity.com", true)]
     [BitAutoData("api-valid.duofederal.com", true)]
     [BitAutoData("invalid", false)]
-    public void ValidDuoHost_HostIsValid_ReturnTrue(
-        string host, bool expectedResponse)
+    public void ValidDuoHost_HostIsValid_ReturnTrue(string host, bool expectedResponse)
     {
         // Act
         var result = DuoUniversalTokenService.ValidDuoHost(host);
@@ -86,6 +91,4 @@ public class DuoUniversalTokenServiceTests
         // Assert
         Assert.Equal(result, expectedResponse);
     }
-
-
 }

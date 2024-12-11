@@ -16,7 +16,9 @@ public class OrgUserInviteTokenableFactory : IOrgUserInviteTokenableFactory
     {
         var token = new OrgUserInviteTokenable(orgUser)
         {
-            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromHours(_globalSettings.OrganizationInviteExpirationHours))
+            ExpirationDate = DateTime.UtcNow.Add(
+                TimeSpan.FromHours(_globalSettings.OrganizationInviteExpirationHours)
+            ),
         };
         return token;
     }

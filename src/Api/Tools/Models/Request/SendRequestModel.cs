@@ -13,47 +13,46 @@ public class SendRequestModel
 {
     public SendType Type { get; set; }
     public long? FileLength { get; set; } = null;
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Notes { get; set; }
+
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Key { get; set; }
+
     [Range(1, int.MaxValue)]
     public int? MaxAccessCount { get; set; }
     public DateTime? ExpirationDate { get; set; }
+
     [Required]
     public DateTime? DeletionDate { get; set; }
     public SendFileModel File { get; set; }
     public SendTextModel Text { get; set; }
+
     [StringLength(1000)]
     public string Password { get; set; }
+
     [Required]
     public bool? Disabled { get; set; }
     public bool? HideEmail { get; set; }
 
     public Send ToSend(Guid userId, ISendService sendService)
     {
-        var send = new Send
-        {
-            Type = Type,
-            UserId = (Guid?)userId
-        };
+        var send = new Send { Type = Type, UserId = (Guid?)userId };
         ToSend(send, sendService);
         return send;
     }
 
     public (Send, SendFileData) ToSend(Guid userId, string fileName, ISendService sendService)
     {
-        var send = ToSendBase(new Send
-        {
-            Type = Type,
-            UserId = (Guid?)userId
-        }, sendService);
+        var send = ToSendBase(new Send { Type = Type, UserId = (Guid?)userId }, sendService);
         var data = new SendFileData(Name, Notes, fileName);
         return (send, data);
     }
@@ -67,10 +66,16 @@ public class SendRequestModel
                 var fileData = JsonSerializer.Deserialize<SendFileData>(existingSend.Data);
                 fileData.Name = Name;
                 fileData.Notes = Notes;
-                existingSend.Data = JsonSerializer.Serialize(fileData, JsonHelpers.IgnoreWritingNull);
+                existingSend.Data = JsonSerializer.Serialize(
+                    fileData,
+                    JsonHelpers.IgnoreWritingNull
+                );
                 break;
             case SendType.Text:
-                existingSend.Data = JsonSerializer.Serialize(ToSendTextData(), JsonHelpers.IgnoreWritingNull);
+                existingSend.Data = JsonSerializer.Serialize(
+                    ToSendTextData(),
+                    JsonHelpers.IgnoreWritingNull
+                );
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -85,8 +90,10 @@ public class SendRequestModel
         var nowPlus1Minute = now.AddMinutes(1);
         if (ExpirationDate.HasValue && ExpirationDate.Value <= nowPlus1Minute)
         {
-            throw new BadRequestException("You cannot create a Send that is already expired. " +
-                "Adjust the expiration date and try again.");
+            throw new BadRequestException(
+                "You cannot create a Send that is already expired. "
+                    + "Adjust the expiration date and try again."
+            );
         }
         ValidateEdit();
     }
@@ -100,27 +107,35 @@ public class SendRequestModel
         {
             if (DeletionDate.Value <= nowPlus1Minute)
             {
-                throw new BadRequestException("You cannot have a Send with a deletion date in the past. " +
-                    "Adjust the deletion date and try again.");
+                throw new BadRequestException(
+                    "You cannot have a Send with a deletion date in the past. "
+                        + "Adjust the deletion date and try again."
+                );
             }
             if (DeletionDate.Value > now.AddDays(31))
             {
-                throw new BadRequestException("You cannot have a Send with a deletion date that far " +
-                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
-                    "and try again.");
+                throw new BadRequestException(
+                    "You cannot have a Send with a deletion date that far "
+                        + "into the future. Adjust the Deletion Date to a value less than 31 days from now "
+                        + "and try again."
+                );
             }
         }
         if (ExpirationDate.HasValue)
         {
             if (ExpirationDate.Value <= nowPlus1Minute)
             {
-                throw new BadRequestException("You cannot have a Send with an expiration date in the past. " +
-                    "Adjust the expiration date and try again.");
+                throw new BadRequestException(
+                    "You cannot have a Send with an expiration date in the past. "
+                        + "Adjust the expiration date and try again."
+                );
             }
             if (ExpirationDate.Value > DeletionDate.Value)
             {
-                throw new BadRequestException("You cannot have a Send with an expiration date greater than the deletion date. " +
-                    "Adjust the expiration date and try again.");
+                throw new BadRequestException(
+                    "You cannot have a Send with an expiration date greater than the deletion date. "
+                        + "Adjust the expiration date and try again."
+                );
             }
         }
     }

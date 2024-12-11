@@ -5,9 +5,14 @@ namespace Bit.Admin.Utilities;
 public static class RolePermissionMapping
 {
     //This is temporary and will be moved to the db in the next round of the rbac implementation
-    public static readonly Dictionary<string, List<Permission>> RolePermissions = new Dictionary<string, List<Permission>>()
+    public static readonly Dictionary<string, List<Permission>> RolePermissions = new Dictionary<
+        string,
+        List<Permission>
+    >()
     {
-        { "owner", new List<Permission>
+        {
+            "owner",
+            new List<Permission>
             {
                 Permission.User_List_View,
                 Permission.User_UserInformation_View,
@@ -47,10 +52,12 @@ public static class RolePermissionMapping
                 Permission.Tools_PromoteAdmin,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
-                Permission.Tools_ManageStripeSubscriptions
+                Permission.Tools_ManageStripeSubscriptions,
             }
         },
-        { "admin", new List<Permission>
+        {
+            "admin",
+            new List<Permission>
             {
                 Permission.User_List_View,
                 Permission.User_UserInformation_View,
@@ -94,10 +101,12 @@ public static class RolePermissionMapping
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_ManageStripeSubscriptions,
-                Permission.Tools_CreateEditTransaction
+                Permission.Tools_CreateEditTransaction,
             }
         },
-        { "cs", new List<Permission>
+        {
+            "cs",
+            new List<Permission>
             {
                 Permission.User_List_View,
                 Permission.User_UserInformation_View,
@@ -122,10 +131,12 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_View,
                 Permission.Org_Billing_LaunchGateway,
                 Permission.Provider_List_View,
-                Permission.Provider_View
+                Permission.Provider_View,
             }
         },
-        { "billing", new List<Permission>
+        {
+            "billing",
+            new List<Permission>
             {
                 Permission.User_List_View,
                 Permission.User_UserInformation_View,
@@ -163,10 +174,12 @@ public static class RolePermissionMapping
                 Permission.Tools_ManageStripeSubscriptions,
                 Permission.Tools_CreateEditTransaction,
                 Permission.Tools_ProcessStripeEvents,
-                Permission.Tools_MigrateProviders
+                Permission.Tools_MigrateProviders,
             }
         },
-        { "sales", new List<Permission>
+        {
+            "sales",
+            new List<Permission>
             {
                 Permission.User_List_View,
                 Permission.User_UserInformation_View,
@@ -192,7 +205,7 @@ public static class RolePermissionMapping
                 Permission.Provider_Create,
                 Permission.Provider_Edit,
                 Permission.Provider_View,
-                Permission.Provider_ResendEmailInvite
+                Permission.Provider_ResendEmailInvite,
             }
         },
     };

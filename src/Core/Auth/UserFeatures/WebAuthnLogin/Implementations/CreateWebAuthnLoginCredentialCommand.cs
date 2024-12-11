@@ -13,13 +13,25 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
     private readonly IFido2 _fido2;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
 
-    public CreateWebAuthnLoginCredentialCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository)
+    public CreateWebAuthnLoginCredentialCommand(
+        IFido2 fido2,
+        IWebAuthnCredentialRepository webAuthnCredentialRepository
+    )
     {
         _fido2 = fido2;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
-    public async Task<bool> CreateWebAuthnLoginCredentialAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf, string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
+    public async Task<bool> CreateWebAuthnLoginCredentialAsync(
+        User user,
+        string name,
+        CredentialCreateOptions options,
+        AuthenticatorAttestationRawResponse attestationResponse,
+        bool supportsPrf,
+        string encryptedUserKey = null,
+        string encryptedPublicKey = null,
+        string encryptedPrivateKey = null
+    )
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= MaxCredentialsPerUser)
@@ -28,7 +40,10 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
         }
 
         var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) =>
+            Task.FromResult(
+                !existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId))
+            );
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
@@ -44,7 +59,7 @@ internal class CreateWebAuthnLoginCredentialCommand : ICreateWebAuthnLoginCreden
             SupportsPrf = supportsPrf,
             EncryptedUserKey = encryptedUserKey,
             EncryptedPublicKey = encryptedPublicKey,
-            EncryptedPrivateKey = encryptedPrivateKey
+            EncryptedPrivateKey = encryptedPrivateKey,
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);

@@ -11,10 +11,7 @@ public class GroupCreateUpdateRequestModel : GroupBaseModel
 
     public Group ToGroup(Guid orgId)
     {
-        return ToGroup(new Group
-        {
-            OrganizationId = orgId
-        });
+        return ToGroup(new Group { OrganizationId = orgId });
     }
 
     public Group ToGroup(Group existingGroup)

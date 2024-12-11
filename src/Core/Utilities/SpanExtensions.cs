@@ -2,8 +2,12 @@
 
 public static class SpanExtensions
 {
-    public static bool TrySplitBy(this ReadOnlySpan<char> input,
-        char splitChar, out ReadOnlySpan<char> chunk, out ReadOnlySpan<char> rest)
+    public static bool TrySplitBy(
+        this ReadOnlySpan<char> input,
+        char splitChar,
+        out ReadOnlySpan<char> chunk,
+        out ReadOnlySpan<char> rest
+    )
     {
         var splitIndex = input.IndexOf(splitChar);
 

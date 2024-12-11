@@ -5,4 +5,3 @@ public class AuthRequestUpdateProcessorConfiguration
     public Guid OrganizationId { get; set; }
     public TimeSpan AuthRequestExpiresAfter { get; set; }
 }
-

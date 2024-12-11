@@ -30,7 +30,8 @@ public class StripeEventProcessor : IStripeEventProcessor
         IInvoiceCreatedHandler invoiceCreatedHandler,
         IPaymentMethodAttachedHandler paymentMethodAttachedHandler,
         ICustomerUpdatedHandler customerUpdatedHandler,
-        IInvoiceFinalizedHandler invoiceFinalizedHandler)
+        IInvoiceFinalizedHandler invoiceFinalizedHandler
+    )
     {
         _logger = logger;
         _subscriptionDeletedHandler = subscriptionDeletedHandler;
@@ -88,5 +89,4 @@ public class StripeEventProcessor : IStripeEventProcessor
                 break;
         }
     }
-
 }

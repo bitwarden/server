@@ -13,11 +13,8 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public abstract class BaseEntityFrameworkRepository
 {
-    protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } = new BulkCopyOptions
-    {
-        KeepIdentity = true,
-        BulkCopyType = BulkCopyType.MultipleRows,
-    };
+    protected BulkCopyOptions DefaultBulkCopyOptions { get; set; } =
+        new BulkCopyOptions { KeepIdentity = true, BulkCopyType = BulkCopyType.MultipleRows };
 
     public BaseEntityFrameworkRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
     {
@@ -55,20 +52,27 @@ public abstract class BaseEntityFrameworkRepository
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var attachments = await dbContext.Ciphers
-                .Where(e => e.UserId == null &&
-                    e.OrganizationId == organizationId &&
-                    !string.IsNullOrWhiteSpace(e.Attachments))
+            var attachments = await dbContext
+                .Ciphers.Where(e =>
+                    e.UserId == null
+                    && e.OrganizationId == organizationId
+                    && !string.IsNullOrWhiteSpace(e.Attachments)
+                )
                 .Select(e => e.Attachments)
                 .ToListAsync();
-            var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateObject().Sum(p =>
-            {
-                if (long.TryParse(p.Value.GetProperty("Size").ToString(), out var s))
-                {
-                    return s;
-                }
-                return 0;
-            }) ?? 0);
+            var storage = attachments.Sum(e =>
+                JsonDocument
+                    .Parse(e)
+                    ?.RootElement.EnumerateObject()
+                    .Sum(p =>
+                    {
+                        if (long.TryParse(p.Value.GetProperty("Size").ToString(), out var s))
+                        {
+                            return s;
+                        }
+                        return 0;
+                    }) ?? 0
+            );
             var organization = new Organization
             {
                 Id = organizationId,
@@ -88,21 +92,28 @@ public abstract class BaseEntityFrameworkRepository
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var attachments = await dbContext.Ciphers
-                .Where(e => e.UserId.HasValue &&
-                    e.UserId.Value == userId &&
-                    e.OrganizationId == null &&
-                    !string.IsNullOrWhiteSpace(e.Attachments))
+            var attachments = await dbContext
+                .Ciphers.Where(e =>
+                    e.UserId.HasValue
+                    && e.UserId.Value == userId
+                    && e.OrganizationId == null
+                    && !string.IsNullOrWhiteSpace(e.Attachments)
+                )
                 .Select(e => e.Attachments)
                 .ToListAsync();
-            var storage = attachments.Sum(e => JsonDocument.Parse(e)?.RootElement.EnumerateObject().Sum(p =>
-            {
-                if (long.TryParse(p.Value.GetProperty("Size").ToString(), out var s))
-                {
-                    return s;
-                }
-                return 0;
-            }) ?? 0);
+            var storage = attachments.Sum(e =>
+                JsonDocument
+                    .Parse(e)
+                    ?.RootElement.EnumerateObject()
+                    .Sum(p =>
+                    {
+                        if (long.TryParse(p.Value.GetProperty("Size").ToString(), out var s))
+                        {
+                            return s;
+                        }
+                        return 0;
+                    }) ?? 0
+            );
             var user = new Models.User
             {
                 Id = userId,

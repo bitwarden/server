@@ -18,7 +18,8 @@ public record ProviderSubscriptionResponse(
     TaxInformation TaxInformation,
     DateTime? CancelAt,
     SubscriptionSuspension Suspension,
-    ProviderType ProviderType)
+    ProviderType ProviderType
+)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
@@ -28,7 +29,8 @@ public record ProviderSubscriptionResponse(
         ICollection<ProviderPlan> providerPlans,
         TaxInformation taxInformation,
         SubscriptionSuspension subscriptionSuspension,
-        Provider provider)
+        Provider provider
+    )
     {
         var providerPlanResponses = providerPlans
             .Where(providerPlan => providerPlan.IsConfigured())
@@ -36,7 +38,9 @@ public record ProviderSubscriptionResponse(
             .Select(configuredProviderPlan =>
             {
                 var plan = StaticStore.GetPlan(configuredProviderPlan.PlanType);
-                var cost = (configuredProviderPlan.SeatMinimum + configuredProviderPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
+                var cost =
+                    (configuredProviderPlan.SeatMinimum + configuredProviderPlan.PurchasedSeats)
+                    * plan.PasswordManager.ProviderPortalSeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
@@ -46,7 +50,8 @@ public record ProviderSubscriptionResponse(
                     configuredProviderPlan.PurchasedSeats,
                     configuredProviderPlan.AssignedSeats,
                     cost,
-                    cadence);
+                    cadence
+                );
             });
 
         var accountCredit = Convert.ToDecimal(subscription.Customer?.Balance) * -1 / 100;
@@ -61,7 +66,8 @@ public record ProviderSubscriptionResponse(
             taxInformation,
             subscription.CancelAt,
             subscriptionSuspension,
-            provider.Type);
+            provider.Type
+        );
     }
 }
 
@@ -73,4 +79,5 @@ public record ProviderPlanResponse(
     int PurchasedSeats,
     int AssignedSeats,
     decimal Cost,
-    string Cadence);
+    string Cadence
+);

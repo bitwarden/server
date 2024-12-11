@@ -7,9 +7,9 @@ public class EventCompare : IEqualityComparer<Event>
 {
     public bool Equals(Event x, Event y)
     {
-        return x.Date.ToShortDateString() == y.Date.ToShortDateString() &&
-        x.Type == y.Type &&
-        x.IpAddress == y.IpAddress;
+        return x.Date.ToShortDateString() == y.Date.ToShortDateString()
+            && x.Type == y.Type
+            && x.IpAddress == y.IpAddress;
     }
 
     public int GetHashCode([DisallowNull] Event obj)

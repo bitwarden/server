@@ -14,9 +14,12 @@ public class OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery : IQuery
 
     public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
     {
-        var query = from ou in dbContext.OrganizationUsers
-                    where ou.OrganizationId == _organizationId && ou.Status >= OrganizationUserStatusType.Invited
-                    select ou;
+        var query =
+            from ou in dbContext.OrganizationUsers
+            where
+                ou.OrganizationId == _organizationId
+                && ou.Status >= OrganizationUserStatusType.Invited
+            select ou;
         return query;
     }
 }

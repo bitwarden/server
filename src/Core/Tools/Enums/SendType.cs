@@ -3,5 +3,5 @@
 public enum SendType : byte
 {
     Text = 0,
-    File = 1
+    File = 1,
 }

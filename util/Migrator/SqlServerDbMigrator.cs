@@ -10,14 +10,21 @@ public class SqlServerDbMigrator : IDbMigrator
 
     public SqlServerDbMigrator(GlobalSettings globalSettings, ILogger<DbMigrator> logger)
     {
-        _migrator = new DbMigrator(globalSettings.SqlServer.ConnectionString, logger,
-            globalSettings.SqlServer.SkipDatabasePreparation);
+        _migrator = new DbMigrator(
+            globalSettings.SqlServer.ConnectionString,
+            logger,
+            globalSettings.SqlServer.SkipDatabasePreparation
+        );
     }
 
-    public bool MigrateDatabase(bool enableLogging = true,
-        CancellationToken cancellationToken = default)
+    public bool MigrateDatabase(
+        bool enableLogging = true,
+        CancellationToken cancellationToken = default
+    )
     {
-        return _migrator.MigrateMsSqlDatabaseWithRetries(enableLogging,
-            cancellationToken: cancellationToken);
+        return _migrator.MigrateMsSqlDatabaseWithRetries(
+            enableLogging,
+            cancellationToken: cancellationToken
+        );
     }
 }

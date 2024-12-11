@@ -9,10 +9,7 @@ public class TwoFactorEmailResponseModel : ResponseModel
     public TwoFactorEmailResponseModel(User user)
         : base("twoFactorEmail")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
         if (provider?.MetaData?.ContainsKey("Email") ?? false)

@@ -9,8 +9,10 @@ public class CountNewSmSeatsRequiredQuery : ICountNewSmSeatsRequiredQuery
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
 
-    public CountNewSmSeatsRequiredQuery(IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
+    public CountNewSmSeatsRequiredQuery(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository
+    )
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
@@ -40,7 +42,9 @@ public class CountNewSmSeatsRequiredQuery : ICountNewSmSeatsRequiredQuery
         }
 
         var occupiedSmSeats =
-            await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+            await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(
+                organization.Id
+            );
 
         var availableSmSeats = organization.SmSeats.Value - occupiedSmSeats;
 

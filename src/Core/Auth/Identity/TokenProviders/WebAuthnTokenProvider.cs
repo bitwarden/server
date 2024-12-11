@@ -18,7 +18,11 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     private readonly IFido2 _fido2;
     private readonly GlobalSettings _globalSettings;
 
-    public WebAuthnTokenProvider(IServiceProvider serviceProvider, IFido2 fido2, GlobalSettings globalSettings)
+    public WebAuthnTokenProvider(
+        IServiceProvider serviceProvider,
+        IFido2 fido2,
+        GlobalSettings globalSettings
+    )
     {
         _serviceProvider = serviceProvider;
         _fido2 = fido2;
@@ -35,7 +39,10 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return false;
         }
 
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.WebAuthn, user);
+        return await userService.TwoFactorProviderIsEnabledAsync(
+            TwoFactorProviderType.WebAuthn,
+            user
+        );
     }
 
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -57,7 +64,11 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             AppID = CoreHelpers.U2fAppIdUrl(_globalSettings),
         };
 
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Discouraged, exts);
+        var options = _fido2.GetAssertionOptions(
+            existingCredentials,
+            UserVerificationRequirement.Discouraged,
+            exts
+        );
 
         // TODO: Remove this when newtonsoft legacy converters are gone
         provider.MetaData["login"] = JsonSerializer.Serialize(options);
@@ -65,12 +76,21 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         var providers = user.GetTwoFactorProviders();
         providers[TwoFactorProviderType.WebAuthn] = provider;
         user.SetTwoFactorProviders(providers);
-        await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
+        await userService.UpdateTwoFactorProviderAsync(
+            user,
+            TwoFactorProviderType.WebAuthn,
+            logEvent: false
+        );
 
         return options.ToJson();
     }
 
-    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    public async Task<bool> ValidateAsync(
+        string purpose,
+        string token,
+        UserManager<User> manager,
+        User user
+    )
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         if (string.IsNullOrWhiteSpace(token))
@@ -86,8 +106,10 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             return false;
         }
 
-        var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(token,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var clientResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(
+            token,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
 
         var jsonOptions = provider.MetaData["login"].ToString();
         var options = AssertionOptions.FromJson(jsonOptions);
@@ -101,11 +123,18 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
 
         // Callback to check user ownership of credential. Always return true since we have already
         // established ownership in this context.
-        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
+        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) =>
+            Task.FromResult(true);
 
         try
         {
-            var res = await _fido2.MakeAssertionAsync(clientResponse, options, webAuthCred.Item2.PublicKey, webAuthCred.Item2.SignatureCounter, callback);
+            var res = await _fido2.MakeAssertionAsync(
+                clientResponse,
+                options,
+                webAuthCred.Item2.PublicKey,
+                webAuthCred.Item2.SignatureCounter,
+                callback
+            );
 
             provider.MetaData.Remove("login");
 
@@ -113,9 +142,14 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
             webAuthCred.Item2.SignatureCounter = res.Counter;
 
             var providers = user.GetTwoFactorProviders();
-            providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] = webAuthCred.Item2;
+            providers[TwoFactorProviderType.WebAuthn].MetaData[webAuthCred.Item1] =
+                webAuthCred.Item2;
             user.SetTwoFactorProviders(providers);
-            await userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn, logEvent: false);
+            await userService.UpdateTwoFactorProviderAsync(
+                user,
+                TwoFactorProviderType.WebAuthn,
+                logEvent: false
+            );
 
             return res.Status == "ok";
         }
@@ -123,10 +157,9 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
         {
             return false;
         }
-
     }
 
-    private bool HasProperMetaData(TwoFactorProvider provider)
+    private static bool HasProperMetaData(TwoFactorProvider provider)
     {
         return provider?.MetaData?.Any() ?? false;
     }

@@ -11,13 +11,13 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationUserResponseModel : ResponseModel
 {
-    public OrganizationUserResponseModel(OrganizationUser organizationUser, string obj = "organizationUser")
+    public OrganizationUserResponseModel(
+        OrganizationUser organizationUser,
+        string obj = "organizationUser"
+    )
         : base(obj)
     {
-        if (organizationUser == null)
-        {
-            throw new ArgumentNullException(nameof(organizationUser));
-        }
+        ArgumentNullException.ThrowIfNull(organizationUser);
 
         Id = organizationUser.Id;
         UserId = organizationUser.UserId;
@@ -29,14 +29,13 @@ public class OrganizationUserResponseModel : ResponseModel
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
 
-    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
-        string obj = "organizationUser")
+    public OrganizationUserResponseModel(
+        OrganizationUserUserDetails organizationUser,
+        string obj = "organizationUser"
+    )
         : base(obj)
     {
-        if (organizationUser == null)
-        {
-            throw new ArgumentNullException(nameof(organizationUser));
-        }
+        ArgumentNullException.ThrowIfNull(organizationUser);
 
         Id = organizationUser.Id;
         UserId = organizationUser.UserId;
@@ -67,16 +66,19 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
     public OrganizationUserDetailsResponseModel(
         OrganizationUser organizationUser,
         bool managedByOrganization,
-        IEnumerable<CollectionAccessSelection> collections)
+        IEnumerable<CollectionAccessSelection> collections
+    )
         : base(organizationUser, "organizationUserDetails")
     {
         ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
-    public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
+    public OrganizationUserDetailsResponseModel(
+        OrganizationUserUserDetails organizationUser,
         bool managedByOrganization,
-        IEnumerable<CollectionAccessSelection> collections)
+        IEnumerable<CollectionAccessSelection> collections
+    )
         : base(organizationUser, "organizationUserDetails")
     {
         ManagedByOrganization = managedByOrganization;
@@ -94,7 +96,9 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
 #nullable enable
 public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
 {
-    public OrganizationUserUserMiniDetailsResponseModel(OrganizationUserUserDetails organizationUser)
+    public OrganizationUserUserMiniDetailsResponseModel(
+        OrganizationUserUserDetails organizationUser
+    )
         : base("organizationUserUserMiniDetails")
     {
         Id = organizationUser.Id;
@@ -112,25 +116,29 @@ public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
     public string? Name { get; }
     public string Email { get; }
 }
+
 #nullable disable
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
-    public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, bool managedByOrganization, string obj = "organizationUserUserDetails")
+    public OrganizationUserUserDetailsResponseModel(
+        OrganizationUserUserDetails organizationUser,
+        bool twoFactorEnabled,
+        bool managedByOrganization,
+        string obj = "organizationUserUserDetails"
+    )
         : base(organizationUser, obj)
     {
-        if (organizationUser == null)
-        {
-            throw new ArgumentNullException(nameof(organizationUser));
-        }
+        ArgumentNullException.ThrowIfNull(organizationUser);
 
         Name = organizationUser.Name;
         Email = organizationUser.Email;
         AvatarColor = organizationUser.AvatarColor;
         TwoFactorEnabled = twoFactorEnabled;
         SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
-        Collections = organizationUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        Collections = organizationUser.Collections.Select(c => new SelectionReadOnlyResponseModel(
+            c
+        ));
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
@@ -142,6 +150,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+
     /// <summary>
     /// Indicates if the organization manages the user. If a user is "managed" by an organization,
     /// the organization has greater control over their account, and some user actions are restricted.
@@ -153,13 +162,13 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
 {
-    public OrganizationUserResetPasswordDetailsResponseModel(OrganizationUserResetPasswordDetails orgUser,
-        string obj = "organizationUserResetPasswordDetails") : base(obj)
+    public OrganizationUserResetPasswordDetailsResponseModel(
+        OrganizationUserResetPasswordDetails orgUser,
+        string obj = "organizationUserResetPasswordDetails"
+    )
+        : base(obj)
     {
-        if (orgUser == null)
-        {
-            throw new ArgumentNullException(nameof(orgUser));
-        }
+        ArgumentNullException.ThrowIfNull(orgUser);
 
         OrganizationUserId = orgUser.OrganizationUserId;
         Kdf = orgUser.Kdf;
@@ -181,9 +190,13 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
 
 public class OrganizationUserPublicKeyResponseModel : ResponseModel
 {
-    public OrganizationUserPublicKeyResponseModel(Guid id, Guid userId,
-        string key, string obj = "organizationUserPublicKeyResponseModel") :
-        base(obj)
+    public OrganizationUserPublicKeyResponseModel(
+        Guid id,
+        Guid userId,
+        string key,
+        string obj = "organizationUserPublicKeyResponseModel"
+    )
+        : base(obj)
     {
         Id = id;
         UserId = userId;
@@ -197,12 +210,17 @@ public class OrganizationUserPublicKeyResponseModel : ResponseModel
 
 public class OrganizationUserBulkResponseModel : ResponseModel
 {
-    public OrganizationUserBulkResponseModel(Guid id, string error,
-        string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
+    public OrganizationUserBulkResponseModel(
+        Guid id,
+        string error,
+        string obj = "OrganizationBulkConfirmResponseModel"
+    )
+        : base(obj)
     {
         Id = id;
         Error = error;
     }
+
     public Guid Id { get; set; }
     public string Error { get; set; }
 }

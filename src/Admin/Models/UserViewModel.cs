@@ -28,7 +28,8 @@ public class UserViewModel
     public string LicenseKey { get; }
     public int CipherCount { get; set; }
 
-    public UserViewModel(Guid id,
+    public UserViewModel(
+        Guid id,
         string name,
         string email,
         DateTime creationDate,
@@ -48,7 +49,8 @@ public class UserViewModel
         string gatewayCustomerId,
         string gatewaySubscriptionId,
         string licenseKey,
-        IEnumerable<Cipher> ciphers)
+        IEnumerable<Cipher> ciphers
+    )
     {
         Id = id;
         Name = name;
@@ -75,11 +77,14 @@ public class UserViewModel
 
     public static IEnumerable<UserViewModel> MapViewModels(
         IEnumerable<User> users,
-        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup) =>
-        users.Select(user => MapViewModel(user, lookup, false));
+        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup
+    ) => users.Select(user => MapViewModel(user, lookup, false));
 
-    public static UserViewModel MapViewModel(User user,
-        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup, bool? claimedAccount) =>
+    public static UserViewModel MapViewModel(
+        User user,
+        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> lookup,
+        bool? claimedAccount
+    ) =>
         new(
             user.Id,
             user.Name,
@@ -101,12 +106,18 @@ public class UserViewModel
             user.GatewayCustomerId ?? string.Empty,
             user.GatewaySubscriptionId ?? string.Empty,
             user.LicenseKey ?? string.Empty,
-            Array.Empty<Cipher>());
+            Array.Empty<Cipher>()
+        );
 
     public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled) =>
         MapViewModel(user, isTwoFactorEnabled, Array.Empty<Cipher>(), false);
 
-    public static UserViewModel MapViewModel(User user, bool isTwoFactorEnabled, IEnumerable<Cipher> ciphers, bool? claimedAccount) =>
+    public static UserViewModel MapViewModel(
+        User user,
+        bool isTwoFactorEnabled,
+        IEnumerable<Cipher> ciphers,
+        bool? claimedAccount
+    ) =>
         new(
             user.Id,
             user.Name,
@@ -128,9 +139,11 @@ public class UserViewModel
             user.GatewayCustomerId ?? string.Empty,
             user.GatewaySubscriptionId ?? string.Empty,
             user.LicenseKey ?? string.Empty,
-            ciphers);
+            ciphers
+        );
 
-    public static bool IsTwoFactorEnabled(User user,
-        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> twoFactorIsEnabledLookup) =>
-        twoFactorIsEnabledLookup.FirstOrDefault(x => x.userId == user.Id).twoFactorIsEnabled;
+    public static bool IsTwoFactorEnabled(
+        User user,
+        IEnumerable<(Guid userId, bool twoFactorIsEnabled)> twoFactorIsEnabledLookup
+    ) => twoFactorIsEnabledLookup.FirstOrDefault(x => x.userId == user.Id).twoFactorIsEnabled;
 }

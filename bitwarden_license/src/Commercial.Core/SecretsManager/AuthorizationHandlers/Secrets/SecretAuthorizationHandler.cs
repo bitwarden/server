@@ -15,8 +15,12 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
 
-    public SecretAuthorizationHandler(ICurrentContext currentContext, IAccessClientQuery accessClientQuery,
-        IProjectRepository projectRepository, ISecretRepository secretRepository)
+    public SecretAuthorizationHandler(
+        ICurrentContext currentContext,
+        IAccessClientQuery accessClientQuery,
+        IProjectRepository projectRepository,
+        ISecretRepository secretRepository
+    )
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
@@ -24,9 +28,11 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         _secretRepository = secretRepository;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
         SecretOperationRequirement requirement,
-        Secret resource)
+        Secret resource
+    )
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -51,14 +57,23 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
                 await CanReadAccessPoliciesAsync(context, requirement, resource);
                 break;
             default:
-                throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
+                throw new ArgumentException(
+                    "Unsupported operation requirement type provided.",
+                    nameof(requirement)
+                );
         }
     }
 
-    private async Task CanCreateSecretAsync(AuthorizationHandlerContext context,
-        SecretOperationRequirement requirement, Secret resource)
+    private async Task CanCreateSecretAsync(
+        AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement,
+        Secret resource
+    )
     {
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
         var project = resource.Projects?.FirstOrDefault();
 
         if (project == null && accessClient != AccessClientType.NoAccessCheck)
@@ -67,10 +82,14 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
 
         // All projects should be apart of the same organization
-        if (resource.Projects != null
-            && resource.Projects.Any()
-            && !await _projectRepository.ProjectsAreInOrganization(resource.Projects.Select(p => p.Id).ToList(),
-                resource.OrganizationId))
+        if (
+            resource.Projects != null
+            && resource.Projects.Count != 0
+            && !await _projectRepository.ProjectsAreInOrganization(
+                resource.Projects.Select(p => p.Id).ToList(),
+                resource.OrganizationId
+            )
+        )
         {
             return;
         }
@@ -78,10 +97,12 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => (await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient))
-                .Write,
-            AccessClientType.ServiceAccount => (await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient))
-                .Write,
+            AccessClientType.User => (
+                await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient)
+            ).Write,
+            AccessClientType.ServiceAccount => (
+                await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient)
+            ).Write,
             _ => false,
         };
 
@@ -91,10 +112,16 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
-    private async Task CanReadSecretAsync(AuthorizationHandlerContext context,
-        SecretOperationRequirement requirement, Secret resource)
+    private async Task CanReadSecretAsync(
+        AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement,
+        Secret resource
+    )
     {
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
 
         var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
 
@@ -104,16 +131,26 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
-    private async Task CanUpdateSecretAsync(AuthorizationHandlerContext context,
-        SecretOperationRequirement requirement, Secret resource)
+    private async Task CanUpdateSecretAsync(
+        AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement,
+        Secret resource
+    )
     {
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
 
         // All projects should be in the same organization
-        if (resource.Projects != null
+        if (
+            resource.Projects != null
             && resource.Projects.Count != 0
-            && !await _projectRepository.ProjectsAreInOrganization(resource.Projects.Select(p => p.Id).ToList(),
-                resource.OrganizationId))
+            && !await _projectRepository.ProjectsAreInOrganization(
+                resource.Projects.Select(p => p.Id).ToList(),
+                resource.OrganizationId
+            )
+        )
         {
             return;
         }
@@ -142,10 +179,16 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
-    private async Task CanDeleteSecretAsync(AuthorizationHandlerContext context,
-        SecretOperationRequirement requirement, Secret resource)
+    private async Task CanDeleteSecretAsync(
+        AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement,
+        Secret resource
+    )
     {
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
 
         var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
 
@@ -155,10 +198,16 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
-    private async Task CanReadAccessPoliciesAsync(AuthorizationHandlerContext context,
-        SecretOperationRequirement requirement, Secret resource)
+    private async Task CanReadAccessPoliciesAsync(
+        AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement,
+        Secret resource
+    )
     {
-        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
 
         // Only users and admins can read access policies
         if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
@@ -174,7 +223,11 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
-    private async Task<bool> GetAccessToUpdateSecretAsync(Secret resource, Guid userId, AccessClientType accessClient)
+    private async Task<bool> GetAccessToUpdateSecretAsync(
+        Secret resource,
+        Guid userId,
+        AccessClientType accessClient
+    )
     {
         // Request was to remove all projects from the secret. This is not allowed for non admin users.
         if (resource.Projects?.Count == 0)
@@ -182,7 +235,9 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             return false;
         }
 
-        var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
+        var access = (
+            await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)
+        ).Write;
 
         // No project mapping changes requested, return secret access.
         if (resource.Projects == null)
@@ -191,9 +246,11 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
 
         var newProject = resource.Projects?.FirstOrDefault();
-        var accessToNew = newProject != null &&
-                          (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
-                          .Write;
+        var accessToNew =
+            newProject != null
+            && (
+                await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient)
+            ).Write;
         return access && accessToNew;
     }
 }

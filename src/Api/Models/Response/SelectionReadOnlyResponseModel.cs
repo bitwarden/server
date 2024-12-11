@@ -6,10 +6,7 @@ public class SelectionReadOnlyResponseModel
 {
     public SelectionReadOnlyResponseModel(CollectionAccessSelection selection)
     {
-        if (selection == null)
-        {
-            throw new ArgumentNullException(nameof(selection));
-        }
+        ArgumentNullException.ThrowIfNull(selection);
 
         Id = selection.Id;
         ReadOnly = selection.ReadOnly;

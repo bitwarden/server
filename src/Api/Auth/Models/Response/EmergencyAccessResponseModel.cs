@@ -12,12 +12,13 @@ namespace Bit.Api.Auth.Models.Response;
 
 public class EmergencyAccessResponseModel : ResponseModel
 {
-    public EmergencyAccessResponseModel(EmergencyAccess emergencyAccess, string obj = "emergencyAccess") : base(obj)
+    public EmergencyAccessResponseModel(
+        EmergencyAccess emergencyAccess,
+        string obj = "emergencyAccess"
+    )
+        : base(obj)
     {
-        if (emergencyAccess == null)
-        {
-            throw new ArgumentNullException(nameof(emergencyAccess));
-        }
+        ArgumentNullException.ThrowIfNull(emergencyAccess);
 
         Id = emergencyAccess.Id;
         Status = emergencyAccess.Status;
@@ -25,12 +26,13 @@ public class EmergencyAccessResponseModel : ResponseModel
         WaitTimeDays = emergencyAccess.WaitTimeDays;
     }
 
-    public EmergencyAccessResponseModel(EmergencyAccessDetails emergencyAccess, string obj = "emergencyAccess") : base(obj)
+    public EmergencyAccessResponseModel(
+        EmergencyAccessDetails emergencyAccess,
+        string obj = "emergencyAccess"
+    )
+        : base(obj)
     {
-        if (emergencyAccess == null)
-        {
-            throw new ArgumentNullException(nameof(emergencyAccess));
-        }
+        ArgumentNullException.ThrowIfNull(emergencyAccess);
 
         Id = emergencyAccess.Id;
         Status = emergencyAccess.Status;
@@ -49,10 +51,7 @@ public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessRespons
     public EmergencyAccessGranteeDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
         : base(emergencyAccess, "emergencyAccessGranteeDetails")
     {
-        if (emergencyAccess == null)
-        {
-            throw new ArgumentNullException(nameof(emergencyAccess));
-        }
+        ArgumentNullException.ThrowIfNull(emergencyAccess);
 
         GranteeId = emergencyAccess.GranteeId;
         Email = emergencyAccess.GranteeEmail;
@@ -71,10 +70,7 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
     public EmergencyAccessGrantorDetailsResponseModel(EmergencyAccessDetails emergencyAccess)
         : base(emergencyAccess, "emergencyAccessGrantorDetails")
     {
-        if (emergencyAccess == null)
-        {
-            throw new ArgumentNullException(nameof(emergencyAccess));
-        }
+        ArgumentNullException.ThrowIfNull(emergencyAccess);
 
         GrantorId = emergencyAccess.GrantorId;
         Email = emergencyAccess.GrantorEmail;
@@ -90,12 +86,14 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
 
 public class EmergencyAccessTakeoverResponseModel : ResponseModel
 {
-    public EmergencyAccessTakeoverResponseModel(EmergencyAccess emergencyAccess, User grantor, string obj = "emergencyAccessTakeover") : base(obj)
+    public EmergencyAccessTakeoverResponseModel(
+        EmergencyAccess emergencyAccess,
+        User grantor,
+        string obj = "emergencyAccessTakeover"
+    )
+        : base(obj)
     {
-        if (emergencyAccess == null)
-        {
-            throw new ArgumentNullException(nameof(emergencyAccess));
-        }
+        ArgumentNullException.ThrowIfNull(emergencyAccess);
 
         KeyEncrypted = emergencyAccess.KeyEncrypted;
         Kdf = grantor.Kdf;
@@ -116,7 +114,8 @@ public class EmergencyAccessViewResponseModel : ResponseModel
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
-        IEnumerable<CipherDetails> ciphers)
+        IEnumerable<CipherDetails> ciphers
+    )
         : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;

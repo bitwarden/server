@@ -8,15 +8,18 @@ public class SecretWithProjectsListResponseModel : ResponseModel
 {
     private const string _objectName = "SecretsWithProjectsList";
 
-    public SecretWithProjectsListResponseModel(IEnumerable<SecretPermissionDetails> secrets) : base(_objectName)
+    public SecretWithProjectsListResponseModel(IEnumerable<SecretPermissionDetails> secrets)
+        : base(_objectName)
     {
         Secrets = secrets.Select(s => new SecretsWithProjectsInnerSecret(s));
-        Projects = secrets.SelectMany(s => s.Secret.Projects).DistinctBy(p => p.Id).Select(p => new SecretWithProjectsInnerProject(p));
+        Projects = secrets
+            .SelectMany(s => s.Secret.Projects)
+            .DistinctBy(p => p.Id)
+            .Select(p => new SecretWithProjectsInnerProject(p));
     }
 
-    public SecretWithProjectsListResponseModel() : base(_objectName)
-    {
-    }
+    public SecretWithProjectsListResponseModel()
+        : base(_objectName) { }
 
     public IEnumerable<SecretsWithProjectsInnerSecret> Secrets { get; set; }
     public IEnumerable<SecretWithProjectsInnerProject> Projects { get; set; }
@@ -29,9 +32,7 @@ public class SecretWithProjectsListResponseModel : ResponseModel
             Name = project.Name;
         }
 
-        public SecretWithProjectsInnerProject()
-        {
-        }
+        public SecretWithProjectsInnerProject() { }
 
         public Guid Id { get; set; }
         public string Name { get; set; }
@@ -51,9 +52,7 @@ public class SecretWithProjectsListResponseModel : ResponseModel
             Write = secret.Write;
         }
 
-        public SecretsWithProjectsInnerSecret()
-        {
-        }
+        public SecretsWithProjectsInnerSecret() { }
 
         public Guid Id { get; set; }
 
@@ -70,5 +69,3 @@ public class SecretWithProjectsListResponseModel : ResponseModel
         public bool Write { get; set; }
     }
 }
-
-

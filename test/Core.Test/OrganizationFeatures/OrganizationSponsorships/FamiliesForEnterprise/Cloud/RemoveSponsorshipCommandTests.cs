@@ -14,15 +14,21 @@ public class RemoveSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
 {
     [Theory]
     [BitAutoData]
-    public async Task RemoveSponsorship_SponsoredOrgNull_ThrowsBadRequest(OrganizationSponsorship sponsorship,
-        SutProvider<RemoveSponsorshipCommand> sutProvider)
+    public async Task RemoveSponsorship_SponsoredOrgNull_ThrowsBadRequest(
+        OrganizationSponsorship sponsorship,
+        SutProvider<RemoveSponsorshipCommand> sutProvider
+    )
     {
         sponsorship.SponsoredOrganizationId = null;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RemoveSponsorshipAsync(sponsorship));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveSponsorshipAsync(sponsorship)
+        );
 
-        Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
+        Assert.Contains(
+            "The requested organization is not currently being sponsored.",
+            exception.Message
+        );
         Assert.False(sponsorship.ToDelete);
         await AssertDidNotDeleteSponsorshipAsync(sutProvider);
         await AssertDidNotUpdateSponsorshipAsync(sutProvider);
@@ -30,12 +36,18 @@ public class RemoveSponsorshipCommandTests : CancelSponsorshipCommandTestsBase
 
     [Theory]
     [BitAutoData]
-    public async Task RemoveSponsorship_SponsorshipNotFound_ThrowsBadRequest(SutProvider<RemoveSponsorshipCommand> sutProvider)
+    public async Task RemoveSponsorship_SponsorshipNotFound_ThrowsBadRequest(
+        SutProvider<RemoveSponsorshipCommand> sutProvider
+    )
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RemoveSponsorshipAsync(null));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RemoveSponsorshipAsync(null)
+        );
 
-        Assert.Contains("The requested organization is not currently being sponsored.", exception.Message);
+        Assert.Contains(
+            "The requested organization is not currently being sponsored.",
+            exception.Message
+        );
         await AssertDidNotDeleteSponsorshipAsync(sutProvider);
         await AssertDidNotUpdateSponsorshipAsync(sutProvider);
     }

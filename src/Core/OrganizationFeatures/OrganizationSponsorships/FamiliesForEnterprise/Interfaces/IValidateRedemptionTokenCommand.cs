@@ -4,5 +4,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public interface IValidateRedemptionTokenCommand
 {
-    Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail);
+    Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(
+        string encryptedToken,
+        string sponsoredUserEmail
+    );
 }

@@ -9,6 +9,7 @@ public class StripeSubscriptionRowModel
     public bool Selected { get; set; }
 
     public StripeSubscriptionRowModel() { }
+
     public StripeSubscriptionRowModel(Stripe.Subscription subscription)
     {
         Subscription = subscription;
@@ -21,7 +22,7 @@ public enum StripeSubscriptionsAction
     PreviousPage,
     NextPage,
     Export,
-    BulkCancel
+    BulkCancel,
 }
 
 public class StripeSubscriptionsModel : IValidatableObject
@@ -32,11 +33,14 @@ public class StripeSubscriptionsModel : IValidatableObject
     public List<Stripe.Price> Prices { get; set; }
     public List<Stripe.TestHelpers.TestClock> TestClocks { get; set; }
     public StripeSubscriptionListOptions Filter { get; set; } = new StripeSubscriptionListOptions();
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (Action == StripeSubscriptionsAction.BulkCancel && Filter.Status != "unpaid")
         {
-            yield return new ValidationResult("Bulk cancel is currently only supported for unpaid subscriptions");
+            yield return new ValidationResult(
+                "Bulk cancel is currently only supported for unpaid subscriptions"
+            );
         }
     }
 }

@@ -15,10 +15,12 @@ public class Transaction : ITableObject<Guid>
     public decimal Amount { get; set; }
     public bool? Refunded { get; set; }
     public decimal? RefundedAmount { get; set; }
+
     [MaxLength(100)]
     public string? Details { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public GatewayType? Gateway { get; set; }
+
     [MaxLength(50)]
     public string? GatewayId { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;

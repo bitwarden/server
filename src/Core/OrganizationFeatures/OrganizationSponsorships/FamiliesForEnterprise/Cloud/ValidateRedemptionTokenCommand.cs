@@ -11,16 +11,20 @@ public class ValidateRedemptionTokenCommand : IValidateRedemptionTokenCommand
     private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
     private readonly IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> _dataProtectorTokenFactory;
 
-    public ValidateRedemptionTokenCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> dataProtectorTokenFactory)
+    public ValidateRedemptionTokenCommand(
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+        IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable> dataProtectorTokenFactory
+    )
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _dataProtectorTokenFactory = dataProtectorTokenFactory;
     }
 
-    public async Task<(bool valid, OrganizationSponsorship sponsorship)> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
+    public async Task<(
+        bool valid,
+        OrganizationSponsorship sponsorship
+    )> ValidateRedemptionTokenAsync(string encryptedToken, string sponsoredUserEmail)
     {
-
         if (!_dataProtectorTokenFactory.TryUnprotect(encryptedToken, out var tokenable))
         {
             return (false, null);

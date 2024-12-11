@@ -9,10 +9,7 @@ public class EventResponseModel : ResponseModel
     public EventResponseModel(IEvent ev)
         : base("event")
     {
-        if (ev == null)
-        {
-            throw new ArgumentNullException(nameof(ev));
-        }
+        ArgumentNullException.ThrowIfNull(ev);
 
         Type = ev.Type;
         UserId = ev.UserId;

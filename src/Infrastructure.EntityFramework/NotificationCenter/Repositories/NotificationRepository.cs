@@ -12,23 +12,28 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories;
 
-public class NotificationRepository : Repository<Core.NotificationCenter.Entities.Notification, Notification, Guid>,
-    INotificationRepository
+public class NotificationRepository
+    : Repository<Core.NotificationCenter.Entities.Notification, Notification, Guid>,
+        INotificationRepository
 {
     public NotificationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, context => context.Notifications)
-    {
-    }
+        : base(serviceScopeFactory, mapper, context => context.Notifications) { }
 
-    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetByUserIdAsync(Guid userId,
-        ClientType clientType)
+    public async Task<IEnumerable<Core.NotificationCenter.Entities.Notification>> GetByUserIdAsync(
+        Guid userId,
+        ClientType clientType
+    )
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var notificationStatusDetailsViewQuery = new NotificationStatusDetailsViewQuery(userId, clientType);
+        var notificationStatusDetailsViewQuery = new NotificationStatusDetailsViewQuery(
+            userId,
+            clientType
+        );
 
-        var notifications = await notificationStatusDetailsViewQuery.Run(dbContext)
+        var notifications = await notificationStatusDetailsViewQuery
+            .Run(dbContext)
             .OrderByDescending(n => n.Priority)
             .ThenByDescending(n => n.CreationDate)
             .ToListAsync();
@@ -36,23 +41,33 @@ public class NotificationRepository : Repository<Core.NotificationCenter.Entitie
         return Mapper.Map<List<Core.NotificationCenter.Entities.Notification>>(notifications);
     }
 
-    public async Task<IEnumerable<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId,
-        ClientType clientType, NotificationStatusFilter? statusFilter)
+    public async Task<IEnumerable<NotificationStatusDetails>> GetByUserIdAndStatusAsync(
+        Guid userId,
+        ClientType clientType,
+        NotificationStatusFilter? statusFilter
+    )
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var notificationStatusDetailsViewQuery = new NotificationStatusDetailsViewQuery(userId, clientType);
+        var notificationStatusDetailsViewQuery = new NotificationStatusDetailsViewQuery(
+            userId,
+            clientType
+        );
 
         var query = notificationStatusDetailsViewQuery.Run(dbContext);
         if (statusFilter != null && (statusFilter.Read != null || statusFilter.Deleted != null))
         {
-            query = from n in query
-                    where statusFilter.Read == null ||
-                          (statusFilter.Read == true ? n.ReadDate != null : n.ReadDate == null) ||
-                          statusFilter.Deleted == null ||
-                          (statusFilter.Deleted == true ? n.DeletedDate != null : n.DeletedDate == null)
-                    select n;
+            query =
+                from n in query
+                where
+                    statusFilter.Read == null
+                    || (statusFilter.Read == true ? n.ReadDate != null : n.ReadDate == null)
+                    || statusFilter.Deleted == null
+                    || (
+                        statusFilter.Deleted == true ? n.DeletedDate != null : n.DeletedDate == null
+                    )
+                select n;
         }
 
         return await query

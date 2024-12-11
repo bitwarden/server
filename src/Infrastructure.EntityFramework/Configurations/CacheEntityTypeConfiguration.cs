@@ -8,17 +8,11 @@ public class CacheEntityTypeConfiguration : IEntityTypeConfiguration<Cache>
 {
     public void Configure(EntityTypeBuilder<Cache> builder)
     {
-        builder
-            .HasKey(s => s.Id)
-            .IsClustered();
+        builder.HasKey(s => s.Id).IsClustered();
 
-        builder
-            .Property(s => s.Id)
-            .ValueGeneratedNever();
+        builder.Property(s => s.Id).ValueGeneratedNever();
 
-        builder
-            .HasIndex(s => s.ExpiresAtTime)
-            .IsClustered(false);
+        builder.HasIndex(s => s.ExpiresAtTime).IsClustered(false);
 
         builder.ToTable(nameof(Cache));
     }

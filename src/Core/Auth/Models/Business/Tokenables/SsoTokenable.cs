@@ -17,7 +17,8 @@ public class SsoTokenable : ExpiringTokenable
     [JsonConstructor]
     public SsoTokenable() { }
 
-    public SsoTokenable(Organization organization, double tokenLifetimeInSeconds) : this()
+    public SsoTokenable(Organization organization, double tokenLifetimeInSeconds)
+        : this()
     {
         OrganizationId = organization?.Id ?? default;
         DomainHint = organization?.Identifier;
@@ -31,8 +32,10 @@ public class SsoTokenable : ExpiringTokenable
             return false;
         }
 
-        return organization.Identifier.Equals(DomainHint, StringComparison.InvariantCultureIgnoreCase)
-            && organization.Id.Equals(OrganizationId);
+        return organization.Identifier.Equals(
+                DomainHint,
+                StringComparison.InvariantCultureIgnoreCase
+            ) && organization.Id.Equals(OrganizationId);
     }
 
     // Validates deserialized

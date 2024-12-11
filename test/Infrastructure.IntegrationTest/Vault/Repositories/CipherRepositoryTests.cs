@@ -17,22 +17,27 @@ public class CipherRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesUserRevisionDate(
         IUserRepository userRepository,
-        ICipherRepository cipherRepository)
+        ICipherRepository cipherRepository
+    )
     {
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User",
+                Email = $"test+{Guid.NewGuid()}@email.com",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+            }
+        );
 
-        var cipher = await cipherRepository.CreateAsync(new Cipher
-        {
-            Type = CipherType.Login,
-            UserId = user.Id,
-            Data = "", // TODO: EF does not enforce this as NOT NULL
-        });
+        var cipher = await cipherRepository.CreateAsync(
+            new Cipher
+            {
+                Type = CipherType.Login,
+                UserId = user.Id,
+                Data = "", // TODO: EF does not enforce this as NOT NULL
+            }
+        );
 
         await cipherRepository.DeleteAsync(cipher);
 
@@ -51,132 +56,153 @@ public class CipherRepositoryTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
         ICipherRepository cipherRepository,
-        ICollectionCipherRepository collectionCipherRepository)
+        ICollectionCipherRepository collectionCipherRepository
+    )
     {
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
+        var user = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User",
+                Email = $"test+{Guid.NewGuid()}@email.com",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+            }
+        );
 
         user = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(user);
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Organization",
-            BillingEmail = user.Email,
-            Plan = "Test" // TODO: EF does not enforce this as NOT NULL
-        });
-
-        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            UserId = user.Id,
-            OrganizationId = organization.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Owner,
-        });
-
-        var collection = await collectionRepository.CreateAsync(new Collection
-        {
-            Name = "Test Collection",
-            OrganizationId = organization.Id
-        });
-
-        await Task.Delay(100);
-
-        await collectionRepository.UpdateUsersAsync(collection.Id, new[]
-        {
-            new CollectionAccessSelection
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
             {
-                Id = orgUser.Id,
-                HidePasswords = true,
-                ReadOnly = true,
-                Manage = true
-            },
-        });
+                Name = "Test Organization",
+                BillingEmail = user.Email,
+                Plan = "Test", // TODO: EF does not enforce this as NOT NULL
+            }
+        );
+
+        var orgUser = await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                UserId = user.Id,
+                OrganizationId = organization.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                Type = OrganizationUserType.Owner,
+            }
+        );
+
+        var collection = await collectionRepository.CreateAsync(
+            new Collection { Name = "Test Collection", OrganizationId = organization.Id }
+        );
 
         await Task.Delay(100);
 
-        await cipherRepository.CreateAsync(new CipherDetails
-        {
-            Type = CipherType.Login,
-            OrganizationId = organization.Id,
-            Data = "", // TODO: EF does not enforce this as NOT NULL
-        }, new List<Guid>
-        {
+        await collectionRepository.UpdateUsersAsync(
             collection.Id,
-        });
+            new[]
+            {
+                new CollectionAccessSelection
+                {
+                    Id = orgUser.Id,
+                    HidePasswords = true,
+                    ReadOnly = true,
+                    Manage = true,
+                },
+            }
+        );
+
+        await Task.Delay(100);
+
+        await cipherRepository.CreateAsync(
+            new CipherDetails
+            {
+                Type = CipherType.Login,
+                OrganizationId = organization.Id,
+                Data = "", // TODO: EF does not enforce this as NOT NULL
+            },
+            new List<Guid> { collection.Id }
+        );
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
         Assert.NotNull(updatedUser);
-        Assert.True(updatedUser.AccountRevisionDate - user.AccountRevisionDate > TimeSpan.Zero,
-            "The AccountRevisionDate is expected to be changed");
+        Assert.True(
+            updatedUser.AccountRevisionDate - user.AccountRevisionDate > TimeSpan.Zero,
+            "The AccountRevisionDate is expected to be changed"
+        );
 
-        var collectionCiphers = await collectionCipherRepository.GetManyByOrganizationIdAsync(organization.Id);
+        var collectionCiphers = await collectionCipherRepository.GetManyByOrganizationIdAsync(
+            organization.Id
+        );
         Assert.NotEmpty(collectionCiphers);
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task ReplaceAsync_SuccessfullyMovesCipherToOrganization(IUserRepository userRepository,
+    public async Task ReplaceAsync_SuccessfullyMovesCipherToOrganization(
+        IUserRepository userRepository,
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IFolderRepository folderRepository)
+        IFolderRepository folderRepository
+    )
     {
         // This tests what happens when a cipher is moved into an organizations
-        var user = await userRepository.CreateAsync(new User
-        {
-            Name = "Test User",
-            Email = $"test+{Guid.NewGuid()}@email.com",
-            ApiKey = "TEST",
-            SecurityStamp = "stamp",
-        });
-
+        var user = await userRepository.CreateAsync(
+            new User
+            {
+                Name = "Test User",
+                Email = $"test+{Guid.NewGuid()}@email.com",
+                ApiKey = "TEST",
+                SecurityStamp = "stamp",
+            }
+        );
 
         user = await userRepository.GetByIdAsync(user.Id);
         Assert.NotNull(user);
 
         // Create cipher in personal vault
-        var createdCipher = await cipherRepository.CreateAsync(new Cipher
-        {
-            UserId = user.Id,
-            Data = "", // TODO: EF does not enforce this as NOT NULL
-        });
+        var createdCipher = await cipherRepository.CreateAsync(
+            new Cipher
+            {
+                UserId = user.Id,
+                Data = "", // TODO: EF does not enforce this as NOT NULL
+            }
+        );
 
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Organization",
-            BillingEmail = user.Email,
-            Plan = "Test" // TODO: EF does not enforce this as NOT NULL
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = "Test Organization",
+                BillingEmail = user.Email,
+                Plan = "Test", // TODO: EF does not enforce this as NOT NULL
+            }
+        );
 
-        _ = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            UserId = user.Id,
-            OrganizationId = organization.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.Owner,
-        });
+        _ = await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                UserId = user.Id,
+                OrganizationId = organization.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                Type = OrganizationUserType.Owner,
+            }
+        );
 
-        var folder = await folderRepository.CreateAsync(new Folder
-        {
-            Name = "FolderName",
-            UserId = user.Id,
-        });
+        var folder = await folderRepository.CreateAsync(
+            new Folder { Name = "FolderName", UserId = user.Id }
+        );
 
         // Move cipher to organization vault
-        await cipherRepository.ReplaceAsync(new CipherDetails
-        {
-            Id = createdCipher.Id,
-            UserId = user.Id,
-            OrganizationId = organization.Id,
-            FolderId = folder.Id,
-            Data = "", // TODO: EF does not enforce this as NOT NULL
-        });
+        await cipherRepository.ReplaceAsync(
+            new CipherDetails
+            {
+                Id = createdCipher.Id,
+                UserId = user.Id,
+                OrganizationId = organization.Id,
+                FolderId = folder.Id,
+                Data = "", // TODO: EF does not enforce this as NOT NULL
+            }
+        );
 
         var updatedCipher = await cipherRepository.GetByIdAsync(createdCipher.Id);
 
@@ -193,7 +219,9 @@ public class CipherRepositoryTests
         // I'd rather we only interact with them as the actual Guid type
         var userProperty = foldersJsonElement
             .EnumerateObject()
-            .FirstOrDefault(jp => string.Equals(jp.Name, user.Id.ToString(), StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(jp =>
+                string.Equals(jp.Name, user.Id.ToString(), StringComparison.OrdinalIgnoreCase)
+            );
 
         Assert.NotEqual(default, userProperty);
         Assert.Equal(folder.Id, userProperty.Value.GetGuid());

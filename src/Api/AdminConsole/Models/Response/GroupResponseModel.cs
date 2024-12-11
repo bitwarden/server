@@ -10,10 +10,7 @@ public class GroupResponseModel : ResponseModel
     public GroupResponseModel(Group group, string obj = "group")
         : base(obj)
     {
-        if (group == null)
-        {
-            throw new ArgumentNullException(nameof(group));
-        }
+        ArgumentNullException.ThrowIfNull(group);
 
         Id = group.Id;
         OrganizationId = group.OrganizationId;
@@ -29,7 +26,10 @@ public class GroupResponseModel : ResponseModel
 
 public class GroupDetailsResponseModel : GroupResponseModel
 {
-    public GroupDetailsResponseModel(Group group, IEnumerable<CollectionAccessSelection> collections)
+    public GroupDetailsResponseModel(
+        Group group,
+        IEnumerable<CollectionAccessSelection> collections
+    )
         : base(group, "groupDetails")
     {
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));

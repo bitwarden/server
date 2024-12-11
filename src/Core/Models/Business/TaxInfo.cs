@@ -25,8 +25,10 @@ public class TaxInfo
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(BillingAddressCountry) ||
-                string.IsNullOrWhiteSpace(TaxIdNumber))
+            if (
+                string.IsNullOrWhiteSpace(BillingAddressCountry)
+                || string.IsNullOrWhiteSpace(TaxIdNumber)
+            )
             {
                 return null;
             }
@@ -219,7 +221,6 @@ public class TaxInfo
 
     public bool HasTaxId
     {
-        get => !string.IsNullOrWhiteSpace(TaxIdNumber) &&
-            !string.IsNullOrWhiteSpace(TaxIdType);
+        get => !string.IsNullOrWhiteSpace(TaxIdNumber) && !string.IsNullOrWhiteSpace(TaxIdType);
     }
 }

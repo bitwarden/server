@@ -7,6 +7,7 @@ public class KeyPairRequestBody
 {
     [Required(ErrorMessage = "'publicKey' must be provided")]
     public string PublicKey { get; set; }
+
     [Required(ErrorMessage = "'encryptedPrivateKey' must be provided")]
     public string EncryptedPrivateKey { get; set; }
 }

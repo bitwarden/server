@@ -12,6 +12,7 @@ public abstract class Tokenable
     }
 
     public static T FromToken<T>(string token) => FromToken<T>(new Token(token));
+
     public static T FromToken<T>(Token token)
     {
         return JsonSerializer.Deserialize<T>(token.ToString());

@@ -28,39 +28,51 @@ public class CipherFido2CredentialModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string CredentialId { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyType { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyAlgorithm { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyCurve { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyValue { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string RpId { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string RpName { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string UserHandle { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string UserName { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string UserDisplayName { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Counter { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Discoverable { get; set; }
+
     [Required]
     public DateTime CreationDate { get; set; }
 
@@ -80,14 +92,16 @@ public class CipherFido2CredentialModel
             UserDisplayName = UserDisplayName,
             Counter = Counter,
             Discoverable = Discoverable,
-            CreationDate = CreationDate
+            CreationDate = CreationDate,
         };
     }
 }
 
 static class CipherFido2CredentialModelExtensions
 {
-    public static CipherLoginFido2CredentialData[] ToCipherLoginFido2CredentialData(this CipherFido2CredentialModel[] models)
+    public static CipherLoginFido2CredentialData[] ToCipherLoginFido2CredentialData(
+        this CipherFido2CredentialModel[] models
+    )
     {
         return models.Select(m => m.ToCipherLoginFido2CredentialData()).ToArray();
     }

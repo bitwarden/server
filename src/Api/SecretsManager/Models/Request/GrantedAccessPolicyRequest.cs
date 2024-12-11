@@ -15,11 +15,18 @@ public class GrantedAccessPolicyRequest
     [Required]
     public bool Write { get; set; }
 
-    public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid serviceAccountId, Guid organizationId) =>
+    public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(
+        Guid serviceAccountId,
+        Guid organizationId
+    ) =>
         new()
         {
             ServiceAccountId = serviceAccountId,
-            ServiceAccount = new ServiceAccount() { Id = serviceAccountId, OrganizationId = organizationId },
+            ServiceAccount = new ServiceAccount()
+            {
+                Id = serviceAccountId,
+                OrganizationId = organizationId,
+            },
             GrantedProjectId = GrantedId,
             Read = Read,
             Write = Write,

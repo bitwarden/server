@@ -13,13 +13,12 @@ public partial class UseScimFlag : Migration
             table: "Organization",
             type: "boolean",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "UseScim",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "UseScim", table: "Organization");
     }
 }

@@ -15,10 +15,8 @@ public class OrganizationSponsorshipOfferTokenable : Tokenable
     public PlanSponsorshipType SponsorshipType { get; set; }
     public string Email { get; set; }
 
-    public override bool Valid => !string.IsNullOrWhiteSpace(Email) &&
-        Identifier == TokenIdentifier &&
-        Id != default;
-
+    public override bool Valid =>
+        !string.IsNullOrWhiteSpace(Email) && Identifier == TokenIdentifier && Id != default;
 
     [JsonConstructor]
     public OrganizationSponsorshipOfferTokenable() { }
@@ -27,30 +25,38 @@ public class OrganizationSponsorshipOfferTokenable : Tokenable
     {
         if (string.IsNullOrWhiteSpace(sponsorship.OfferedToEmail))
         {
-            throw new ArgumentException("Invalid OrganizationSponsorship to create a token, OfferedToEmail is required", nameof(sponsorship));
+            throw new ArgumentException(
+                "Invalid OrganizationSponsorship to create a token, OfferedToEmail is required",
+                nameof(sponsorship)
+            );
         }
         Email = sponsorship.OfferedToEmail;
 
         if (!sponsorship.PlanSponsorshipType.HasValue)
         {
-            throw new ArgumentException("Invalid OrganizationSponsorship to create a token, PlanSponsorshipType is required", nameof(sponsorship));
+            throw new ArgumentException(
+                "Invalid OrganizationSponsorship to create a token, PlanSponsorshipType is required",
+                nameof(sponsorship)
+            );
         }
         SponsorshipType = sponsorship.PlanSponsorshipType.Value;
 
         if (sponsorship.Id == default)
         {
-            throw new ArgumentException("Invalid OrganizationSponsorship to create a token, Id is required", nameof(sponsorship));
+            throw new ArgumentException(
+                "Invalid OrganizationSponsorship to create a token, Id is required",
+                nameof(sponsorship)
+            );
         }
         Id = sponsorship.Id;
     }
 
     public bool IsValid(OrganizationSponsorship sponsorship, string currentUserEmail) =>
-        sponsorship != null &&
-        sponsorship.PlanSponsorshipType.HasValue &&
-        SponsorshipType == sponsorship.PlanSponsorshipType.Value &&
-        Id == sponsorship.Id &&
-        !string.IsNullOrWhiteSpace(sponsorship.OfferedToEmail) &&
-        Email.Equals(currentUserEmail, StringComparison.InvariantCultureIgnoreCase) &&
-        Email.Equals(sponsorship.OfferedToEmail, StringComparison.InvariantCultureIgnoreCase);
-
+        sponsorship != null
+        && sponsorship.PlanSponsorshipType.HasValue
+        && SponsorshipType == sponsorship.PlanSponsorshipType.Value
+        && Id == sponsorship.Id
+        && !string.IsNullOrWhiteSpace(sponsorship.OfferedToEmail)
+        && Email.Equals(currentUserEmail, StringComparison.InvariantCultureIgnoreCase)
+        && Email.Equals(sponsorship.OfferedToEmail, StringComparison.InvariantCultureIgnoreCase);
 }

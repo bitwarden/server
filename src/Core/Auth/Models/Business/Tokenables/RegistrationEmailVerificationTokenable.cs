@@ -27,7 +27,12 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.Add(GetTokenLifetime());
     }
 
-    public RegistrationEmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default) : this()
+    public RegistrationEmailVerificationTokenable(
+        string email,
+        string name = default,
+        bool receiveMarketingEmails = default
+    )
+        : this()
     {
         if (string.IsNullOrEmpty(email))
         {
@@ -51,16 +56,16 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
 
     // Validates deserialized
     protected override bool TokenIsValid() =>
-        Identifier == TokenIdentifier
-        && !string.IsNullOrWhiteSpace(Email);
+        Identifier == TokenIdentifier && !string.IsNullOrWhiteSpace(Email);
 
-
-    public static bool ValidateToken(IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory, string token, string userEmail)
+    public static bool ValidateToken(
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> dataProtectorTokenFactory,
+        string token,
+        string userEmail
+    )
     {
         return dataProtectorTokenFactory.TryUnprotect(token, out var tokenable)
-               && tokenable.Valid
-               && tokenable.TokenIsValid(userEmail);
+            && tokenable.Valid
+            && tokenable.TokenIsValid(userEmail);
     }
-
-
 }

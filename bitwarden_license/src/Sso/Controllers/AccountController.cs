@@ -73,7 +73,8 @@ public class AccountController : Controller
         Core.Services.IEventService eventService,
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
-        IRegisterUserCommand registerUserCommand)
+        IRegisterUserCommand registerUserCommand
+    )
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -152,7 +153,10 @@ public class AccountController : Controller
                 return InvalidJson(errorKey, translatedException.ResourceNotFound ? ex : null);
             }
 
-            var tokenable = new SsoTokenable(organization, _globalSettings.Sso.SsoTokenLifetimeInSeconds);
+            var tokenable = new SsoTokenable(
+                organization,
+                _globalSettings.Sso.SsoTokenLifetimeInSeconds
+            );
             var token = _dataProtector.Protect(tokenable);
 
             return new SsoPreValidateResponseModel(token);
@@ -168,8 +172,10 @@ public class AccountController : Controller
     {
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-        if (!context.Parameters.AllKeys.Contains("domain_hint") ||
-            string.IsNullOrWhiteSpace(context.Parameters["domain_hint"]))
+        if (
+            !context.Parameters.AllKeys.Contains("domain_hint")
+            || string.IsNullOrWhiteSpace(context.Parameters["domain_hint"])
+        )
         {
             throw new Exception(_i18nService.T("NoDomainHintProvided"));
         }
@@ -193,20 +199,30 @@ public class AccountController : Controller
 
         if (!tokenable.TokenIsValid(organization))
         {
-            return Unauthorized("The SSO token associated with your request is expired. A valid SSO token is required to continue.");
+            return Unauthorized(
+                "The SSO token associated with your request is expired. A valid SSO token is required to continue."
+            );
         }
 
-        return RedirectToAction(nameof(ExternalChallenge), new
-        {
-            scheme = organization.Id.ToString(),
-            returnUrl,
-            state = context.Parameters["state"],
-            userIdentifier = context.Parameters["session_state"],
-        });
+        return RedirectToAction(
+            nameof(ExternalChallenge),
+            new
+            {
+                scheme = organization.Id.ToString(),
+                returnUrl,
+                state = context.Parameters["state"],
+                userIdentifier = context.Parameters["session_state"],
+            }
+        );
     }
 
     [HttpGet]
-    public IActionResult ExternalChallenge(string scheme, string returnUrl, string state, string userIdentifier)
+    public IActionResult ExternalChallenge(
+        string scheme,
+        string returnUrl,
+        string state,
+        string userIdentifier
+    )
     {
         if (string.IsNullOrEmpty(returnUrl))
         {
@@ -230,7 +246,7 @@ public class AccountController : Controller
                 { "return_url", returnUrl },
                 { "state", state },
                 { "user_identifier", userIdentifier },
-            }
+            },
         };
 
         return Challenge(props, scheme);
@@ -241,7 +257,8 @@ public class AccountController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme
+        );
         if (result?.Succeeded != true)
         {
             throw new Exception(_i18nService.T("ExternalAuthenticationError"));
@@ -252,15 +269,21 @@ public class AccountController : Controller
         _logger.LogDebug("External claims: {@claims}", externalClaims);
 
         // Lookup our user and external provider info
-        var (user, provider, providerUserId, claims, ssoConfigData) = await FindUserFromExternalProviderAsync(result);
+        var (user, provider, providerUserId, claims, ssoConfigData) =
+            await FindUserFromExternalProviderAsync(result);
         if (user == null)
         {
             // This might be where you might initiate a custom workflow for user registration
             // in this sample we don't show how that would be done, as our sample implementation
             // simply auto-provisions new external user
-            var userIdentifier = result.Properties.Items.Keys.Contains("user_identifier") ?
-                result.Properties.Items["user_identifier"] : null;
-            user = await AutoProvisionUserAsync(provider, providerUserId, claims, userIdentifier, ssoConfigData);
+            var userIdentifier = result.Properties.Items.TryGetValue("user_identifier", out var value) ? value : null;
+            user = await AutoProvisionUserAsync(
+                provider,
+                providerUserId,
+                claims,
+                userIdentifier,
+                ssoConfigData
+            );
         }
 
         if (user != null)
@@ -272,21 +295,26 @@ public class AccountController : Controller
             var localSignInProps = new AuthenticationProperties
             {
                 IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+                ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1),
             };
             ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
 
             // Issue authentication cookie for user
-            await HttpContext.SignInAsync(new IdentityServerUser(user.Id.ToString())
-            {
-                DisplayName = user.Email,
-                IdentityProvider = provider,
-                AdditionalClaims = additionalLocalClaims.ToArray()
-            }, localSignInProps);
+            await HttpContext.SignInAsync(
+                new IdentityServerUser(user.Id.ToString())
+                {
+                    DisplayName = user.Email,
+                    IdentityProvider = provider,
+                    AdditionalClaims = additionalLocalClaims.ToArray(),
+                },
+                localSignInProps
+            );
         }
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(
+            AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme
+        );
 
         // Retrieve return URL
         var returnUrl = result.Properties.Items["return_url"] ?? "~/";
@@ -300,7 +328,7 @@ public class AccountController : Controller
                 // The client is native, so this change in how to
                 // return the response is for better UX for the end user.
                 HttpContext.Response.StatusCode = 200;
-                HttpContext.Response.Headers["Location"] = string.Empty;
+                HttpContext.Response.Headers.Location = string.Empty;
                 return View("Redirect", new RedirectViewModel { RedirectUrl = returnUrl });
             }
         }
@@ -312,7 +340,8 @@ public class AccountController : Controller
     public async Task<IActionResult> Logout(string logoutId)
     {
         // Build a model so the logged out page knows what to display
-        var (updatedLogoutId, redirectUri, externalAuthenticationScheme) = await GetLoggedOutDataAsync(logoutId);
+        var (updatedLogoutId, redirectUri, externalAuthenticationScheme) =
+            await GetLoggedOutDataAsync(logoutId);
 
         if (User?.Identity.IsAuthenticated == true)
         {
@@ -322,7 +351,10 @@ public class AccountController : Controller
 
         // HACK: Temporary workaround for the time being that doesn't try to sign out of OneLogin schemes,
         // which doesn't support SLO
-        if (externalAuthenticationScheme != null && !externalAuthenticationScheme.Contains("onelogin"))
+        if (
+            externalAuthenticationScheme != null
+            && !externalAuthenticationScheme.Contains("onelogin")
+        )
         {
             // Build a return URL so the upstream provider will redirect back
             // to us after the user has logged out. this allows us to then
@@ -330,7 +362,10 @@ public class AccountController : Controller
             var url = Url.Action("Logout", new { logoutId = updatedLogoutId });
 
             // This triggers a redirect to the external provider for sign-out
-            return SignOut(new AuthenticationProperties { RedirectUri = url }, externalAuthenticationScheme);
+            return SignOut(
+                new AuthenticationProperties { RedirectUri = url },
+                externalAuthenticationScheme
+            );
         }
         if (redirectUri != null)
         {
@@ -342,8 +377,13 @@ public class AccountController : Controller
         }
     }
 
-    private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims, SsoConfigurationData config)>
-        FindUserFromExternalProviderAsync(AuthenticateResult result)
+    private async Task<(
+        User user,
+        string provider,
+        string providerUserId,
+        IEnumerable<Claim> claims,
+        SsoConfigurationData config
+    )> FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
         var provider = result.Properties.Items["scheme"];
         var orgId = new Guid(provider);
@@ -359,7 +399,9 @@ public class AccountController : Controller
         // Validate acr claim against expectation before going further
         if (!string.IsNullOrWhiteSpace(ssoConfigData.ExpectedReturnAcrValue))
         {
-            var acrClaim = externalUser.FindFirst(JwtClaimTypes.AuthenticationContextClassReference);
+            var acrClaim = externalUser.FindFirst(
+                JwtClaimTypes.AuthenticationContextClassReference
+            );
             if (acrClaim?.Value != ssoConfigData.ExpectedReturnAcrValue)
             {
                 throw new Exception(_i18nService.T("AcrMissingOrInvalid"));
@@ -368,24 +410,29 @@ public class AccountController : Controller
 
         // Ensure the NameIdentifier used is not a transient name ID, if so, we need a different attribute
         //  for the user identifier.
-        static bool nameIdIsNotTransient(Claim c) => c.Type == ClaimTypes.NameIdentifier
-            && (c.Properties == null
-            || !c.Properties.ContainsKey(SamlPropertyKeys.ClaimFormat)
-            || c.Properties[SamlPropertyKeys.ClaimFormat] != SamlNameIdFormats.Transient);
+        static bool nameIdIsNotTransient(Claim c) =>
+            c.Type == ClaimTypes.NameIdentifier
+            && (
+                c.Properties == null
+                || !c.Properties.ContainsKey(SamlPropertyKeys.ClaimFormat)
+                || c.Properties[SamlPropertyKeys.ClaimFormat] != SamlNameIdFormats.Transient
+            );
 
         // Try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
         // depending on the external provider, some other claim type might be used
         var customUserIdClaimTypes = ssoConfigData.GetAdditionalUserIdClaimTypes();
-        var userIdClaim = externalUser.FindFirst(c => customUserIdClaimTypes.Contains(c.Type)) ??
-                          externalUser.FindFirst(JwtClaimTypes.Subject) ??
-                          externalUser.FindFirst(nameIdIsNotTransient) ??
-                          // Some SAML providers may use the `uid` attribute for this
-                          //    where a transient NameID has been sent in the subject
-                          externalUser.FindFirst("uid") ??
-                          externalUser.FindFirst("upn") ??
-                          externalUser.FindFirst("eppn") ??
-                          throw new Exception(_i18nService.T("UnknownUserId"));
+        var userIdClaim =
+            externalUser.FindFirst(c => customUserIdClaimTypes.Contains(c.Type))
+            ?? externalUser.FindFirst(JwtClaimTypes.Subject)
+            ?? externalUser.FindFirst(nameIdIsNotTransient)
+            ??
+            // Some SAML providers may use the `uid` attribute for this
+            //    where a transient NameID has been sent in the subject
+            externalUser.FindFirst("uid")
+            ?? externalUser.FindFirst("upn")
+            ?? externalUser.FindFirst("eppn")
+            ?? throw new Exception(_i18nService.T("UnknownUserId"));
 
         // Remove the user id claim so we don't include it as an extra claim if/when we provision the user
         var claims = externalUser.Claims.ToList();
@@ -399,12 +446,17 @@ public class AccountController : Controller
         return (user, provider, providerUserId, claims, ssoConfigData);
     }
 
-    private async Task<User> AutoProvisionUserAsync(string provider, string providerUserId,
-        IEnumerable<Claim> claims, string userIdentifier, SsoConfigurationData config)
+    private async Task<User> AutoProvisionUserAsync(
+        string provider,
+        string providerUserId,
+        IEnumerable<Claim> claims,
+        string userIdentifier,
+        SsoConfigurationData config
+    )
     {
         var name = GetName(claims, config.GetAdditionalNameClaimTypes());
         var email = GetEmailAddress(claims, config.GetAdditionalEmailClaimTypes());
-        if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains("@"))
+        if (string.IsNullOrWhiteSpace(email) && providerUserId.Contains('@'))
         {
             email = providerUserId;
         }
@@ -440,7 +492,11 @@ public class AccountController : Controller
             if (claimedUser != null)
             {
                 var tokenIsValid = await _userManager.VerifyUserTokenAsync(
-                    claimedUser, tokenOptions.PasswordResetTokenProvider, TokenPurposes.LinkSso, token);
+                    claimedUser,
+                    tokenOptions.PasswordResetTokenProvider,
+                    TokenPurposes.LinkSso,
+                    token
+                );
                 if (tokenIsValid)
                 {
                     existingUser = claimedUser;
@@ -462,7 +518,9 @@ public class AccountController : Controller
         // Try to find OrgUser via existing User Id (accepted/confirmed user)
         if (existingUser != null)
         {
-            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(existingUser.Id);
+            var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(
+                existingUser.Id
+            );
             orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
         }
 
@@ -472,8 +530,10 @@ public class AccountController : Controller
         // All Existing User flows handled below
         if (existingUser != null)
         {
-            if (existingUser.UsesKeyConnector &&
-                (orgUser == null || orgUser.Status == OrganizationUserStatusType.Invited))
+            if (
+                existingUser.UsesKeyConnector
+                && (orgUser == null || orgUser.Status == OrganizationUserStatusType.Invited)
+            )
             {
                 throw new Exception(_i18nService.T("UserAlreadyExistsKeyConnector"));
             }
@@ -488,7 +548,9 @@ public class AccountController : Controller
             {
                 // Org User is invited - they must manually accept the invite via email and authenticate with MP
                 // This allows us to enroll them in MP reset if required
-                throw new Exception(_i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName()));
+                throw new Exception(
+                    _i18nService.T("AcceptInviteBeforeUsingSSO", organization.DisplayName())
+                );
             }
 
             // Accepted or Confirmed - create SSO link and return;
@@ -499,7 +561,10 @@ public class AccountController : Controller
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
         if (orgUser == null && organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            var occupiedSeats =
+                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(
+                    organization.Id
+                );
             var initialSeatCount = organization.Seats.Value;
             var availableSeats = initialSeatCount - occupiedSeats;
             if (availableSeats < 1)
@@ -517,10 +582,15 @@ public class AccountController : Controller
                 {
                     if (organization.Seats.Value != initialSeatCount)
                     {
-                        await _organizationService.AdjustSeatsAsync(orgId, initialSeatCount - organization.Seats.Value);
+                        await _organizationService.AdjustSeatsAsync(
+                            orgId,
+                            initialSeatCount - organization.Seats.Value
+                        );
                     }
                     _logger.LogInformation(e, "SSO auto provisioning failed");
-                    throw new Exception(_i18nService.T("NoSeatsAvailable", organization.DisplayName()));
+                    throw new Exception(
+                        _i18nService.T("NoSeatsAvailable", organization.DisplayName())
+                    );
                 }
             }
         }
@@ -530,7 +600,11 @@ public class AccountController : Controller
         var emailDomain = CoreHelpers.GetEmailDomain(email);
         if (!string.IsNullOrWhiteSpace(emailDomain))
         {
-            var organizationDomain = await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(orgId, emailDomain);
+            var organizationDomain =
+                await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(
+                    orgId,
+                    emailDomain
+                );
             emailVerified = organizationDomain?.VerifiedDate.HasValue ?? false;
         }
 
@@ -540,23 +614,30 @@ public class AccountController : Controller
             Name = name,
             Email = email,
             EmailVerified = emailVerified,
-            ApiKey = CoreHelpers.SecureRandomString(30)
+            ApiKey = CoreHelpers.SecureRandomString(30),
         };
         await _registerUserCommand.RegisterUser(user);
 
         // If the organization has 2fa policy enabled, make sure to default jit user 2fa to email
-        var twoFactorPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.TwoFactorAuthentication);
+        var twoFactorPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(
+            orgId,
+            PolicyType.TwoFactorAuthentication
+        );
         if (twoFactorPolicy != null && twoFactorPolicy.Enabled)
         {
-            user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
-            {
-                [TwoFactorProviderType.Email] = new TwoFactorProvider
+            user.SetTwoFactorProviders(
+                new Dictionary<TwoFactorProviderType, TwoFactorProvider>
                 {
-                    MetaData = new Dictionary<string, object> { ["Email"] = user.Email.ToLowerInvariant() },
-                    Enabled = true
+                    [TwoFactorProviderType.Email] = new TwoFactorProvider
+                    {
+                        MetaData = new Dictionary<string, object>
+                        {
+                            ["Email"] = user.Email.ToLowerInvariant(),
+                        },
+                        Enabled = true,
+                    },
                 }
-            });
+            );
             await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
         }
 
@@ -568,7 +649,7 @@ public class AccountController : Controller
                 OrganizationId = orgId,
                 UserId = user.Id,
                 Type = OrganizationUserType.User,
-                Status = OrganizationUserStatusType.Invited
+                Status = OrganizationUserStatusType.Invited,
             };
             await _organizationUserRepository.CreateAsync(orgUser);
         }
@@ -587,28 +668,44 @@ public class AccountController : Controller
     private IActionResult InvalidJson(string errorMessageKey, Exception ex = null)
     {
         Response.StatusCode = ex == null ? 400 : 500;
-        return Json(new ErrorResponseModel(_i18nService.T(errorMessageKey))
-        {
-            ExceptionMessage = ex?.Message,
-            ExceptionStackTrace = ex?.StackTrace,
-            InnerExceptionMessage = ex?.InnerException?.Message,
-        });
+        return Json(
+            new ErrorResponseModel(_i18nService.T(errorMessageKey))
+            {
+                ExceptionMessage = ex?.Message,
+                ExceptionStackTrace = ex?.StackTrace,
+                InnerExceptionMessage = ex?.InnerException?.Message,
+            }
+        );
     }
 
-    private string GetEmailAddress(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
+    private static string GetEmailAddress(
+        IEnumerable<Claim> claims,
+        IEnumerable<string> additionalClaimTypes
+    )
     {
-        var filteredClaims = claims.Where(c => !string.IsNullOrWhiteSpace(c.Value) && c.Value.Contains("@"));
+        var filteredClaims = claims.Where(c =>
+            !string.IsNullOrWhiteSpace(c.Value) && c.Value.Contains('@')
+        );
 
-        var email = filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray()) ??
-            filteredClaims.GetFirstMatch(JwtClaimTypes.Email, ClaimTypes.Email,
-                SamlClaimTypes.Email, "mail", "emailaddress");
+        var email =
+            filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray())
+            ?? filteredClaims.GetFirstMatch(
+                JwtClaimTypes.Email,
+                ClaimTypes.Email,
+                SamlClaimTypes.Email,
+                "mail",
+                "emailaddress"
+            );
         if (!string.IsNullOrWhiteSpace(email))
         {
             return email;
         }
 
-        var username = filteredClaims.GetFirstMatch(JwtClaimTypes.PreferredUserName,
-            SamlClaimTypes.UserId, "uid");
+        var username = filteredClaims.GetFirstMatch(
+            JwtClaimTypes.PreferredUserName,
+            SamlClaimTypes.UserId,
+            "uid"
+        );
         if (!string.IsNullOrWhiteSpace(username))
         {
             return username;
@@ -617,21 +714,39 @@ public class AccountController : Controller
         return null;
     }
 
-    private string GetName(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
+    private static string GetName(IEnumerable<Claim> claims, IEnumerable<string> additionalClaimTypes)
     {
         var filteredClaims = claims.Where(c => !string.IsNullOrWhiteSpace(c.Value));
 
-        var name = filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray()) ??
-            filteredClaims.GetFirstMatch(JwtClaimTypes.Name, ClaimTypes.Name,
-                SamlClaimTypes.DisplayName, SamlClaimTypes.CommonName, "displayname", "cn");
+        var name =
+            filteredClaims.GetFirstMatch(additionalClaimTypes.ToArray())
+            ?? filteredClaims.GetFirstMatch(
+                JwtClaimTypes.Name,
+                ClaimTypes.Name,
+                SamlClaimTypes.DisplayName,
+                SamlClaimTypes.CommonName,
+                "displayname",
+                "cn"
+            );
         if (!string.IsNullOrWhiteSpace(name))
         {
             return name;
         }
 
-        var givenName = filteredClaims.GetFirstMatch(SamlClaimTypes.GivenName, "givenname", "firstname",
-            "fn", "fname", "nickname");
-        var surname = filteredClaims.GetFirstMatch(SamlClaimTypes.Surname, "sn", "surname", "lastname");
+        var givenName = filteredClaims.GetFirstMatch(
+            SamlClaimTypes.GivenName,
+            "givenname",
+            "firstname",
+            "fn",
+            "fname",
+            "nickname"
+        );
+        var surname = filteredClaims.GetFirstMatch(
+            SamlClaimTypes.Surname,
+            "sn",
+            "surname",
+            "lastname"
+        );
         var nameParts = new[] { givenName, surname }.Where(p => !string.IsNullOrWhiteSpace(p));
         if (nameParts.Any())
         {
@@ -641,19 +756,33 @@ public class AccountController : Controller
         return null;
     }
 
-    private async Task CreateSsoUserRecord(string providerUserId, Guid userId, Guid orgId, OrganizationUser orgUser)
+    private async Task CreateSsoUserRecord(
+        string providerUserId,
+        Guid userId,
+        Guid orgId,
+        OrganizationUser orgUser
+    )
     {
         // Delete existing SsoUser (if any) - avoids error if providerId has changed and the sso link is stale
-        var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(orgId, userId);
+        var existingSsoUser = await _ssoUserRepository.GetByUserIdOrganizationIdAsync(
+            orgId,
+            userId
+        );
         if (existingSsoUser != null)
         {
             await _ssoUserRepository.DeleteAsync(userId, orgId);
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_ResetSsoLink);
+            await _eventService.LogOrganizationUserEventAsync(
+                orgUser,
+                EventType.OrganizationUser_ResetSsoLink
+            );
         }
         else
         {
             // If no stale user, this is the user's first Sso login ever
-            await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_FirstSsoLogin);
+            await _eventService.LogOrganizationUserEventAsync(
+                orgUser,
+                EventType.OrganizationUser_FirstSsoLogin
+            );
         }
 
         var ssoUser = new SsoUser
@@ -665,12 +794,17 @@ public class AccountController : Controller
         await _ssoUserRepository.CreateAsync(ssoUser);
     }
 
-    private void ProcessLoginCallback(AuthenticateResult externalResult,
-        List<Claim> localClaims, AuthenticationProperties localSignInProps)
+    private static void ProcessLoginCallback(
+        AuthenticateResult externalResult,
+        List<Claim> localClaims,
+        AuthenticationProperties localSignInProps
+    )
     {
         // If the external system sent a session id claim, copy it over
         // so we can use it for single sign-out
-        var sid = externalResult.Principal.Claims.FirstOrDefault(x => x.Type == JwtClaimTypes.SessionId);
+        var sid = externalResult.Principal.Claims.FirstOrDefault(x =>
+            x.Type == JwtClaimTypes.SessionId
+        );
         if (sid != null)
         {
             localClaims.Add(new Claim(JwtClaimTypes.SessionId, sid.Value));
@@ -681,7 +815,11 @@ public class AccountController : Controller
         if (idToken != null)
         {
             localSignInProps.StoreTokens(
-                new[] { new AuthenticationToken { Name = "id_token", Value = idToken } });
+                new[]
+                {
+                    new AuthenticationToken { Name = "id_token", Value = idToken },
+                }
+            );
         }
     }
 
@@ -707,7 +845,8 @@ public class AccountController : Controller
             var idp = User.FindFirst(JwtClaimTypes.IdentityProvider)?.Value;
             if (idp != null && idp != IdentityServerConstants.LocalIdentityProvider)
             {
-                var provider = HttpContext.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
+                var provider =
+                    HttpContext.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
                 var handler = await provider.GetHandlerAsync(HttpContext, idp);
 
                 if (handler is IAuthenticationSignOutHandler)
@@ -731,6 +870,6 @@ public class AccountController : Controller
     public bool IsNativeClient(DIM.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
-           && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
+            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
     }
 }

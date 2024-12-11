@@ -40,20 +40,41 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IAuthorizationHandler, ProjectAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecretAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, ProjectPeopleAccessPoliciesAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, ServiceAccountPeopleAccessPoliciesAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, ServiceAccountGrantedPoliciesAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, ProjectServiceAccountsAccessPoliciesAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, SecretAccessPoliciesUpdatesAuthorizationHandler>();
+        services.AddScoped<
+            IAuthorizationHandler,
+            ProjectPeopleAccessPoliciesAuthorizationHandler
+        >();
+        services.AddScoped<
+            IAuthorizationHandler,
+            ServiceAccountPeopleAccessPoliciesAuthorizationHandler
+        >();
+        services.AddScoped<
+            IAuthorizationHandler,
+            ServiceAccountGrantedPoliciesAuthorizationHandler
+        >();
+        services.AddScoped<
+            IAuthorizationHandler,
+            ProjectServiceAccountsAccessPoliciesAuthorizationHandler
+        >();
+        services.AddScoped<
+            IAuthorizationHandler,
+            SecretAccessPoliciesUpdatesAuthorizationHandler
+        >();
         services.AddScoped<IAuthorizationHandler, BulkSecretAuthorizationHandler>();
         services.AddScoped<IAccessClientQuery, AccessClientQuery>();
         services.AddScoped<IMaxProjectsQuery, MaxProjectsQuery>();
         services.AddScoped<ISameOrganizationQuery, SameOrganizationQuery>();
         services.AddScoped<IServiceAccountSecretsDetailsQuery, ServiceAccountSecretsDetailsQuery>();
-        services.AddScoped<IServiceAccountGrantedPolicyUpdatesQuery, ServiceAccountGrantedPolicyUpdatesQuery>();
+        services.AddScoped<
+            IServiceAccountGrantedPolicyUpdatesQuery,
+            ServiceAccountGrantedPolicyUpdatesQuery
+        >();
         services.AddScoped<ISecretAccessPoliciesUpdatesQuery, SecretAccessPoliciesUpdatesQuery>();
         services.AddScoped<ISecretsSyncQuery, SecretsSyncQuery>();
-        services.AddScoped<IProjectServiceAccountsAccessPoliciesUpdatesQuery, ProjectServiceAccountsAccessPoliciesUpdatesQuery>();
+        services.AddScoped<
+            IProjectServiceAccountsAccessPoliciesUpdatesQuery,
+            ProjectServiceAccountsAccessPoliciesUpdatesQuery
+        >();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
@@ -64,13 +85,22 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<ICreateServiceAccountCommand, CreateServiceAccountCommand>();
         services.AddScoped<IUpdateServiceAccountCommand, UpdateServiceAccountCommand>();
         services.AddScoped<IDeleteServiceAccountsCommand, DeleteServiceAccountsCommand>();
-        services.AddScoped<ICountNewServiceAccountSlotsRequiredQuery, CountNewServiceAccountSlotsRequiredQuery>();
+        services.AddScoped<
+            ICountNewServiceAccountSlotsRequiredQuery,
+            CountNewServiceAccountSlotsRequiredQuery
+        >();
         services.AddScoped<IRevokeAccessTokensCommand, RevokeAccessTokensCommand>();
         services.AddScoped<ICreateAccessTokenCommand, CreateAccessTokenCommand>();
         services.AddScoped<IImportCommand, ImportCommand>();
         services.AddScoped<IEmptyTrashCommand, EmptyTrashCommand>();
         services.AddScoped<IRestoreTrashCommand, RestoreTrashCommand>();
-        services.AddScoped<IUpdateServiceAccountGrantedPoliciesCommand, UpdateServiceAccountGrantedPoliciesCommand>();
-        services.AddScoped<IUpdateProjectServiceAccountsAccessPoliciesCommand, UpdateProjectServiceAccountsAccessPoliciesCommand>();
+        services.AddScoped<
+            IUpdateServiceAccountGrantedPoliciesCommand,
+            UpdateServiceAccountGrantedPoliciesCommand
+        >();
+        services.AddScoped<
+            IUpdateProjectServiceAccountsAccessPoliciesCommand,
+            UpdateProjectServiceAccountsAccessPoliciesCommand
+        >();
     }
 }

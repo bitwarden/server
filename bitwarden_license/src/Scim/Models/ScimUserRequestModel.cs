@@ -9,8 +9,7 @@ namespace Bit.Scim.Models;
 public class ScimUserRequestModel : BaseScimUserModel
 {
     public ScimUserRequestModel()
-        : base(false)
-    { }
+        : base(false) { }
 
     public OrganizationUserInvite ToOrganizationUserInvite(ScimProviderType scimProvider)
     {
@@ -21,7 +20,7 @@ public class ScimUserRequestModel : BaseScimUserModel
             // Permissions cannot be set via SCIM so we use default values
             Type = OrganizationUserType.User,
             Collections = new List<CollectionAccessSelection>(),
-            Groups = new List<Guid>()
+            Groups = new List<Guid>(),
         };
     }
 

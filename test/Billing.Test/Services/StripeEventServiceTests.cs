@@ -18,11 +18,18 @@ public class StripeEventServiceTests
     public StripeEventServiceTests()
     {
         var globalSettings = new GlobalSettings();
-        var baseServiceUriSettings = new GlobalSettings.BaseServiceUriSettings(globalSettings) { CloudRegion = "US" };
+        var baseServiceUriSettings = new GlobalSettings.BaseServiceUriSettings(globalSettings)
+        {
+            CloudRegion = "US",
+        };
         globalSettings.BaseServiceUri = baseServiceUriSettings;
 
         _stripeFacade = Substitute.For<IStripeFacade>();
-        _stripeEventService = new StripeEventService(globalSettings, Substitute.For<ILogger<StripeEventService>>(), _stripeFacade);
+        _stripeEventService = new StripeEventService(
+            globalSettings,
+            Substitute.For<ILogger<StripeEventService>>(),
+            _stripeFacade
+        );
     }
 
     #region GetCharge
@@ -39,13 +46,18 @@ public class StripeEventServiceTests
         await function
             .Should()
             .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Charge)}'");
+            .WithMessage(
+                $"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Charge)}'"
+            );
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(
-            Arg.Any<string>(),
-            Arg.Any<ChargeGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetCharge(
+                Arg.Any<string>(),
+                Arg.Any<ChargeGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -60,11 +72,14 @@ public class StripeEventServiceTests
         // Assert
         charge.Should().BeEquivalentTo(stripeEvent.Data.Object as Charge);
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(
-            Arg.Any<string>(),
-            Arg.Any<ChargeGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetCharge(
+                Arg.Any<string>(),
+                Arg.Any<ChargeGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -79,9 +94,8 @@ public class StripeEventServiceTests
 
         var expand = new List<string> { "customer" };
 
-        _stripeFacade.GetCharge(
-                apiCharge.Id,
-                Arg.Is<ChargeGetOptions>(options => options.Expand == expand))
+        _stripeFacade
+            .GetCharge(apiCharge.Id, Arg.Is<ChargeGetOptions>(options => options.Expand == expand))
             .Returns(apiCharge);
 
         // Act
@@ -91,11 +105,14 @@ public class StripeEventServiceTests
         charge.Should().Be(apiCharge);
         charge.Should().NotBeSameAs(eventCharge);
 
-        await _stripeFacade.Received().GetCharge(
-            apiCharge.Id,
-            Arg.Is<ChargeGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received()
+            .GetCharge(
+                apiCharge.Id,
+                Arg.Is<ChargeGetOptions>(options => options.Expand == expand),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
     #endregion
 
@@ -113,13 +130,18 @@ public class StripeEventServiceTests
         await function
             .Should()
             .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Customer)}'");
+            .WithMessage(
+                $"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Customer)}'"
+            );
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(
-            Arg.Any<string>(),
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetCustomer(
+                Arg.Any<string>(),
+                Arg.Any<CustomerGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -134,11 +156,14 @@ public class StripeEventServiceTests
         // Assert
         customer.Should().BeEquivalentTo(stripeEvent.Data.Object as Customer);
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(
-            Arg.Any<string>(),
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetCustomer(
+                Arg.Any<string>(),
+                Arg.Any<CustomerGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -153,9 +178,11 @@ public class StripeEventServiceTests
 
         var expand = new List<string> { "subscriptions" };
 
-        _stripeFacade.GetCustomer(
+        _stripeFacade
+            .GetCustomer(
                 apiCustomer.Id,
-                Arg.Is<CustomerGetOptions>(options => options.Expand == expand))
+                Arg.Is<CustomerGetOptions>(options => options.Expand == expand)
+            )
             .Returns(apiCustomer);
 
         // Act
@@ -165,11 +192,14 @@ public class StripeEventServiceTests
         customer.Should().Be(apiCustomer);
         customer.Should().NotBeSameAs(eventCustomer);
 
-        await _stripeFacade.Received().GetCustomer(
-            apiCustomer.Id,
-            Arg.Is<CustomerGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received()
+            .GetCustomer(
+                apiCustomer.Id,
+                Arg.Is<CustomerGetOptions>(options => options.Expand == expand),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
     #endregion
 
@@ -187,13 +217,18 @@ public class StripeEventServiceTests
         await function
             .Should()
             .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Invoice)}'");
+            .WithMessage(
+                $"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Invoice)}'"
+            );
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(
-            Arg.Any<string>(),
-            Arg.Any<InvoiceGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetInvoice(
+                Arg.Any<string>(),
+                Arg.Any<InvoiceGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -208,11 +243,14 @@ public class StripeEventServiceTests
         // Assert
         invoice.Should().BeEquivalentTo(stripeEvent.Data.Object as Invoice);
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(
-            Arg.Any<string>(),
-            Arg.Any<InvoiceGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetInvoice(
+                Arg.Any<string>(),
+                Arg.Any<InvoiceGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -227,9 +265,11 @@ public class StripeEventServiceTests
 
         var expand = new List<string> { "customer" };
 
-        _stripeFacade.GetInvoice(
+        _stripeFacade
+            .GetInvoice(
                 apiInvoice.Id,
-                Arg.Is<InvoiceGetOptions>(options => options.Expand == expand))
+                Arg.Is<InvoiceGetOptions>(options => options.Expand == expand)
+            )
             .Returns(apiInvoice);
 
         // Act
@@ -239,11 +279,14 @@ public class StripeEventServiceTests
         invoice.Should().Be(apiInvoice);
         invoice.Should().NotBeSameAs(eventInvoice);
 
-        await _stripeFacade.Received().GetInvoice(
-            apiInvoice.Id,
-            Arg.Is<InvoiceGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received()
+            .GetInvoice(
+                apiInvoice.Id,
+                Arg.Is<InvoiceGetOptions>(options => options.Expand == expand),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
     #endregion
 
@@ -261,13 +304,18 @@ public class StripeEventServiceTests
         await function
             .Should()
             .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(PaymentMethod)}'");
+            .WithMessage(
+                $"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(PaymentMethod)}'"
+            );
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(
-            Arg.Any<string>(),
-            Arg.Any<PaymentMethodGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetPaymentMethod(
+                Arg.Any<string>(),
+                Arg.Any<PaymentMethodGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -282,11 +330,14 @@ public class StripeEventServiceTests
         // Assert
         paymentMethod.Should().BeEquivalentTo(stripeEvent.Data.Object as PaymentMethod);
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(
-            Arg.Any<string>(),
-            Arg.Any<PaymentMethodGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetPaymentMethod(
+                Arg.Any<string>(),
+                Arg.Any<PaymentMethodGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -301,9 +352,11 @@ public class StripeEventServiceTests
 
         var expand = new List<string> { "customer" };
 
-        _stripeFacade.GetPaymentMethod(
+        _stripeFacade
+            .GetPaymentMethod(
                 apiPaymentMethod.Id,
-                Arg.Is<PaymentMethodGetOptions>(options => options.Expand == expand))
+                Arg.Is<PaymentMethodGetOptions>(options => options.Expand == expand)
+            )
             .Returns(apiPaymentMethod);
 
         // Act
@@ -313,11 +366,14 @@ public class StripeEventServiceTests
         paymentMethod.Should().Be(apiPaymentMethod);
         paymentMethod.Should().NotBeSameAs(eventPaymentMethod);
 
-        await _stripeFacade.Received().GetPaymentMethod(
-            apiPaymentMethod.Id,
-            Arg.Is<PaymentMethodGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received()
+            .GetPaymentMethod(
+                apiPaymentMethod.Id,
+                Arg.Is<PaymentMethodGetOptions>(options => options.Expand == expand),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
     #endregion
 
@@ -335,20 +391,27 @@ public class StripeEventServiceTests
         await function
             .Should()
             .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Subscription)}'");
+            .WithMessage(
+                $"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Subscription)}'"
+            );
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(
-            Arg.Any<string>(),
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetSubscription(
+                Arg.Any<string>(),
+                Arg.Any<SubscriptionGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
     public async Task GetSubscription_NotFresh_ReturnsEventSubscription()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var stripeEvent = await StripeTestEvents.GetAsync(
+            StripeEventType.CustomerSubscriptionUpdated
+        );
 
         // Act
         var subscription = await _stripeEventService.GetSubscription(stripeEvent);
@@ -356,18 +419,23 @@ public class StripeEventServiceTests
         // Assert
         subscription.Should().BeEquivalentTo(stripeEvent.Data.Object as Subscription);
 
-        await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(
-            Arg.Any<string>(),
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .DidNotReceiveWithAnyArgs()
+            .GetSubscription(
+                Arg.Any<string>(),
+                Arg.Any<SubscriptionGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
     public async Task GetSubscription_Fresh_Expand_ReturnsAPISubscription()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var stripeEvent = await StripeTestEvents.GetAsync(
+            StripeEventType.CustomerSubscriptionUpdated
+        );
 
         var eventSubscription = stripeEvent.Data.Object as Subscription;
 
@@ -375,9 +443,11 @@ public class StripeEventServiceTests
 
         var expand = new List<string> { "customer" };
 
-        _stripeFacade.GetSubscription(
+        _stripeFacade
+            .GetSubscription(
                 apiSubscription.Id,
-                Arg.Is<SubscriptionGetOptions>(options => options.Expand == expand))
+                Arg.Is<SubscriptionGetOptions>(options => options.Expand == expand)
+            )
             .Returns(apiSubscription);
 
         // Act
@@ -387,11 +457,14 @@ public class StripeEventServiceTests
         subscription.Should().Be(apiSubscription);
         subscription.Should().NotBeSameAs(eventSubscription);
 
-        await _stripeFacade.Received().GetSubscription(
-            apiSubscription.Id,
-            Arg.Is<SubscriptionGetOptions>(options => options.Expand == expand),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received()
+            .GetSubscription(
+                apiSubscription.Id,
+                Arg.Is<SubscriptionGetOptions>(options => options.Expand == expand),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
     #endregion
 
@@ -400,7 +473,9 @@ public class StripeEventServiceTests
     public async Task ValidateCloudRegion_SubscriptionUpdated_Success()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var stripeEvent = await StripeTestEvents.GetAsync(
+            StripeEventType.CustomerSubscriptionUpdated
+        );
 
         var subscription = Copy(stripeEvent.Data.Object as Subscription);
 
@@ -408,9 +483,8 @@ public class StripeEventServiceTests
 
         subscription.Customer = customer;
 
-        _stripeFacade.GetSubscription(
-                subscription.Id,
-                Arg.Any<SubscriptionGetOptions>())
+        _stripeFacade
+            .GetSubscription(subscription.Id, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -419,11 +493,14 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetSubscription(
+                subscription.Id,
+                Arg.Any<SubscriptionGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -438,10 +515,7 @@ public class StripeEventServiceTests
 
         charge.Customer = customer;
 
-        _stripeFacade.GetCharge(
-                charge.Id,
-                Arg.Any<ChargeGetOptions>())
-            .Returns(charge);
+        _stripeFacade.GetCharge(charge.Id, Arg.Any<ChargeGetOptions>()).Returns(charge);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -449,11 +523,14 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetCharge(
-            charge.Id,
-            Arg.Any<ChargeGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetCharge(
+                charge.Id,
+                Arg.Any<ChargeGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -466,9 +543,8 @@ public class StripeEventServiceTests
 
         var customer = await GetCustomerAsync();
 
-        _stripeFacade.GetCustomer(
-                invoice.CustomerId,
-                Arg.Any<CustomerGetOptions>())
+        _stripeFacade
+            .GetCustomer(invoice.CustomerId, Arg.Any<CustomerGetOptions>())
             .Returns(customer);
 
         // Act
@@ -477,11 +553,14 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetCustomer(
-            invoice.CustomerId,
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetCustomer(
+                invoice.CustomerId,
+                Arg.Any<CustomerGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -496,10 +575,7 @@ public class StripeEventServiceTests
 
         invoice.Customer = customer;
 
-        _stripeFacade.GetInvoice(
-                invoice.Id,
-                Arg.Any<InvoiceGetOptions>())
-            .Returns(invoice);
+        _stripeFacade.GetInvoice(invoice.Id, Arg.Any<InvoiceGetOptions>()).Returns(invoice);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -507,11 +583,14 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetInvoice(
-            invoice.Id,
-            Arg.Any<InvoiceGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetInvoice(
+                invoice.Id,
+                Arg.Any<InvoiceGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -526,9 +605,8 @@ public class StripeEventServiceTests
 
         paymentMethod.Customer = customer;
 
-        _stripeFacade.GetPaymentMethod(
-                paymentMethod.Id,
-                Arg.Any<PaymentMethodGetOptions>())
+        _stripeFacade
+            .GetPaymentMethod(paymentMethod.Id, Arg.Any<PaymentMethodGetOptions>())
             .Returns(paymentMethod);
 
         // Act
@@ -537,11 +615,14 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetPaymentMethod(
-            paymentMethod.Id,
-            Arg.Any<PaymentMethodGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetPaymentMethod(
+                paymentMethod.Id,
+                Arg.Any<PaymentMethodGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -552,10 +633,7 @@ public class StripeEventServiceTests
 
         var customer = Copy(stripeEvent.Data.Object as Customer);
 
-        _stripeFacade.GetCustomer(
-                customer.Id,
-                Arg.Any<CustomerGetOptions>())
-            .Returns(customer);
+        _stripeFacade.GetCustomer(customer.Id, Arg.Any<CustomerGetOptions>()).Returns(customer);
 
         // Act
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
@@ -563,18 +641,23 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetCustomer(
-            customer.Id,
-            Arg.Any<CustomerGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetCustomer(
+                customer.Id,
+                Arg.Any<CustomerGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
     public async Task ValidateCloudRegion_MetadataNull_ReturnsFalse()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var stripeEvent = await StripeTestEvents.GetAsync(
+            StripeEventType.CustomerSubscriptionUpdated
+        );
 
         var subscription = Copy(stripeEvent.Data.Object as Subscription);
 
@@ -583,9 +666,8 @@ public class StripeEventServiceTests
 
         subscription.Customer = customer;
 
-        _stripeFacade.GetSubscription(
-                subscription.Id,
-                Arg.Any<SubscriptionGetOptions>())
+        _stripeFacade
+            .GetSubscription(subscription.Id, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -594,18 +676,23 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeFalse();
 
-        await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetSubscription(
+                subscription.Id,
+                Arg.Any<SubscriptionGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
     public async Task ValidateCloudRegion_MetadataNoRegion_DefaultUS_ReturnsTrue()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var stripeEvent = await StripeTestEvents.GetAsync(
+            StripeEventType.CustomerSubscriptionUpdated
+        );
 
         var subscription = Copy(stripeEvent.Data.Object as Subscription);
 
@@ -614,9 +701,8 @@ public class StripeEventServiceTests
 
         subscription.Customer = customer;
 
-        _stripeFacade.GetSubscription(
-                subscription.Id,
-                Arg.Any<SubscriptionGetOptions>())
+        _stripeFacade
+            .GetSubscription(subscription.Id, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -625,32 +711,33 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetSubscription(
+                subscription.Id,
+                Arg.Any<SubscriptionGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
     public async Task ValidateCloudRegion_MetadataMiscasedRegion_ReturnsTrue()
     {
         // Arrange
-        var stripeEvent = await StripeTestEvents.GetAsync(StripeEventType.CustomerSubscriptionUpdated);
+        var stripeEvent = await StripeTestEvents.GetAsync(
+            StripeEventType.CustomerSubscriptionUpdated
+        );
 
         var subscription = Copy(stripeEvent.Data.Object as Subscription);
 
         var customer = await GetCustomerAsync();
-        customer.Metadata = new Dictionary<string, string>
-        {
-            { "Region", "US" }
-        };
+        customer.Metadata = new Dictionary<string, string> { { "Region", "US" } };
 
         subscription.Customer = customer;
 
-        _stripeFacade.GetSubscription(
-                subscription.Id,
-                Arg.Any<SubscriptionGetOptions>())
+        _stripeFacade
+            .GetSubscription(subscription.Id, Arg.Any<SubscriptionGetOptions>())
             .Returns(subscription);
 
         // Act
@@ -659,11 +746,14 @@ public class StripeEventServiceTests
         // Assert
         cloudRegionValid.Should().BeTrue();
 
-        await _stripeFacade.Received(1).GetSubscription(
-            subscription.Id,
-            Arg.Any<SubscriptionGetOptions>(),
-            Arg.Any<RequestOptions>(),
-            Arg.Any<CancellationToken>());
+        await _stripeFacade
+            .Received(1)
+            .GetSubscription(
+                subscription.Id,
+                Arg.Any<SubscriptionGetOptions>(),
+                Arg.Any<RequestOptions>(),
+                Arg.Any<CancellationToken>()
+            );
     }
     #endregion
 
@@ -676,15 +766,12 @@ public class StripeEventServiceTests
         foreach (var property in properties)
         {
             var value = property.GetValue(input);
-            copy!
-                .GetType()
-                .GetProperty(property.Name)!
-                .SetValue(copy, value);
+            copy!.GetType().GetProperty(property.Name)!.SetValue(copy, value);
         }
 
         return copy;
     }
 
-    private static async Task<Customer> GetCustomerAsync()
-        => (await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated)).Data.Object as Customer;
+    private static async Task<Customer> GetCustomerAsync() =>
+        (await StripeTestEvents.GetAsync(StripeEventType.CustomerUpdated)).Data.Object as Customer;
 }

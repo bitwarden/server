@@ -5,5 +5,8 @@ namespace Bit.Scim.Users.Interfaces;
 
 public interface IPostUserCommand
 {
-    Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model);
+    Task<OrganizationUserUserDetails> PostUserAsync(
+        Guid organizationId,
+        ScimUserRequestModel model
+    );
 }

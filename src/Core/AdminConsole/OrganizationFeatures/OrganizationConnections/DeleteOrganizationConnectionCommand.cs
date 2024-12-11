@@ -8,7 +8,9 @@ public class DeleteOrganizationConnectionCommand : IDeleteOrganizationConnection
 {
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
 
-    public DeleteOrganizationConnectionCommand(IOrganizationConnectionRepository organizationConnectionRepository)
+    public DeleteOrganizationConnectionCommand(
+        IOrganizationConnectionRepository organizationConnectionRepository
+    )
     {
         _organizationConnectionRepository = organizationConnectionRepository;
     }

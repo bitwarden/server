@@ -18,28 +18,37 @@ public class CreateMspProviderModel : IValidatableObject
 
     public virtual Provider ToProvider()
     {
-        return new Provider
-        {
-            Type = ProviderType.Msp
-        };
+        return new Provider { Type = ProviderType.Msp };
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(OwnerEmail))
         {
-            var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateMspProviderModel>()?.GetName() ?? nameof(OwnerEmail);
+            var ownerEmailDisplayName =
+                nameof(OwnerEmail).GetDisplayAttribute<CreateMspProviderModel>()?.GetName()
+                ?? nameof(OwnerEmail);
             yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
         }
         if (TeamsMonthlySeatMinimum < 0)
         {
-            var teamsMinimumSeatsDisplayName = nameof(TeamsMonthlySeatMinimum).GetDisplayAttribute<CreateMspProviderModel>()?.GetName() ?? nameof(TeamsMonthlySeatMinimum);
-            yield return new ValidationResult($"The {teamsMinimumSeatsDisplayName} field can not be negative.");
+            var teamsMinimumSeatsDisplayName =
+                nameof(TeamsMonthlySeatMinimum)
+                    .GetDisplayAttribute<CreateMspProviderModel>()
+                    ?.GetName() ?? nameof(TeamsMonthlySeatMinimum);
+            yield return new ValidationResult(
+                $"The {teamsMinimumSeatsDisplayName} field can not be negative."
+            );
         }
         if (EnterpriseMonthlySeatMinimum < 0)
         {
-            var enterpriseMinimumSeatsDisplayName = nameof(EnterpriseMonthlySeatMinimum).GetDisplayAttribute<CreateMspProviderModel>()?.GetName() ?? nameof(EnterpriseMonthlySeatMinimum);
-            yield return new ValidationResult($"The {enterpriseMinimumSeatsDisplayName} field can not be negative.");
+            var enterpriseMinimumSeatsDisplayName =
+                nameof(EnterpriseMonthlySeatMinimum)
+                    .GetDisplayAttribute<CreateMspProviderModel>()
+                    ?.GetName() ?? nameof(EnterpriseMonthlySeatMinimum);
+            yield return new ValidationResult(
+                $"The {enterpriseMinimumSeatsDisplayName} field can not be negative."
+            );
         }
     }
 }

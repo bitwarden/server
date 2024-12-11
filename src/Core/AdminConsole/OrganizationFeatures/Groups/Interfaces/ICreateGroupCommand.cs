@@ -6,11 +6,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 
 public interface ICreateGroupCommand
 {
-    Task CreateGroupAsync(Group group, Organization organization,
+    Task CreateGroupAsync(
+        Group group,
+        Organization organization,
         ICollection<CollectionAccessSelection> collections = null,
-        IEnumerable<Guid> users = null);
+        IEnumerable<Guid> users = null
+    );
 
-    Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
+    Task CreateGroupAsync(
+        Group group,
+        Organization organization,
+        EventSystemUser systemUser,
         ICollection<CollectionAccessSelection> collections = null,
-        IEnumerable<Guid> users = null);
+        IEnumerable<Guid> users = null
+    );
 }

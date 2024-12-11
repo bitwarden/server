@@ -29,16 +29,9 @@ public class PremiumRequestModelTests
     [MemberData(nameof(GetValidateData))]
     public void Validate_Success(bool selfHosted, IFormFile formFile, string country, bool expected)
     {
-        var gs = new GlobalSettings
-        {
-            SelfHosted = selfHosted
-        };
+        var gs = new GlobalSettings { SelfHosted = selfHosted };
 
-        var sut = new PremiumRequestModel
-        {
-            License = formFile,
-            Country = country,
-        };
+        var sut = new PremiumRequestModel { License = formFile, Country = country };
 
         Assert.Equal(expected, sut.Validate(gs));
     }
@@ -59,6 +52,9 @@ public class NotImplementedFormFile : IFormFile
     public string FileName => throw new NotImplementedException();
 
     public void CopyTo(Stream target) => throw new NotImplementedException();
-    public Task CopyToAsync(Stream target, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+
+    public Task CopyToAsync(Stream target, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
     public Stream OpenReadStream() => throw new NotImplementedException();
 }

@@ -14,15 +14,23 @@ public class GetOrganizationApiKeyQuery : IGetOrganizationApiKeyQuery
         _organizationApiKeyRepository = organizationApiKeyRepository;
     }
 
-    public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType)
+    public async Task<OrganizationApiKey> GetOrganizationApiKeyAsync(
+        Guid organizationId,
+        OrganizationApiKeyType organizationApiKeyType
+    )
     {
         if (!Enum.IsDefined(organizationApiKeyType))
         {
-            throw new ArgumentOutOfRangeException(nameof(organizationApiKeyType), $"Invalid value for enum {nameof(OrganizationApiKeyType)}");
+            throw new ArgumentOutOfRangeException(
+                nameof(organizationApiKeyType),
+                $"Invalid value for enum {nameof(OrganizationApiKeyType)}"
+            );
         }
 
-        var apiKeys = await _organizationApiKeyRepository
-            .GetManyByOrganizationIdTypeAsync(organizationId, organizationApiKeyType);
+        var apiKeys = await _organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(
+            organizationId,
+            organizationApiKeyType
+        );
 
         // NOTE: Currently we only allow one type of api key per organization
         return apiKeys.SingleOrDefault();

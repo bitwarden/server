@@ -21,7 +21,8 @@ public class PolicyService : IPolicyService
         IApplicationCacheService applicationCacheService,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _applicationCacheService = applicationCacheService;
         _organizationUserRepository = organizationUserRepository;
@@ -50,29 +51,48 @@ public class PolicyService : IPolicyService
         return enforcedOptions;
     }
 
-    public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(
+        Guid userId,
+        PolicyType policyType,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted
+    )
     {
         var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minStatus);
         return result.ToList();
     }
 
-    public async Task<bool> AnyPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    public async Task<bool> AnyPoliciesApplicableToUserAsync(
+        Guid userId,
+        PolicyType policyType,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted
+    )
     {
         var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minStatus);
         return result.Any();
     }
 
-    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    private async Task<
+        IEnumerable<OrganizationUserPolicyDetails>
+    > QueryOrganizationUserPolicyDetailsAsync(
+        Guid userId,
+        PolicyType policyType,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted
+    )
     {
-        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
+        var organizationUserPolicyDetails =
+            await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         return organizationUserPolicyDetails.Where(o =>
-            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].UsePolicies) &&
-            o.PolicyEnabled &&
-            !excludedUserTypes.Contains(o.OrganizationUserType) &&
-            o.OrganizationUserStatus >= minStatus &&
-            !o.IsProvider);
+            (
+                !orgAbilities.ContainsKey(o.OrganizationId)
+                || orgAbilities[o.OrganizationId].UsePolicies
+            )
+            && o.PolicyEnabled
+            && !excludedUserTypes.Contains(o.OrganizationUserType)
+            && o.OrganizationUserStatus >= minStatus
+            && !o.IsProvider
+        );
     }
 
     private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)

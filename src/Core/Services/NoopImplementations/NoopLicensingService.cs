@@ -10,13 +10,13 @@ namespace Bit.Core.Services;
 
 public class NoopLicensingService : ILicensingService
 {
-    public NoopLicensingService(
-        IWebHostEnvironment environment,
-        GlobalSettings globalSettings)
+    public NoopLicensingService(IWebHostEnvironment environment, GlobalSettings globalSettings)
     {
         if (!environment.IsDevelopment() && globalSettings.SelfHosted)
         {
-            throw new Exception($"{nameof(NoopLicensingService)} cannot be used for self hosted instances.");
+            throw new Exception(
+                $"{nameof(NoopLicensingService)} cannot be used for self hosted instances."
+            );
         }
     }
 
@@ -60,7 +60,11 @@ public class NoopLicensingService : ILicensingService
         return null;
     }
 
-    public Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    public Task<string> CreateOrganizationTokenAsync(
+        Organization organization,
+        Guid installationId,
+        SubscriptionInfo subscriptionInfo
+    )
     {
         return Task.FromResult<string>(null);
     }
