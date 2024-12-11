@@ -29,12 +29,14 @@ public class CustomValidatorRequestContext
     public bool SsoRequired { get; set; } = false;
     /// <summary>
     /// We use the parent class for both GrantValidationResult and TokenRequestValidationResult here for
-    /// flexibility when building the response.
+    /// flexibility when building an error response.
+    /// This will be null if the authentication request is successful.
     /// </summary>
     public ValidationResult ValidationErrorResult { get; set; }
     /// <summary>
     /// This dictionary should contain relevant information for the clients to act on.
-    /// This contains the information used to guide a user to successful authentication.
+    /// This will contain the information used to guide a user to successful authentication, such as TwoFactorProviders.
+    /// This will be null if the authentication request is successful.
     /// </summary>
     public Dictionary<string, object> CustomResponse { get; set; }
     public CaptchaResponse CaptchaResponse { get; set; }

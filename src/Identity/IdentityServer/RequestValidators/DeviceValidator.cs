@@ -36,6 +36,7 @@ public class DeviceValidator(
         var requestDevice = context.Device ?? GetDeviceFromRequest(request);
         // If context.Device and request device information are null then return error
         // backwards compatibility -- check if user is null
+        // PM-13340: Null user check happens in the HandleNewDeviceVerificationAsync method and can be removed from here
         if (requestDevice == null || context.User == null)
         {
             (context.ValidationErrorResult, context.CustomResponse) =
@@ -58,6 +59,7 @@ public class DeviceValidator(
         }
 
         // We have established that the device is unknown at this point; begin new device verification
+        // PM-13340: remove feature flag
         if (_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification) &&
             request.GrantType == "password" &&
             request.Raw["AuthRequest"] == null &&
@@ -85,6 +87,7 @@ public class DeviceValidator(
         context.Device = requestDevice;
 
         // backwards compatibility -- If NewDeviceVerification not enabled send the new login emails
+        // PM-13340: removal Task; remove entire if block emails should no longer be sent
         if (!_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification))
         {
             // This ensures the user doesn't receive a "new device" email on the first login
@@ -111,7 +114,8 @@ public class DeviceValidator(
     /// <returns>returns deviceValtaionResultType</returns>
     private async Task<DeviceValidationResultType> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
     {
-        // currently unreachable due to backward compatibility 
+        // currently unreachable due to backward compatibility
+        // PM-13340: will address this
         if (user == null)
         {
             return DeviceValidationResultType.InvalidUser;

@@ -415,6 +415,7 @@ public class DeviceValidatorTests
 
         Assert.False(result);
         Assert.NotNull(context.CustomResponse["ErrorModel"]);
+        // PM-13340: The error message should be "invalid user" instead of "no device information provided"
         var expectedErrorMessage = "no device information provided";
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorMessage, actualResponse.Message);
