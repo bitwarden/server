@@ -1391,6 +1391,12 @@ public class StripePaymentService : IPaymentService
 
         try
         {
+            if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber))
+            {
+                taxInfo.TaxIdType = taxInfo.TaxIdType ??
+                                    _taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry, taxInfo.TaxIdNumber);
+            }
+
             if (customer == null)
             {
                 customer = await _stripeAdapter.CustomerCreateAsync(new CustomerCreateOptions
@@ -1420,8 +1426,17 @@ public class StripePaymentService : IPaymentService
                         Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
                         Line2 = taxInfo.BillingAddressLine2,
                         City = taxInfo.BillingAddressCity,
-                        State = taxInfo.BillingAddressState,
+                        State = taxInfo.BillingAddressState
                     },
+                    TaxIdData = string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber)
+                    ? []
+                    : [
+                        new CustomerTaxIdDataOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber
+                        }
+                    ],
                     Expand = ["sources", "tax", "subscriptions"],
                 });
 
