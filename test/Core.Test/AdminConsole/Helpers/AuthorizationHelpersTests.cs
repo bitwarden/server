@@ -21,20 +21,21 @@ public class AuthorizationHelpersTests
 
         Assert.True(
             result
-                is {
-                    AccessEventLogs: false,
-                    AccessImportExport: true,
-                    AccessReports: false,
-                    CreateNewCollections: true,
-                    EditAnyCollection: true,
-                    DeleteAnyCollection: false,
-                    ManageGroups: true,
-                    ManagePolicies: false,
-                    ManageSso: true,
-                    ManageUsers: true,
-                    ManageResetPassword: true,
-                    ManageScim: false
-                }
+                is
+            {
+                AccessEventLogs: false,
+                AccessImportExport: true,
+                AccessReports: false,
+                CreateNewCollections: true,
+                EditAnyCollection: true,
+                DeleteAnyCollection: false,
+                ManageGroups: true,
+                ManagePolicies: false,
+                ManageSso: true,
+                ManageUsers: true,
+                ManageResetPassword: true,
+                ManageScim: false
+            }
         );
     }
 }

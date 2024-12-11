@@ -173,79 +173,79 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         switch (charge.Source)
         {
             case Card card:
-            {
-                transaction.PaymentMethodType = PaymentMethodType.Card;
-                transaction.Details = $"{card.Brand}, *{card.Last4}";
-                break;
-            }
-            case BankAccount bankAccount:
-            {
-                transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                transaction.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
-                break;
-            }
-            case Source { Card: not null } source:
-            {
-                transaction.PaymentMethodType = PaymentMethodType.Card;
-                transaction.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
-                break;
-            }
-            case Source { AchDebit: not null } source:
-            {
-                transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                transaction.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
-                break;
-            }
-            case Source source:
-            {
-                if (source.AchCreditTransfer == null)
                 {
-                    break;
-                }
-
-                var achCreditTransfer = source.AchCreditTransfer;
-
-                transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                transaction.Details =
-                    $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
-
-                break;
-            }
-            default:
-            {
-                if (charge.PaymentMethodDetails == null)
-                {
-                    break;
-                }
-
-                if (charge.PaymentMethodDetails.Card != null)
-                {
-                    var card = charge.PaymentMethodDetails.Card;
                     transaction.PaymentMethodType = PaymentMethodType.Card;
-                    transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
+                    transaction.Details = $"{card.Brand}, *{card.Last4}";
+                    break;
                 }
-                else if (charge.PaymentMethodDetails.UsBankAccount != null)
+            case BankAccount bankAccount:
                 {
-                    var usBankAccount = charge.PaymentMethodDetails.UsBankAccount;
                     transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                    transaction.Details = $"{usBankAccount.BankName}, *{usBankAccount.Last4}";
+                    transaction.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                    break;
                 }
-                else if (charge.PaymentMethodDetails.AchDebit != null)
+            case Source { Card: not null } source:
                 {
-                    var achDebit = charge.PaymentMethodDetails.AchDebit;
+                    transaction.PaymentMethodType = PaymentMethodType.Card;
+                    transaction.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
+                    break;
+                }
+            case Source { AchDebit: not null } source:
+                {
                     transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                    transaction.Details = $"{achDebit.BankName}, *{achDebit.Last4}";
+                    transaction.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
+                    break;
                 }
-                else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
+            case Source source:
                 {
-                    var achCreditTransfer = charge.PaymentMethodDetails.AchCreditTransfer;
+                    if (source.AchCreditTransfer == null)
+                    {
+                        break;
+                    }
+
+                    var achCreditTransfer = source.AchCreditTransfer;
+
                     transaction.PaymentMethodType = PaymentMethodType.BankAccount;
                     transaction.Details =
                         $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
-                }
 
-                break;
-            }
+                    break;
+                }
+            default:
+                {
+                    if (charge.PaymentMethodDetails == null)
+                    {
+                        break;
+                    }
+
+                    if (charge.PaymentMethodDetails.Card != null)
+                    {
+                        var card = charge.PaymentMethodDetails.Card;
+                        transaction.PaymentMethodType = PaymentMethodType.Card;
+                        transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
+                    }
+                    else if (charge.PaymentMethodDetails.UsBankAccount != null)
+                    {
+                        var usBankAccount = charge.PaymentMethodDetails.UsBankAccount;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details = $"{usBankAccount.BankName}, *{usBankAccount.Last4}";
+                    }
+                    else if (charge.PaymentMethodDetails.AchDebit != null)
+                    {
+                        var achDebit = charge.PaymentMethodDetails.AchDebit;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details = $"{achDebit.BankName}, *{achDebit.Last4}";
+                    }
+                    else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
+                    {
+                        var achCreditTransfer = charge.PaymentMethodDetails.AchCreditTransfer;
+                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                        transaction.Details =
+                            $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
+                    }
+
+                    break;
+                }
         }
 
         return transaction;
@@ -273,13 +273,14 @@ public class StripeEventUtilityService : IStripeEventUtilityService
 
     public bool ShouldAttemptToPayInvoice(Invoice invoice) =>
         invoice
-            is {
-                AmountDue: > 0,
-                Paid: false,
-                CollectionMethod: "charge_automatically",
-                BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-                SubscriptionId: not null
-            };
+            is
+        {
+            AmountDue: > 0,
+            Paid: false,
+            CollectionMethod: "charge_automatically",
+            BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
+            SubscriptionId: not null
+        };
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(
         Invoice invoice,

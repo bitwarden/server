@@ -24,7 +24,8 @@ public class PasswordHealthReportApplicationRepository
             serviceScopeFactory,
             mapper,
             (DatabaseContext context) => context.PasswordHealthReportApplications
-        ) { }
+        )
+    { }
 
     public async Task<
         ICollection<AdminConsoleEntities.PasswordHealthReportApplication>

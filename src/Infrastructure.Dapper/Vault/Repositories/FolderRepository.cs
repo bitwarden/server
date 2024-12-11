@@ -16,7 +16,8 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public FolderRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

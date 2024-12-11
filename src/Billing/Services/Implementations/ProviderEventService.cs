@@ -46,102 +46,102 @@ public class ProviderEventService(
         switch (parsedEvent.Type)
         {
             case HandledStripeWebhook.InvoiceCreated:
-            {
-                var clients = await providerOrganizationRepository.GetManyDetailsByProviderAsync(
-                    parsedProviderId
-                );
-
-                var providerPlans = await providerPlanRepository.GetByProviderId(parsedProviderId);
-
-                var invoiceItems = new List<ProviderInvoiceItem>();
-
-                foreach (var client in clients)
                 {
-                    if (client.Status != OrganizationStatusType.Managed)
+                    var clients = await providerOrganizationRepository.GetManyDetailsByProviderAsync(
+                        parsedProviderId
+                    );
+
+                    var providerPlans = await providerPlanRepository.GetByProviderId(parsedProviderId);
+
+                    var invoiceItems = new List<ProviderInvoiceItem>();
+
+                    foreach (var client in clients)
                     {
-                        continue;
+                        if (client.Status != OrganizationStatusType.Managed)
+                        {
+                            continue;
+                        }
+
+                        var plan = StaticStore.Plans.Single(x =>
+                            x.Name == client.Plan && providerPlans.Any(y => y.PlanType == x.Type)
+                        );
+
+                        var discountedPercentage =
+                            (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+
+                        var discountedSeatPrice =
+                            plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
+
+                        invoiceItems.Add(
+                            new ProviderInvoiceItem
+                            {
+                                ProviderId = parsedProviderId,
+                                InvoiceId = invoice.Id,
+                                InvoiceNumber = invoice.Number,
+                                ClientId = client.OrganizationId,
+                                ClientName = client.OrganizationName,
+                                PlanName = client.Plan,
+                                AssignedSeats = client.Seats ?? 0,
+                                UsedSeats = client.OccupiedSeats ?? 0,
+                                Total = (client.Seats ?? 0) * discountedSeatPrice,
+                            }
+                        );
                     }
 
-                    var plan = StaticStore.Plans.Single(x =>
-                        x.Name == client.Plan && providerPlans.Any(y => y.PlanType == x.Type)
-                    );
+                    foreach (
+                        var providerPlan in providerPlans.Where(x => x.PurchasedSeats is null or 0)
+                    )
+                    {
+                        var plan = StaticStore.GetPlan(providerPlan.PlanType);
 
-                    var discountedPercentage =
-                        (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+                        var clientSeats = invoiceItems
+                            .Where(item => item.PlanName == plan.Name)
+                            .Sum(item => item.AssignedSeats);
 
-                    var discountedSeatPrice =
-                        plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
+                        var unassignedSeats = providerPlan.SeatMinimum - clientSeats ?? 0;
 
-                    invoiceItems.Add(
-                        new ProviderInvoiceItem
-                        {
-                            ProviderId = parsedProviderId,
-                            InvoiceId = invoice.Id,
-                            InvoiceNumber = invoice.Number,
-                            ClientId = client.OrganizationId,
-                            ClientName = client.OrganizationName,
-                            PlanName = client.Plan,
-                            AssignedSeats = client.Seats ?? 0,
-                            UsedSeats = client.OccupiedSeats ?? 0,
-                            Total = (client.Seats ?? 0) * discountedSeatPrice,
-                        }
-                    );
+                        var discountedPercentage =
+                            (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+
+                        var discountedSeatPrice =
+                            plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
+
+                        invoiceItems.Add(
+                            new ProviderInvoiceItem
+                            {
+                                ProviderId = parsedProviderId,
+                                InvoiceId = invoice.Id,
+                                InvoiceNumber = invoice.Number,
+                                ClientName = "Unassigned seats",
+                                PlanName = plan.Name,
+                                AssignedSeats = unassignedSeats,
+                                UsedSeats = 0,
+                                Total = unassignedSeats * discountedSeatPrice,
+                            }
+                        );
+                    }
+
+                    await Task.WhenAll(invoiceItems.Select(providerInvoiceItemRepository.CreateAsync));
+
+                    break;
                 }
-
-                foreach (
-                    var providerPlan in providerPlans.Where(x => x.PurchasedSeats is null or 0)
-                )
-                {
-                    var plan = StaticStore.GetPlan(providerPlan.PlanType);
-
-                    var clientSeats = invoiceItems
-                        .Where(item => item.PlanName == plan.Name)
-                        .Sum(item => item.AssignedSeats);
-
-                    var unassignedSeats = providerPlan.SeatMinimum - clientSeats ?? 0;
-
-                    var discountedPercentage =
-                        (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
-
-                    var discountedSeatPrice =
-                        plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
-
-                    invoiceItems.Add(
-                        new ProviderInvoiceItem
-                        {
-                            ProviderId = parsedProviderId,
-                            InvoiceId = invoice.Id,
-                            InvoiceNumber = invoice.Number,
-                            ClientName = "Unassigned seats",
-                            PlanName = plan.Name,
-                            AssignedSeats = unassignedSeats,
-                            UsedSeats = 0,
-                            Total = unassignedSeats * discountedSeatPrice,
-                        }
-                    );
-                }
-
-                await Task.WhenAll(invoiceItems.Select(providerInvoiceItemRepository.CreateAsync));
-
-                break;
-            }
             case HandledStripeWebhook.InvoiceFinalized:
-            {
-                var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoice.Id);
-
-                if (invoiceItems.Count != 0)
                 {
-                    await Task.WhenAll(
-                        invoiceItems.Select(invoiceItem =>
-                        {
-                            invoiceItem.InvoiceNumber = invoice.Number;
-                            return providerInvoiceItemRepository.ReplaceAsync(invoiceItem);
-                        })
-                    );
-                }
+                    var invoiceItems = await providerInvoiceItemRepository.GetByInvoiceId(invoice.Id);
 
-                break;
-            }
+                    if (invoiceItems.Count != 0)
+                    {
+                        await Task.WhenAll(
+                            invoiceItems.Select(invoiceItem =>
+                            {
+                                invoiceItem.InvoiceNumber = invoice.Number;
+                                return providerInvoiceItemRepository.ReplaceAsync(invoiceItem);
+                            })
+                        );
+                    }
+
+                    break;
+                }
         }
     }
 }

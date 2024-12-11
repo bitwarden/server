@@ -34,15 +34,16 @@ public class InvoiceCreatedHandler(
             if (
                 usingPayPal
                 && invoice
-                    is {
-                        AmountDue: > 0,
-                        Paid: false,
-                        CollectionMethod: "charge_automatically",
-                        BillingReason: "subscription_create"
+                    is
+                {
+                    AmountDue: > 0,
+                    Paid: false,
+                    CollectionMethod: "charge_automatically",
+                    BillingReason: "subscription_create"
                             or "subscription_cycle"
                             or "automatic_pending_invoice_item_invoice",
-                        SubscriptionId: not null and not ""
-                    }
+                    SubscriptionId: not null and not ""
+                }
             )
             {
                 await stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);

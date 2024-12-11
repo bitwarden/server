@@ -15,7 +15,8 @@ public class NotificationStatusRepository : BaseRepository, INotificationStatusR
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public NotificationStatusRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

@@ -18,7 +18,8 @@ public class OrganizationApiKeyRepository
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public OrganizationApiKeyRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

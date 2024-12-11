@@ -21,7 +21,8 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger
-        ) { }
+        )
+    { }
 
     public async Task CreateOrUpdateRegistrationAsync(
         string pushToken,

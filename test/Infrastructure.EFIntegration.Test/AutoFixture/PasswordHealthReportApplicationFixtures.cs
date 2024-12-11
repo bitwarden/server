@@ -84,7 +84,8 @@ internal class EfPasswordHealthReportApplicationApplicableToUserInlineAutoDataAt
                 typeof(EfPasswordHealthReportApplicationApplicableToUser),
             },
             values
-        ) { }
+        )
+    { }
 }
 
 internal class InlineEfPasswordHealthReportApplicationAutoDataAttribute

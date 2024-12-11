@@ -16,7 +16,8 @@ public class TransactionRepository : Repository<Transaction, Guid>, ITransaction
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public TransactionRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

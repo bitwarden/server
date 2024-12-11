@@ -11,7 +11,8 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public SecurityTaskRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

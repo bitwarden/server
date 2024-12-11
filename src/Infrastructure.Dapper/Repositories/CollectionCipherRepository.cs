@@ -15,7 +15,8 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public CollectionCipherRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

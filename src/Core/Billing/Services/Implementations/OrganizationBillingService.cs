@@ -173,7 +173,8 @@ public class OrganizationBillingService(
         {
             if (
                 customerSetup.TokenizedPaymentSource
-                is not {
+                is not
+                {
                     Type: PaymentMethodType.BankAccount
                         or PaymentMethodType.Card
                         or PaymentMethodType.PayPal,
@@ -217,49 +218,49 @@ public class OrganizationBillingService(
             switch (paymentMethodType)
             {
                 case PaymentMethodType.BankAccount:
-                {
-                    var setupIntent = (
-                        await stripeAdapter.SetupIntentList(
-                            new SetupIntentListOptions { PaymentMethod = paymentMethodToken }
-                        )
-                    ).FirstOrDefault();
+                    {
+                        var setupIntent = (
+                            await stripeAdapter.SetupIntentList(
+                                new SetupIntentListOptions { PaymentMethod = paymentMethodToken }
+                            )
+                        ).FirstOrDefault();
 
-                    if (setupIntent == null)
+                        if (setupIntent == null)
+                        {
+                            logger.LogError(
+                                "Cannot create customer for organization ({OrganizationID}) without a setup intent for their bank account",
+                                organization.Id
+                            );
+                            throw new BillingException();
+                        }
+
+                        await setupIntentCache.Set(organization.Id, setupIntent.Id);
+                        break;
+                    }
+                case PaymentMethodType.Card:
+                    {
+                        customerCreateOptions.PaymentMethod = paymentMethodToken;
+                        customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethodToken;
+                        break;
+                    }
+                case PaymentMethodType.PayPal:
+                    {
+                        braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(
+                            organization,
+                            paymentMethodToken
+                        );
+                        customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
+                        break;
+                    }
+                default:
                     {
                         logger.LogError(
-                            "Cannot create customer for organization ({OrganizationID}) without a setup intent for their bank account",
-                            organization.Id
+                            "Cannot create customer for organization ({OrganizationID}) using payment method type ({PaymentMethodType}) as it is not supported",
+                            organization.Id,
+                            paymentMethodType.ToString()
                         );
                         throw new BillingException();
                     }
-
-                    await setupIntentCache.Set(organization.Id, setupIntent.Id);
-                    break;
-                }
-                case PaymentMethodType.Card:
-                {
-                    customerCreateOptions.PaymentMethod = paymentMethodToken;
-                    customerCreateOptions.InvoiceSettings.DefaultPaymentMethod = paymentMethodToken;
-                    break;
-                }
-                case PaymentMethodType.PayPal:
-                {
-                    braintreeCustomerId = await subscriberService.CreateBraintreeCustomer(
-                        organization,
-                        paymentMethodToken
-                    );
-                    customerCreateOptions.Metadata[BraintreeCustomerIdKey] = braintreeCustomerId;
-                    break;
-                }
-                default:
-                {
-                    logger.LogError(
-                        "Cannot create customer for organization ({OrganizationID}) using payment method type ({PaymentMethodType}) as it is not supported",
-                        organization.Id,
-                        paymentMethodType.ToString()
-                    );
-                    throw new BillingException();
-                }
             }
         }
 
@@ -299,15 +300,15 @@ public class OrganizationBillingService(
                 switch (customerSetup.TokenizedPaymentSource!.Type)
                 {
                     case PaymentMethodType.BankAccount:
-                    {
-                        await setupIntentCache.Remove(organization.Id);
-                        break;
-                    }
+                        {
+                            await setupIntentCache.Remove(organization.Id);
+                            break;
+                        }
                     case PaymentMethodType.PayPal when !string.IsNullOrEmpty(braintreeCustomerId):
-                    {
-                        await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
-                        break;
-                    }
+                        {
+                            await braintreeGateway.Customer.DeleteAsync(braintreeCustomerId);
+                            break;
+                        }
                 }
             }
         }

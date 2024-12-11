@@ -21,7 +21,8 @@ public class AuthorizationCodeStore : DefaultGrantStore<AuthorizationCode>, IAut
             serializer,
             handleGenerationService,
             logger
-        ) { }
+        )
+    { }
 
     public Task<string> StoreAuthorizationCodeAsync(AuthorizationCode code)
     {

@@ -16,7 +16,8 @@ public class PasswordHealthReportApplicationRepository
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public PasswordHealthReportApplicationRepository(
         string connectionString,

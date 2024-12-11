@@ -2119,7 +2119,8 @@ public class StripePaymentService : IPaymentService
 
         if (
             subscriptionInfo.Subscription
-                is not {
+                is not
+                {
                     Status: "active" or "trialing" or "past_due",
                     CollectionMethod: "charge_automatically"
                 }
@@ -2172,21 +2173,21 @@ public class StripePaymentService : IPaymentService
         switch (subscription.CollectionMethod)
         {
             case "charge_automatically":
-            {
-                var firstOverdueInvoice = openInvoices
-                    .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                    .MinBy(invoice => invoice.Created);
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
 
-                return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
-            }
+                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+                }
             case "send_invoice":
-            {
-                var firstOverdueInvoice = openInvoices
-                    .Where(invoice => invoice.DueDate < currentDate)
-                    .MinBy(invoice => invoice.Created);
+                {
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
 
-                return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
-            }
+                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+                }
             default:
                 return (null, null);
         }

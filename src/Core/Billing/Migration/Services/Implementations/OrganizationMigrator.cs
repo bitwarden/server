@@ -143,10 +143,11 @@ public class OrganizationMigrator(
             if (
                 !trialing
                 && subscription
-                    is {
-                        Status: StripeConstants.SubscriptionStatus.Canceled,
-                        CancellationDetails.Comment: _cancellationComment
-                    }
+                    is
+                {
+                    Status: StripeConstants.SubscriptionStatus.Canceled,
+                    CancellationDetails.Comment: _cancellationComment
+                }
             )
             {
                 var latestInvoice = subscription.LatestInvoice;

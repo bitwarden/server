@@ -15,7 +15,8 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public DeviceRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

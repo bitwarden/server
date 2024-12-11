@@ -60,7 +60,8 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
             );
         }
         catch (ServiceBusException e)
-            when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists) { }
+            when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+        { }
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _executingTask = ExecuteAsync(_cts.Token);

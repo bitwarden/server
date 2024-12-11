@@ -18,7 +18,8 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public AuthRequestRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

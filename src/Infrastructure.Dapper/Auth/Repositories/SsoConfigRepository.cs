@@ -16,7 +16,8 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public SsoConfigRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

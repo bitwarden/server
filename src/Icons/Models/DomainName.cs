@@ -281,7 +281,8 @@ public class DomainName
         public IDictionary<
             TLDRule.RuleType,
             IDictionary<string, TLDRule>
-        > TLDRuleLists { get; set; }
+        > TLDRuleLists
+        { get; set; }
 
         public static void Reset()
         {

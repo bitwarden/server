@@ -33,7 +33,8 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
                 globalSettings.Amazon.AccessKeySecret,
                 RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region)
             )
-        ) { }
+        )
+    { }
 
     public AmazonSesMailDeliveryService(
         GlobalSettings globalSettings,

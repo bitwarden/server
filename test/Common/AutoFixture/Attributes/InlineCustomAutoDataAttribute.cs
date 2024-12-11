@@ -13,5 +13,6 @@ public class InlineCustomAutoDataAttribute : CompositeDataAttribute
                 new InlineDataAttribute(values),
                 new CustomAutoDataAttribute(iCustomizationTypes),
             }
-        ) { }
+        )
+    { }
 }

@@ -11,7 +11,8 @@ public class AzureQueueMailService : AzureQueueService<IMailQueueMessage>, IMail
         : base(
             new QueueClient(globalSettings.Mail.ConnectionString, "mail"),
             JsonHelpers.IgnoreWritingNull
-        ) { }
+        )
+    { }
 
     public Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback) =>
         CreateManyAsync(new[] { message });

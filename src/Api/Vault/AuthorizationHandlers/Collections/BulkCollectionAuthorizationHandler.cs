@@ -349,7 +349,7 @@ public class BulkCollectionAuthorizationHandler
         if (
             org
             is not (
-                { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
                 or { Permissions.EditAnyCollection: true }
             )
         )

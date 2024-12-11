@@ -1207,19 +1207,19 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
-            {
-                await _loginHelper.LoginAsync(_email);
-                break;
-            }
+                {
+                    await _loginHelper.LoginAsync(_email);
+                    break;
+                }
             case PermissionType.RunAsUserWithPermission:
-            {
-                var (email, orgUser) = await _organizationHelper.CreateNewUser(
-                    OrganizationUserType.User,
-                    true
-                );
-                await _loginHelper.LoginAsync(email);
+                {
+                    var (email, orgUser) = await _organizationHelper.CreateNewUser(
+                        OrganizationUserType.User,
+                        true
+                    );
+                    await _loginHelper.LoginAsync(email);
 
-                var accessPolicies = new List<BaseAccessPolicy>
+                    var accessPolicies = new List<BaseAccessPolicy>
                 {
                     new UserProjectAccessPolicy
                     {
@@ -1229,15 +1229,15 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
                         Write = true,
                     },
                 };
-                await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-                break;
-            }
+                    await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+                    break;
+                }
             case PermissionType.RunAsServiceAccountWithPermission:
-            {
-                var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
-                await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+                {
+                    var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+                    await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
 
-                var accessPolicies = new List<BaseAccessPolicy>
+                    var accessPolicies = new List<BaseAccessPolicy>
                 {
                     new ServiceAccountProjectAccessPolicy
                     {
@@ -1247,9 +1247,9 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
                         Write = true,
                     },
                 };
-                await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-                break;
-            }
+                    await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+                    break;
+                }
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }

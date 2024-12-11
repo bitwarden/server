@@ -528,36 +528,36 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
                 await _loginHelper.LoginAsync(_email);
                 break;
             case PermissionType.RunAsUserWithPermission:
-            {
-                var (email, orgUser) = await _organizationHelper.CreateNewUser(
-                    OrganizationUserType.User,
-                    true
-                );
-                user = orgUser;
-                await _loginHelper.LoginAsync(email);
-
-                foreach (var project in projects)
                 {
-                    await CreateUserProjectAccessPolicyAsync(user.Id, project.Id, writeAccess);
-                }
-
-                break;
-            }
-            case PermissionType.RunAsServiceAccountWithPermission:
-            {
-                var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
-                await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
-
-                foreach (var project in projects)
-                {
-                    await CreateServiceAccountProjectAccessPolicyAsync(
-                        project.Id,
-                        apiKeyDetails.ApiKey.ServiceAccountId!.Value
+                    var (email, orgUser) = await _organizationHelper.CreateNewUser(
+                        OrganizationUserType.User,
+                        true
                     );
-                }
+                    user = orgUser;
+                    await _loginHelper.LoginAsync(email);
 
-                break;
-            }
+                    foreach (var project in projects)
+                    {
+                        await CreateUserProjectAccessPolicyAsync(user.Id, project.Id, writeAccess);
+                    }
+
+                    break;
+                }
+            case PermissionType.RunAsServiceAccountWithPermission:
+                {
+                    var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+                    await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+                    foreach (var project in projects)
+                    {
+                        await CreateServiceAccountProjectAccessPolicyAsync(
+                            project.Id,
+                            apiKeyDetails.ApiKey.ServiceAccountId!.Value
+                        );
+                    }
+
+                    break;
+                }
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }

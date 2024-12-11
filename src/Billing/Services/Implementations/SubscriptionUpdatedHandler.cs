@@ -52,55 +52,55 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         {
             case StripeSubscriptionStatus.Unpaid
             or StripeSubscriptionStatus.IncompleteExpired when organizationId.HasValue:
-            {
-                await _organizationService.DisableAsync(
-                    organizationId.Value,
-                    subscription.CurrentPeriodEnd
-                );
-                break;
-            }
-            case StripeSubscriptionStatus.Unpaid
-            or StripeSubscriptionStatus.IncompleteExpired:
-            {
-                if (!userId.HasValue)
                 {
-                    break;
-                }
-
-                if (
-                    subscription.Status is StripeSubscriptionStatus.Unpaid
-                    && subscription.Items.Any(i =>
-                        i.Price.Id
-                            is IStripeEventUtilityService.PremiumPlanId
-                                or IStripeEventUtilityService.PremiumPlanIdAppStore
-                    )
-                )
-                {
-                    await CancelSubscription(subscription.Id);
-                    await VoidOpenInvoices(subscription.Id);
-                }
-
-                await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
-
-                break;
-            }
-            case StripeSubscriptionStatus.Active when organizationId.HasValue:
-            {
-                await _organizationService.EnableAsync(organizationId.Value);
-                break;
-            }
-            case StripeSubscriptionStatus.Active:
-            {
-                if (userId.HasValue)
-                {
-                    await _userService.EnablePremiumAsync(
-                        userId.Value,
+                    await _organizationService.DisableAsync(
+                        organizationId.Value,
                         subscription.CurrentPeriodEnd
                     );
+                    break;
                 }
+            case StripeSubscriptionStatus.Unpaid
+            or StripeSubscriptionStatus.IncompleteExpired:
+                {
+                    if (!userId.HasValue)
+                    {
+                        break;
+                    }
 
-                break;
-            }
+                    if (
+                        subscription.Status is StripeSubscriptionStatus.Unpaid
+                        && subscription.Items.Any(i =>
+                            i.Price.Id
+                                is IStripeEventUtilityService.PremiumPlanId
+                                    or IStripeEventUtilityService.PremiumPlanIdAppStore
+                        )
+                    )
+                    {
+                        await CancelSubscription(subscription.Id);
+                        await VoidOpenInvoices(subscription.Id);
+                    }
+
+                    await _userService.DisablePremiumAsync(userId.Value, subscription.CurrentPeriodEnd);
+
+                    break;
+                }
+            case StripeSubscriptionStatus.Active when organizationId.HasValue:
+                {
+                    await _organizationService.EnableAsync(organizationId.Value);
+                    break;
+                }
+            case StripeSubscriptionStatus.Active:
+                {
+                    if (userId.HasValue)
+                    {
+                        await _userService.EnablePremiumAsync(
+                            userId.Value,
+                            subscription.CurrentPeriodEnd
+                        );
+                    }
+
+                    break;
+                }
         }
 
         if (organizationId.HasValue)

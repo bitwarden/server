@@ -27,7 +27,8 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
             globalSettings,
             hostingEnvironment,
             logger
-        ) { }
+        )
+    { }
 
     public void Dispose()
     {

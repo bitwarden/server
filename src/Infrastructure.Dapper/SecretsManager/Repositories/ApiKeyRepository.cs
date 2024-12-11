@@ -15,7 +15,8 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public ApiKeyRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

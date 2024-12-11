@@ -19,7 +19,8 @@ public class OrganizationDomainRepository
             serviceScopeFactory,
             mapper,
             (DatabaseContext context) => context.OrganizationDomains
-        ) { }
+        )
+    { }
 
     public async Task<
         ICollection<Core.Entities.OrganizationDomain>

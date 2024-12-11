@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Authorization.Infrastructure;
 namespace Bit.Core.SecretsManager.AuthorizationRequirements;
 
 public class ServiceAccountGrantedPoliciesOperationRequirement
-    : OperationAuthorizationRequirement { }
+    : OperationAuthorizationRequirement
+{ }
 
 public static class ServiceAccountGrantedPoliciesOperations
 {

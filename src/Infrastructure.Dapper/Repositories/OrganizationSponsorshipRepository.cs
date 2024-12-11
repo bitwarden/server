@@ -17,7 +17,8 @@ public class OrganizationSponsorshipRepository
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public OrganizationSponsorshipRepository(
         string connectionString,

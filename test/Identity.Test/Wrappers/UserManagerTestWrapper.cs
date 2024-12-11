@@ -58,7 +58,8 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser>
             errors,
             services,
             logger
-        ) { }
+        )
+    { }
 
     /// <summary>
     /// return class variable TWO_FACTOR_ENABLED

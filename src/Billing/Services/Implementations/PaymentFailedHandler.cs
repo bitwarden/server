@@ -49,11 +49,12 @@ public class PaymentFailedHandler : IPaymentFailedHandler
 
     private static bool ShouldAttemptToPayInvoice(Invoice invoice) =>
         invoice
-            is {
-                AmountDue: > 0,
-                Paid: false,
-                CollectionMethod: "charge_automatically",
-                BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-                SubscriptionId: not null
-            };
+            is
+        {
+            AmountDue: > 0,
+            Paid: false,
+            CollectionMethod: "charge_automatically",
+            BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
+            SubscriptionId: not null
+        };
 }

@@ -3,7 +3,8 @@
 namespace Bit.Infrastructure.EntityFramework.Billing.Models;
 
 public class ClientOrganizationMigrationRecord
-    : Core.Billing.Entities.ClientOrganizationMigrationRecord { }
+    : Core.Billing.Entities.ClientOrganizationMigrationRecord
+{ }
 
 public class ClientOrganizationMigrationRecordProfile : Profile
 {

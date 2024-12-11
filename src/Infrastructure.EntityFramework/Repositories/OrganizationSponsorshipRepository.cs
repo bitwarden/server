@@ -20,7 +20,8 @@ public class OrganizationSponsorshipRepository
             serviceScopeFactory,
             mapper,
             (DatabaseContext context) => context.OrganizationSponsorships
-        ) { }
+        )
+    { }
 
     public async Task<ICollection<Guid>?> CreateManyAsync(
         IEnumerable<Core.Entities.OrganizationSponsorship> organizationSponsorships

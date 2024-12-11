@@ -11,7 +11,8 @@ public class AzureQueueEventWriteService : AzureQueueService<IEvent>, IEventWrit
         : base(
             new QueueClient(globalSettings.Events.ConnectionString, "event"),
             JsonHelpers.IgnoreWritingNull
-        ) { }
+        )
+    { }
 
     public Task CreateAsync(IEvent e) => CreateManyAsync(new[] { e });
 }

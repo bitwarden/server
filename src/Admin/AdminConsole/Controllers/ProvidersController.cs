@@ -332,26 +332,26 @@ public class ProvidersController : Controller
                 await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
                 break;
             case ProviderType.MultiOrganizationEnterprise:
-            {
-                var existingMoePlan = providerPlans.Single();
+                {
+                    var existingMoePlan = providerPlans.Single();
 
-                // 1. Change the plan and take over any old values.
-                var changeMoePlanCommand = new ChangeProviderPlanCommand(
-                    existingMoePlan.Id,
-                    model.Plan!.Value,
-                    provider.GatewaySubscriptionId
-                );
-                await _providerBillingService.ChangePlan(changeMoePlanCommand);
+                    // 1. Change the plan and take over any old values.
+                    var changeMoePlanCommand = new ChangeProviderPlanCommand(
+                        existingMoePlan.Id,
+                        model.Plan!.Value,
+                        provider.GatewaySubscriptionId
+                    );
+                    await _providerBillingService.ChangePlan(changeMoePlanCommand);
 
-                // 2. Update the seat minimums.
-                var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
-                    provider.Id,
-                    provider.GatewaySubscriptionId,
-                    [(Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)]
-                );
-                await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
-                break;
-            }
+                    // 2. Update the seat minimums.
+                    var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                        provider.Id,
+                        provider.GatewaySubscriptionId,
+                        [(Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)]
+                    );
+                    await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
+                    break;
+                }
         }
 
         return RedirectToAction("Edit", new { id });

@@ -5,5 +5,6 @@ public class ApprovedAuthRequestIsMissingKeyException : AuthRequestUpdateProcess
     public ApprovedAuthRequestIsMissingKeyException(Guid id)
         : base(
             $"An auth request with id {id} was approved, but no key was provided. This auth request can not be approved."
-        ) { }
+        )
+    { }
 }

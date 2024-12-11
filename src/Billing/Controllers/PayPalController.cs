@@ -166,129 +166,129 @@ public class PayPalController : Controller
         switch (transactionModel.PaymentStatus)
         {
             case "Completed":
-            {
-                var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                    GatewayType.PayPal,
-                    transactionModel.TransactionId
-                );
-
-                if (existingTransaction != null)
                 {
-                    _logger.LogWarning(
-                        "PayPal IPN ({Id}): Already processed this completed transaction",
+                    var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal,
                         transactionModel.TransactionId
                     );
-                    return Ok();
-                }
 
-                try
-                {
-                    var transaction = new Transaction
+                    if (existingTransaction != null)
                     {
-                        Amount = transactionModel.MerchantGross,
-                        CreationDate = transactionModel.PaymentDate,
-                        OrganizationId = transactionModel.OrganizationId,
-                        UserId = transactionModel.UserId,
-                        ProviderId = transactionModel.ProviderId,
-                        Type = transactionModel.IsAccountCredit
-                            ? TransactionType.Credit
-                            : TransactionType.Charge,
-                        Gateway = GatewayType.PayPal,
-                        GatewayId = transactionModel.TransactionId,
-                        PaymentMethodType = PaymentMethodType.PayPal,
-                        Details = transactionModel.TransactionId,
-                    };
-
-                    await _transactionRepository.CreateAsync(transaction);
-
-                    if (transactionModel.IsAccountCredit)
-                    {
-                        await ApplyCreditAsync(transaction);
-                    }
-                }
-                // Catch foreign key violations because user/org could have been deleted.
-                catch (SqlException sqlException) when (sqlException.Number == 547)
-                {
-                    _logger.LogError(
-                        "PayPal IPN ({Id}): SQL Exception | {Message}",
-                        transactionModel.TransactionId,
-                        sqlException.Message
-                    );
-                }
-
-                break;
-            }
-            case "Refunded"
-            or "Reversed":
-            {
-                var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                    GatewayType.PayPal,
-                    transactionModel.TransactionId
-                );
-
-                if (existingTransaction != null)
-                {
-                    _logger.LogWarning(
-                        "PayPal IPN ({Id}): Already processed this refunded transaction",
-                        transactionModel.TransactionId
-                    );
-                    return Ok();
-                }
-
-                var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
-                    GatewayType.PayPal,
-                    transactionModel.ParentTransactionId
-                );
-
-                if (parentTransaction == null)
-                {
-                    _logger.LogWarning(
-                        "PayPal IPN ({Id}): Could not find parent transaction",
-                        transactionModel.TransactionId
-                    );
-                    return Ok();
-                }
-
-                var refundAmount = Math.Abs(transactionModel.MerchantGross);
-
-                var remainingAmount =
-                    parentTransaction.Amount - parentTransaction.RefundedAmount.GetValueOrDefault();
-
-                if (
-                    refundAmount > 0
-                    && !parentTransaction.Refunded.GetValueOrDefault()
-                    && remainingAmount >= refundAmount
-                )
-                {
-                    parentTransaction.RefundedAmount =
-                        parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
-
-                    if (parentTransaction.RefundedAmount == parentTransaction.Amount)
-                    {
-                        parentTransaction.Refunded = true;
+                        _logger.LogWarning(
+                            "PayPal IPN ({Id}): Already processed this completed transaction",
+                            transactionModel.TransactionId
+                        );
+                        return Ok();
                     }
 
-                    await _transactionRepository.ReplaceAsync(parentTransaction);
-
-                    await _transactionRepository.CreateAsync(
-                        new Transaction
+                    try
+                    {
+                        var transaction = new Transaction
                         {
-                            Amount = refundAmount,
+                            Amount = transactionModel.MerchantGross,
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
                             ProviderId = transactionModel.ProviderId,
-                            Type = TransactionType.Refund,
+                            Type = transactionModel.IsAccountCredit
+                                ? TransactionType.Credit
+                                : TransactionType.Charge,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,
                             PaymentMethodType = PaymentMethodType.PayPal,
                             Details = transactionModel.TransactionId,
-                        }
-                    );
-                }
+                        };
 
-                break;
-            }
+                        await _transactionRepository.CreateAsync(transaction);
+
+                        if (transactionModel.IsAccountCredit)
+                        {
+                            await ApplyCreditAsync(transaction);
+                        }
+                    }
+                    // Catch foreign key violations because user/org could have been deleted.
+                    catch (SqlException sqlException) when (sqlException.Number == 547)
+                    {
+                        _logger.LogError(
+                            "PayPal IPN ({Id}): SQL Exception | {Message}",
+                            transactionModel.TransactionId,
+                            sqlException.Message
+                        );
+                    }
+
+                    break;
+                }
+            case "Refunded"
+            or "Reversed":
+                {
+                    var existingTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal,
+                        transactionModel.TransactionId
+                    );
+
+                    if (existingTransaction != null)
+                    {
+                        _logger.LogWarning(
+                            "PayPal IPN ({Id}): Already processed this refunded transaction",
+                            transactionModel.TransactionId
+                        );
+                        return Ok();
+                    }
+
+                    var parentTransaction = await _transactionRepository.GetByGatewayIdAsync(
+                        GatewayType.PayPal,
+                        transactionModel.ParentTransactionId
+                    );
+
+                    if (parentTransaction == null)
+                    {
+                        _logger.LogWarning(
+                            "PayPal IPN ({Id}): Could not find parent transaction",
+                            transactionModel.TransactionId
+                        );
+                        return Ok();
+                    }
+
+                    var refundAmount = Math.Abs(transactionModel.MerchantGross);
+
+                    var remainingAmount =
+                        parentTransaction.Amount - parentTransaction.RefundedAmount.GetValueOrDefault();
+
+                    if (
+                        refundAmount > 0
+                        && !parentTransaction.Refunded.GetValueOrDefault()
+                        && remainingAmount >= refundAmount
+                    )
+                    {
+                        parentTransaction.RefundedAmount =
+                            parentTransaction.RefundedAmount.GetValueOrDefault() + refundAmount;
+
+                        if (parentTransaction.RefundedAmount == parentTransaction.Amount)
+                        {
+                            parentTransaction.Refunded = true;
+                        }
+
+                        await _transactionRepository.ReplaceAsync(parentTransaction);
+
+                        await _transactionRepository.CreateAsync(
+                            new Transaction
+                            {
+                                Amount = refundAmount,
+                                CreationDate = transactionModel.PaymentDate,
+                                OrganizationId = transactionModel.OrganizationId,
+                                UserId = transactionModel.UserId,
+                                ProviderId = transactionModel.ProviderId,
+                                Type = TransactionType.Refund,
+                                Gateway = GatewayType.PayPal,
+                                GatewayId = transactionModel.TransactionId,
+                                PaymentMethodType = PaymentMethodType.PayPal,
+                                Details = transactionModel.TransactionId,
+                            }
+                        );
+                    }
+
+                    break;
+                }
         }
 
         return Ok();

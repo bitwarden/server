@@ -50,7 +50,8 @@ internal class EfOrganizationSponsorshipAutoDataAttribute : CustomAutoDataAttrib
             new SutProviderCustomization(),
             new EfOrganizationSponsorship(),
             new EfOrganization()
-        ) { }
+        )
+    { }
 }
 
 internal class InlineEfOrganizationSponsorshipAutoDataAttribute : InlineCustomAutoDataAttribute
@@ -64,5 +65,6 @@ internal class InlineEfOrganizationSponsorshipAutoDataAttribute : InlineCustomAu
                 typeof(EfOrganization),
             },
             values
-        ) { }
+        )
+    { }
 }

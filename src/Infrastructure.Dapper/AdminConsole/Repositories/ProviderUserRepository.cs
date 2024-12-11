@@ -18,7 +18,8 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public ProviderUserRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

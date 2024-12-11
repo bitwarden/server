@@ -18,7 +18,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public CollectionRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }

@@ -81,7 +81,8 @@ public class BaseRequestValidatorTestWrapper
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder
-        ) { }
+        )
+    { }
 
     public async Task ValidateAsync(BaseRequestValidationContextFake context)
     {
@@ -134,7 +135,8 @@ public class BaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse
-    ) { }
+    )
+    { }
 
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,

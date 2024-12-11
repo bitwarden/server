@@ -3,7 +3,8 @@
 namespace Bit.Core.SecretsManager.AuthorizationRequirements;
 
 public class ServiceAccountPeopleAccessPoliciesOperationRequirement
-    : OperationAuthorizationRequirement { }
+    : OperationAuthorizationRequirement
+{ }
 
 public static class ServiceAccountPeopleAccessPoliciesOperations
 {

@@ -715,7 +715,8 @@ public static class StaticStore
     public static IDictionary<
         GlobalEquivalentDomainsType,
         IEnumerable<string>
-    > GlobalDomains { get; set; }
+    > GlobalDomains
+    { get; set; }
     public static IEnumerable<Plan> Plans { get; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } =
         new[]

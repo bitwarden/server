@@ -52,30 +52,30 @@ public record PaymentSource(PaymentMethodType Type, string Description, bool Nee
         switch (defaultPaymentMethod)
         {
             case Braintree.PayPalAccount payPalAccount:
-            {
-                return new PaymentSource(PaymentMethodType.PayPal, payPalAccount.Email, false);
-            }
+                {
+                    return new PaymentSource(PaymentMethodType.PayPal, payPalAccount.Email, false);
+                }
             case Braintree.CreditCard creditCard:
-            {
-                var paddedExpirationMonth = creditCard.ExpirationMonth.PadLeft(2, '0');
+                {
+                    var paddedExpirationMonth = creditCard.ExpirationMonth.PadLeft(2, '0');
 
-                var description =
-                    $"{creditCard.CardType}, *{creditCard.LastFour}, {paddedExpirationMonth}/{creditCard.ExpirationYear}";
+                    var description =
+                        $"{creditCard.CardType}, *{creditCard.LastFour}, {paddedExpirationMonth}/{creditCard.ExpirationYear}";
 
-                return new PaymentSource(PaymentMethodType.Card, description, false);
-            }
+                    return new PaymentSource(PaymentMethodType.Card, description, false);
+                }
             case Braintree.UsBankAccount bankAccount:
-            {
-                return new PaymentSource(
-                    PaymentMethodType.BankAccount,
-                    $"{bankAccount.BankName}, *{bankAccount.Last4}",
-                    false
-                );
-            }
+                {
+                    return new PaymentSource(
+                        PaymentMethodType.BankAccount,
+                        $"{bankAccount.BankName}, *{bankAccount.Last4}",
+                        false
+                    );
+                }
             default:
-            {
-                return null;
-            }
+                {
+                    return null;
+                }
         }
     }
 

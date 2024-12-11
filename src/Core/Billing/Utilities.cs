@@ -33,43 +33,43 @@ public static class Utilities
         switch (subscription.CollectionMethod)
         {
             case "charge_automatically":
-            {
-                var firstOverdueInvoice = openInvoices
-                    .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                    .MinBy(invoice => invoice.Created);
-
-                if (firstOverdueInvoice == null)
                 {
-                    return null;
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                        .MinBy(invoice => invoice.Created);
+
+                    if (firstOverdueInvoice == null)
+                    {
+                        return null;
+                    }
+
+                    const int gracePeriod = 14;
+
+                    return new SubscriptionSuspension(
+                        firstOverdueInvoice.Created.AddDays(gracePeriod),
+                        firstOverdueInvoice.PeriodEnd,
+                        gracePeriod
+                    );
                 }
-
-                const int gracePeriod = 14;
-
-                return new SubscriptionSuspension(
-                    firstOverdueInvoice.Created.AddDays(gracePeriod),
-                    firstOverdueInvoice.PeriodEnd,
-                    gracePeriod
-                );
-            }
             case "send_invoice":
-            {
-                var firstOverdueInvoice = openInvoices
-                    .Where(invoice => invoice.DueDate < currentDate)
-                    .MinBy(invoice => invoice.Created);
-
-                if (firstOverdueInvoice?.DueDate == null)
                 {
-                    return null;
+                    var firstOverdueInvoice = openInvoices
+                        .Where(invoice => invoice.DueDate < currentDate)
+                        .MinBy(invoice => invoice.Created);
+
+                    if (firstOverdueInvoice?.DueDate == null)
+                    {
+                        return null;
+                    }
+
+                    const int gracePeriod = 30;
+
+                    return new SubscriptionSuspension(
+                        firstOverdueInvoice.DueDate.Value.AddDays(gracePeriod),
+                        firstOverdueInvoice.PeriodEnd,
+                        gracePeriod
+                    );
                 }
-
-                const int gracePeriod = 30;
-
-                return new SubscriptionSuspension(
-                    firstOverdueInvoice.DueDate.Value.AddDays(gracePeriod),
-                    firstOverdueInvoice.PeriodEnd,
-                    gracePeriod
-                );
-            }
             default:
                 return null;
         }

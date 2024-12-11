@@ -18,7 +18,8 @@ public class OrganizationConnectionRepository
         : base(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public async Task<OrganizationConnection?> GetByIdOrganizationIdAsync(
         Guid id,

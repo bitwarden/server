@@ -8,7 +8,8 @@ public class CustomAutoDataAttribute : AutoDataAttribute
     public CustomAutoDataAttribute(params Type[] iCustomizationTypes)
         : this(
             iCustomizationTypes.Select(t => (ICustomization)Activator.CreateInstance(t)).ToArray()
-        ) { }
+        )
+    { }
 
     public CustomAutoDataAttribute(params ICustomization[] customizations)
         : base(() =>
@@ -19,5 +20,6 @@ public class CustomAutoDataAttribute : AutoDataAttribute
                 fixture.Customize(customization);
             }
             return fixture;
-        }) { }
+        })
+    { }
 }

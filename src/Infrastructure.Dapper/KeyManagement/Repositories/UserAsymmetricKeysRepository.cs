@@ -15,7 +15,8 @@ public class UserAsymmetricKeysRepository : BaseRepository, IUserAsymmetricKeysR
         : this(
             globalSettings.SqlServer.ConnectionString,
             globalSettings.SqlServer.ReadOnlyConnectionString
-        ) { }
+        )
+    { }
 
     public UserAsymmetricKeysRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString) { }
