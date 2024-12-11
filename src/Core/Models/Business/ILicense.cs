@@ -12,6 +12,7 @@ public interface ILicense
     bool Trial { get; set; }
     string Hash { get; set; }
     string Signature { get; set; }
+    string Token { get; set; }
     byte[] SignatureBytes { get; }
     byte[] GetDataBytes(bool forHash = false);
     byte[] ComputeHash();

@@ -1,8 +1,8 @@
 ﻿using System.Data;
 using System.Text.Json;
 using Bit.Core;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -168,6 +168,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_DeleteById]",
                 new { Id = user.Id },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 180);
+        }
+    }
+    public async Task DeleteManyAsync(IEnumerable<User> users)
+    {
+        var ids = users.Select(user => user.Id);
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_DeleteByIds]",
+                new { Ids = JsonSerializer.Serialize(ids) },
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 180);
         }
