@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.IntegrationTestCommon.Factories;
 
 namespace Bit.Api.IntegrationTest.Helpers;
@@ -24,11 +24,11 @@ public static class OrganizationTestHelpers
         PaymentMethodType paymentMethod = PaymentMethodType.None) where T : class
     {
         var userRepository = factory.GetService<IUserRepository>();
-        var organizationService = factory.GetService<IOrganizationService>();
+        var organizationSignUpCommand = factory.GetService<ICloudOrganizationSignUpCommand>();
 
         var owner = await userRepository.GetByEmailAsync(ownerEmail);
 
-        var signUpResult = await organizationService.SignUpAsync(new OrganizationSignup
+        var signUpResult = await organizationSignUpCommand.SignUpOrganizationAsync(new OrganizationSignup
         {
             Name = name,
             BillingEmail = billingEmail,
@@ -39,9 +39,9 @@ public static class OrganizationTestHelpers
             PaymentMethodType = paymentMethod
         });
 
-        Debug.Assert(signUpResult.organizationUser is not null);
+        Debug.Assert(signUpResult.OrganizationUser is not null);
 
-        return new Tuple<Organization, OrganizationUser>(signUpResult.organization, signUpResult.organizationUser);
+        return new Tuple<Organization, OrganizationUser>(signUpResult.Organization, signUpResult.OrganizationUser);
     }
 
     /// <summary>

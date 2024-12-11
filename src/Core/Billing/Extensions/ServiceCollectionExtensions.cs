@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Caches.Implementations;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
 
@@ -16,5 +17,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
+        services.AddLicenseServices();
     }
 }

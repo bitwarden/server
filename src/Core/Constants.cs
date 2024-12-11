@@ -144,7 +144,6 @@ public static class FeatureFlagKeys
     public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
-    public const string LimitCollectionCreationDeletionSplit = "pm-10863-limit-collection-creation-deletion-split";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
@@ -153,8 +152,14 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
     public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
+    public const string PM11360RemoveProviderExportPermission = "pm-11360-remove-provider-export-permission";
     public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
+    public const string InlineMenuTotp = "inline-menu-totp";
+    public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
+    public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
+    public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
 
     public static List<string> GetAllKeys()
     {
@@ -170,7 +175,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { CipherKeyEncryption, "true" },
         };
     }
 }

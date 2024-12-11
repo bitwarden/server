@@ -32,4 +32,5 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+    Task DeleteManyAsync(IEnumerable<User> users);
 }
