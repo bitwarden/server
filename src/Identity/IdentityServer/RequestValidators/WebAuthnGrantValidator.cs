@@ -122,7 +122,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         return context.Result.Subject;
     }
 
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -130,7 +130,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             customResponse);
     }
 
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetSsoResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -138,7 +138,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             customResponse);
     }
 
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetErrorResult(ExtensionGrantValidationContext context, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);

@@ -31,7 +31,7 @@ public class CustomValidatorRequestContext
     /// We use the parent class for both GrantValidationResult and TokenRequestValidationResult here for
     /// flexibility when building the response.
     /// </summary>
-    public ValidationResult ValidationErrorResult {get; set;}
+    public ValidationResult ValidationErrorResult { get; set; }
     /// <summary>
     /// This dictionary should contain relevant information for the clients to act on.
     /// This contains the information used to guide a user to successful authentication.

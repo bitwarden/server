@@ -174,10 +174,11 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // 4. Check if the user is logging in from a new device
-        var deviceValid = await _deviceValidator.DeviceValid(request, validatorContext);
+        var deviceValid = await _deviceValidator.ValidateRequestDeviceAsync(request, validatorContext);
         if (!deviceValid)
         {
             SetValidationErrorResult(context, validatorContext);
+            await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
             return;
         }
 
@@ -245,6 +246,17 @@ public abstract class BaseRequestValidator<T> where T : class
         await SetSuccessResult(context, user, claims, customResponse);
     }
 
+    /// <summary>
+    /// This does two things, it sets the error result for the current ValidatorContext _and_ it logs error.
+    /// These two things should be seperated to maintain single concerns.
+    /// </summary>
+    /// <param name="message">Error message for the error result</param>
+    /// <param name="twoFactorRequest">bool that controls how the error is logged</param>
+    /// <param name="context">used to set the error result in the current validator</param>
+    /// <param name="user">used to associate the failed login with a user</param>
+    /// <returns>void</returns>
+    [Obsolete("Consider using SetValidationErrorResult to set the validation result, and LogFailedLoginEvent " +
+        "to log the failure.")]
     protected async Task BuildErrorResultAsync(string message, bool twoFactorRequest, T context, User user)
     {
         if (user != null)
@@ -265,11 +277,38 @@ public abstract class BaseRequestValidator<T> where T : class
             new Dictionary<string, object> { { "ErrorModel", new ErrorResponseModel(message) } });
     }
 
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    protected async Task LogFailedLoginEvent(User user, EventType eventType)
+    {
+        if (user != null)
+        {
+            await _eventService.LogUserEventAsync(user.Id, eventType);
+        }
+
+        if (_globalSettings.SelfHosted)
+        {
+            string formattedMessage;
+            switch (eventType)
+            {
+                case EventType.User_FailedLogIn:
+                    formattedMessage = string.Format("Failed login attempt. {0}", $" {CurrentContext.IpAddress}");
+                    break;
+                case EventType.User_FailedLogIn2fa:
+                    formattedMessage = string.Format("Failed login attempt, 2FA invalid.{0}", $" {CurrentContext.IpAddress}");
+                    break;
+                default:
+                    formattedMessage = "Failed login attempt.";
+                    break;
+            }
+            _logger.LogWarning(Constants.BypassFiltersEventId, formattedMessage);
+        }
+        await Task.Delay(2000); // Delay for brute force.
+    }
+
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
-    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
     /// <summary>
