@@ -78,6 +78,7 @@ public class DatabaseContext : DbContext
     public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
+    public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
