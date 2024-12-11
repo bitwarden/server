@@ -1,4 +1,4 @@
-﻿using Bit.Core.Context;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
