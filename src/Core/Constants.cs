@@ -171,7 +171,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { CipherKeyEncryption, "true" },
         };
     }
 }
