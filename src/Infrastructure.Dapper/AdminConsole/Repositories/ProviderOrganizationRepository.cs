@@ -11,17 +11,22 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
-public class ProviderOrganizationRepository : Repository<ProviderOrganization, Guid>, IProviderOrganizationRepository
+public class ProviderOrganizationRepository
+    : Repository<ProviderOrganization, Guid>,
+        IProviderOrganizationRepository
 {
     public ProviderOrganizationRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public ProviderOrganizationRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
-    public async Task<ICollection<ProviderOrganization>?> CreateManyAsync(IEnumerable<ProviderOrganization> providerOrganizations)
+    public async Task<ICollection<ProviderOrganization>?> CreateManyAsync(
+        IEnumerable<ProviderOrganization> providerOrganizations
+    )
     {
         var entities = providerOrganizations.ToList();
 
@@ -43,7 +48,13 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
             {
                 try
                 {
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                    using (
+                        var bulkCopy = new SqlBulkCopy(
+                            connection,
+                            SqlBulkCopyOptions.KeepIdentity,
+                            transaction
+                        )
+                    )
                     {
                         bulkCopy.DestinationTableName = "[dbo].[ProviderOrganization]";
                         var dataTable = BuildProviderOrganizationsTable(bulkCopy, entities);
@@ -63,14 +74,17 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         }
     }
 
-    public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)
+    public async Task<
+        ICollection<ProviderOrganizationOrganizationDetails>
+    > GetManyDetailsByProviderAsync(Guid providerId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderOrganizationOrganizationDetails>(
                 "[dbo].[ProviderOrganizationOrganizationDetails_ReadByProviderId]",
                 new { ProviderId = providerId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -83,40 +97,47 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
             var results = await connection.QueryAsync<ProviderOrganization>(
                 "[dbo].[ProviderOrganization_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetManyByUserAsync(Guid userId)
+    public async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetManyByUserAsync(
+        Guid userId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderOrganizationProviderDetails>(
                 "[dbo].[ProviderOrganizationProviderDetails_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<int> GetCountByOrganizationIdsAsync(
-        IEnumerable<Guid> organizationIds)
+    public async Task<int> GetCountByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteScalarAsync<int>(
                 $"[{Schema}].[ProviderOrganization_ReadCountByOrganizationIds]",
                 new { Ids = organizationIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results;
         }
     }
 
-    private DataTable BuildProviderOrganizationsTable(SqlBulkCopy bulkCopy, IEnumerable<ProviderOrganization> providerOrganizations)
+    private DataTable BuildProviderOrganizationsTable(
+        SqlBulkCopy bulkCopy,
+        IEnumerable<ProviderOrganization> providerOrganizations
+    )
     {
         var po = providerOrganizations.FirstOrDefault();
         if (po == null)

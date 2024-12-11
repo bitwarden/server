@@ -62,19 +62,19 @@ internal class EfPolicyApplicableToUser : ICustomization
 
 internal class EfPolicyAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfPolicyAutoDataAttribute() : base(new SutProviderCustomization(), new EfPolicy())
-    { }
+    public EfPolicyAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfPolicy()) { }
 }
 
 internal class EfPolicyApplicableToUserInlineAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public EfPolicyApplicableToUserInlineAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicyApplicableToUser) }, values)
+    public EfPolicyApplicableToUserInlineAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicyApplicableToUser) }, values)
     { }
 }
 
 internal class InlineEfPolicyAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfPolicyAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfPolicy) }, values)
-    { }
+    public InlineEfPolicyAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicy) }, values) { }
 }

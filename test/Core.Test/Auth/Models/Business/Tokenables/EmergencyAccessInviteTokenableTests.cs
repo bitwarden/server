@@ -12,9 +12,13 @@ public class EmergencyAccessInviteTokenableTests
     public void SerializationSetsCorrectDateTime(EmergencyAccess emergencyAccess)
     {
         var token = new EmergencyAccessInviteTokenable(emergencyAccess, 2);
-        Assert.Equal(Tokenable.FromToken<EmergencyAccessInviteTokenable>(token.ToToken().ToString()).ExpirationDate,
+        Assert.Equal(
+            Tokenable
+                .FromToken<EmergencyAccessInviteTokenable>(token.ToToken().ToString())
+                .ExpirationDate,
             token.ExpirationDate,
-            TimeSpan.FromMilliseconds(10));
+            TimeSpan.FromMilliseconds(10)
+        );
     }
 
     [Fact]
@@ -24,7 +28,7 @@ public class EmergencyAccessInviteTokenableTests
         {
             Email = "email",
             Id = Guid.NewGuid(),
-            Identifier = "not correct"
+            Identifier = "not correct",
         };
 
         Assert.False(token.Valid);

@@ -7,18 +7,23 @@ namespace Bit.Api.Auth.Models.Response;
 
 public class AuthRequestResponseModel : ResponseModel
 {
-    public AuthRequestResponseModel(AuthRequest authRequest, string vaultUri, string obj = "auth-request")
+    public AuthRequestResponseModel(
+        AuthRequest authRequest,
+        string vaultUri,
+        string obj = "auth-request"
+    )
         : base(obj)
     {
-        if (authRequest == null)
-        {
-            throw new ArgumentNullException(nameof(authRequest));
-        }
+        ArgumentNullException.ThrowIfNull(authRequest);
 
         Id = authRequest.Id;
         PublicKey = authRequest.PublicKey;
-        RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
-            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+        RequestDeviceType = authRequest
+            .RequestDeviceType.GetType()
+            .GetMember(authRequest.RequestDeviceType.ToString())
+            .FirstOrDefault()
+            ?.GetCustomAttribute<DisplayAttribute>()
+            ?.GetName();
         RequestIpAddress = authRequest.RequestIpAddress;
         Key = authRequest.Key;
         MasterPasswordHash = authRequest.MasterPasswordHash;

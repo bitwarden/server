@@ -24,7 +24,8 @@ public class CountsController : Controller
         IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository
+    )
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
@@ -34,29 +35,44 @@ public class CountsController : Controller
     }
 
     [HttpGet("organizations/{organizationId}/sm-counts")]
-    public async Task<OrganizationCountsResponseModel> GetByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<OrganizationCountsResponseModel> GetByOrganizationAsync(
+        [FromRoute] Guid organizationId
+    )
     {
         var (accessType, userId) = await GetAccessClientAsync(organizationId);
 
-        var projectsCountTask = _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId,
-            userId, accessType);
+        var projectsCountTask = _projectRepository.GetProjectCountByOrganizationIdAsync(
+            organizationId,
+            userId,
+            accessType
+        );
 
-        var secretsCountTask = _secretRepository.GetSecretsCountByOrganizationIdAsync(organizationId,
-            userId, accessType);
+        var secretsCountTask = _secretRepository.GetSecretsCountByOrganizationIdAsync(
+            organizationId,
+            userId,
+            accessType
+        );
 
-        var serviceAccountsCountsTask = _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(
-            organizationId, userId, accessType);
+        var serviceAccountsCountsTask =
+            _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(
+                organizationId,
+                userId,
+                accessType
+            );
 
-        var counts = await Task.WhenAll(projectsCountTask, secretsCountTask, serviceAccountsCountsTask);
+        var counts = await Task.WhenAll(
+            projectsCountTask,
+            secretsCountTask,
+            serviceAccountsCountsTask
+        );
 
         return new OrganizationCountsResponseModel
         {
             Projects = counts[0],
             Secrets = counts[1],
-            ServiceAccounts = counts[2]
+            ServiceAccounts = counts[2],
         };
     }
-
 
     [HttpGet("projects/{projectId}/sm-counts")]
     public async Task<ProjectCountsResponseModel> GetByProjectAsync([FromRoute] Guid projectId)
@@ -69,18 +85,24 @@ public class CountsController : Controller
 
         var (accessType, userId) = await GetAccessClientAsync(project.OrganizationId);
 
-        var projectsCounts = await _projectRepository.GetProjectCountsByIdAsync(projectId, userId, accessType);
+        var projectsCounts = await _projectRepository.GetProjectCountsByIdAsync(
+            projectId,
+            userId,
+            accessType
+        );
 
         return new ProjectCountsResponseModel
         {
             Secrets = projectsCounts.Secrets,
             People = projectsCounts.People,
-            ServiceAccounts = projectsCounts.ServiceAccounts
+            ServiceAccounts = projectsCounts.ServiceAccounts,
         };
     }
 
     [HttpGet("service-accounts/{serviceAccountId}/sm-counts")]
-    public async Task<ServiceAccountCountsResponseModel> GetByServiceAccountAsync([FromRoute] Guid serviceAccountId)
+    public async Task<ServiceAccountCountsResponseModel> GetByServiceAccountAsync(
+        [FromRoute] Guid serviceAccountId
+    )
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
         if (serviceAccount == null)
@@ -90,14 +112,17 @@ public class CountsController : Controller
 
         var (accessType, userId) = await GetAccessClientAsync(serviceAccount.OrganizationId);
 
-        var serviceAccountCounts =
-            await _serviceAccountRepository.GetServiceAccountCountsByIdAsync(serviceAccountId, userId, accessType);
+        var serviceAccountCounts = await _serviceAccountRepository.GetServiceAccountCountsByIdAsync(
+            serviceAccountId,
+            userId,
+            accessType
+        );
 
         return new ServiceAccountCountsResponseModel
         {
             Projects = serviceAccountCounts.Projects,
             People = serviceAccountCounts.People,
-            AccessTokens = serviceAccountCounts.AccessTokens
+            AccessTokens = serviceAccountCounts.AccessTokens,
         };
     }
 
@@ -108,7 +133,10 @@ public class CountsController : Controller
             throw new NotFoundException();
         }
 
-        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(User, organizationId);
+        var (accessType, userId) = await _accessClientQuery.GetAccessClientAsync(
+            User,
+            organizationId
+        );
         if (accessType == AccessClientType.ServiceAccount)
         {
             throw new NotFoundException();

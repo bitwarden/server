@@ -25,7 +25,8 @@ public class PoliciesController : Controller
         IPolicyRepository policyRepository,
         IPolicyService policyService,
         ICurrentContext currentContext,
-        ISavePolicyCommand savePolicyCommand)
+        ISavePolicyCommand savePolicyCommand
+    )
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
@@ -45,7 +46,10 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(PolicyType type)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(_currentContext.OrganizationId.Value, type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
+            _currentContext.OrganizationId.Value,
+            type
+        );
         if (policy == null)
         {
             return new NotFoundResult();
@@ -64,9 +68,15 @@ public class PoliciesController : Controller
     [ProducesResponseType(typeof(ListResponseModel<PolicyResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
+        var policies = await _policyRepository.GetManyByOrganizationIdAsync(
+            _currentContext.OrganizationId.Value
+        );
 
-        return new JsonResult(new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p))));
+        return new JsonResult(
+            new ListResponseModel<PolicyResponseModel>(
+                policies.Select(p => new PolicyResponseModel(p))
+            )
+        );
     }
 
     /// <summary>

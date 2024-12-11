@@ -22,9 +22,7 @@ public interface IProviderBillingService
     /// </summary>
     /// <param name="provider">The MSP that owns the client organization.</param>
     /// <param name="organization">The client organization to create a Stripe <see cref="Stripe.Customer"/> for.</param>
-    Task CreateCustomerForClientOrganization(
-        Provider provider,
-        Organization organization);
+    Task CreateCustomerForClientOrganization(Provider provider, Organization organization);
 
     /// <summary>
     /// Generate a provider's client invoice report in CSV format for the specified <paramref name="invoiceId"/>. Utilizes the <see cref="ProviderInvoiceItem"/>
@@ -32,8 +30,7 @@ public interface IProviderBillingService
     /// </summary>
     /// <param name="invoiceId">The ID of the Stripe <see cref="Stripe.Invoice"/> to generate the report for.</param>
     /// <returns>The provider's client invoice report as a byte array.</returns>
-    Task<byte[]> GenerateClientInvoiceReport(
-        string invoiceId);
+    Task<byte[]> GenerateClientInvoiceReport(string invoiceId);
 
     /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
@@ -43,10 +40,7 @@ public interface IProviderBillingService
     /// <param name="provider">The <see cref="Provider"/> to scale seats for.</param>
     /// <param name="planType">The <see cref="PlanType"/> to scale seats for.</param>
     /// <param name="seatAdjustment">The change in the number of seats you'd like to apply to the <paramref name="provider"/>.</param>
-    Task ScaleSeats(
-        Provider provider,
-        PlanType planType,
-        int seatAdjustment);
+    Task ScaleSeats(Provider provider, PlanType planType, int seatAdjustment);
 
     /// <summary>
     /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="planType"/>.
@@ -62,7 +56,8 @@ public interface IProviderBillingService
     Task<bool> SeatAdjustmentResultsInPurchase(
         Provider provider,
         PlanType planType,
-        int seatAdjustment);
+        int seatAdjustment
+    );
 
     /// <summary>
     /// For use during the provider setup process, this method creates a Stripe <see cref="Stripe.Customer"/> for the specified <paramref name="provider"/> utilizing the provided <paramref name="taxInfo"/>.
@@ -70,9 +65,7 @@ public interface IProviderBillingService
     /// <param name="provider">The <see cref="Provider"/> to create a Stripe customer for.</param>
     /// <param name="taxInfo">The <see cref="TaxInfo"/> to use for calculating the customer's automatic tax.</param>
     /// <returns>The newly created <see cref="Stripe.Customer"/> for the <paramref name="provider"/>.</returns>
-    Task<Customer> SetupCustomer(
-        Provider provider,
-        TaxInfo taxInfo);
+    Task<Customer> SetupCustomer(Provider provider, TaxInfo taxInfo);
 
     /// <summary>
     /// For use during the provider setup process, this method starts a Stripe <see cref="Stripe.Subscription"/> for the given <paramref name="provider"/>.
@@ -82,8 +75,7 @@ public interface IProviderBillingService
     /// <param name="provider">The provider to create the <see cref="Stripe.Subscription"/> for.</param>
     /// <returns>The newly created <see cref="Stripe.Subscription"/> for the <paramref name="provider"/>.</returns>
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
-    Task<Subscription> SetupSubscription(
-        Provider provider);
+    Task<Subscription> SetupSubscription(Provider provider);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }

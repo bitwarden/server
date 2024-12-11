@@ -40,7 +40,8 @@ public class StripePaymentService : IPaymentService
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
-        IFeatureService featureService)
+        IFeatureService featureService
+    )
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -51,20 +52,31 @@ public class StripePaymentService : IPaymentService
         _featureService = featureService;
     }
 
-    public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
-        int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
+    public async Task<string> PurchaseOrganizationAsync(
+        Organization org,
+        PaymentMethodType paymentMethodType,
+        string paymentToken,
+        StaticStore.Plan plan,
+        short additionalStorageGb,
+        int additionalSeats,
+        bool premiumAccessAddon,
+        TaxInfo taxInfo,
+        bool provider = false,
+        int additionalSmSeats = 0,
+        int additionalServiceAccount = 0,
+        bool signupIsFromSecretsManagerTrial = false
+    )
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
         string stipeCustomerPaymentMethodId = null;
         var stripeCustomerMetadata = new Dictionary<string, string>
         {
-            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+            { "region", _globalSettings.BaseServiceUri.CloudRegion },
         };
-        var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
-                                  paymentMethodType == PaymentMethodType.BankAccount;
+        var stripePaymentMethod =
+            paymentMethodType == PaymentMethodType.Card
+            || paymentMethodType == PaymentMethodType.BankAccount;
 
         if (stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
         {
@@ -80,17 +92,24 @@ public class StripePaymentService : IPaymentService
         else if (paymentMethodType == PaymentMethodType.PayPal)
         {
             var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
-            var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
-            {
-                PaymentMethodNonce = paymentToken,
-                Email = org.BillingEmail,
-                Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix,
-                CustomFields = new Dictionary<string, string>
+            var customerResult = await _btGateway.Customer.CreateAsync(
+                new Braintree.CustomerRequest
                 {
-                    [org.BraintreeIdField()] = org.Id.ToString(),
-                    [org.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
+                    PaymentMethodNonce = paymentToken,
+                    Email = org.BillingEmail,
+                    Id =
+                        org.BraintreeCustomerIdPrefix()
+                        + org.Id.ToString("N").ToLower()
+                        + randomSuffix,
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [org.BraintreeIdField()] = org.Id.ToString(),
+                        [org.BraintreeCloudRegionField()] = _globalSettings
+                            .BaseServiceUri
+                            .CloudRegion,
+                    },
                 }
-            });
+            );
 
             if (!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
             {
@@ -105,8 +124,16 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Payment method is not supported at this time.");
         }
 
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
-        , additionalSmSeats, additionalServiceAccount);
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(
+            org,
+            plan,
+            taxInfo,
+            additionalSeats,
+            additionalStorageGb,
+            premiumAccessAddon,
+            additionalSmSeats,
+            additionalServiceAccount
+        );
 
         Customer customer = null;
         Subscription subscription;
@@ -128,14 +155,13 @@ public class StripePaymentService : IPaymentService
                         {
                             Name = org.SubscriberType(),
                             Value = GetFirstThirtyCharacters(org.SubscriberName()),
-                        }
+                        },
                     ],
                 },
-                Coupon = signupIsFromSecretsManagerTrial
-                    ? SecretsManagerStandaloneDiscountId
-                    : provider
-                        ? ProviderDiscountId
-                        : null,
+                Coupon =
+                    signupIsFromSecretsManagerTrial ? SecretsManagerStandaloneDiscountId
+                    : provider ? ProviderDiscountId
+                    : null,
                 Address = new AddressOptions
                 {
                     Country = taxInfo?.BillingAddressCountry,
@@ -146,12 +172,17 @@ public class StripePaymentService : IPaymentService
                     City = taxInfo?.BillingAddressCity,
                     State = taxInfo?.BillingAddressState,
                 },
-                TaxIdData = taxInfo?.HasTaxId != true
-                    ? null
-                    :
-                    [
-                        new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber, }
-                    ],
+                TaxIdData =
+                    taxInfo?.HasTaxId != true
+                        ? null
+                        :
+                        [
+                            new CustomerTaxIdDataOptions
+                            {
+                                Type = taxInfo.TaxIdType,
+                                Value = taxInfo.TaxIdNumber,
+                            },
+                        ],
             };
 
             customerCreateOptions.AddExpand("tax");
@@ -162,15 +193,24 @@ public class StripePaymentService : IPaymentService
 
             if (CustomerHasTaxLocationVerified(customer))
             {
-                subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+                subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true,
+                };
             }
 
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
-            if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+            if (
+                subscription.Status == "incomplete"
+                && subscription.LatestInvoice?.PaymentIntent != null
+            )
             {
                 if (subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
                 {
-                    await _stripeAdapter.SubscriptionCancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                    await _stripeAdapter.SubscriptionCancelAsync(
+                        subscription.Id,
+                        new SubscriptionCancelOptions()
+                    );
                     throw new GatewayException("Payment method was declined.");
                 }
             }
@@ -193,8 +233,10 @@ public class StripePaymentService : IPaymentService
         org.GatewayCustomerId = customer.Id;
         org.GatewaySubscriptionId = subscription.Id;
 
-        if (subscription.Status == "incomplete" &&
-            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        if (
+            subscription.Status == "incomplete"
+            && subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action"
+        )
         {
             org.Enabled = false;
             return subscription.LatestInvoice.PaymentIntent.ClientSecret;
@@ -207,16 +249,30 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    public async Task<string> PurchaseOrganizationNoPaymentMethod(Organization org, StaticStore.Plan plan, int additionalSeats, bool premiumAccessAddon,
-        int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
+    public async Task<string> PurchaseOrganizationNoPaymentMethod(
+        Organization org,
+        StaticStore.Plan plan,
+        int additionalSeats,
+        bool premiumAccessAddon,
+        int additionalSmSeats = 0,
+        int additionalServiceAccount = 0,
+        bool signupIsFromSecretsManagerTrial = false
+    )
     {
-
         var stripeCustomerMetadata = new Dictionary<string, string>
         {
-            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+            { "region", _globalSettings.BaseServiceUri.CloudRegion },
         };
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, new TaxInfo(), additionalSeats, 0, premiumAccessAddon
-        , additionalSmSeats, additionalServiceAccount);
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(
+            org,
+            plan,
+            new TaxInfo(),
+            additionalSeats,
+            0,
+            premiumAccessAddon,
+            additionalSmSeats,
+            additionalServiceAccount
+        );
 
         Customer customer = null;
         Subscription subscription;
@@ -235,7 +291,7 @@ public class StripePaymentService : IPaymentService
                         {
                             Name = org.SubscriberType(),
                             Value = GetFirstThirtyCharacters(org.SubscriberName()),
-                        }
+                        },
                     ],
                 },
                 Coupon = signupIsFromSecretsManagerTrial
@@ -265,8 +321,10 @@ public class StripePaymentService : IPaymentService
         org.GatewayCustomerId = customer.Id;
         org.GatewaySubscriptionId = subscription.Id;
 
-        if (subscription.Status == "incomplete" &&
-            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        if (
+            subscription.Status == "incomplete"
+            && subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action"
+        )
         {
             org.Enabled = false;
             return subscription.LatestInvoice.PaymentIntent.ClientSecret;
@@ -275,19 +333,24 @@ public class StripePaymentService : IPaymentService
         org.Enabled = true;
         org.ExpirationDate = subscription.CurrentPeriodEnd;
         return null;
-
     }
 
     private async Task ChangeOrganizationSponsorship(
         Organization org,
         OrganizationSponsorship sponsorship,
-        bool applySponsorship)
+        bool applySponsorship
+    )
     {
         var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
-        var sponsoredPlan = sponsorship?.PlanSponsorshipType != null ?
-            Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
-            null;
-        var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(existingPlan, sponsoredPlan, applySponsorship);
+        var sponsoredPlan =
+            sponsorship?.PlanSponsorshipType != null
+                ? Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)
+                : null;
+        var subscriptionUpdate = new SponsorOrganizationSubscriptionUpdate(
+            existingPlan,
+            sponsoredPlan,
+            applySponsorship
+        );
 
         await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, true);
 
@@ -303,11 +366,16 @@ public class StripePaymentService : IPaymentService
     public Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, true);
 
-    public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
-        ChangeOrganizationSponsorship(org, sponsorship, false);
+    public Task RemoveOrganizationSponsorshipAsync(
+        Organization org,
+        OrganizationSponsorship sponsorship
+    ) => ChangeOrganizationSponsorship(org, sponsorship, false);
 
-    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
-        OrganizationUpgrade upgrade)
+    public async Task<string> UpgradeFreeOrganizationAsync(
+        Organization org,
+        StaticStore.Plan plan,
+        OrganizationUpgrade upgrade
+    )
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
         {
@@ -318,14 +386,19 @@ public class StripePaymentService : IPaymentService
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
         customerOptions.AddExpand("tax");
-        var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId, customerOptions);
+        var customer = await _stripeAdapter.CustomerGetAsync(
+            org.GatewayCustomerId,
+            customerOptions
+        );
         if (customer == null)
         {
             throw new GatewayException("Could not find customer payment profile.");
         }
 
-        if (!string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressCountry) &&
-            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressPostalCode))
+        if (
+            !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressCountry)
+            && !string.IsNullOrEmpty(upgrade.TaxInfo?.BillingAddressPostalCode)
+        )
         {
             var addressOptions = new AddressOptions
             {
@@ -341,10 +414,18 @@ public class StripePaymentService : IPaymentService
             customerUpdateOptions.AddExpand("default_source");
             customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
             customerUpdateOptions.AddExpand("tax");
-            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
+            customer = await _stripeAdapter.CustomerUpdateAsync(
+                org.GatewayCustomerId,
+                customerUpdateOptions
+            );
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(
+            customer.Id,
+            org,
+            plan,
+            upgrade
+        );
 
         if (CustomerHasTaxLocationVerified(customer))
         {
@@ -352,14 +433,26 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
-        var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
+        var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(
+            customer,
+            subCreateOptions
+        );
 
-        var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
-            stripePaymentMethod, paymentMethodType, subCreateOptions, null);
+        var subscription = await ChargeForNewSubscriptionAsync(
+            org,
+            customer,
+            false,
+            stripePaymentMethod,
+            paymentMethodType,
+            subCreateOptions,
+            null
+        );
         org.GatewaySubscriptionId = subscription.Id;
 
-        if (subscription.Status == "incomplete" &&
-            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        if (
+            subscription.Status == "incomplete"
+            && subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action"
+        )
         {
             org.Enabled = false;
             return subscription.LatestInvoice.PaymentIntent.ClientSecret;
@@ -373,7 +466,9 @@ public class StripePaymentService : IPaymentService
     }
 
     private (bool stripePaymentMethod, PaymentMethodType PaymentMethodType) IdentifyPaymentMethod(
-            Customer customer, SubscriptionCreateOptions subCreateOptions)
+        Customer customer,
+        SubscriptionCreateOptions subCreateOptions
+    )
     {
         var stripePaymentMethod = false;
         var paymentMethodType = PaymentMethodType.Credit;
@@ -396,7 +491,10 @@ public class StripePaymentService : IPaymentService
                     paymentMethodType = PaymentMethodType.Card;
                     stripePaymentMethod = true;
                 }
-                else if (customer.DefaultSource is BankAccount || customer.DefaultSource is SourceAchDebit)
+                else if (
+                    customer.DefaultSource is BankAccount
+                    || customer.DefaultSource is SourceAchDebit
+                )
                 {
                     paymentMethodType = PaymentMethodType.BankAccount;
                     stripePaymentMethod = true;
@@ -416,15 +514,28 @@ public class StripePaymentService : IPaymentService
         return (stripePaymentMethod, paymentMethodType);
     }
 
-    public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
-        string paymentToken, short additionalStorageGb, TaxInfo taxInfo)
+    public async Task<string> PurchasePremiumAsync(
+        User user,
+        PaymentMethodType paymentMethodType,
+        string paymentToken,
+        short additionalStorageGb,
+        TaxInfo taxInfo
+    )
     {
-        if (paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
+        if (
+            paymentMethodType != PaymentMethodType.Credit
+            && string.IsNullOrWhiteSpace(paymentToken)
+        )
         {
             throw new BadRequestException("Payment token is required.");
         }
-        if (paymentMethodType == PaymentMethodType.Credit &&
-            (user.Gateway != GatewayType.Stripe || string.IsNullOrWhiteSpace(user.GatewayCustomerId)))
+        if (
+            paymentMethodType == PaymentMethodType.Credit
+            && (
+                user.Gateway != GatewayType.Stripe
+                || string.IsNullOrWhiteSpace(user.GatewayCustomerId)
+            )
+        )
         {
             throw new BadRequestException("Your account does not have any credit available.");
         }
@@ -436,8 +547,11 @@ public class StripePaymentService : IPaymentService
         var createdStripeCustomer = false;
         Customer customer = null;
         Braintree.Customer braintreeCustomer = null;
-        var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount
-            or PaymentMethodType.Credit;
+        var stripePaymentMethod =
+            paymentMethodType
+                is PaymentMethodType.Card
+                    or PaymentMethodType.BankAccount
+                    or PaymentMethodType.Credit;
 
         string stipeCustomerPaymentMethodId = null;
         string stipeCustomerSourceToken = null;
@@ -453,7 +567,10 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        if (user.Gateway == GatewayType.Stripe && !string.IsNullOrWhiteSpace(user.GatewayCustomerId))
+        if (
+            user.Gateway == GatewayType.Stripe
+            && !string.IsNullOrWhiteSpace(user.GatewayCustomerId)
+        )
         {
             if (!string.IsNullOrWhiteSpace(paymentToken))
             {
@@ -464,12 +581,16 @@ public class StripePaymentService : IPaymentService
             {
                 var customerGetOptions = new CustomerGetOptions();
                 customerGetOptions.AddExpand("tax");
-                customer = await _stripeAdapter.CustomerGetAsync(user.GatewayCustomerId, customerGetOptions);
+                customer = await _stripeAdapter.CustomerGetAsync(
+                    user.GatewayCustomerId,
+                    customerGetOptions
+                );
             }
             catch
             {
                 _logger.LogWarning(
-                    "Attempted to get existing customer from Stripe, but customer ID was not found. Attempting to recreate customer...");
+                    "Attempted to get existing customer from Stripe, but customer ID was not found. Attempting to recreate customer..."
+                );
             }
         }
 
@@ -477,22 +598,33 @@ public class StripePaymentService : IPaymentService
         {
             var stripeCustomerMetadata = new Dictionary<string, string>
             {
-                { "region", _globalSettings.BaseServiceUri.CloudRegion }
+                { "region", _globalSettings.BaseServiceUri.CloudRegion },
             };
             if (paymentMethodType == PaymentMethodType.PayPal)
             {
-                var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
-                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
-                {
-                    PaymentMethodNonce = paymentToken,
-                    Email = user.Email,
-                    Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
-                    CustomFields = new Dictionary<string, string>
+                var randomSuffix = Utilities.CoreHelpers.RandomString(
+                    3,
+                    upper: false,
+                    numeric: false
+                );
+                var customerResult = await _btGateway.Customer.CreateAsync(
+                    new Braintree.CustomerRequest
                     {
-                        [user.BraintreeIdField()] = user.Id.ToString(),
-                        [user.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
+                        PaymentMethodNonce = paymentToken,
+                        Email = user.Email,
+                        Id =
+                            user.BraintreeCustomerIdPrefix()
+                            + user.Id.ToString("N").ToLower()
+                            + randomSuffix,
+                        CustomFields = new Dictionary<string, string>
+                        {
+                            [user.BraintreeIdField()] = user.Id.ToString(),
+                            [user.BraintreeCloudRegionField()] = _globalSettings
+                                .BaseServiceUri
+                                .CloudRegion,
+                        },
                     }
-                });
+                );
 
                 if (!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
                 {
@@ -523,9 +655,8 @@ public class StripePaymentService : IPaymentService
                         {
                             Name = user.SubscriberType(),
                             Value = GetFirstThirtyCharacters(user.SubscriberName()),
-                        }
-
-                    ]
+                        },
+                    ],
                 },
                 Address = new AddressOptions
                 {
@@ -550,23 +681,19 @@ public class StripePaymentService : IPaymentService
             Items = [],
             Metadata = new Dictionary<string, string>
             {
-                [user.GatewayIdField()] = user.Id.ToString()
-            }
+                [User.GatewayIdField()] = user.Id.ToString(),
+            },
         };
 
-        subCreateOptions.Items.Add(new SubscriptionItemOptions
-        {
-            Plan = PremiumPlanId,
-            Quantity = 1
-        });
+        subCreateOptions.Items.Add(
+            new SubscriptionItemOptions { Plan = PremiumPlanId, Quantity = 1 }
+        );
 
         if (additionalStorageGb > 0)
         {
-            subCreateOptions.Items.Add(new SubscriptionItemOptions
-            {
-                Plan = StoragePlanId,
-                Quantity = additionalStorageGb
-            });
+            subCreateOptions.Items.Add(
+                new SubscriptionItemOptions { Plan = StoragePlanId, Quantity = additionalStorageGb }
+            );
         }
 
         if (CustomerHasTaxLocationVerified(customer))
@@ -575,15 +702,24 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
-        var subscription = await ChargeForNewSubscriptionAsync(user, customer, createdStripeCustomer,
-            stripePaymentMethod, paymentMethodType, subCreateOptions, braintreeCustomer);
+        var subscription = await ChargeForNewSubscriptionAsync(
+            user,
+            customer,
+            createdStripeCustomer,
+            stripePaymentMethod,
+            paymentMethodType,
+            subCreateOptions,
+            braintreeCustomer
+        );
 
         user.Gateway = GatewayType.Stripe;
         user.GatewayCustomerId = customer.Id;
         user.GatewaySubscriptionId = subscription.Id;
 
-        if (subscription.Status == "incomplete" &&
-            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        if (
+            subscription.Status == "incomplete"
+            && subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action"
+        )
         {
             return subscription.LatestInvoice.PaymentIntent.ClientSecret;
         }
@@ -593,9 +729,15 @@ public class StripePaymentService : IPaymentService
         return null;
     }
 
-    private async Task<Subscription> ChargeForNewSubscriptionAsync(ISubscriber subscriber, Customer customer,
-        bool createdStripeCustomer, bool stripePaymentMethod, PaymentMethodType paymentMethodType,
-        SubscriptionCreateOptions subCreateOptions, Braintree.Customer braintreeCustomer)
+    private async Task<Subscription> ChargeForNewSubscriptionAsync(
+        ISubscriber subscriber,
+        Customer customer,
+        bool createdStripeCustomer,
+        bool stripePaymentMethod,
+        PaymentMethodType paymentMethodType,
+        SubscriptionCreateOptions subCreateOptions,
+        Braintree.Customer braintreeCustomer
+    )
     {
         var addedCreditToStripeCustomer = false;
         Braintree.Transaction braintreeTransaction = null;
@@ -606,11 +748,15 @@ public class StripePaymentService : IPaymentService
         {
             if (!stripePaymentMethod)
             {
-                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(new UpcomingInvoiceOptions
-                {
-                    Customer = customer.Id,
-                    SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
-                });
+                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(
+                    new UpcomingInvoiceOptions
+                    {
+                        Customer = customer.Id,
+                        SubscriptionItems = ToInvoiceSubscriptionItemOptions(
+                            subCreateOptions.Items
+                        ),
+                    }
+                );
 
                 if (CustomerHasTaxLocationVerified(customer))
                 {
@@ -619,8 +765,10 @@ public class StripePaymentService : IPaymentService
 
                 if (previewInvoice.AmountDue > 0)
                 {
-                    var braintreeCustomerId = customer.Metadata != null &&
-                        customer.Metadata.ContainsKey("btCustomerId") ? customer.Metadata["btCustomerId"] : null;
+                    var braintreeCustomerId =
+                        customer.Metadata != null && customer.Metadata.ContainsKey("btCustomerId")
+                            ? customer.Metadata["btCustomerId"]
+                            : null;
                     if (!string.IsNullOrWhiteSpace(braintreeCustomerId))
                     {
                         var btInvoiceAmount = (previewInvoice.AmountDue / 100M);
@@ -634,15 +782,19 @@ public class StripePaymentService : IPaymentService
                                     SubmitForSettlement = true,
                                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                                     {
-                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}"
-                                    }
+                                        CustomField =
+                                            $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}",
+                                    },
                                 },
                                 CustomFields = new Dictionary<string, string>
                                 {
                                     [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
-                                    [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
-                                }
-                            });
+                                    [subscriber.BraintreeCloudRegionField()] = _globalSettings
+                                        .BaseServiceUri
+                                        .CloudRegion,
+                                },
+                            }
+                        );
 
                         if (!transactionResult.IsSuccess())
                         {
@@ -651,18 +803,23 @@ public class StripePaymentService : IPaymentService
 
                         braintreeTransaction = transactionResult.Target;
                         subInvoiceMetadata.Add("btTransactionId", braintreeTransaction.Id);
-                        subInvoiceMetadata.Add("btPayPalTransactionId",
-                            braintreeTransaction.PayPalDetails.AuthorizationId);
+                        subInvoiceMetadata.Add(
+                            "btPayPalTransactionId",
+                            braintreeTransaction.PayPalDetails.AuthorizationId
+                        );
                     }
                     else
                     {
                         throw new GatewayException("No payment was able to be collected.");
                     }
 
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-                    {
-                        Balance = customer.Balance - previewInvoice.AmountDue
-                    });
+                    await _stripeAdapter.CustomerUpdateAsync(
+                        customer.Id,
+                        new CustomerUpdateOptions
+                        {
+                            Balance = customer.Balance - previewInvoice.AmountDue,
+                        }
+                    );
                     addedCreditToStripeCustomer = true;
                 }
             }
@@ -677,15 +834,22 @@ public class StripePaymentService : IPaymentService
 
                 if (CustomerHasTaxLocationVerified(customer))
                 {
-                    upcomingInvoiceOptions.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
+                    upcomingInvoiceOptions.AutomaticTax = new InvoiceAutomaticTaxOptions
+                    {
+                        Enabled = true,
+                    };
                     upcomingInvoiceOptions.SubscriptionDefaultTaxRates = [];
                 }
 
-                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
+                var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(
+                    upcomingInvoiceOptions
+                );
 
                 if (previewInvoice.AmountDue > 0)
                 {
-                    throw new GatewayException("Your account does not have enough credit available.");
+                    throw new GatewayException(
+                        "Your account does not have enough credit available."
+                    );
                 }
             }
 
@@ -693,21 +857,26 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
 
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
-            if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+            if (
+                subscription.Status == "incomplete"
+                && subscription.LatestInvoice?.PaymentIntent != null
+            )
             {
                 if (subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
                 {
-                    await _stripeAdapter.SubscriptionCancelAsync(subscription.Id, new SubscriptionCancelOptions());
+                    await _stripeAdapter.SubscriptionCancelAsync(
+                        subscription.Id,
+                        new SubscriptionCancelOptions()
+                    );
                     throw new GatewayException("Payment method was declined.");
                 }
             }
 
             if (!stripePaymentMethod && subInvoiceMetadata.Any())
             {
-                var invoices = await _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
-                {
-                    Subscription = subscription.Id
-                });
+                var invoices = await _stripeAdapter.InvoiceListAsync(
+                    new StripeInvoiceListOptions { Subscription = subscription.Id }
+                );
 
                 var invoice = invoices?.FirstOrDefault();
                 if (invoice == null)
@@ -715,10 +884,10 @@ public class StripePaymentService : IPaymentService
                     throw new GatewayException("Invoice not found.");
                 }
 
-                await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new InvoiceUpdateOptions
-                {
-                    Metadata = subInvoiceMetadata
-                });
+                await _stripeAdapter.InvoiceUpdateAsync(
+                    invoice.Id,
+                    new InvoiceUpdateOptions { Metadata = subInvoiceMetadata }
+                );
             }
 
             return subscription;
@@ -733,10 +902,10 @@ public class StripePaymentService : IPaymentService
                 }
                 else if (addedCreditToStripeCustomer || customer.Balance < 0)
                 {
-                    await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-                    {
-                        Balance = customer.Balance
-                    });
+                    await _stripeAdapter.CustomerUpdateAsync(
+                        customer.Id,
+                        new CustomerUpdateOptions { Balance = customer.Balance }
+                    );
                 }
             }
             if (braintreeTransaction != null)
@@ -748,8 +917,14 @@ public class StripePaymentService : IPaymentService
                 await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
             }
 
-            if (e is StripeException strEx &&
-                (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+            if (
+                e is StripeException strEx
+                && (
+                    strEx.StripeError?.Message?.Contains(
+                        "cannot be used because it is not verified"
+                    ) ?? false
+                )
+            )
             {
                 throw new GatewayException("Bank account is not yet verified.");
             }
@@ -758,26 +933,35 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    private List<InvoiceSubscriptionItemOptions> ToInvoiceSubscriptionItemOptions(
-        List<SubscriptionItemOptions> subItemOptions)
+    private static List<InvoiceSubscriptionItemOptions> ToInvoiceSubscriptionItemOptions(
+        List<SubscriptionItemOptions> subItemOptions
+    )
     {
-        return subItemOptions.Select(si => new InvoiceSubscriptionItemOptions
-        {
-            Plan = si.Plan,
-            Price = si.Price,
-            Quantity = si.Quantity,
-            Id = si.Id
-        }).ToList();
+        return subItemOptions
+            .Select(si => new InvoiceSubscriptionItemOptions
+            {
+                Plan = si.Plan,
+                Price = si.Price,
+                Quantity = si.Quantity,
+                Id = si.Id,
+            })
+            .ToList();
     }
 
-    private async Task<string> FinalizeSubscriptionChangeAsync(ISubscriber subscriber,
-        SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
+    private async Task<string> FinalizeSubscriptionChangeAsync(
+        ISubscriber subscriber,
+        SubscriptionUpdate subscriptionUpdate,
+        bool invoiceNow = false
+    )
     {
         // remember, when in doubt, throw
         var subGetOptions = new SubscriptionGetOptions();
         // subGetOptions.AddExpand("customer");
         subGetOptions.AddExpand("customer.tax");
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subGetOptions);
+        var sub = await _stripeAdapter.SubscriptionGetAsync(
+            subscriber.GatewaySubscriptionId,
+            subGetOptions
+        );
         if (sub == null)
         {
             throw new GatewayException("Subscription not found.");
@@ -785,7 +969,9 @@ public class StripePaymentService : IPaymentService
 
         if (sub.Status == SubscriptionStatuses.Canceled)
         {
-            throw new BadRequestException("You do not have an active subscription. Reinstate your subscription to make changes.");
+            throw new BadRequestException(
+                "You do not have an active subscription. Reinstate your subscription to make changes."
+            );
         }
 
         var collectionMethod = sub.CollectionMethod;
@@ -799,7 +985,7 @@ public class StripePaymentService : IPaymentService
             Items = updatedItemOptions,
             ProrationBehavior = invoiceNow ? Constants.AlwaysInvoice : Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
-            CollectionMethod = "send_invoice"
+            CollectionMethod = "send_invoice",
         };
         if (!invoiceNow && isAnnualPlan && sub.Status.Trim() != "trialing")
         {
@@ -807,8 +993,7 @@ public class StripePaymentService : IPaymentService
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
-        if (sub.AutomaticTax.Enabled != true &&
-            CustomerHasTaxLocationVerified(sub.Customer))
+        if (sub.AutomaticTax.Enabled != true && CustomerHasTaxLocationVerified(sub.Customer))
         {
             subUpdateOptions.DefaultTaxRates = [];
             subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
@@ -823,12 +1008,20 @@ public class StripePaymentService : IPaymentService
         string paymentIntentClientSecret = null;
         try
         {
-            var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
+            var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(
+                sub.Id,
+                subUpdateOptions
+            );
 
-            var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new InvoiceGetOptions());
+            var invoice = await _stripeAdapter.InvoiceGetAsync(
+                subResponse?.LatestInvoiceId,
+                new InvoiceGetOptions()
+            );
             if (invoice == null)
             {
-                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
+                throw new BadRequestException(
+                    "Unable to locate draft invoice for subscription update."
+                );
             }
 
             if (invoice.AmountDue > 0 && updatedItemOptions.Any(i => i.Quantity > 0))
@@ -844,9 +1037,14 @@ public class StripePaymentService : IPaymentService
                         }
                         else
                         {
-                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
-                                new InvoiceFinalizeOptions { AutoAdvance = false, });
-                            await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(
+                                subResponse.LatestInvoiceId,
+                                new InvoiceFinalizeOptions { AutoAdvance = false }
+                            );
+                            await _stripeAdapter.InvoiceSendInvoiceAsync(
+                                invoice.Id,
+                                new InvoiceSendOptions()
+                            );
                             paymentIntentClientSecret = null;
                         }
                     }
@@ -854,15 +1052,18 @@ public class StripePaymentService : IPaymentService
                 catch
                 {
                     // Need to revert the subscription
-                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new SubscriptionUpdateOptions
-                    {
-                        Items = subscriptionUpdate.RevertItemsOptions(sub),
-                        // This proration behavior prevents a false "credit" from
-                        //  being applied forward to the next month's invoice
-                        ProrationBehavior = "none",
-                        CollectionMethod = collectionMethod,
-                        DaysUntilDue = daysUntilDue,
-                    });
+                    await _stripeAdapter.SubscriptionUpdateAsync(
+                        sub.Id,
+                        new SubscriptionUpdateOptions
+                        {
+                            Items = subscriptionUpdate.RevertItemsOptions(sub),
+                            // This proration behavior prevents a false "credit" from
+                            //  being applied forward to the next month's invoice
+                            ProrationBehavior = "none",
+                            CollectionMethod = collectionMethod,
+                            DaysUntilDue = daysUntilDue,
+                        }
+                    );
                     throw;
                 }
             }
@@ -872,18 +1073,20 @@ public class StripePaymentService : IPaymentService
                 invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
                 paymentIntentClientSecret = null;
             }
-
         }
         finally
         {
             // Change back the subscription collection method and/or days until due
             if (collectionMethod != "send_invoice" || daysUntilDue == null)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new SubscriptionUpdateOptions
-                {
-                    CollectionMethod = collectionMethod,
-                    DaysUntilDue = daysUntilDue,
-                });
+                await _stripeAdapter.SubscriptionUpdateAsync(
+                    sub.Id,
+                    new SubscriptionUpdateOptions
+                    {
+                        CollectionMethod = collectionMethod,
+                        DaysUntilDue = daysUntilDue,
+                    }
+                );
             }
         }
 
@@ -897,7 +1100,8 @@ public class StripePaymentService : IPaymentService
         bool subscribedToSecretsManager,
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
-        int newlyPurchasedAdditionalStorage) =>
+        int newlyPurchasedAdditionalStorage
+    ) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new CompleteSubscriptionUpdate(
@@ -910,53 +1114,77 @@ public class StripePaymentService : IPaymentService
                     PurchasedSecretsManagerSeats = newlyPurchasedSecretsManagerSeats,
                     PurchasedAdditionalSecretsManagerServiceAccounts =
                         newlyPurchasedAdditionalSecretsManagerServiceAccounts,
-                    PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
-                }), true);
+                    PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage,
+                }
+            ),
+            true
+        );
 
-    public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
-        FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
+    public Task<string> AdjustSeatsAsync(
+        Organization organization,
+        StaticStore.Plan plan,
+        int additionalSeats
+    ) =>
+        FinalizeSubscriptionChangeAsync(
+            organization,
+            new SeatSubscriptionUpdate(organization, plan, additionalSeats)
+        );
 
     public Task<string> AdjustSeats(
         Provider provider,
         StaticStore.Plan plan,
         int currentlySubscribedSeats,
-        int newlySubscribedSeats)
-        => FinalizeSubscriptionChangeAsync(
+        int newlySubscribedSeats
+    ) =>
+        FinalizeSubscriptionChangeAsync(
             provider,
             new ProviderSubscriptionUpdate(
                 plan.Type,
                 currentlySubscribedSeats,
-                newlySubscribedSeats));
+                newlySubscribedSeats
+            )
+        );
 
-    public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+    public Task<string> AdjustSmSeatsAsync(
+        Organization organization,
+        StaticStore.Plan plan,
+        int additionalSeats
+    ) =>
         FinalizeSubscriptionChangeAsync(
             organization,
-            new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
+            new SmSeatSubscriptionUpdate(organization, plan, additionalSeats)
+        );
 
     public Task<string> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
-        int additionalServiceAccounts) =>
+        int additionalServiceAccounts
+    ) =>
         FinalizeSubscriptionChangeAsync(
             organization,
-            new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts));
+            new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts)
+        );
 
     public Task<string> AdjustStorageAsync(
         IStorableSubscriber storableSubscriber,
         int additionalStorage,
-        string storagePlanId)
+        string storagePlanId
+    )
     {
         return FinalizeSubscriptionChangeAsync(
             storableSubscriber,
-            new StorageSubscriptionUpdate(storagePlanId, additionalStorage));
+            new StorageSubscriptionUpdate(storagePlanId, additionalStorage)
+        );
     }
 
     public async Task CancelAndRecoverChargesAsync(ISubscriber subscriber)
     {
         if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
         {
-            await _stripeAdapter.SubscriptionCancelAsync(subscriber.GatewaySubscriptionId,
-                new SubscriptionCancelOptions());
+            await _stripeAdapter.SubscriptionCancelAsync(
+                subscriber.GatewaySubscriptionId,
+                new SubscriptionCancelOptions()
+            );
         }
 
         if (string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
@@ -972,13 +1200,16 @@ public class StripePaymentService : IPaymentService
 
         if (customer.Metadata.ContainsKey("btCustomerId"))
         {
-            var transactionRequest = new Braintree.TransactionSearchRequest()
-                .CustomerId.Is(customer.Metadata["btCustomerId"]);
+            var transactionRequest = new Braintree.TransactionSearchRequest().CustomerId.Is(
+                customer.Metadata["btCustomerId"]
+            );
             var transactions = _btGateway.Transaction.Search(transactionRequest);
 
             if ((transactions?.MaximumCount ?? 0) > 0)
             {
-                var txs = transactions.Cast<Braintree.Transaction>().Where(c => c.RefundedTransactionId == null);
+                var txs = transactions
+                    .Cast<Braintree.Transaction>()
+                    .Where(c => c.RefundedTransactionId == null);
                 foreach (var transaction in txs)
                 {
                     await _btGateway.Transaction.RefundAsync(transaction.Id);
@@ -989,16 +1220,17 @@ public class StripePaymentService : IPaymentService
         }
         else
         {
-            var charges = await _stripeAdapter.ChargeListAsync(new ChargeListOptions
-            {
-                Customer = subscriber.GatewayCustomerId
-            });
+            var charges = await _stripeAdapter.ChargeListAsync(
+                new ChargeListOptions { Customer = subscriber.GatewayCustomerId }
+            );
 
             if (charges?.Data != null)
             {
                 foreach (var charge in charges.Data.Where(c => c.Captured && !c.Refunded))
                 {
-                    await _stripeAdapter.RefundCreateAsync(new RefundCreateOptions { Charge = charge.Id });
+                    await _stripeAdapter.RefundCreateAsync(
+                        new RefundCreateOptions { Charge = charge.Id }
+                    );
                 }
             }
         }
@@ -1006,12 +1238,18 @@ public class StripePaymentService : IPaymentService
         await _stripeAdapter.CustomerDeleteAsync(subscriber.GatewayCustomerId);
     }
 
-    public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, Invoice invoice)
+    public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(
+        ISubscriber subscriber,
+        Invoice invoice
+    )
     {
         var customerOptions = new CustomerGetOptions();
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+        var customer = await _stripeAdapter.CustomerGetAsync(
+            subscriber.GatewayCustomerId,
+            customerOptions
+        );
 
         string paymentIntentClientSecret = null;
 
@@ -1020,9 +1258,11 @@ public class StripePaymentService : IPaymentService
         string cardPaymentMethodId = null;
         if (!customer.Metadata.ContainsKey("btCustomerId"))
         {
-            var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
-            var hasDefaultValidSource = customer.DefaultSource != null &&
-                (customer.DefaultSource is Card || customer.DefaultSource is BankAccount);
+            var hasDefaultCardPaymentMethod =
+                customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
+            var hasDefaultValidSource =
+                customer.DefaultSource != null
+                && (customer.DefaultSource is Card || customer.DefaultSource is BankAccount);
             if (!hasDefaultCardPaymentMethod && !hasDefaultValidSource)
             {
                 cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
@@ -1035,10 +1275,10 @@ public class StripePaymentService : IPaymentService
                     }
                     catch
                     {
-                        await _stripeAdapter.InvoiceFinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions
-                        {
-                            AutoAdvance = false
-                        });
+                        await _stripeAdapter.InvoiceFinalizeInvoiceAsync(
+                            invoice.Id,
+                            new InvoiceFinalizeOptions { AutoAdvance = false }
+                        );
                         await _stripeAdapter.InvoiceVoidInvoiceAsync(invoice.Id);
                     }
                     throw new BadRequestException("No payment method is available.");
@@ -1051,14 +1291,11 @@ public class StripePaymentService : IPaymentService
         {
             // Finalize the invoice (from Draft) w/o auto-advance so we
             //  can attempt payment manually.
-            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(invoice.Id, new InvoiceFinalizeOptions
-            {
-                AutoAdvance = false,
-            });
-            var invoicePayOptions = new InvoicePayOptions
-            {
-                PaymentMethod = cardPaymentMethodId,
-            };
+            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(
+                invoice.Id,
+                new InvoiceFinalizeOptions { AutoAdvance = false }
+            );
+            var invoicePayOptions = new InvoicePayOptions { PaymentMethod = cardPaymentMethodId };
             if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
             {
                 invoicePayOptions.PaidOutOfBand = true;
@@ -1073,15 +1310,19 @@ public class StripePaymentService : IPaymentService
                             SubmitForSettlement = true,
                             PayPal = new Braintree.TransactionOptionsPayPalRequest
                             {
-                                CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}"
-                            }
+                                CustomField =
+                                    $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}",
+                            },
                         },
                         CustomFields = new Dictionary<string, string>
                         {
                             [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
-                            [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
-                        }
-                    });
+                            [subscriber.BraintreeCloudRegionField()] = _globalSettings
+                                .BaseServiceUri
+                                .CloudRegion,
+                        },
+                    }
+                );
 
                 if (!transactionResult.IsSuccess())
                 {
@@ -1089,15 +1330,19 @@ public class StripePaymentService : IPaymentService
                 }
 
                 braintreeTransaction = transactionResult.Target;
-                invoice = await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new InvoiceUpdateOptions
-                {
-                    Metadata = new Dictionary<string, string>
+                invoice = await _stripeAdapter.InvoiceUpdateAsync(
+                    invoice.Id,
+                    new InvoiceUpdateOptions
                     {
-                        ["btTransactionId"] = braintreeTransaction.Id,
-                        ["btPayPalTransactionId"] =
-                            braintreeTransaction.PayPalDetails.AuthorizationId
-                    },
-                });
+                        Metadata = new Dictionary<string, string>
+                        {
+                            ["btTransactionId"] = braintreeTransaction.Id,
+                            ["btPayPalTransactionId"] = braintreeTransaction
+                                .PayPalDetails
+                                .AuthorizationId,
+                        },
+                    }
+                );
                 invoicePayOptions.PaidOutOfBand = true;
             }
 
@@ -1107,8 +1352,10 @@ public class StripePaymentService : IPaymentService
             }
             catch (StripeException e)
             {
-                if (e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
-                    e.StripeError?.Code == "invoice_payment_intent_requires_action")
+                if (
+                    e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired
+                    && e.StripeError?.Code == "invoice_payment_intent_requires_action"
+                )
                 {
                     // SCA required, get intent client secret
                     var invoiceGetOptions = new InvoiceGetOptions();
@@ -1136,7 +1383,10 @@ public class StripePaymentService : IPaymentService
                     return paymentIntentClientSecret;
                 }
 
-                invoice = await _stripeAdapter.InvoiceVoidInvoiceAsync(invoice.Id, new InvoiceVoidOptions());
+                invoice = await _stripeAdapter.InvoiceVoidInvoiceAsync(
+                    invoice.Id,
+                    new InvoiceVoidOptions()
+                );
 
                 // HACK: Workaround for customer balance credit
                 if (invoice.StartingBalance < 0)
@@ -1144,21 +1394,30 @@ public class StripePaymentService : IPaymentService
                     // Customer had a balance applied to this invoice. Since we can't fully trust Stripe to
                     //  credit it back to the customer (even though their docs claim they will), we need to
                     //  check that balance against the current customer balance and determine if it needs to be re-applied
-                    customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+                    customer = await _stripeAdapter.CustomerGetAsync(
+                        subscriber.GatewayCustomerId,
+                        customerOptions
+                    );
 
                     // Assumption: Customer balance should now be $0, otherwise payment would not have failed.
                     if (customer.Balance == 0)
                     {
-                        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-                        {
-                            Balance = invoice.StartingBalance
-                        });
+                        await _stripeAdapter.CustomerUpdateAsync(
+                            customer.Id,
+                            new CustomerUpdateOptions { Balance = invoice.StartingBalance }
+                        );
                     }
                 }
             }
 
-            if (e is StripeException strEx &&
-                (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+            if (
+                e is StripeException strEx
+                && (
+                    strEx.StripeError?.Message?.Contains(
+                        "cannot be used because it is not verified"
+                    ) ?? false
+                )
+            )
             {
                 throw new GatewayException("Bank account is not yet verified.");
             }
@@ -1187,8 +1446,12 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Subscription was not found.");
         }
 
-        if (sub.CanceledAt.HasValue || sub.Status == "canceled" || sub.Status == "unpaid" ||
-            sub.Status == "incomplete_expired")
+        if (
+            sub.CanceledAt.HasValue
+            || sub.Status == "canceled"
+            || sub.Status == "unpaid"
+            || sub.Status == "incomplete_expired"
+        )
         {
             // Already canceled
             return;
@@ -1196,10 +1459,15 @@ public class StripePaymentService : IPaymentService
 
         try
         {
-            var canceledSub = endOfPeriod ?
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id,
-                    new SubscriptionUpdateOptions { CancelAtPeriodEnd = true }) :
-                await _stripeAdapter.SubscriptionCancelAsync(sub.Id, new SubscriptionCancelOptions());
+            var canceledSub = endOfPeriod
+                ? await _stripeAdapter.SubscriptionUpdateAsync(
+                    sub.Id,
+                    new SubscriptionUpdateOptions { CancelAtPeriodEnd = true }
+                )
+                : await _stripeAdapter.SubscriptionCancelAsync(
+                    sub.Id,
+                    new SubscriptionCancelOptions()
+                );
             if (!canceledSub.CanceledAt.HasValue)
             {
                 throw new GatewayException("Unable to cancel subscription.");
@@ -1232,22 +1500,33 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Subscription was not found.");
         }
 
-        if ((sub.Status != "active" && sub.Status != "trialing" && !sub.Status.StartsWith("incomplete")) ||
-            !sub.CanceledAt.HasValue)
+        if (
+            (
+                sub.Status != "active"
+                && sub.Status != "trialing"
+                && !sub.Status.StartsWith("incomplete")
+            ) || !sub.CanceledAt.HasValue
+        )
         {
             throw new GatewayException("Subscription is not marked for cancellation.");
         }
 
-        var updatedSub = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id,
-            new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
+        var updatedSub = await _stripeAdapter.SubscriptionUpdateAsync(
+            sub.Id,
+            new SubscriptionUpdateOptions { CancelAtPeriodEnd = false }
+        );
         if (updatedSub.CanceledAt.HasValue)
         {
             throw new GatewayException("Unable to reinstate subscription.");
         }
     }
 
-    public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, TaxInfo taxInfo = null)
+    public async Task<bool> UpdatePaymentMethodAsync(
+        ISubscriber subscriber,
+        PaymentMethodType paymentMethodType,
+        string paymentToken,
+        TaxInfo taxInfo = null
+    )
     {
         if (subscriber == null)
         {
@@ -1256,8 +1535,10 @@ public class StripePaymentService : IPaymentService
 
         if (subscriber.Gateway.HasValue && subscriber.Gateway.Value != GatewayType.Stripe)
         {
-            throw new GatewayException("Switching from one payment type to another is not supported. " +
-                "Contact us for assistance.");
+            throw new GatewayException(
+                "Switching from one payment type to another is not supported. "
+                    + "Contact us for assistance."
+            );
         }
 
         var createdCustomer = false;
@@ -1266,9 +1547,10 @@ public class StripePaymentService : IPaymentService
         string stipeCustomerPaymentMethodId = null;
         var stripeCustomerMetadata = new Dictionary<string, string>
         {
-            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+            { "region", _globalSettings.BaseServiceUri.CloudRegion },
         };
-        var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount;
+        var stripePaymentMethod =
+            paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount;
 
         Customer customer = null;
 
@@ -1298,21 +1580,28 @@ public class StripePaymentService : IPaymentService
         {
             if (hadBtCustomer)
             {
-                var pmResult = await _btGateway.PaymentMethod.CreateAsync(new Braintree.PaymentMethodRequest
-                {
-                    CustomerId = stripeCustomerMetadata["btCustomerId"],
-                    PaymentMethodNonce = paymentToken
-                });
+                var pmResult = await _btGateway.PaymentMethod.CreateAsync(
+                    new Braintree.PaymentMethodRequest
+                    {
+                        CustomerId = stripeCustomerMetadata["btCustomerId"],
+                        PaymentMethodNonce = paymentToken,
+                    }
+                );
 
                 if (pmResult.IsSuccess())
                 {
                     var customerResult = await _btGateway.Customer.UpdateAsync(
-                        stripeCustomerMetadata["btCustomerId"], new Braintree.CustomerRequest
+                        stripeCustomerMetadata["btCustomerId"],
+                        new Braintree.CustomerRequest
                         {
-                            DefaultPaymentMethodToken = pmResult.Target.Token
-                        });
+                            DefaultPaymentMethodToken = pmResult.Target.Token,
+                        }
+                    );
 
-                    if (customerResult.IsSuccess() && customerResult.Target.PaymentMethods.Length > 0)
+                    if (
+                        customerResult.IsSuccess()
+                        && customerResult.Target.PaymentMethods.Length > 0
+                    )
                     {
                         braintreeCustomer = customerResult.Target;
                     }
@@ -1330,18 +1619,24 @@ public class StripePaymentService : IPaymentService
 
             if (!hadBtCustomer)
             {
-                var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
-                {
-                    PaymentMethodNonce = paymentToken,
-                    Email = subscriber.BillingEmailAddress(),
-                    Id = subscriber.BraintreeCustomerIdPrefix() + subscriber.Id.ToString("N").ToLower() +
-                        Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false),
-                    CustomFields = new Dictionary<string, string>
+                var customerResult = await _btGateway.Customer.CreateAsync(
+                    new Braintree.CustomerRequest
                     {
-                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
-                        [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
+                        PaymentMethodNonce = paymentToken,
+                        Email = subscriber.BillingEmailAddress(),
+                        Id =
+                            subscriber.BraintreeCustomerIdPrefix()
+                            + subscriber.Id.ToString("N").ToLower()
+                            + Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false),
+                        CustomFields = new Dictionary<string, string>
+                        {
+                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                            [subscriber.BraintreeCloudRegionField()] = _globalSettings
+                                .BaseServiceUri
+                                .CloudRegion,
+                        },
                     }
-                });
+                );
 
                 if (!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
                 {
@@ -1374,37 +1669,41 @@ public class StripePaymentService : IPaymentService
         {
             if (customer == null)
             {
-                customer = await _stripeAdapter.CustomerCreateAsync(new CustomerCreateOptions
-                {
-                    Description = subscriber.BillingName(),
-                    Email = subscriber.BillingEmailAddress(),
-                    Metadata = stripeCustomerMetadata,
-                    Source = stipeCustomerSourceToken,
-                    PaymentMethod = stipeCustomerPaymentMethodId,
-                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                customer = await _stripeAdapter.CustomerCreateAsync(
+                    new CustomerCreateOptions
                     {
-                        DefaultPaymentMethod = stipeCustomerPaymentMethodId,
-                        CustomFields =
-                        [
-                            new CustomerInvoiceSettingsCustomFieldOptions()
-                            {
-                                Name = subscriber.SubscriberType(),
-                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName()),
-                            }
-
-                        ]
-                    },
-                    Address = taxInfo == null ? null : new AddressOptions
-                    {
-                        Country = taxInfo.BillingAddressCountry,
-                        PostalCode = taxInfo.BillingAddressPostalCode,
-                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
-                        Line2 = taxInfo.BillingAddressLine2,
-                        City = taxInfo.BillingAddressCity,
-                        State = taxInfo.BillingAddressState,
-                    },
-                    Expand = ["sources", "tax", "subscriptions"],
-                });
+                        Description = subscriber.BillingName(),
+                        Email = subscriber.BillingEmailAddress(),
+                        Metadata = stripeCustomerMetadata,
+                        Source = stipeCustomerSourceToken,
+                        PaymentMethod = stipeCustomerPaymentMethodId,
+                        InvoiceSettings = new CustomerInvoiceSettingsOptions
+                        {
+                            DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                            CustomFields =
+                            [
+                                new CustomerInvoiceSettingsCustomFieldOptions()
+                                {
+                                    Name = subscriber.SubscriberType(),
+                                    Value = GetFirstThirtyCharacters(subscriber.SubscriberName()),
+                                },
+                            ],
+                        },
+                        Address =
+                            taxInfo == null
+                                ? null
+                                : new AddressOptions
+                                {
+                                    Country = taxInfo.BillingAddressCountry,
+                                    PostalCode = taxInfo.BillingAddressPostalCode,
+                                    Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                                    Line2 = taxInfo.BillingAddressLine2,
+                                    City = taxInfo.BillingAddressCity,
+                                    State = taxInfo.BillingAddressState,
+                                },
+                        Expand = ["sources", "tax", "subscriptions"],
+                    }
+                );
 
                 subscriber.Gateway = GatewayType.Stripe;
                 subscriber.GatewayCustomerId = customer.Id;
@@ -1417,18 +1716,23 @@ public class StripePaymentService : IPaymentService
                 string defaultPaymentMethodId = null;
                 if (stripePaymentMethod)
                 {
-                    if (!string.IsNullOrWhiteSpace(stipeCustomerSourceToken) && paymentToken.StartsWith("btok_"))
+                    if (
+                        !string.IsNullOrWhiteSpace(stipeCustomerSourceToken)
+                        && paymentToken.StartsWith("btok_")
+                    )
                     {
-                        var bankAccount = await _stripeAdapter.BankAccountCreateAsync(customer.Id, new BankAccountCreateOptions
-                        {
-                            Source = paymentToken
-                        });
+                        var bankAccount = await _stripeAdapter.BankAccountCreateAsync(
+                            customer.Id,
+                            new BankAccountCreateOptions { Source = paymentToken }
+                        );
                         defaultSourceId = bankAccount.Id;
                     }
                     else if (!string.IsNullOrWhiteSpace(stipeCustomerPaymentMethodId))
                     {
-                        await _stripeAdapter.PaymentMethodAttachAsync(stipeCustomerPaymentMethodId,
-                            new PaymentMethodAttachOptions { Customer = customer.Id });
+                        await _stripeAdapter.PaymentMethodAttachAsync(
+                            stipeCustomerPaymentMethodId,
+                            new PaymentMethodAttachOptions { Customer = customer.Id }
+                        );
                         defaultPaymentMethodId = stipeCustomerPaymentMethodId;
                     }
                 }
@@ -1448,60 +1752,72 @@ public class StripePaymentService : IPaymentService
                     }
                 }
 
-                var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(new PaymentMethodListOptions
+                var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
+                    new PaymentMethodListOptions { Customer = customer.Id, Type = "card" }
+                );
+                foreach (
+                    var cardMethod in cardPaymentMethods.Where(m => m.Id != defaultPaymentMethodId)
+                )
                 {
-                    Customer = customer.Id,
-                    Type = "card"
-                });
-                foreach (var cardMethod in cardPaymentMethods.Where(m => m.Id != defaultPaymentMethodId))
-                {
-                    await _stripeAdapter.PaymentMethodDetachAsync(cardMethod.Id, new PaymentMethodDetachOptions());
+                    await _stripeAdapter.PaymentMethodDetachAsync(
+                        cardMethod.Id,
+                        new PaymentMethodDetachOptions()
+                    );
                 }
 
-                customer = await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-                {
-                    Metadata = stripeCustomerMetadata,
-                    DefaultSource = defaultSourceId,
-                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                customer = await _stripeAdapter.CustomerUpdateAsync(
+                    customer.Id,
+                    new CustomerUpdateOptions
                     {
-                        DefaultPaymentMethod = defaultPaymentMethodId,
-                        CustomFields =
-                        [
-                            new CustomerInvoiceSettingsCustomFieldOptions()
-                            {
-                                Name = subscriber.SubscriberType(),
-                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName())
-                            }
-                        ]
-                    },
-                    Address = taxInfo == null ? null : new AddressOptions
-                    {
-                        Country = taxInfo.BillingAddressCountry,
-                        PostalCode = taxInfo.BillingAddressPostalCode,
-                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
-                        Line2 = taxInfo.BillingAddressLine2,
-                        City = taxInfo.BillingAddressCity,
-                        State = taxInfo.BillingAddressState,
-                    },
-                    Expand = ["tax", "subscriptions"]
-                });
+                        Metadata = stripeCustomerMetadata,
+                        DefaultSource = defaultSourceId,
+                        InvoiceSettings = new CustomerInvoiceSettingsOptions
+                        {
+                            DefaultPaymentMethod = defaultPaymentMethodId,
+                            CustomFields =
+                            [
+                                new CustomerInvoiceSettingsCustomFieldOptions()
+                                {
+                                    Name = subscriber.SubscriberType(),
+                                    Value = GetFirstThirtyCharacters(subscriber.SubscriberName()),
+                                },
+                            ],
+                        },
+                        Address =
+                            taxInfo == null
+                                ? null
+                                : new AddressOptions
+                                {
+                                    Country = taxInfo.BillingAddressCountry,
+                                    PostalCode = taxInfo.BillingAddressPostalCode,
+                                    Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                                    Line2 = taxInfo.BillingAddressLine2,
+                                    City = taxInfo.BillingAddressCity,
+                                    State = taxInfo.BillingAddressState,
+                                },
+                        Expand = ["tax", "subscriptions"],
+                    }
+                );
             }
 
-            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId) &&
-                customer.Subscriptions.Any(sub =>
-                    sub.Id == subscriber.GatewaySubscriptionId &&
-                    !sub.AutomaticTax.Enabled) &&
-                CustomerHasTaxLocationVerified(customer))
+            if (
+                !string.IsNullOrEmpty(subscriber.GatewaySubscriptionId)
+                && customer.Subscriptions.Any(sub =>
+                    sub.Id == subscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled
+                )
+                && CustomerHasTaxLocationVerified(customer)
+            )
             {
                 var subscriptionUpdateOptions = new SubscriptionUpdateOptions
                 {
                     AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
+                    DefaultTaxRates = [],
                 };
 
                 _ = await _stripeAdapter.SubscriptionUpdateAsync(
                     subscriber.GatewaySubscriptionId,
-                    subscriptionUpdateOptions);
+                    subscriptionUpdateOptions
+                );
             }
         }
         catch
@@ -1519,36 +1835,42 @@ public class StripePaymentService : IPaymentService
     public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
     {
         Customer customer = null;
-        var customerExists = subscriber.Gateway == GatewayType.Stripe &&
-            !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId);
+        var customerExists =
+            subscriber.Gateway == GatewayType.Stripe
+            && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId);
         if (customerExists)
         {
             customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
         }
         else
         {
-            customer = await _stripeAdapter.CustomerCreateAsync(new CustomerCreateOptions
-            {
-                Email = subscriber.BillingEmailAddress(),
-                Description = subscriber.BillingName(),
-            });
+            customer = await _stripeAdapter.CustomerCreateAsync(
+                new CustomerCreateOptions
+                {
+                    Email = subscriber.BillingEmailAddress(),
+                    Description = subscriber.BillingName(),
+                }
+            );
             subscriber.Gateway = GatewayType.Stripe;
             subscriber.GatewayCustomerId = customer.Id;
         }
-        await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-        {
-            Balance = customer.Balance - (long)(creditAmount * 100)
-        });
+        await _stripeAdapter.CustomerUpdateAsync(
+            customer.Id,
+            new CustomerUpdateOptions { Balance = customer.Balance - (long)(creditAmount * 100) }
+        );
         return !customerExists;
     }
 
     public async Task<BillingInfo> GetBillingAsync(ISubscriber subscriber)
     {
-        var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
+        var customer = await GetCustomerAsync(
+            subscriber.GatewayCustomerId,
+            GetCustomerPaymentOptions()
+        );
         var billingInfo = new BillingInfo
         {
             Balance = GetBillingBalance(customer),
-            PaymentSource = await GetBillingPaymentSourceAsync(customer)
+            PaymentSource = await GetBillingPaymentSourceAsync(customer),
         };
 
         return billingInfo;
@@ -1560,7 +1882,7 @@ public class StripePaymentService : IPaymentService
         var billingInfo = new BillingHistoryInfo
         {
             Transactions = await GetBillingTransactionsAsync(subscriber, 20),
-            Invoices = await GetBillingInvoicesAsync(customer, 20)
+            Invoices = await GetBillingInvoicesAsync(customer, 20),
         };
 
         return billingInfo;
@@ -1574,11 +1896,16 @@ public class StripePaymentService : IPaymentService
         {
             var customerGetOptions = new CustomerGetOptions();
             customerGetOptions.AddExpand("discount.coupon.applies_to");
-            var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerGetOptions);
+            var customer = await _stripeAdapter.CustomerGetAsync(
+                subscriber.GatewayCustomerId,
+                customerGetOptions
+            );
 
             if (customer.Discount != null)
             {
-                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(
+                    customer.Discount
+                );
             }
         }
 
@@ -1587,10 +1914,10 @@ public class StripePaymentService : IPaymentService
             return subscriptionInfo;
         }
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, new SubscriptionGetOptions
-        {
-            Expand = ["test_clock"]
-        });
+        var sub = await _stripeAdapter.SubscriptionGetAsync(
+            subscriber.GatewaySubscriptionId,
+            new SubscriptionGetOptions { Expand = ["test_clock"] }
+        );
 
         if (sub != null)
         {
@@ -1608,19 +1935,27 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        if (sub is { CanceledAt: not null } || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        if (
+            sub is { CanceledAt: not null }
+            || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId)
+        )
         {
             return subscriptionInfo;
         }
 
         try
         {
-            var upcomingInvoiceOptions = new UpcomingInvoiceOptions { Customer = subscriber.GatewayCustomerId };
+            var upcomingInvoiceOptions = new UpcomingInvoiceOptions
+            {
+                Customer = subscriber.GatewayCustomerId,
+            };
             var upcomingInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
 
             if (upcomingInvoice != null)
             {
-                subscriptionInfo.UpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(upcomingInvoice);
+                subscriptionInfo.UpcomingInvoice = new SubscriptionInfo.BillingUpcomingInvoice(
+                    upcomingInvoice
+                );
             }
         }
         catch (StripeException ex)
@@ -1638,8 +1973,10 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId,
-            new CustomerGetOptions { Expand = ["tax_ids"] });
+        var customer = await _stripeAdapter.CustomerGetAsync(
+            subscriber.GatewayCustomerId,
+            new CustomerGetOptions { Expand = ["tax_ids"] }
+        );
 
         if (customer == null)
         {
@@ -1672,19 +2009,22 @@ public class StripePaymentService : IPaymentService
     {
         if (subscriber != null && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
-            var customer = await _stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId, new CustomerUpdateOptions
-            {
-                Address = new AddressOptions
+            var customer = await _stripeAdapter.CustomerUpdateAsync(
+                subscriber.GatewayCustomerId,
+                new CustomerUpdateOptions
                 {
-                    Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
-                    Line2 = taxInfo.BillingAddressLine2,
-                    City = taxInfo.BillingAddressCity,
-                    State = taxInfo.BillingAddressState,
-                    PostalCode = taxInfo.BillingAddressPostalCode,
-                    Country = taxInfo.BillingAddressCountry,
-                },
-                Expand = ["tax_ids"]
-            });
+                    Address = new AddressOptions
+                    {
+                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                        Line2 = taxInfo.BillingAddressLine2,
+                        City = taxInfo.BillingAddressCity,
+                        State = taxInfo.BillingAddressState,
+                        PostalCode = taxInfo.BillingAddressPostalCode,
+                        Country = taxInfo.BillingAddressCountry,
+                    },
+                    Expand = ["tax_ids"],
+                }
+            );
 
             if (!subscriber.IsUser() && customer != null)
             {
@@ -1694,14 +2034,19 @@ public class StripePaymentService : IPaymentService
                 {
                     await _stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
                 }
-                if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber) &&
-                    !string.IsNullOrWhiteSpace(taxInfo.TaxIdType))
+                if (
+                    !string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber)
+                    && !string.IsNullOrWhiteSpace(taxInfo.TaxIdType)
+                )
                 {
-                    await _stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
-                    {
-                        Type = taxInfo.TaxIdType,
-                        Value = taxInfo.TaxIdNumber,
-                    });
+                    await _stripeAdapter.TaxIdCreateAsync(
+                        customer.Id,
+                        new TaxIdCreateOptions
+                        {
+                            Type = taxInfo.TaxIdType,
+                            Value = taxInfo.TaxIdNumber,
+                        }
+                    );
                 }
             }
         }
@@ -1714,7 +2059,7 @@ public class StripePaymentService : IPaymentService
             DisplayName = $"{taxRate.Country} - {taxRate.PostalCode}",
             Inclusive = false,
             Percentage = taxRate.Rate,
-            Active = true
+            Active = true,
         };
         var stripeTaxRate = await _stripeAdapter.TaxRateCreateAsync(stripeTaxRateOptions);
         taxRate.Id = stripeTaxRate.Id;
@@ -1741,8 +2086,8 @@ public class StripePaymentService : IPaymentService
         }
 
         var updatedStripeTaxRate = await _stripeAdapter.TaxRateUpdateAsync(
-                taxRate.Id,
-                new TaxRateUpdateOptions() { Active = false }
+            taxRate.Id,
+            new TaxRateUpdateOptions() { Active = false }
         );
         if (!updatedStripeTaxRate.Active)
         {
@@ -1755,27 +2100,39 @@ public class StripePaymentService : IPaymentService
         Organization org,
         StaticStore.Plan plan,
         int additionalSmSeats,
-        int additionalServiceAccount) =>
+        int additionalServiceAccount
+    ) =>
         await FinalizeSubscriptionChangeAsync(
             org,
-            new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount),
-            true);
+            new SecretsManagerSubscribeUpdate(
+                org,
+                plan,
+                additionalSmSeats,
+                additionalServiceAccount
+            ),
+            true
+        );
 
     public async Task<bool> RisksSubscriptionFailure(Organization organization)
     {
         var subscriptionInfo = await GetSubscriptionAsync(organization);
 
-        if (subscriptionInfo.Subscription is not
-            {
-                Status: "active" or "trialing" or "past_due",
-                CollectionMethod: "charge_automatically"
-            }
-            || subscriptionInfo.UpcomingInvoice == null)
+        if (
+            subscriptionInfo.Subscription
+                is not {
+                    Status: "active" or "trialing" or "past_due",
+                    CollectionMethod: "charge_automatically"
+                }
+            || subscriptionInfo.UpcomingInvoice == null
+        )
         {
             return false;
         }
 
-        var customer = await GetCustomerAsync(organization.GatewayCustomerId, GetCustomerPaymentOptions());
+        var customer = await GetCustomerAsync(
+            organization.GatewayCustomerId,
+            GetCustomerPaymentOptions()
+        );
 
         var paymentSource = await GetBillingPaymentSourceAsync(customer);
 
@@ -1801,10 +2158,9 @@ public class StripePaymentService : IPaymentService
             return (null, null);
         }
 
-        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
-        {
-            Query = $"subscription:'{subscription.Id}' status:'open'"
-        });
+        var openInvoices = await _stripeAdapter.InvoiceSearchAsync(
+            new InvoiceSearchOptions { Query = $"subscription:'{subscription.Id}' status:'open'" }
+        );
 
         if (openInvoices.Count == 0)
         {
@@ -1816,33 +2172,35 @@ public class StripePaymentService : IPaymentService
         switch (subscription.CollectionMethod)
         {
             case "charge_automatically":
-                {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                        .MinBy(invoice => invoice.Created);
+            {
+                var firstOverdueInvoice = openInvoices
+                    .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                    .MinBy(invoice => invoice.Created);
 
-                    return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
-                }
+                return (firstOverdueInvoice?.Created.AddDays(14), firstOverdueInvoice?.PeriodEnd);
+            }
             case "send_invoice":
-                {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.DueDate < currentDate)
-                        .MinBy(invoice => invoice.Created);
+            {
+                var firstOverdueInvoice = openInvoices
+                    .Where(invoice => invoice.DueDate < currentDate)
+                    .MinBy(invoice => invoice.Created);
 
-                    return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
-                }
-            default: return (null, null);
+                return (firstOverdueInvoice?.DueDate?.AddDays(30), firstOverdueInvoice?.PeriodEnd);
+            }
+            default:
+                return (null, null);
         }
     }
 
     private PaymentMethod GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
-            new PaymentMethodListOptions { Customer = customerId, Type = "card" });
+            new PaymentMethodListOptions { Customer = customerId, Type = "card" }
+        );
         return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
     }
 
-    private decimal GetBillingBalance(Customer customer)
+    private static decimal GetBillingBalance(Customer customer)
     {
         return customer != null ? customer.Balance / 100M : default;
     }
@@ -1859,11 +2217,11 @@ public class StripePaymentService : IPaymentService
             try
             {
                 var braintreeCustomer = await _btGateway.Customer.FindAsync(
-                    customer.Metadata["btCustomerId"]);
+                    customer.Metadata["btCustomerId"]
+                );
                 if (braintreeCustomer?.DefaultPaymentMethod != null)
                 {
-                    return new BillingInfo.BillingSource(
-                        braintreeCustomer.DefaultPaymentMethod);
+                    return new BillingInfo.BillingSource(braintreeCustomer.DefaultPaymentMethod);
                 }
             }
             catch (Braintree.Exceptions.NotFoundException) { }
@@ -1871,12 +2229,13 @@ public class StripePaymentService : IPaymentService
 
         if (customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card")
         {
-            return new BillingInfo.BillingSource(
-                customer.InvoiceSettings.DefaultPaymentMethod);
+            return new BillingInfo.BillingSource(customer.InvoiceSettings.DefaultPaymentMethod);
         }
 
-        if (customer.DefaultSource != null &&
-            (customer.DefaultSource is Card || customer.DefaultSource is BankAccount))
+        if (
+            customer.DefaultSource != null
+            && (customer.DefaultSource is Card || customer.DefaultSource is BankAccount)
+        )
         {
             return new BillingInfo.BillingSource(customer.DefaultSource);
         }
@@ -1885,7 +2244,7 @@ public class StripePaymentService : IPaymentService
         return paymentMethod != null ? new BillingInfo.BillingSource(paymentMethod) : null;
     }
 
-    private CustomerGetOptions GetCustomerPaymentOptions()
+    private static CustomerGetOptions GetCustomerPaymentOptions()
     {
         var customerOptions = new CustomerGetOptions();
         customerOptions.AddExpand("default_source");
@@ -1893,7 +2252,10 @@ public class StripePaymentService : IPaymentService
         return customerOptions;
     }
 
-    private async Task<Customer> GetCustomerAsync(string gatewayCustomerId, CustomerGetOptions options = null)
+    private async Task<Customer> GetCustomerAsync(
+        string gatewayCustomerId,
+        CustomerGetOptions options = null
+    )
     {
         if (string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
@@ -1910,21 +2272,29 @@ public class StripePaymentService : IPaymentService
         return customer;
     }
 
-    private async Task<IEnumerable<BillingHistoryInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
+    private async Task<
+        IEnumerable<BillingHistoryInfo.BillingTransaction>
+    > GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
     {
         var transactions = subscriber switch
         {
             User => await _transactionRepository.GetManyByUserIdAsync(subscriber.Id, limit),
-            Organization => await _transactionRepository.GetManyByOrganizationIdAsync(subscriber.Id, limit),
-            _ => null
+            Organization => await _transactionRepository.GetManyByOrganizationIdAsync(
+                subscriber.Id,
+                limit
+            ),
+            _ => null,
         };
 
-        return transactions?.OrderByDescending(i => i.CreationDate)
+        return transactions
+            ?.OrderByDescending(i => i.CreationDate)
             .Select(t => new BillingHistoryInfo.BillingTransaction(t));
     }
 
-    private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
-        int? limit = null)
+    private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetBillingInvoicesAsync(
+        Customer customer,
+        int? limit = null
+    )
     {
         if (customer == null)
         {
@@ -1933,43 +2303,45 @@ public class StripePaymentService : IPaymentService
 
         try
         {
-            var paidInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
-            {
-                Customer = customer.Id,
-                SelectAll = !limit.HasValue,
-                Limit = limit,
-                Status = "paid"
-            });
-            var openInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
-            {
-                Customer = customer.Id,
-                SelectAll = !limit.HasValue,
-                Limit = limit,
-                Status = "open"
-            });
-            var uncollectibleInvoicesTask = _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
-            {
-                Customer = customer.Id,
-                SelectAll = !limit.HasValue,
-                Limit = limit,
-                Status = "uncollectible"
-            });
+            var paidInvoicesTask = _stripeAdapter.InvoiceListAsync(
+                new StripeInvoiceListOptions
+                {
+                    Customer = customer.Id,
+                    SelectAll = !limit.HasValue,
+                    Limit = limit,
+                    Status = "paid",
+                }
+            );
+            var openInvoicesTask = _stripeAdapter.InvoiceListAsync(
+                new StripeInvoiceListOptions
+                {
+                    Customer = customer.Id,
+                    SelectAll = !limit.HasValue,
+                    Limit = limit,
+                    Status = "open",
+                }
+            );
+            var uncollectibleInvoicesTask = _stripeAdapter.InvoiceListAsync(
+                new StripeInvoiceListOptions
+                {
+                    Customer = customer.Id,
+                    SelectAll = !limit.HasValue,
+                    Limit = limit,
+                    Status = "uncollectible",
+                }
+            );
 
             var paidInvoices = await paidInvoicesTask;
             var openInvoices = await openInvoicesTask;
             var uncollectibleInvoices = await uncollectibleInvoicesTask;
 
-            var invoices = paidInvoices
-                .Concat(openInvoices)
-                .Concat(uncollectibleInvoices);
+            var invoices = paidInvoices.Concat(openInvoices).Concat(uncollectibleInvoices);
 
             var result = invoices
                 .OrderByDescending(invoice => invoice.Created)
                 .Select(invoice => new BillingHistoryInfo.BillingInvoice(invoice));
 
-            return limit.HasValue
-                ? result.Take(limit.Value)
-                : result;
+            return limit.HasValue ? result.Take(limit.Value) : result;
         }
         catch (StripeException exception)
         {
@@ -1995,8 +2367,6 @@ public class StripePaymentService : IPaymentService
             return string.Empty;
         }
 
-        return subscriberName.Length <= 30
-            ? subscriberName
-            : subscriberName[..30];
+        return subscriberName.Length <= 30 ? subscriberName : subscriberName[..30];
     }
 }

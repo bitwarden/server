@@ -21,7 +21,8 @@ public class PostGroupCommand : IPostGroupCommand
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
         IScimContext scimContext,
-        ICreateGroupCommand createGroupCommand)
+        ICreateGroupCommand createGroupCommand
+    )
     {
         _groupRepository = groupRepository;
         _scimContext = scimContext;
@@ -36,13 +37,21 @@ public class PostGroupCommand : IPostGroupCommand
         }
 
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
-        if (!string.IsNullOrWhiteSpace(model.ExternalId) && groups.Any(g => g.ExternalId == model.ExternalId))
+        if (
+            !string.IsNullOrWhiteSpace(model.ExternalId)
+            && groups.Any(g => g.ExternalId == model.ExternalId)
+        )
         {
             throw new ConflictException();
         }
 
         var group = model.ToGroup(organization.Id);
-        await _createGroupCommand.CreateGroupAsync(group, organization, EventSystemUser.SCIM, collections: null);
+        await _createGroupCommand.CreateGroupAsync(
+            group,
+            organization,
+            EventSystemUser.SCIM,
+            collections: null
+        );
         await UpdateGroupMembersAsync(group, model);
 
         return group;
@@ -69,7 +78,7 @@ public class PostGroupCommand : IPostGroupCommand
             }
         }
 
-        if (!memberIds.Any())
+        if (memberIds.Count == 0)
         {
             return;
         }

@@ -11,8 +11,10 @@ public class StorageRequestModel : IValidatableObject
     {
         if (StorageGbAdjustment == 0)
         {
-            yield return new ValidationResult("Storage adjustment cannot be 0.",
-                new string[] { nameof(StorageGbAdjustment) });
+            yield return new ValidationResult(
+                "Storage adjustment cannot be 0.",
+                new string[] { nameof(StorageGbAdjustment) }
+            );
         }
     }
 }

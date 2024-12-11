@@ -8,40 +8,40 @@ public partial class AddKeysToDevice : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "EncryptedPrivateKey",
-            table: "Device",
-            type: "longtext",
-            nullable: true)
+        migrationBuilder
+            .AddColumn<string>(
+                name: "EncryptedPrivateKey",
+                table: "Device",
+                type: "longtext",
+                nullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AddColumn<string>(
-            name: "EncryptedPublicKey",
-            table: "Device",
-            type: "longtext",
-            nullable: true)
+        migrationBuilder
+            .AddColumn<string>(
+                name: "EncryptedPublicKey",
+                table: "Device",
+                type: "longtext",
+                nullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AddColumn<string>(
-            name: "EncryptedUserKey",
-            table: "Device",
-            type: "longtext",
-            nullable: true)
+        migrationBuilder
+            .AddColumn<string>(
+                name: "EncryptedUserKey",
+                table: "Device",
+                type: "longtext",
+                nullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "EncryptedPrivateKey",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "EncryptedPrivateKey", table: "Device");
 
-        migrationBuilder.DropColumn(
-            name: "EncryptedPublicKey",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "EncryptedPublicKey", table: "Device");
 
-        migrationBuilder.DropColumn(
-            name: "EncryptedUserKey",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "EncryptedUserKey", table: "Device");
     }
 }

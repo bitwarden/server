@@ -6,7 +6,9 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 
-public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SecretsManagerPortingControllerTests
+    : IClassFixture<ApiApplicationFactory>,
+        IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -43,9 +45,17 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task Import_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task Import_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var projectsList = new List<SMImportRequestModel.InnerProjectImportRequestModel>();
@@ -64,9 +74,17 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task Export_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task Export_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"sm/{org.Id}/export");

@@ -36,84 +36,232 @@ public class SecretAccessPoliciesTests
         {
             UserAccessPolicies = new List<UserSecretAccessPolicy>
             {
-                new() { OrganizationUserId = updatedId, GrantedSecretId = secretId, Read = true, Write = true },
-                new() { OrganizationUserId = unChangedId, GrantedSecretId = secretId, Read = true, Write = true },
-                new() { OrganizationUserId = deleteId, GrantedSecretId = secretId, Read = true, Write = true }
+                new()
+                {
+                    OrganizationUserId = updatedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+                new()
+                {
+                    OrganizationUserId = unChangedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+                new()
+                {
+                    OrganizationUserId = deleteId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
             },
             GroupAccessPolicies = new List<GroupSecretAccessPolicy>
             {
-                new() { GroupId = updatedId, GrantedSecretId = secretId, Read = true, Write = true },
-                new() { GroupId = unChangedId, GrantedSecretId = secretId, Read = true, Write = true },
-                new() { GroupId = deleteId, GrantedSecretId = secretId, Read = true, Write = true }
+                new()
+                {
+                    GroupId = updatedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+                new()
+                {
+                    GroupId = unChangedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+                new()
+                {
+                    GroupId = deleteId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
             },
             ServiceAccountAccessPolicies = new List<ServiceAccountSecretAccessPolicy>
             {
-                new() { ServiceAccountId = updatedId, GrantedSecretId = secretId, Read = true, Write = true },
-                new() { ServiceAccountId = unChangedId, GrantedSecretId = secretId, Read = true, Write = true },
-                new() { ServiceAccountId = deleteId, GrantedSecretId = secretId, Read = true, Write = true }
-            }
+                new()
+                {
+                    ServiceAccountId = updatedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+                new()
+                {
+                    ServiceAccountId = unChangedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+                new()
+                {
+                    ServiceAccountId = deleteId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+            },
         };
 
         var requested = new SecretAccessPolicies
         {
             UserAccessPolicies = new List<UserSecretAccessPolicy>
             {
-                new() { OrganizationUserId = updatedId, GrantedSecretId = secretId, Read = true, Write = false },
-                new() { OrganizationUserId = createId, GrantedSecretId = secretId, Read = false, Write = true },
-                new() { OrganizationUserId = unChangedId, GrantedSecretId = secretId, Read = true, Write = true }
+                new()
+                {
+                    OrganizationUserId = updatedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = false,
+                },
+                new()
+                {
+                    OrganizationUserId = createId,
+                    GrantedSecretId = secretId,
+                    Read = false,
+                    Write = true,
+                },
+                new()
+                {
+                    OrganizationUserId = unChangedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
             },
             GroupAccessPolicies = new List<GroupSecretAccessPolicy>
             {
-                new() { GroupId = updatedId, GrantedSecretId = secretId, Read = true, Write = false },
-                new() { GroupId = createId, GrantedSecretId = secretId, Read = false, Write = true },
-                new() { GroupId = unChangedId, GrantedSecretId = secretId, Read = true, Write = true }
+                new()
+                {
+                    GroupId = updatedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = false,
+                },
+                new()
+                {
+                    GroupId = createId,
+                    GrantedSecretId = secretId,
+                    Read = false,
+                    Write = true,
+                },
+                new()
+                {
+                    GroupId = unChangedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
             },
             ServiceAccountAccessPolicies = new List<ServiceAccountSecretAccessPolicy>
             {
-                new() { ServiceAccountId = updatedId, GrantedSecretId = secretId, Read = true, Write = false },
-                new() { ServiceAccountId = createId, GrantedSecretId = secretId, Read = false, Write = true },
-                new() { ServiceAccountId = unChangedId, GrantedSecretId = secretId, Read = true, Write = true }
-            }
+                new()
+                {
+                    ServiceAccountId = updatedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = false,
+                },
+                new()
+                {
+                    ServiceAccountId = createId,
+                    GrantedSecretId = secretId,
+                    Read = false,
+                    Write = true,
+                },
+                new()
+                {
+                    ServiceAccountId = unChangedId,
+                    GrantedSecretId = secretId,
+                    Read = true,
+                    Write = true,
+                },
+            },
         };
-
 
         var result = existing.GetPolicyUpdates(requested);
 
-        Assert.Contains(createId, result.UserAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Create)
-            .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value));
-        Assert.Contains(createId, result.GroupAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Create)
-            .Select(pu => pu.AccessPolicy.GroupId!.Value));
-        Assert.Contains(createId, result.ServiceAccountAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Create)
-            .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value));
+        Assert.Contains(
+            createId,
+            result
+                .UserAccessPolicyUpdates.Where(pu => pu.Operation == AccessPolicyOperation.Create)
+                .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value)
+        );
+        Assert.Contains(
+            createId,
+            result
+                .GroupAccessPolicyUpdates.Where(pu => pu.Operation == AccessPolicyOperation.Create)
+                .Select(pu => pu.AccessPolicy.GroupId!.Value)
+        );
+        Assert.Contains(
+            createId,
+            result
+                .ServiceAccountAccessPolicyUpdates.Where(pu =>
+                    pu.Operation == AccessPolicyOperation.Create
+                )
+                .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
+        );
 
-        Assert.Contains(deleteId, result.UserAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Delete)
-            .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value));
-        Assert.Contains(deleteId, result.GroupAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Delete)
-            .Select(pu => pu.AccessPolicy.GroupId!.Value));
-        Assert.Contains(deleteId, result.ServiceAccountAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Delete)
-            .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value));
+        Assert.Contains(
+            deleteId,
+            result
+                .UserAccessPolicyUpdates.Where(pu => pu.Operation == AccessPolicyOperation.Delete)
+                .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value)
+        );
+        Assert.Contains(
+            deleteId,
+            result
+                .GroupAccessPolicyUpdates.Where(pu => pu.Operation == AccessPolicyOperation.Delete)
+                .Select(pu => pu.AccessPolicy.GroupId!.Value)
+        );
+        Assert.Contains(
+            deleteId,
+            result
+                .ServiceAccountAccessPolicyUpdates.Where(pu =>
+                    pu.Operation == AccessPolicyOperation.Delete
+                )
+                .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
+        );
 
-        Assert.Contains(updatedId, result.UserAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Update)
-            .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value));
-        Assert.Contains(updatedId, result.GroupAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Update)
-            .Select(pu => pu.AccessPolicy.GroupId!.Value));
-        Assert.Contains(updatedId, result.ServiceAccountAccessPolicyUpdates
-            .Where(pu => pu.Operation == AccessPolicyOperation.Update)
-            .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value));
+        Assert.Contains(
+            updatedId,
+            result
+                .UserAccessPolicyUpdates.Where(pu => pu.Operation == AccessPolicyOperation.Update)
+                .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value)
+        );
+        Assert.Contains(
+            updatedId,
+            result
+                .GroupAccessPolicyUpdates.Where(pu => pu.Operation == AccessPolicyOperation.Update)
+                .Select(pu => pu.AccessPolicy.GroupId!.Value)
+        );
+        Assert.Contains(
+            updatedId,
+            result
+                .ServiceAccountAccessPolicyUpdates.Where(pu =>
+                    pu.Operation == AccessPolicyOperation.Update
+                )
+                .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value)
+        );
 
-        Assert.DoesNotContain(unChangedId, result.UserAccessPolicyUpdates
-            .Select(pu => pu.AccessPolicy.OrganizationUserId!.Value));
-        Assert.DoesNotContain(unChangedId, result.GroupAccessPolicyUpdates
-            .Select(pu => pu.AccessPolicy.GroupId!.Value));
-        Assert.DoesNotContain(unChangedId, result.ServiceAccountAccessPolicyUpdates
-            .Select(pu => pu.AccessPolicy.ServiceAccountId!.Value));
+        Assert.DoesNotContain(
+            unChangedId,
+            result.UserAccessPolicyUpdates.Select(pu => pu.AccessPolicy.OrganizationUserId!.Value)
+        );
+        Assert.DoesNotContain(
+            unChangedId,
+            result.GroupAccessPolicyUpdates.Select(pu => pu.AccessPolicy.GroupId!.Value)
+        );
+        Assert.DoesNotContain(
+            unChangedId,
+            result.ServiceAccountAccessPolicyUpdates.Select(pu =>
+                pu.AccessPolicy.ServiceAccountId!.Value
+            )
+        );
     }
 }

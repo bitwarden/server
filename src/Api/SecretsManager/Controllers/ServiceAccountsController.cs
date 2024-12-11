@@ -52,7 +52,8 @@ public class ServiceAccountsController : Controller
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
         IDeleteServiceAccountsCommand deleteServiceAccountsCommand,
-        IRevokeAccessTokensCommand revokeAccessTokensCommand)
+        IRevokeAccessTokensCommand revokeAccessTokensCommand
+    )
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -71,8 +72,12 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
-    public async Task<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>> ListByOrganizationAsync(
-        [FromRoute] Guid organizationId, [FromQuery] bool includeAccessToSecrets = false)
+    public async Task<
+        ListResponseModel<ServiceAccountSecretsDetailsResponseModel>
+    > ListByOrganizationAsync(
+        [FromRoute] Guid organizationId,
+        [FromQuery] bool includeAccessToSecrets = false
+    )
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -81,22 +86,30 @@ public class ServiceAccountsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(
+            _currentContext.IdentityClientType,
+            orgAdmin
+        );
 
-        var results =
-            await _serviceAccountSecretsDetailsQuery.GetManyByOrganizationIdAsync(organizationId, userId, accessClient,
-                includeAccessToSecrets);
+        var results = await _serviceAccountSecretsDetailsQuery.GetManyByOrganizationIdAsync(
+            organizationId,
+            userId,
+            accessClient,
+            includeAccessToSecrets
+        );
         var responses = results.Select(r => new ServiceAccountSecretsDetailsResponseModel(r));
         return new ListResponseModel<ServiceAccountSecretsDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}")]
-    public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync(
-        [FromRoute] Guid id)
+    public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync([FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Read);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.Read
+        );
 
         if (!authorizationResult.Succeeded)
         {
@@ -107,64 +120,86 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpPost("/organizations/{organizationId}/service-accounts")]
-    public async Task<ServiceAccountResponseModel> CreateAsync([FromRoute] Guid organizationId,
-        [FromBody] ServiceAccountCreateRequestModel createRequest)
+    public async Task<ServiceAccountResponseModel> CreateAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] ServiceAccountCreateRequestModel createRequest
+    )
     {
         var serviceAccount = createRequest.ToServiceAccount(organizationId);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Create);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.Create
+        );
 
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        var newServiceAccountSlotsRequired = await _countNewServiceAccountSlotsRequiredQuery
-            .CountNewServiceAccountSlotsRequiredAsync(organizationId, 1);
+        var newServiceAccountSlotsRequired =
+            await _countNewServiceAccountSlotsRequiredQuery.CountNewServiceAccountSlotsRequiredAsync(
+                organizationId,
+                1
+            );
         if (newServiceAccountSlotsRequired > 0)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            var update = new SecretsManagerSubscriptionUpdate(org, true)
-                .AdjustServiceAccounts(newServiceAccountSlotsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(org, true).AdjustServiceAccounts(
+                newServiceAccountSlotsRequired
+            );
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var result =
-            await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
+        var result = await _createServiceAccountCommand.CreateAsync(
+            createRequest.ToServiceAccount(organizationId),
+            userId
+        );
         return new ServiceAccountResponseModel(result);
     }
 
     [HttpPut("{id}")]
-    public async Task<ServiceAccountResponseModel> UpdateAsync([FromRoute] Guid id,
-        [FromBody] ServiceAccountUpdateRequestModel updateRequest)
+    public async Task<ServiceAccountResponseModel> UpdateAsync(
+        [FromRoute] Guid id,
+        [FromBody] ServiceAccountUpdateRequestModel updateRequest
+    )
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Update);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.Update
+        );
 
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        var result = await _updateServiceAccountCommand.UpdateAsync(updateRequest.ToServiceAccount(id));
+        var result = await _updateServiceAccountCommand.UpdateAsync(
+            updateRequest.ToServiceAccount(id)
+        );
         return new ServiceAccountResponseModel(result);
     }
 
     [HttpPost("delete")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync(
+        [FromBody] List<Guid> ids
+    )
     {
         var serviceAccounts = (await _serviceAccountRepository.GetManyByIds(ids)).ToList();
-        if (!serviceAccounts.Any() || serviceAccounts.Count != ids.Count)
+        if (serviceAccounts.Count == 0 || serviceAccounts.Count != ids.Count)
         {
             throw new NotFoundException();
         }
 
         // Ensure all service accounts belong to the same organization
         var organizationId = serviceAccounts.First().OrganizationId;
-        if (serviceAccounts.Any(sa => sa.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+        if (
+            serviceAccounts.Any(sa => sa.OrganizationId != organizationId)
+            || !_currentContext.AccessSecretsManager(organizationId)
+        )
         {
             throw new NotFoundException();
         }
@@ -174,8 +209,11 @@ public class ServiceAccountsController : Controller
 
         foreach (var serviceAccount in serviceAccounts)
         {
-            var authorizationResult =
-                await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Delete);
+            var authorizationResult = await _authorizationService.AuthorizeAsync(
+                User,
+                serviceAccount,
+                ServiceAccountOperations.Delete
+            );
             if (authorizationResult.Succeeded)
             {
                 serviceAccountsToDelete.Add(serviceAccount);
@@ -188,17 +226,24 @@ public class ServiceAccountsController : Controller
         }
 
         await _deleteServiceAccountsCommand.DeleteServiceAccounts(serviceAccountsToDelete);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.ServiceAccount.Id, r.Error));
+        var responses = results.Select(r => new BulkDeleteResponseModel(
+            r.ServiceAccount.Id,
+            r.Error
+        ));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
     [HttpGet("{id}/access-tokens")]
-    public async Task<ListResponseModel<AccessTokenResponseModel>> GetAccessTokens([FromRoute] Guid id)
+    public async Task<ListResponseModel<AccessTokenResponseModel>> GetAccessTokens(
+        [FromRoute] Guid id
+    )
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount,
-                ServiceAccountOperations.ReadAccessTokens);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.ReadAccessTokens
+        );
 
         if (!authorizationResult.Succeeded)
         {
@@ -211,13 +256,17 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpPost("{id}/access-tokens")]
-    public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id,
-        [FromBody] AccessTokenCreateRequestModel request)
+    public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync(
+        [FromRoute] Guid id,
+        [FromBody] AccessTokenCreateRequestModel request
+    )
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount,
-                ServiceAccountOperations.CreateAccessToken);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.CreateAccessToken
+        );
 
         if (!authorizationResult.Succeeded)
         {
@@ -232,9 +281,11 @@ public class ServiceAccountsController : Controller
     public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount,
-                ServiceAccountOperations.RevokeAccessTokens);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.RevokeAccessTokens
+        );
 
         if (!authorizationResult.Succeeded)
         {

@@ -5,6 +5,10 @@ namespace Bit.Core.Tools.ReportFeatures.Interfaces;
 
 public interface IAddPasswordHealthReportApplicationCommand
 {
-    Task<PasswordHealthReportApplication> AddPasswordHealthReportApplicationAsync(AddPasswordHealthReportApplicationRequest request);
-    Task<IEnumerable<PasswordHealthReportApplication>> AddPasswordHealthReportApplicationAsync(IEnumerable<AddPasswordHealthReportApplicationRequest> requests);
+    Task<PasswordHealthReportApplication> AddPasswordHealthReportApplicationAsync(
+        AddPasswordHealthReportApplicationRequest request
+    );
+    Task<IEnumerable<PasswordHealthReportApplication>> AddPasswordHealthReportApplicationAsync(
+        IEnumerable<AddPasswordHealthReportApplicationRequest> requests
+    );
 }

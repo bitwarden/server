@@ -14,7 +14,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RenewalReminderDate",
@@ -23,7 +24,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "PremiumExpirationDate",
@@ -32,7 +34,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "LastFailedLoginDate",
@@ -41,7 +44,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -49,7 +53,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "AccountRevisionDate",
@@ -57,7 +62,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -65,7 +71,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -73,7 +80,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -81,7 +89,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -89,7 +98,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -97,7 +107,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ExpirationDate",
@@ -106,7 +117,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "DeletionDate",
@@ -114,7 +126,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -122,7 +135,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -130,7 +144,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -138,7 +153,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -146,7 +162,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -154,7 +171,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -162,7 +180,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -170,7 +189,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -178,7 +198,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -186,7 +207,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -194,7 +216,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -202,7 +225,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ValidUntil",
@@ -211,7 +235,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "LastSyncDate",
@@ -220,7 +245,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -228,7 +254,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -236,7 +263,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "OwnersNotifiedOfAutoscaling",
@@ -245,7 +273,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ExpirationDate",
@@ -254,7 +283,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -262,7 +292,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -270,7 +301,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -278,7 +310,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -286,7 +319,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ExpirationDate",
@@ -295,7 +329,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -303,7 +338,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ConsumedDate",
@@ -312,7 +348,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -320,7 +357,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -328,7 +366,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "Date",
@@ -336,7 +375,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -344,7 +384,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RecoveryInitiatedDate",
@@ -353,7 +394,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "LastNotificationDate",
@@ -362,7 +404,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -370,7 +413,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -378,7 +422,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -386,7 +431,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -394,7 +440,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -402,7 +449,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -410,7 +458,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "DeletedDate",
@@ -419,7 +468,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp without time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -427,7 +477,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp with time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp without time zone");
+            oldType: "timestamp without time zone"
+        );
 
         migrationBuilder.CreateTable(
             name: "AuthRequest",
@@ -445,9 +496,18 @@ public partial class PasswordlessAuthRequests : Migration
                 PublicKey = table.Column<string>(type: "text", nullable: true),
                 Key = table.Column<string>(type: "text", nullable: true),
                 MasterPasswordHash = table.Column<string>(type: "text", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                ResponseDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                AuthenticationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                CreationDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: false
+                ),
+                ResponseDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: true
+                ),
+                AuthenticationDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: true
+                ),
             },
             constraints: table =>
             {
@@ -456,30 +516,34 @@ public partial class PasswordlessAuthRequests : Migration
                     name: "FK_AuthRequest_Device_ResponseDeviceId",
                     column: x => x.ResponseDeviceId,
                     principalTable: "Device",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_AuthRequest_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_AuthRequest_ResponseDeviceId",
             table: "AuthRequest",
-            column: "ResponseDeviceId");
+            column: "ResponseDeviceId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_AuthRequest_UserId",
             table: "AuthRequest",
-            column: "UserId");
+            column: "UserId"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "AuthRequest");
+        migrationBuilder.DropTable(name: "AuthRequest");
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -487,7 +551,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RenewalReminderDate",
@@ -496,7 +561,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "PremiumExpirationDate",
@@ -505,7 +571,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "LastFailedLoginDate",
@@ -514,7 +581,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -522,7 +590,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "AccountRevisionDate",
@@ -530,7 +599,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -538,7 +608,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -546,7 +617,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -554,7 +626,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -562,7 +635,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -570,7 +644,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ExpirationDate",
@@ -579,7 +654,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "DeletionDate",
@@ -587,7 +663,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -595,7 +672,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -603,7 +681,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -611,7 +690,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -619,7 +699,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -627,7 +708,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -635,7 +717,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -643,7 +726,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -651,7 +735,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -659,7 +744,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -667,7 +753,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -675,7 +762,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ValidUntil",
@@ -684,7 +772,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "LastSyncDate",
@@ -693,7 +782,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -701,7 +791,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -709,7 +800,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "OwnersNotifiedOfAutoscaling",
@@ -718,7 +810,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ExpirationDate",
@@ -727,7 +820,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -735,7 +829,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -743,7 +838,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -751,7 +847,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -759,7 +856,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ExpirationDate",
@@ -768,7 +866,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -776,7 +875,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "ConsumedDate",
@@ -785,7 +885,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -793,7 +894,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -801,7 +903,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "Date",
@@ -809,7 +912,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -817,7 +921,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RecoveryInitiatedDate",
@@ -826,7 +931,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "LastNotificationDate",
@@ -835,7 +941,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -843,7 +950,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -851,7 +959,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -859,7 +968,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -867,7 +977,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -875,7 +986,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "RevisionDate",
@@ -883,7 +995,8 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "DeletedDate",
@@ -892,7 +1005,8 @@ public partial class PasswordlessAuthRequests : Migration
             nullable: true,
             oldClrType: typeof(DateTime),
             oldType: "timestamp with time zone",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<DateTime>(
             name: "CreationDate",
@@ -900,6 +1014,7 @@ public partial class PasswordlessAuthRequests : Migration
             type: "timestamp without time zone",
             nullable: false,
             oldClrType: typeof(DateTime),
-            oldType: "timestamp with time zone");
+            oldType: "timestamp with time zone"
+        );
     }
 }

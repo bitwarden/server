@@ -12,5 +12,6 @@ public class StandardUser : IActingUser
 
     public Guid? UserId { get; }
     public bool IsOrganizationOwnerOrProvider { get; }
-    public EventSystemUser? SystemUserType => throw new Exception($"{nameof(StandardUser)} does not have a {nameof(SystemUserType)}");
+    public EventSystemUser? SystemUserType =>
+        throw new Exception($"{nameof(StandardUser)} does not have a {nameof(SystemUserType)}");
 }

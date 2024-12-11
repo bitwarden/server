@@ -12,14 +12,19 @@ public class MySqlDbMigrator : IDbMigrator
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly ILogger<MySqlDbMigrator> _logger;
 
-    public MySqlDbMigrator(IServiceScopeFactory serviceScopeFactory, ILogger<MySqlDbMigrator> logger)
+    public MySqlDbMigrator(
+        IServiceScopeFactory serviceScopeFactory,
+        ILogger<MySqlDbMigrator> logger
+    )
     {
         _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
     }
 
-    public bool MigrateDatabase(bool enableLogging = true,
-        CancellationToken cancellationToken = default(CancellationToken))
+    public bool MigrateDatabase(
+        bool enableLogging = true,
+        CancellationToken cancellationToken = default(CancellationToken)
+    )
     {
         if (enableLogging && _logger != null)
         {

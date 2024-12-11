@@ -31,17 +31,31 @@ public class SyncResponseModel : ResponseModel
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict,
         bool excludeDomains,
         IEnumerable<Policy> policies,
-        IEnumerable<Send> sends)
+        IEnumerable<Send> sends
+    )
         : base("sync")
     {
-        Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingUser);
+        Profile = new ProfileResponseModel(
+            user,
+            organizationUserDetails,
+            providerUserDetails,
+            providerUserOrganizationDetails,
+            userTwoFactorEnabled,
+            userHasPremiumFromOrganization,
+            organizationIdsManagingUser
+        );
         Folders = folders.Select(f => new FolderResponseModel(f));
-        Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
-        Collections = collections?.Select(
-            c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
+        Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(
+            c,
+            globalSettings,
+            collectionCiphersDict
+        ));
+        Collections =
+            collections?.Select(c => new CollectionDetailsResponseModel(c))
+            ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
-        Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
+        Policies =
+            policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         Sends = sends.Select(s => new SendResponseModel(s, globalSettings));
     }
 

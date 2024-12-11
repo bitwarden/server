@@ -34,7 +34,8 @@ public class BitPayController : Controller
         IProviderRepository providerRepository,
         IMailService mailService,
         IPaymentService paymentService,
-        ILogger<BitPayController> logger)
+        ILogger<BitPayController> logger
+    )
     {
         _billingSettings = billingSettings?.Value;
         _bitPayClient = bitPayClient;
@@ -48,14 +49,20 @@ public class BitPayController : Controller
     }
 
     [HttpPost("ipn")]
-    public async Task<IActionResult> PostIpn([FromBody] BitPayEventModel model, [FromQuery] string key)
+    public async Task<IActionResult> PostIpn(
+        [FromBody] BitPayEventModel model,
+        [FromQuery] string key
+    )
     {
         if (!CoreHelpers.FixedTimeEquals(key, _billingSettings.BitPayWebhookKey))
         {
             return new BadRequestResult();
         }
-        if (model == null || string.IsNullOrWhiteSpace(model.Data?.Id) ||
-            string.IsNullOrWhiteSpace(model.Event?.Name))
+        if (
+            model == null
+            || string.IsNullOrWhiteSpace(model.Data?.Id)
+            || string.IsNullOrWhiteSpace(model.Event?.Name)
+        )
         {
             return new BadRequestResult();
         }
@@ -76,7 +83,9 @@ public class BitPayController : Controller
 
         if (invoice.Status != "confirmed" && invoice.Status != "completed")
         {
-            _logger.LogWarning("Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id);
+            _logger.LogWarning(
+                "Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id
+            );
             return new BadRequestResult();
         }
 
@@ -101,7 +110,10 @@ public class BitPayController : Controller
             return new OkResult();
         }
 
-        var transaction = await _transactionRepository.GetByGatewayIdAsync(GatewayType.BitPay, invoice.Id);
+        var transaction = await _transactionRepository.GetByGatewayIdAsync(
+            GatewayType.BitPay,
+            invoice.Id
+        );
         if (transaction != null)
         {
             _logger.LogWarning("Already processed this invoice. #{InvoiceId}", invoice.Id);
@@ -121,7 +133,7 @@ public class BitPayController : Controller
                 Gateway = GatewayType.BitPay,
                 GatewayId = invoice.Id,
                 PaymentMethodType = PaymentMethodType.BitPay,
-                Details = $"{invoice.Currency}, BitPay {invoice.Id}"
+                Details = $"{invoice.Currency}, BitPay {invoice.Id}",
             };
             await _transactionRepository.CreateAsync(tx);
 
@@ -164,7 +176,10 @@ public class BitPayController : Controller
             }
             else
             {
-                _logger.LogError("Received BitPay account credit transaction that didn't have a user, org, or provider. Invoice#{InvoiceId}", invoice.Id);
+                _logger.LogError(
+                    "Received BitPay account credit transaction that didn't have a user, org, or provider. Invoice#{InvoiceId}",
+                    invoice.Id
+                );
             }
 
             if (!string.IsNullOrWhiteSpace(billingEmail))
@@ -173,26 +188,30 @@ public class BitPayController : Controller
             }
         }
         // Catch foreign key violations because user/org could have been deleted.
-        catch (SqlException e) when (e.Number == 547)
-        {
-        }
+        catch (SqlException e) when (e.Number == 547) { }
 
         return new OkResult();
     }
 
-    private bool IsAccountCredit(BitPayLight.Models.Invoice.Invoice invoice)
+    private static bool IsAccountCredit(BitPayLight.Models.Invoice.Invoice invoice)
     {
-        return invoice != null && invoice.PosData != null && invoice.PosData.Contains("accountCredit:1");
+        return invoice != null
+            && invoice.PosData != null
+            && invoice.PosData.Contains("accountCredit:1");
     }
 
-    private DateTime GetTransactionDate(BitPayLight.Models.Invoice.Invoice invoice)
+    private static DateTime GetTransactionDate(BitPayLight.Models.Invoice.Invoice invoice)
     {
-        var transactions = invoice.Transactions?.Where(t => t.Type == null &&
-            !string.IsNullOrWhiteSpace(t.Confirmations) && t.Confirmations != "0");
+        var transactions = invoice.Transactions?.Where(t =>
+            t.Type == null && !string.IsNullOrWhiteSpace(t.Confirmations) && t.Confirmations != "0"
+        );
         if (transactions != null && transactions.Count() == 1)
         {
-            return DateTime.Parse(transactions.First().ReceivedTime, CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind);
+            return DateTime.Parse(
+                transactions.First().ReceivedTime,
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind
+            );
         }
         return CoreHelpers.FromEpocMilliseconds(invoice.CurrentTime);
     }
@@ -203,7 +222,11 @@ public class BitPayController : Controller
         Guid? userId = null;
         Guid? providerId = null;
 
-        if (invoice == null || string.IsNullOrWhiteSpace(invoice.PosData) || !invoice.PosData.Contains(':'))
+        if (
+            invoice == null
+            || string.IsNullOrWhiteSpace(invoice.PosData)
+            || !invoice.PosData.Contains(':')
+        )
         {
             return new Tuple<Guid?, Guid?, Guid?>(null, null, null);
         }

@@ -34,7 +34,9 @@ public class SyncController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
-    private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
+    private readonly Version _sshKeyCipherMinimumVersion = new(
+        Constants.SSHKeyCipherMinimumVersion
+    );
     private readonly IFeatureService _featureService;
 
     public SyncController(
@@ -49,7 +51,8 @@ public class SyncController : Controller
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService
+    )
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -74,17 +77,26 @@ public class SyncController : Controller
             throw new BadRequestException("User not found.");
         }
 
-        var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
-            OrganizationUserStatusType.Confirmed);
-        var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(user.Id,
-            ProviderUserStatusType.Confirmed);
+        var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(
+            user.Id,
+            OrganizationUserStatusType.Confirmed
+        );
+        var providerUserDetails = await _providerUserRepository.GetManyDetailsByUserAsync(
+            user.Id,
+            ProviderUserStatusType.Confirmed
+        );
         var providerUserOrganizationDetails =
-            await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
-                ProviderUserStatusType.Confirmed);
+            await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(
+                user.Id,
+                ProviderUserStatusType.Confirmed
+            );
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
 
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: hasEnabledOrgs);
+        var allCiphers = await _cipherRepository.GetManyByUserIdAsync(
+            user.Id,
+            withOrganizations: hasEnabledOrgs
+        );
         var ciphers = FilterSSHKeys(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
@@ -96,23 +108,44 @@ public class SyncController : Controller
         {
             collections = await _collectionRepository.GetManyByUserIdAsync(user.Id);
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
-            collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+            collectionCiphersGroupDict = collectionCiphers
+                .GroupBy(c => c.CipherId)
+                .ToDictionary(s => s.Key);
         }
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
-        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
+        var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(
+            user.Id
+        );
         var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
-            organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+        var response = new SyncResponseModel(
+            _globalSettings,
+            user,
+            userTwoFactorEnabled,
+            userHasPremiumFromOrganization,
+            organizationIdsManagingActiveUser,
+            organizationUserDetails,
+            providerUserDetails,
+            providerUserOrganizationDetails,
+            folders,
+            collections,
+            ciphers,
+            collectionCiphersGroupDict,
+            excludeDomains,
+            policies,
+            sends
+        );
         return response;
     }
 
     private ICollection<CipherDetails> FilterSSHKeys(ICollection<CipherDetails> ciphers)
     {
-        if (_currentContext.ClientVersion >= _sshKeyCipherMinimumVersion || _featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride))
+        if (
+            _currentContext.ClientVersion >= _sshKeyCipherMinimumVersion
+            || _featureService.IsEnabled(FeatureFlagKeys.SSHVersionCheckQAOverride)
+        )
         {
             return ciphers;
         }

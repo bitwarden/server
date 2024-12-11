@@ -14,7 +14,7 @@ on:
           - Redeploy
           - Dry Run
       version:
-        description: 'Version to publish (default: latest release)'
+        description: "Version to publish (default: latest release)"
         required: true
         type: string
         default: latest
@@ -53,10 +53,10 @@ jobs:
         uses: chrnorm/deployment-action@55729fcebec3d284f60f5bcabbd8376437d696b1 # v2.0.7
         id: deployment
         with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          initial-status: 'in_progress'
-          environment: 'production'
-          description: 'Deployment ${{ steps.version-output.outputs.release-version }} from branch ${{ github.ref_name }}'
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          initial-status: "in_progress"
+          environment: "production"
+          description: "Deployment ${{ steps.version-output.outputs.release-version }} from branch ${{ github.ref_name }}"
           task: release
 
   publish-docker:
@@ -168,14 +168,14 @@ jobs:
         if: ${{ inputs.publish_type != 'Dry Run' && success() }}
         uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
         with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          state: 'success'
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          state: "success"
           deployment-id: ${{ needs.setup.outputs.deployment-id }}
 
       - name: Update deployment status to Failure
         if: ${{ inputs.publish_type != 'Dry Run' && failure() }}
         uses: chrnorm/deployment-status@9a72af4586197112e0491ea843682b5dc280d806 # v2.0.3
         with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          state: 'failure'
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          state: "failure"
           deployment-id: ${{ needs.setup.outputs.deployment-id }}

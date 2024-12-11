@@ -18,9 +18,7 @@ public class AzureQueueEventWriteServiceTests
         _globalSettings = new GlobalSettings();
         _eventRepository = Substitute.For<IEventRepository>();
 
-        _sut = new AzureQueueEventWriteService(
-            _globalSettings
-        );
+        _sut = new AzureQueueEventWriteService(_globalSettings);
     }
 
     // Remove this test when we add actual tests. It only proves that

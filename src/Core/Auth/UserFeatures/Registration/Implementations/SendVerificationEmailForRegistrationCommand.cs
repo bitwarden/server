@@ -13,9 +13,9 @@ namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 ///  contain a link to complete the registration process.
 /// If email verification is disabled, this command will return a token that can be used to complete the registration process directly.
 /// </summary>
-public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmailForRegistrationCommand
+public class SendVerificationEmailForRegistrationCommand
+    : ISendVerificationEmailForRegistrationCommand
 {
-
     private readonly IUserRepository _userRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IMailService _mailService;
@@ -27,21 +27,23 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         GlobalSettings globalSettings,
         IMailService mailService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory,
-        IFeatureService featureService)
+        IFeatureService featureService
+    )
     {
         _userRepository = userRepository;
         _globalSettings = globalSettings;
         _mailService = mailService;
         _tokenDataFactory = tokenDataFactory;
         _featureService = featureService;
-
     }
 
     public async Task<string?> Run(string email, string? name, bool receiveMarketingEmails)
     {
         if (_globalSettings.DisableUserRegistration)
         {
-            throw new BadRequestException("Open registration has been disabled by the system administrator.");
+            throw new BadRequestException(
+                "Open registration has been disabled by the system administrator."
+            );
         }
 
         if (string.IsNullOrWhiteSpace(email))
@@ -54,14 +56,14 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
         var userExists = user != null;
 
         // Delays enabled by default; flag must be enabled to remove the delays.
-        var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
+        var delaysEnabled = !_featureService.IsEnabled(
+            FeatureFlagKeys.EmailVerificationDisableTimingDelays
+        );
 
         if (!_globalSettings.EnableEmailVerification)
         {
-
             if (userExists)
             {
-
                 if (delaysEnabled)
                 {
                     // Add delay to prevent timing attacks
@@ -98,8 +100,11 @@ public class SendVerificationEmailForRegistrationCommand : ISendVerificationEmai
 
     private string GenerateToken(string email, string? name, bool receiveMarketingEmails)
     {
-        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var registrationEmailVerificationTokenable = new RegistrationEmailVerificationTokenable(
+            email,
+            name,
+            receiveMarketingEmails
+        );
         return _tokenDataFactory.Protect(registrationEmailVerificationTokenable);
     }
 }
-

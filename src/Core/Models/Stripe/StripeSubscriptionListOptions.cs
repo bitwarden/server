@@ -14,13 +14,13 @@ public class StripeSubscriptionListOptions : Stripe.SubscriptionListOptions
     {
         get
         {
-            return CurrentPeriodEndDate.HasValue ?
-                new Stripe.DateRangeOptions()
+            return CurrentPeriodEndDate.HasValue
+                ? new Stripe.DateRangeOptions()
                 {
                     LessThan = CurrentPeriodEndRange == "lt" ? CurrentPeriodEndDate : null,
-                    GreaterThan = CurrentPeriodEndRange == "gt" ? CurrentPeriodEndDate : null
-                } :
-                null;
+                    GreaterThan = CurrentPeriodEndRange == "gt" ? CurrentPeriodEndDate : null,
+                }
+                : null;
         }
     }
 
@@ -39,7 +39,7 @@ public class StripeSubscriptionListOptions : Stripe.SubscriptionListOptions
             stripeApiOptions.CurrentPeriodEnd = new Stripe.DateRangeOptions()
             {
                 LessThan = CurrentPeriodEndRange == "lt" ? CurrentPeriodEndDate : null,
-                GreaterThan = CurrentPeriodEndRange == "gt" ? CurrentPeriodEndDate : null
+                GreaterThan = CurrentPeriodEndRange == "gt" ? CurrentPeriodEndDate : null,
             };
         }
 

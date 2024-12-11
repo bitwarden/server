@@ -19,10 +19,12 @@ internal class PolicyCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<Policy>(composer => composer
-            .With(o => o.OrganizationId, Guid.NewGuid())
-            .With(o => o.Type, Type)
-            .With(o => o.Enabled, Enabled));
+        fixture.Customize<Policy>(composer =>
+            composer
+                .With(o => o.OrganizationId, Guid.NewGuid())
+                .With(o => o.Type, Type)
+                .With(o => o.Enabled, Enabled)
+        );
     }
 }
 

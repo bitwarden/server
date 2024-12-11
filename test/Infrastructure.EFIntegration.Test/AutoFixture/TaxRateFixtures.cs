@@ -43,14 +43,12 @@ internal class EfTaxRate : ICustomization
 
 internal class EfTaxRateAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfTaxRateAutoDataAttribute() : base(new SutProviderCustomization(), new EfTaxRate())
-    { }
+    public EfTaxRateAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfTaxRate()) { }
 }
 
 internal class InlineEfTaxRateAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfTaxRateAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfTaxRate) }, values)
-    { }
+    public InlineEfTaxRateAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfTaxRate) }, values) { }
 }
-

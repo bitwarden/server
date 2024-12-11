@@ -11,9 +11,7 @@ public partial class GrantIdWithIndexes : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropPrimaryKey(
-            name: "PK_Grant",
-            table: "Grant");
+        migrationBuilder.DropPrimaryKey(name: "PK_Grant", table: "Grant");
 
         migrationBuilder.AlterColumn<string>(
             name: "Type",
@@ -25,7 +23,8 @@ public partial class GrantIdWithIndexes : Migration
             oldClrType: typeof(string),
             oldType: "character varying(50)",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Data",
@@ -35,7 +34,8 @@ public partial class GrantIdWithIndexes : Migration
             defaultValue: "",
             oldClrType: typeof(string),
             oldType: "text",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ClientId",
@@ -47,42 +47,40 @@ public partial class GrantIdWithIndexes : Migration
             oldClrType: typeof(string),
             oldType: "character varying(200)",
             oldMaxLength: 200,
-            oldNullable: true);
+            oldNullable: true
+        );
 
-        migrationBuilder.AddColumn<int>(
-            name: "Id",
-            table: "Grant",
-            type: "integer",
-            nullable: false,
-            defaultValue: 0)
-            .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
+        migrationBuilder
+            .AddColumn<int>(
+                name: "Id",
+                table: "Grant",
+                type: "integer",
+                nullable: false,
+                defaultValue: 0
+            )
+            .Annotation(
+                "Npgsql:ValueGenerationStrategy",
+                NpgsqlValueGenerationStrategy.IdentityByDefaultColumn
+            );
 
-        migrationBuilder.AddPrimaryKey(
-            name: "PK_Grant",
-            table: "Grant",
-            column: "Id");
+        migrationBuilder.AddPrimaryKey(name: "PK_Grant", table: "Grant", column: "Id");
 
         migrationBuilder.CreateIndex(
             name: "IX_Grant_Key",
             table: "Grant",
             column: "Key",
-            unique: true);
+            unique: true
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropPrimaryKey(
-            name: "PK_Grant",
-            table: "Grant");
+        migrationBuilder.DropPrimaryKey(name: "PK_Grant", table: "Grant");
 
-        migrationBuilder.DropIndex(
-            name: "IX_Grant_Key",
-            table: "Grant");
+        migrationBuilder.DropIndex(name: "IX_Grant_Key", table: "Grant");
 
-        migrationBuilder.DropColumn(
-            name: "Id",
-            table: "Grant");
+        migrationBuilder.DropColumn(name: "Id", table: "Grant");
 
         migrationBuilder.AlterColumn<string>(
             name: "Type",
@@ -92,7 +90,8 @@ public partial class GrantIdWithIndexes : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "character varying(50)",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Data",
@@ -100,7 +99,8 @@ public partial class GrantIdWithIndexes : Migration
             type: "text",
             nullable: true,
             oldClrType: typeof(string),
-            oldType: "text");
+            oldType: "text"
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ClientId",
@@ -110,11 +110,9 @@ public partial class GrantIdWithIndexes : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "character varying(200)",
-            oldMaxLength: 200);
+            oldMaxLength: 200
+        );
 
-        migrationBuilder.AddPrimaryKey(
-            name: "PK_Grant",
-            table: "Grant",
-            column: "Key");
+        migrationBuilder.AddPrimaryKey(name: "PK_Grant", table: "Grant", column: "Key");
     }
 }

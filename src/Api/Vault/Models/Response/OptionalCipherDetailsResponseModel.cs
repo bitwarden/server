@@ -10,6 +10,5 @@ public class OptionalCipherDetailsResponseModel : ResponseModel
     public CipherDetailsResponseModel? Cipher { get; set; }
 
     public OptionalCipherDetailsResponseModel()
-        : base("optionalCipherDetails")
-    { }
+        : base("optionalCipherDetails") { }
 }

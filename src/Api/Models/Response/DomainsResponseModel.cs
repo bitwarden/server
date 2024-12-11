@@ -10,30 +10,41 @@ public class DomainsResponseModel : ResponseModel
     public DomainsResponseModel(User user, bool excluded = true)
         : base("domains")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
-        EquivalentDomains = user.EquivalentDomains != null ?
-            JsonSerializer.Deserialize<List<List<string>>>(user.EquivalentDomains) : null;
+        EquivalentDomains =
+            user.EquivalentDomains != null
+                ? JsonSerializer.Deserialize<List<List<string>>>(user.EquivalentDomains)
+                : null;
 
-        var excludedGlobalEquivalentDomains = user.ExcludedGlobalEquivalentDomains != null ?
-            JsonSerializer.Deserialize<List<GlobalEquivalentDomainsType>>(user.ExcludedGlobalEquivalentDomains) :
-            new List<GlobalEquivalentDomainsType>();
+        var excludedGlobalEquivalentDomains =
+            user.ExcludedGlobalEquivalentDomains != null
+                ? JsonSerializer.Deserialize<List<GlobalEquivalentDomainsType>>(
+                    user.ExcludedGlobalEquivalentDomains
+                )
+                : new List<GlobalEquivalentDomainsType>();
         var globalDomains = new List<GlobalDomains>();
-        var domainsToInclude = excluded ? Core.Utilities.StaticStore.GlobalDomains :
-            Core.Utilities.StaticStore.GlobalDomains.Where(d => !excludedGlobalEquivalentDomains.Contains(d.Key));
+        var domainsToInclude = excluded
+            ? Core.Utilities.StaticStore.GlobalDomains
+            : Core.Utilities.StaticStore.GlobalDomains.Where(d =>
+                !excludedGlobalEquivalentDomains.Contains(d.Key)
+            );
         foreach (var domain in domainsToInclude)
         {
-            globalDomains.Add(new GlobalDomains(domain.Key, domain.Value, excludedGlobalEquivalentDomains, excluded));
+            globalDomains.Add(
+                new GlobalDomains(
+                    domain.Key,
+                    domain.Value,
+                    excludedGlobalEquivalentDomains,
+                    excluded
+                )
+            );
         }
-        GlobalEquivalentDomains = !globalDomains.Any() ? null : globalDomains;
+        GlobalEquivalentDomains = globalDomains.Count == 0 ? null : globalDomains;
     }
 
     public IEnumerable<IEnumerable<string>> EquivalentDomains { get; set; }
     public IEnumerable<GlobalDomains> GlobalEquivalentDomains { get; set; }
-
 
     public class GlobalDomains
     {
@@ -41,7 +52,8 @@ public class DomainsResponseModel : ResponseModel
             GlobalEquivalentDomainsType globalDomain,
             IEnumerable<string> domains,
             IEnumerable<GlobalEquivalentDomainsType> excludedDomains,
-            bool excluded)
+            bool excluded
+        )
         {
             Type = (byte)globalDomain;
             Domains = domains;

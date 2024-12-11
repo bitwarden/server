@@ -6,15 +6,15 @@ public class SecretResponseModel : BaseSecretResponseModel
 {
     private const string _objectName = "secret";
 
-    public SecretResponseModel(Secret secret, bool read, bool write) : base(secret, _objectName)
+    public SecretResponseModel(Secret secret, bool read, bool write)
+        : base(secret, _objectName)
     {
         Read = read;
         Write = write;
     }
 
-    public SecretResponseModel() : base(_objectName)
-    {
-    }
+    public SecretResponseModel()
+        : base(_objectName) { }
 
     public bool Read { get; set; }
 

@@ -17,13 +17,21 @@ using Xunit;
 [NotificationCustomize]
 public class NotificationAuthorizationHandlerTests
 {
-    private static void SetupUserPermission(SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Guid? userId = null, Guid? organizationId = null, bool canAccessReports = false)
+    private static void SetupUserPermission(
+        SutProvider<NotificationAuthorizationHandler> sutProvider,
+        Guid? userId = null,
+        Guid? organizationId = null,
+        bool canAccessReports = false
+    )
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId.GetValueOrDefault(Guid.NewGuid()))
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .GetOrganization(organizationId.GetValueOrDefault(Guid.NewGuid()))
             .Returns(new CurrentContextOrganization());
-        sutProvider.GetDependency<ICurrentContext>().AccessReports(organizationId.GetValueOrDefault(Guid.NewGuid()))
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessReports(organizationId.GetValueOrDefault(Guid.NewGuid()))
             .Returns(canAccessReports);
     }
 
@@ -31,12 +39,17 @@ public class NotificationAuthorizationHandlerTests
     [BitAutoData]
     public async Task HandleAsync_UnsupportedNotificationOperationRequirement_Throws(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid());
         var requirement = new NotificationOperationsRequirement("UnsupportedOperation");
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await Assert.ThrowsAsync<ArgumentException>(() => sutProvider.Sut.HandleAsync(context));
     }
@@ -48,12 +61,17 @@ public class NotificationAuthorizationHandlerTests
     public async Task HandleAsync_NotLoggedIn_Unauthorized(
         string requirementName,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, userId: null);
         var requirement = new NotificationOperationsRequirement(requirementName);
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -67,12 +85,16 @@ public class NotificationAuthorizationHandlerTests
     public async Task HandleAsync_ResourceEmpty_Unauthorized(
         string requirementName,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid());
         var requirement = new NotificationOperationsRequirement(requirementName);
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, null);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            null
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -84,13 +106,18 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: true)]
     public async Task HandleAsync_ReadRequirementGlobalNotification_Authorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid());
 
         var requirement = NotificationOperations.Read;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -104,7 +131,9 @@ public class NotificationAuthorizationHandlerTests
     public async Task HandleAsync_ReadRequirementUserNotMatching_Unauthorized(
         bool hasOrganizationId,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid(), notification.OrganizationId);
 
@@ -114,8 +143,11 @@ public class NotificationAuthorizationHandlerTests
         }
 
         var requirement = NotificationOperations.Read;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -130,7 +162,9 @@ public class NotificationAuthorizationHandlerTests
     public async Task HandleAsync_ReadRequirementOrganizationNotMatching_Unauthorized(
         bool hasUserId,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId, Guid.NewGuid());
 
@@ -140,8 +174,11 @@ public class NotificationAuthorizationHandlerTests
         }
 
         var requirement = NotificationOperations.Read;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -157,7 +194,9 @@ public class NotificationAuthorizationHandlerTests
         bool hasUserId,
         bool hasOrganizationId,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId, notification.OrganizationId);
 
@@ -172,8 +211,11 @@ public class NotificationAuthorizationHandlerTests
         }
 
         var requirement = NotificationOperations.Read;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -185,12 +227,17 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: true)]
     public async Task HandleAsync_CreateRequirementGlobalNotification_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid());
         var requirement = NotificationOperations.Create;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -202,15 +249,20 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_CreateRequirementUserNotMatching_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid(), notification.OrganizationId);
 
         notification.OrganizationId = null;
 
         var requirement = NotificationOperations.Create;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -222,13 +274,18 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_CreateRequirementOrganizationNotMatching_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId, Guid.NewGuid());
 
         var requirement = NotificationOperations.Create;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -240,13 +297,23 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_CreateRequirementOrganizationUserNoAccessReportsPermission_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
-        SetupUserPermission(sutProvider, notification.UserId, notification.OrganizationId, canAccessReports: false);
+        SetupUserPermission(
+            sutProvider,
+            notification.UserId,
+            notification.OrganizationId,
+            canAccessReports: false
+        );
 
         var requirement = NotificationOperations.Create;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -258,15 +325,20 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_CreateRequirementUserNotPartOfOrganization_Authorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId);
 
         notification.OrganizationId = null;
 
         var requirement = NotificationOperations.Create;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -280,7 +352,9 @@ public class NotificationAuthorizationHandlerTests
     public async Task HandleAsync_CreateRequirementOrganizationUserCanAccessReports_Authorized(
         bool hasUserId,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId, notification.OrganizationId, true);
 
@@ -290,8 +364,11 @@ public class NotificationAuthorizationHandlerTests
         }
 
         var requirement = NotificationOperations.Create;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -304,12 +381,17 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: true)]
     public async Task HandleAsync_UpdateRequirementGlobalNotification_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid());
         var requirement = NotificationOperations.Update;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -321,15 +403,20 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_UpdateRequirementUserNotMatching_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, Guid.NewGuid(), notification.OrganizationId);
 
         notification.OrganizationId = null;
 
         var requirement = NotificationOperations.Update;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -341,13 +428,18 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_UpdateRequirementOrganizationNotMatching_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId, Guid.NewGuid());
 
         var requirement = NotificationOperations.Update;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -359,13 +451,23 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_UpdateRequirementOrganizationUserNoAccessReportsPermission_Unauthorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
-        SetupUserPermission(sutProvider, notification.UserId, notification.OrganizationId, canAccessReports: false);
+        SetupUserPermission(
+            sutProvider,
+            notification.UserId,
+            notification.OrganizationId,
+            canAccessReports: false
+        );
 
         var requirement = NotificationOperations.Update;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -377,15 +479,20 @@ public class NotificationAuthorizationHandlerTests
     [NotificationCustomize(global: false)]
     public async Task HandleAsync_UpdateRequirementUserNotPartOfOrganization_Authorized(
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId);
 
         notification.OrganizationId = null;
 
         var requirement = NotificationOperations.Update;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -399,7 +506,9 @@ public class NotificationAuthorizationHandlerTests
     public async Task HandleAsync_UpdateRequirementOrganizationUserCanAccessReports_Authorized(
         bool hasUserId,
         SutProvider<NotificationAuthorizationHandler> sutProvider,
-        Notification notification, ClaimsPrincipal claimsPrincipal)
+        Notification notification,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         SetupUserPermission(sutProvider, notification.UserId, notification.OrganizationId, true);
 
@@ -409,8 +518,11 @@ public class NotificationAuthorizationHandlerTests
         }
 
         var requirement = NotificationOperations.Update;
-        var context = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, notification);
+        var context = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            notification
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 

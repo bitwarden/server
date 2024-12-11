@@ -9,8 +9,15 @@ public class RegisterFinishRequestModelTests
 {
     [Theory]
     [BitAutoData]
-    public void GetTokenType_Returns_EmailVerification(string email, string masterPasswordHash,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, string emailVerificationToken)
+    public void GetTokenType_Returns_EmailVerification(
+        string email,
+        string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations,
+        string emailVerificationToken
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -21,7 +28,7 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = userAsymmetricKeys,
             Kdf = kdf,
             KdfIterations = kdfIterations,
-            EmailVerificationToken = emailVerificationToken
+            EmailVerificationToken = emailVerificationToken,
         };
 
         // Act
@@ -30,8 +37,16 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void GetTokenType_Returns_OrganizationInvite(string email, string masterPasswordHash,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, string orgInviteToken, Guid organizationUserId)
+    public void GetTokenType_Returns_OrganizationInvite(
+        string email,
+        string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations,
+        string orgInviteToken,
+        Guid organizationUserId
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -43,7 +58,7 @@ public class RegisterFinishRequestModelTests
             Kdf = kdf,
             KdfIterations = kdfIterations,
             OrgInviteToken = orgInviteToken,
-            OrganizationUserId = organizationUserId
+            OrganizationUserId = organizationUserId,
         };
 
         // Act
@@ -52,8 +67,15 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void GetTokenType_Returns_OrgSponsoredFreeFamilyPlan(string email, string masterPasswordHash,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, string orgSponsoredFreeFamilyPlanToken)
+    public void GetTokenType_Returns_OrgSponsoredFreeFamilyPlan(
+        string email,
+        string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations,
+        string orgSponsoredFreeFamilyPlanToken
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -64,7 +86,7 @@ public class RegisterFinishRequestModelTests
             UserAsymmetricKeys = userAsymmetricKeys,
             Kdf = kdf,
             KdfIterations = kdfIterations,
-            OrgSponsoredFreeFamilyPlanToken = orgSponsoredFreeFamilyPlanToken
+            OrgSponsoredFreeFamilyPlanToken = orgSponsoredFreeFamilyPlanToken,
         };
 
         // Act
@@ -73,8 +95,16 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void GetTokenType_Returns_EmergencyAccessInvite(string email, string masterPasswordHash,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId)
+    public void GetTokenType_Returns_EmergencyAccessInvite(
+        string email,
+        string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations,
+        string acceptEmergencyAccessInviteToken,
+        Guid acceptEmergencyAccessId
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -86,7 +116,7 @@ public class RegisterFinishRequestModelTests
             Kdf = kdf,
             KdfIterations = kdfIterations,
             AcceptEmergencyAccessInviteToken = acceptEmergencyAccessInviteToken,
-            AcceptEmergencyAccessId = acceptEmergencyAccessId
+            AcceptEmergencyAccessId = acceptEmergencyAccessId,
         };
 
         // Act
@@ -95,8 +125,16 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void GetTokenType_Returns_ProviderInvite(string email, string masterPasswordHash,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations, string providerInviteToken, Guid providerUserId)
+    public void GetTokenType_Returns_ProviderInvite(
+        string email,
+        string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations,
+        string providerInviteToken,
+        Guid providerUserId
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -108,7 +146,7 @@ public class RegisterFinishRequestModelTests
             Kdf = kdf,
             KdfIterations = kdfIterations,
             ProviderInviteToken = providerInviteToken,
-            ProviderUserId = providerUserId
+            ProviderUserId = providerUserId,
         };
 
         // Act
@@ -117,8 +155,14 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void GetTokenType_Returns_Invalid(string email, string masterPasswordHash,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations)
+    public void GetTokenType_Returns_Invalid(
+        string email,
+        string masterPasswordHash,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -128,7 +172,7 @@ public class RegisterFinishRequestModelTests
             UserSymmetricKey = userSymmetricKey,
             UserAsymmetricKeys = userAsymmetricKeys,
             Kdf = kdf,
-            KdfIterations = kdfIterations
+            KdfIterations = kdfIterations,
         };
 
         // Act
@@ -138,9 +182,17 @@ public class RegisterFinishRequestModelTests
 
     [Theory]
     [BitAutoData]
-    public void ToUser_Returns_User(string email, string masterPasswordHash, string masterPasswordHint,
-        string userSymmetricKey, KeysRequestModel userAsymmetricKeys, KdfType kdf, int kdfIterations,
-        int? kdfMemory, int? kdfParallelism)
+    public void ToUser_Returns_User(
+        string email,
+        string masterPasswordHash,
+        string masterPasswordHint,
+        string userSymmetricKey,
+        KeysRequestModel userAsymmetricKeys,
+        KdfType kdf,
+        int kdfIterations,
+        int? kdfMemory,
+        int? kdfParallelism
+    )
     {
         // Arrange
         var model = new RegisterFinishRequestModel
@@ -153,7 +205,7 @@ public class RegisterFinishRequestModelTests
             Kdf = kdf,
             KdfIterations = kdfIterations,
             KdfMemory = kdfMemory,
-            KdfParallelism = kdfParallelism
+            KdfParallelism = kdfParallelism,
         };
 
         // Act

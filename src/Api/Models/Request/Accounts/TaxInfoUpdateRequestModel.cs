@@ -12,8 +12,10 @@ public class TaxInfoUpdateRequestModel : IValidatableObject
     {
         if (Country == "US" && string.IsNullOrWhiteSpace(PostalCode))
         {
-            yield return new ValidationResult("Zip / postal code is required.",
-                new string[] { nameof(PostalCode) });
+            yield return new ValidationResult(
+                "Zip / postal code is required.",
+                new string[] { nameof(PostalCode) }
+            );
         }
     }
 }

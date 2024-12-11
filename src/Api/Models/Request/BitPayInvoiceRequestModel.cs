@@ -9,6 +9,7 @@ public class BitPayInvoiceRequestModel : IValidatableObject
     public Guid? OrganizationId { get; set; }
     public Guid? ProviderId { get; set; }
     public bool Credit { get; set; }
+
     [Required]
     public decimal? Amount { get; set; }
     public string ReturnUrl { get; set; }
@@ -22,14 +23,10 @@ public class BitPayInvoiceRequestModel : IValidatableObject
             Price = Convert.ToDouble(Amount.Value),
             Currency = "USD",
             RedirectUrl = ReturnUrl,
-            Buyer = new BitPayLight.Models.Invoice.Buyer
-            {
-                Email = Email,
-                Name = Name
-            },
+            Buyer = new BitPayLight.Models.Invoice.Buyer { Email = Email, Name = Name },
             NotificationUrl = globalSettings.BitPay.NotificationUrl,
             FullNotifications = true,
-            ExtendedNotifications = true
+            ExtendedNotifications = true,
         };
 
         var posData = string.Empty;

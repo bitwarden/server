@@ -21,7 +21,8 @@ public class EventsController : Controller
     public EventsController(
         IEventRepository eventRepository,
         ICipherRepository cipherRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _eventRepository = eventRepository;
         _cipherRepository = cipherRepository;
@@ -44,8 +45,12 @@ public class EventsController : Controller
         if (request.ActingUserId.HasValue)
         {
             result = await _eventRepository.GetManyByOrganizationActingUserAsync(
-                _currentContext.OrganizationId.Value, request.ActingUserId.Value, dateRange.Item1, dateRange.Item2,
-                new PageOptions { ContinuationToken = request.ContinuationToken });
+                _currentContext.OrganizationId.Value,
+                request.ActingUserId.Value,
+                dateRange.Item1,
+                dateRange.Item2,
+                new PageOptions { ContinuationToken = request.ContinuationToken }
+            );
         }
         else if (request.ItemId.HasValue)
         {
@@ -53,19 +58,28 @@ public class EventsController : Controller
             if (cipher != null && cipher.OrganizationId == _currentContext.OrganizationId.Value)
             {
                 result = await _eventRepository.GetManyByCipherAsync(
-                    cipher, dateRange.Item1, dateRange.Item2,
-                    new PageOptions { ContinuationToken = request.ContinuationToken });
+                    cipher,
+                    dateRange.Item1,
+                    dateRange.Item2,
+                    new PageOptions { ContinuationToken = request.ContinuationToken }
+                );
             }
         }
         else
         {
             result = await _eventRepository.GetManyByOrganizationAsync(
-                _currentContext.OrganizationId.Value, dateRange.Item1, dateRange.Item2,
-                new PageOptions { ContinuationToken = request.ContinuationToken });
+                _currentContext.OrganizationId.Value,
+                dateRange.Item1,
+                dateRange.Item2,
+                new PageOptions { ContinuationToken = request.ContinuationToken }
+            );
         }
 
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
-        var response = new ListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
+        var response = new ListResponseModel<EventResponseModel>(
+            eventResponses,
+            result.ContinuationToken
+        );
         return new JsonResult(response);
     }
 }

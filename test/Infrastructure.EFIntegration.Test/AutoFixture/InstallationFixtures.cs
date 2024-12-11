@@ -41,14 +41,12 @@ internal class EfInstallation : ICustomization
 
 internal class EfInstallationAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfInstallationAutoDataAttribute() : base(new SutProviderCustomization(), new EfInstallation())
-    { }
+    public EfInstallationAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfInstallation()) { }
 }
 
 internal class InlineEfInstallationAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfInstallationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfInstallation) }, values)
-    { }
+    public InlineEfInstallationAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfInstallation) }, values) { }
 }
-

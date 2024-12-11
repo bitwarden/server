@@ -33,7 +33,8 @@ public class DevicesController : Controller
         IUserService userService,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        ILogger<DevicesController> logger)
+        ILogger<DevicesController> logger
+    )
     {
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
@@ -46,7 +47,10 @@ public class DevicesController : Controller
     [HttpGet("{id}")]
     public async Task<DeviceResponseModel> Get(string id)
     {
-        var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdAsync(
+            new Guid(id),
+            _userService.GetProperUserId(User).Value
+        );
         if (device == null)
         {
             throw new NotFoundException();
@@ -59,7 +63,10 @@ public class DevicesController : Controller
     [HttpGet("identifier/{identifier}")]
     public async Task<DeviceResponseModel> GetByIdentifier(string identifier)
     {
-        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdentifierAsync(
+            identifier,
+            _userService.GetProperUserId(User).Value
+        );
         if (device == null)
         {
             throw new NotFoundException();
@@ -72,7 +79,9 @@ public class DevicesController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<DeviceResponseModel>> Get()
     {
-        ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
+        ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(
+            _userService.GetProperUserId(User).Value
+        );
         var responses = devices.Select(d => new DeviceResponseModel(d));
         return new ListResponseModel<DeviceResponseModel>(responses);
     }
@@ -91,7 +100,10 @@ public class DevicesController : Controller
     [HttpPost("{id}")]
     public async Task<DeviceResponseModel> Put(string id, [FromBody] DeviceRequestModel model)
     {
-        var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdAsync(
+            new Guid(id),
+            _userService.GetProperUserId(User).Value
+        );
         if (device == null)
         {
             throw new NotFoundException();
@@ -105,9 +117,15 @@ public class DevicesController : Controller
 
     [HttpPut("{identifier}/keys")]
     [HttpPost("{identifier}/keys")]
-    public async Task<DeviceResponseModel> PutKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
+    public async Task<DeviceResponseModel> PutKeys(
+        string identifier,
+        [FromBody] DeviceKeysRequestModel model
+    )
     {
-        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdentifierAsync(
+            identifier,
+            _userService.GetProperUserId(User).Value
+        );
         if (device == null)
         {
             throw new NotFoundException();
@@ -120,7 +138,10 @@ public class DevicesController : Controller
     }
 
     [HttpPost("{identifier}/retrieve-keys")]
-    public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(string identifier, [FromBody] SecretVerificationRequestModel model)
+    public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(
+        string identifier,
+        [FromBody] SecretVerificationRequestModel model
+    )
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -165,14 +186,18 @@ public class DevicesController : Controller
             _currentContext.DeviceIdentifier,
             user.Id,
             model.CurrentDevice,
-            model.OtherDevices ?? Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>());
+            model.OtherDevices ?? Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>()
+        );
     }
 
     [HttpPut("identifier/{identifier}/token")]
     [HttpPost("identifier/{identifier}/token")]
     public async Task PutToken(string identifier, [FromBody] DeviceTokenRequestModel model)
     {
-        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdentifierAsync(
+            identifier,
+            _userService.GetProperUserId(User).Value
+        );
         if (device == null)
         {
             throw new NotFoundException();
@@ -199,7 +224,10 @@ public class DevicesController : Controller
     [HttpPost("{id}/deactivate")]
     public async Task Deactivate(string id)
     {
-        var device = await _deviceRepository.GetByIdAsync(new Guid(id), _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdAsync(
+            new Guid(id),
+            _userService.GetProperUserId(User).Value
+        );
         if (device == null)
         {
             throw new NotFoundException();
@@ -211,9 +239,9 @@ public class DevicesController : Controller
     [AllowAnonymous]
     [HttpGet("knowndevice")]
     public async Task<bool> GetByIdentifierQuery(
-            [Required][FromHeader(Name = "X-Request-Email")] string Email,
-            [Required][FromHeader(Name = "X-Device-Identifier")] string DeviceIdentifier)
-        => await GetByIdentifier(CoreHelpers.Base64UrlDecodeString(Email), DeviceIdentifier);
+        [Required] [FromHeader(Name = "X-Request-Email")] string Email,
+        [Required] [FromHeader(Name = "X-Device-Identifier")] string DeviceIdentifier
+    ) => await GetByIdentifier(CoreHelpers.Base64UrlDecodeString(Email), DeviceIdentifier);
 
     [Obsolete("Path is deprecated due to encoding issues, use /knowndevice instead.")]
     [AllowAnonymous]
@@ -256,8 +284,11 @@ public class DevicesController : Controller
             throw new BadRequestException("Please provide a device type");
         }
 
-        _logger.LogError("User {id} has a device key, but didn't receive decryption keys for device {device} of type {deviceType}", userId,
-            deviceId, deviceType);
+        _logger.LogError(
+            "User {id} has a device key, but didn't receive decryption keys for device {device} of type {deviceType}",
+            userId,
+            deviceId,
+            deviceType
+        );
     }
-
 }

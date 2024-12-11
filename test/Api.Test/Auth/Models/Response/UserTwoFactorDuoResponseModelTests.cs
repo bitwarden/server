@@ -1,5 +1,4 @@
-﻿
-using Bit.Api.Auth.Models.Response.TwoFactor;
+﻿using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -68,20 +67,16 @@ public class UserTwoFactorDuoResponseModelTests
         try
         {
             var model = new TwoFactorDuoResponseModel(user);
-
         }
         catch (Exception ex)
         {
             // Assert
             Assert.IsType<ArgumentNullException>(ex);
-
         }
-
     }
 
     private string GetTwoFactorDuoProvidersJson()
     {
-        return
-            "{\"2\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
+        return "{\"2\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
     }
 }

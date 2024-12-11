@@ -6,4 +6,3 @@ public class BaseTitleContactUsMailModel : BaseMailModel
     public string TitleSecondBold { get; set; }
     public string TitleThird { get; set; }
 }
-

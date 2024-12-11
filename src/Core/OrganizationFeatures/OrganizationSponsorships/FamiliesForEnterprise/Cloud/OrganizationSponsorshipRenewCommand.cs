@@ -7,14 +7,19 @@ public class OrganizationSponsorshipRenewCommand : IOrganizationSponsorshipRenew
 {
     private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
 
-    public OrganizationSponsorshipRenewCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository)
+    public OrganizationSponsorshipRenewCommand(
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository
+    )
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
     }
 
     public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime expireDate)
     {
-        var sponsorship = await _organizationSponsorshipRepository.GetBySponsoredOrganizationIdAsync(organizationId);
+        var sponsorship =
+            await _organizationSponsorshipRepository.GetBySponsoredOrganizationIdAsync(
+                organizationId
+            );
 
         if (sponsorship == null)
         {

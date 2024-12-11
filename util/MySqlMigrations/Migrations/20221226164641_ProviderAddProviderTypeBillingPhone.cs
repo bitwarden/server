@@ -8,11 +8,13 @@ public partial class ProviderAddProviderTypeBillingPhone : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "BillingPhone",
-            table: "Provider",
-            type: "longtext",
-            nullable: true)
+        migrationBuilder
+            .AddColumn<string>(
+                name: "BillingPhone",
+                table: "Provider",
+                type: "longtext",
+                nullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4");
 
         migrationBuilder.AddColumn<byte>(
@@ -20,17 +22,14 @@ public partial class ProviderAddProviderTypeBillingPhone : Migration
             table: "Provider",
             type: "tinyint unsigned",
             nullable: false,
-            defaultValue: (byte)0);
+            defaultValue: (byte)0
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "BillingPhone",
-            table: "Provider");
+        migrationBuilder.DropColumn(name: "BillingPhone", table: "Provider");
 
-        migrationBuilder.DropColumn(
-            name: "Type",
-            table: "Provider");
+        migrationBuilder.DropColumn(name: "Type", table: "Provider");
     }
 }

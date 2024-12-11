@@ -23,7 +23,7 @@ public partial class ProviderInvoiceItem : Migration
                 AssignedSeats = table.Column<int>(type: "integer", nullable: false),
                 UsedSeats = table.Column<int>(type: "integer", nullable: false),
                 Total = table.Column<decimal>(type: "numeric", nullable: false),
-                Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
             },
             constraints: table =>
             {
@@ -33,25 +33,28 @@ public partial class ProviderInvoiceItem : Migration
                     column: x => x.ProviderId,
                     principalTable: "Provider",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderInvoiceItem_Id_InvoiceId",
             table: "ProviderInvoiceItem",
             columns: new[] { "Id", "InvoiceId" },
-            unique: true);
+            unique: true
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderInvoiceItem_ProviderId",
             table: "ProviderInvoiceItem",
-            column: "ProviderId");
+            column: "ProviderId"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "ProviderInvoiceItem");
+        migrationBuilder.DropTable(name: "ProviderInvoiceItem");
     }
 }

@@ -10,8 +10,12 @@ public static class DistributedCacheExtensions
         Set(cache, key, value, new DistributedCacheEntryOptions());
     }
 
-    public static void Set<T>(this IDistributedCache cache, string key, T value,
-        DistributedCacheEntryOptions options)
+    public static void Set<T>(
+        this IDistributedCache cache,
+        string key,
+        T value,
+        DistributedCacheEntryOptions options
+    )
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
         cache.Set(key, bytes, options);
@@ -22,8 +26,12 @@ public static class DistributedCacheExtensions
         return SetAsync(cache, key, value, new DistributedCacheEntryOptions());
     }
 
-    public static Task SetAsync<T>(this IDistributedCache cache, string key, T value,
-        DistributedCacheEntryOptions options)
+    public static Task SetAsync<T>(
+        this IDistributedCache cache,
+        string key,
+        T value,
+        DistributedCacheEntryOptions options
+    )
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
         return cache.SetAsync(key, bytes, options);
@@ -33,7 +41,8 @@ public static class DistributedCacheExtensions
     {
         var val = cache.Get(key);
         value = default;
-        if (val == null) return false;
+        if (val == null)
+            return false;
         try
         {
             value = JsonSerializer.Deserialize<T>(val);

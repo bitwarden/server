@@ -14,6 +14,8 @@ public interface IGetOrganizationUsersManagementStatusQuery
     /// <returns>
     /// A dictionary containing the OrganizationUserId and a boolean indicating if the user is managed by the organization.
     /// </returns>
-    Task<IDictionary<Guid, bool>> GetUsersOrganizationManagementStatusAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds);
+    Task<IDictionary<Guid, bool>> GetUsersOrganizationManagementStatusAsync(
+        Guid organizationId,
+        IEnumerable<Guid> organizationUserIds
+    );
 }

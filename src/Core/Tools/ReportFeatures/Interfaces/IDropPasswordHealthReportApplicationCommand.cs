@@ -4,6 +4,7 @@ namespace Bit.Core.Tools.ReportFeatures.Interfaces;
 
 public interface IDropPasswordHealthReportApplicationCommand
 {
-    Task DropPasswordHealthReportApplicationAsync(DropPasswordHealthReportApplicationRequest request);
+    Task DropPasswordHealthReportApplicationAsync(
+        DropPasswordHealthReportApplicationRequest request
+    );
 }
-

@@ -15,8 +15,9 @@ public class LoggingExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             return;
         }
 
-        var logger = context.HttpContext.RequestServices
-            .GetRequiredService<ILogger<LoggingExceptionHandlerFilterAttribute>>();
+        var logger = context.HttpContext.RequestServices.GetRequiredService<
+            ILogger<LoggingExceptionHandlerFilterAttribute>
+        >();
         logger.LogError(0, exception, exception.Message);
     }
 }

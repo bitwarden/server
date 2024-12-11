@@ -16,48 +16,68 @@ namespace Bit.Api.Test.Tools.Authorization;
 [SutProviderCustomize]
 public class VaultExportAuthorizationHandlerTests
 {
-    public static IEnumerable<object[]> CanExportWholeVault => new List<CurrentContextOrganization>
-    {
-        new () { Type = OrganizationUserType.Owner },
-        new () { Type = OrganizationUserType.Admin },
-        new ()
+    public static IEnumerable<object[]> CanExportWholeVault =>
+        new List<CurrentContextOrganization>
         {
-            Type = OrganizationUserType.Custom, Permissions = new Permissions { AccessImportExport = true }
-        }
-    }.Select(org => new[] { org });
+            new() { Type = OrganizationUserType.Owner },
+            new() { Type = OrganizationUserType.Admin },
+            new()
+            {
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { AccessImportExport = true },
+            },
+        }.Select(org => new[] { org });
 
     [Theory]
     [BitMemberAutoData(nameof(CanExportWholeVault))]
-    public async Task ExportAll_PermittedRoles_Success(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
-        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    public async Task ExportAll_PermittedRoles_Success(
+        CurrentContextOrganization org,
+        OrganizationScope orgScope,
+        ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider
+    )
     {
         org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(
+            new[] { VaultExportOperations.ExportWholeVault },
+            user,
+            orgScope
+        );
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.True(authContext.HasSucceeded);
     }
 
-    public static IEnumerable<object[]> CannotExportWholeVault => new List<CurrentContextOrganization>
-    {
-        new () { Type = OrganizationUserType.User },
-        new ()
+    public static IEnumerable<object[]> CannotExportWholeVault =>
+        new List<CurrentContextOrganization>
         {
-            Type = OrganizationUserType.Custom, Permissions = new Permissions { AccessImportExport = true }.Invert()
-        }
-    }.Select(org => new[] { org });
+            new() { Type = OrganizationUserType.User },
+            new()
+            {
+                Type = OrganizationUserType.Custom,
+                Permissions = new Permissions { AccessImportExport = true }.Invert(),
+            },
+        }.Select(org => new[] { org });
 
     [Theory]
     [BitMemberAutoData(nameof(CannotExportWholeVault))]
-    public async Task ExportAll_NotPermitted_Failure(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
-        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    public async Task ExportAll_NotPermitted_Failure(
+        CurrentContextOrganization org,
+        OrganizationScope orgScope,
+        ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider
+    )
     {
         org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportWholeVault }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(
+            new[] { VaultExportOperations.ExportWholeVault },
+            user,
+            orgScope
+        );
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.False(authContext.HasSucceeded);
@@ -68,13 +88,21 @@ public class VaultExportAuthorizationHandlerTests
 
     [Theory]
     [BitMemberAutoData(nameof(CanExportManagedCollections))]
-    public async Task ExportManagedCollections_PermittedRoles_Success(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
-        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    public async Task ExportManagedCollections_PermittedRoles_Success(
+        CurrentContextOrganization org,
+        OrganizationScope orgScope,
+        ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider
+    )
     {
         org.Id = orgScope;
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportManagedCollections }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(
+            new[] { VaultExportOperations.ExportManagedCollections },
+            user,
+            orgScope
+        );
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.True(authContext.HasSucceeded);
@@ -82,12 +110,20 @@ public class VaultExportAuthorizationHandlerTests
 
     [Theory]
     [BitAutoData([null])]
-    public async Task ExportManagedCollections_NotPermitted_Failure(CurrentContextOrganization org, OrganizationScope orgScope, ClaimsPrincipal user,
-        SutProvider<VaultExportAuthorizationHandler> sutProvider)
+    public async Task ExportManagedCollections_NotPermitted_Failure(
+        CurrentContextOrganization org,
+        OrganizationScope orgScope,
+        ClaimsPrincipal user,
+        SutProvider<VaultExportAuthorizationHandler> sutProvider
+    )
     {
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgScope).Returns(org);
 
-        var authContext = new AuthorizationHandlerContext(new[] { VaultExportOperations.ExportManagedCollections }, user, orgScope);
+        var authContext = new AuthorizationHandlerContext(
+            new[] { VaultExportOperations.ExportManagedCollections },
+            user,
+            orgScope
+        );
         await sutProvider.Sut.HandleAsync(authContext);
 
         Assert.False(authContext.HasSucceeded);

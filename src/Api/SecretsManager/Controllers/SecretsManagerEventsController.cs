@@ -20,7 +20,8 @@ public class SecretsManagerEventsController : Controller
     public SecretsManagerEventsController(
         IEventRepository eventRepository,
         IServiceAccountRepository serviceAccountRepository,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService
+    )
     {
         _authorizationService = authorizationService;
         _serviceAccountRepository = serviceAccountRepository;
@@ -28,13 +29,19 @@ public class SecretsManagerEventsController : Controller
     }
 
     [HttpGet("sm/events/service-accounts/{serviceAccountId}")]
-    public async Task<ListResponseModel<EventResponseModel>> GetServiceAccountEventsAsync(Guid serviceAccountId,
-        [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null,
-        [FromQuery] string continuationToken = null)
+    public async Task<ListResponseModel<EventResponseModel>> GetServiceAccountEventsAsync(
+        Guid serviceAccountId,
+        [FromQuery] DateTime? start = null,
+        [FromQuery] DateTime? end = null,
+        [FromQuery] string continuationToken = null
+    )
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.ReadEvents);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(
+            User,
+            serviceAccount,
+            ServiceAccountOperations.ReadEvents
+        );
 
         if (!authorizationResult.Succeeded)
         {
@@ -43,9 +50,13 @@ public class SecretsManagerEventsController : Controller
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
 
-        var result = await _eventRepository.GetManyByOrganizationServiceAccountAsync(serviceAccount.OrganizationId,
-            serviceAccount.Id, dateRange.Item1, dateRange.Item2,
-            new PageOptions { ContinuationToken = continuationToken });
+        var result = await _eventRepository.GetManyByOrganizationServiceAccountAsync(
+            serviceAccount.OrganizationId,
+            serviceAccount.Id,
+            dateRange.Item1,
+            dateRange.Item2,
+            new PageOptions { ContinuationToken = continuationToken }
+        );
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
     }

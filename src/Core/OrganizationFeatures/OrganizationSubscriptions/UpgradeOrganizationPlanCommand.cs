@@ -53,7 +53,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IFeatureService featureService,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService
+    )
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -71,7 +72,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _organizationBillingService = organizationBillingService;
     }
 
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
+    public async Task<Tuple<bool, string>> UpgradePlanAsync(
+        Guid organizationId,
+        OrganizationUpgrade upgrade
+    )
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -113,29 +117,43 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             _organizationService.ValidateSecretsManagerPlan(newPlan, upgrade);
         }
 
-        var updatedPasswordManagerSeats = (short)(newPlan.PasswordManager.BaseSeats +
-                                                  (newPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
+        var updatedPasswordManagerSeats = (short)(
+            newPlan.PasswordManager.BaseSeats
+            + (newPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0)
+        );
         if (!organization.Seats.HasValue || organization.Seats.Value > updatedPasswordManagerSeats)
         {
             var occupiedSeats =
-                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+                await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(
+                    organization.Id
+                );
             if (occupiedSeats > updatedPasswordManagerSeats)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                                              $"Your new plan only has ({updatedPasswordManagerSeats}) seats. Remove some users.");
+                throw new BadRequestException(
+                    $"Your organization currently has {occupiedSeats} seats filled. "
+                        + $"Your new plan only has ({updatedPasswordManagerSeats}) seats. Remove some users."
+                );
             }
         }
 
-        if (newPlan.PasswordManager.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
-                                                               organization.MaxCollections.Value >
-                                                               newPlan.PasswordManager.MaxCollections.Value))
+        if (
+            newPlan.PasswordManager.MaxCollections.HasValue
+            && (
+                !organization.MaxCollections.HasValue
+                || organization.MaxCollections.Value > newPlan.PasswordManager.MaxCollections.Value
+            )
+        )
         {
-            var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
+            var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(
+                organization.Id
+            );
             if (collectionCount > newPlan.PasswordManager.MaxCollections.Value)
             {
-                throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
-                                              $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) collections. " +
-                                              "Remove some collections.");
+                throw new BadRequestException(
+                    $"Your organization currently has {collectionCount} collections. "
+                        + $"Your new plan allows for a maximum of ({newPlan.PasswordManager.MaxCollections.Value}) collections. "
+                        + "Remove some collections."
+                );
             }
         }
 
@@ -144,8 +162,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
             if (groups.Any())
             {
-                throw new BadRequestException($"Your new plan does not allow the groups feature. " +
-                                              $"Remove your groups.");
+                throw new BadRequestException(
+                    $"Your new plan does not allow the groups feature. " + $"Remove your groups."
+                );
             }
         }
 
@@ -154,8 +173,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
             if (policies.Any(p => p.Enabled))
             {
-                throw new BadRequestException($"Your new plan does not allow the policies feature. " +
-                                              $"Disable your policies.");
+                throw new BadRequestException(
+                    $"Your new plan does not allow the policies feature. "
+                        + $"Disable your policies."
+                );
             }
         }
 
@@ -164,52 +185,75 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
             if (ssoConfig != null && ssoConfig.Enabled)
             {
-                throw new BadRequestException($"Your new plan does not allow the SSO feature. " +
-                                              $"Disable your SSO configuration.");
+                throw new BadRequestException(
+                    $"Your new plan does not allow the SSO feature. "
+                        + $"Disable your SSO configuration."
+                );
             }
         }
 
         if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector)
+            if (
+                ssoConfig != null
+                && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector
+            )
             {
-                throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
-                                              "Disable your Key Connector.");
+                throw new BadRequestException(
+                    "Your new plan does not allow the Key Connector feature. "
+                        + "Disable your Key Connector."
+                );
             }
         }
 
         if (!newPlan.HasResetPassword && organization.UseResetPassword)
         {
-            var resetPasswordPolicy =
-                await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+            var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(
+                organization.Id,
+                PolicyType.ResetPassword
+            );
             if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
             {
-                throw new BadRequestException("Your new plan does not allow the Password Reset feature. " +
-                                              "Disable your Password Reset policy.");
+                throw new BadRequestException(
+                    "Your new plan does not allow the Password Reset feature. "
+                        + "Disable your Password Reset policy."
+                );
             }
         }
 
         if (!newPlan.HasScim && organization.UseScim)
         {
-            var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
-                OrganizationConnectionType.Scim);
-            if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
+            var scimConnections =
+                await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(
+                    organization.Id,
+                    OrganizationConnectionType.Scim
+                );
+            if (
+                scimConnections != null
+                && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true)
+            )
             {
-                throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
-                                              "Disable your SCIM configuration.");
+                throw new BadRequestException(
+                    "Your new plan does not allow the SCIM feature. "
+                        + "Disable your SCIM configuration."
+                );
             }
         }
 
         if (!newPlan.HasCustomPermissions && organization.UseCustomPermissions)
         {
             var organizationCustomUsers =
-                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
-                    OrganizationUserType.Custom);
+                await _organizationUserRepository.GetManyByOrganizationAsync(
+                    organization.Id,
+                    OrganizationUserType.Custom
+                );
             if (organizationCustomUsers.Any())
             {
-                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
-                                              "Disable your Custom Permissions configuration.");
+                throw new BadRequestException(
+                    "Your new plan does not allow the Custom Permissions feature. "
+                        + "Disable your Custom Permissions configuration."
+                );
             }
         }
 
@@ -233,8 +277,11 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             {
                 try
                 {
-                    paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                        newPlan, upgrade);
+                    paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(
+                        organization,
+                        newPlan,
+                        upgrade
+                    );
                     success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
                 }
                 catch
@@ -255,7 +302,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                 upgrade.UseSecretsManager,
                 upgrade.AdditionalSmSeats,
                 upgrade.AdditionalServiceAccounts,
-                upgrade.AdditionalStorageGb);
+                upgrade.AdditionalStorageGb
+            );
 
             success = string.IsNullOrEmpty(paymentIntentClientSecret);
         }
@@ -297,9 +345,11 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (upgrade.UseSecretsManager)
         {
-            organization.SmSeats = newPlan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = newPlan.SecretsManager.BaseServiceAccount +
-                                             upgrade.AdditionalServiceAccounts.GetValueOrDefault();
+            organization.SmSeats =
+                newPlan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
+            organization.SmServiceAccounts =
+                newPlan.SecretsManager.BaseServiceAccount
+                + upgrade.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
@@ -319,47 +369,67 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                     PlanUpgradePath = upgradePath,
                     Storage = organization.MaxStorageGb,
                     // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
-                });
+                }
+            );
         }
 
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
-    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
-        Models.StaticStore.Plan newSecretsManagerPlan)
+    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(
+        OrganizationUpgrade upgrade,
+        Organization organization,
+        Models.StaticStore.Plan newSecretsManagerPlan
+    )
     {
-        var newPlanSmSeats = (short)(newSecretsManagerPlan.SecretsManager.BaseSeats +
-                                     (newSecretsManagerPlan.SecretsManager.HasAdditionalSeatsOption
-                                         ? upgrade.AdditionalSmSeats
-                                         : 0));
+        var newPlanSmSeats = (short)(
+            newSecretsManagerPlan.SecretsManager.BaseSeats
+            + (
+                newSecretsManagerPlan.SecretsManager.HasAdditionalSeatsOption
+                    ? upgrade.AdditionalSmSeats
+                    : 0
+            )
+        );
         var occupiedSmSeats =
-            await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+            await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(
+                organization.Id
+            );
 
         if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats)
         {
             if (occupiedSmSeats > newPlanSmSeats)
             {
                 throw new BadRequestException(
-                    $"Your organization currently has {occupiedSmSeats} Secrets Manager seats filled. " +
-                    $"Your new plan only has {newPlanSmSeats} seats. Remove some users or increase your subscription.");
+                    $"Your organization currently has {occupiedSmSeats} Secrets Manager seats filled. "
+                        + $"Your new plan only has {newPlanSmSeats} seats. Remove some users or increase your subscription."
+                );
             }
         }
 
-        var additionalServiceAccounts = newSecretsManagerPlan.SecretsManager.HasAdditionalServiceAccountOption
+        var additionalServiceAccounts = newSecretsManagerPlan
+            .SecretsManager
+            .HasAdditionalServiceAccountOption
             ? upgrade.AdditionalServiceAccounts
             : 0;
-        var newPlanServiceAccounts = newSecretsManagerPlan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
+        var newPlanServiceAccounts =
+            newSecretsManagerPlan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
 
-        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanServiceAccounts)
+        if (
+            !organization.SmServiceAccounts.HasValue
+            || organization.SmServiceAccounts.Value > newPlanServiceAccounts
+        )
         {
             var currentServiceAccounts =
-                await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+                await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(
+                    organization.Id
+                );
             if (currentServiceAccounts > newPlanServiceAccounts)
             {
                 throw new BadRequestException(
-                    $"Your organization currently has {currentServiceAccounts} machine accounts. " +
-                    $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} machine accounts. " +
-                    "Remove some machine accounts or increase your subscription.");
+                    $"Your organization currently has {currentServiceAccounts} machine accounts. "
+                        + $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} machine accounts. "
+                        + "Remove some machine accounts or increase your subscription."
+                );
             }
         }
     }
@@ -369,7 +439,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static string GetUpgradePath(ProductTierType oldProductTierType, ProductTierType newProductTierType)
+    private static string GetUpgradePath(
+        ProductTierType oldProductTierType,
+        ProductTierType newProductTierType
+    )
     {
         var oldDescription = _upgradePath.TryGetValue(oldProductTierType, out var description)
             ? description
@@ -388,6 +461,6 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         [ProductTierType.Families] = "Families",
         [ProductTierType.TeamsStarter] = "Teams Starter",
         [ProductTierType.Teams] = "Teams",
-        [ProductTierType.Enterprise] = "Enterprise"
+        [ProductTierType.Enterprise] = "Enterprise",
     };
 }

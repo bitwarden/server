@@ -27,7 +27,7 @@ public class StorageSubscriptionUpdate : SubscriptionUpdate
                 Plan = _plan,
                 Quantity = _additionalStorage,
                 Deleted = (item?.Id != null && _additionalStorage == 0) ? true : (bool?)null,
-            }
+            },
         };
     }
 
@@ -47,7 +47,7 @@ public class StorageSubscriptionUpdate : SubscriptionUpdate
                 Plan = _plan,
                 Quantity = _prevStorage.Value,
                 Deleted = _prevStorage.Value == 0 ? true : (bool?)null,
-            }
+            },
         };
     }
 }

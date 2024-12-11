@@ -8,12 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
-public class ApiKeyRepository : Repository<Core.SecretsManager.Entities.ApiKey, ApiKey, Guid>, IApiKeyRepository
+public class ApiKeyRepository
+    : Repository<Core.SecretsManager.Entities.ApiKey, ApiKey, Guid>,
+        IApiKeyRepository
 {
     public ApiKeyRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ApiKeys)
-    {
-    }
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ApiKeys) { }
 
     public async Task<ApiKeyDetails> GetDetailsByIdAsync(Guid id)
     {
@@ -22,13 +22,18 @@ public class ApiKeyRepository : Repository<Core.SecretsManager.Entities.ApiKey, 
         var entity = await GetDbSet(dbContext)
             .Where(apiKey => apiKey.Id == id)
             .Include(apiKey => apiKey.ServiceAccount)
-            .Select(apiKey => new ServiceAccountApiKeyDetails(apiKey, apiKey.ServiceAccount.OrganizationId))
+            .Select(apiKey => new ServiceAccountApiKeyDetails(
+                apiKey,
+                apiKey.ServiceAccount.OrganizationId
+            ))
             .FirstOrDefaultAsync();
 
         return Mapper.Map<ServiceAccountApiKeyDetails>(entity);
     }
 
-    public async Task<ICollection<Core.SecretsManager.Entities.ApiKey>> GetManyByServiceAccountIdAsync(Guid id)
+    public async Task<
+        ICollection<Core.SecretsManager.Entities.ApiKey>
+    > GetManyByServiceAccountIdAsync(Guid id)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

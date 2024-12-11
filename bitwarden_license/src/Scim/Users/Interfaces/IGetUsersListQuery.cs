@@ -4,5 +4,8 @@ namespace Bit.Scim.Users.Interfaces;
 
 public interface IGetUsersListQuery
 {
-    Task<(IEnumerable<OrganizationUserUserDetails> userList, int totalResults)> GetUsersListAsync(Guid organizationId, GetUsersQueryParamModel userQueryParams);
+    Task<(IEnumerable<OrganizationUserUserDetails> userList, int totalResults)> GetUsersListAsync(
+        Guid organizationId,
+        GetUsersQueryParamModel userQueryParams
+    );
 }

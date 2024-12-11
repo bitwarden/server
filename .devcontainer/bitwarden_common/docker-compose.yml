@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 services:
   bitwarden_server:
@@ -12,8 +12,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     platform: linux/amd64
     restart: unless-stopped
-    env_file:
-      ../../dev/.env
+    env_file: ../../dev/.env
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
@@ -28,6 +27,6 @@ services:
     image: sj26/mailcatcher:latest
     restart: unless-stopped
     network_mode: service:bitwarden_server
-    
+
 volumes:
   mssql_dev_data:

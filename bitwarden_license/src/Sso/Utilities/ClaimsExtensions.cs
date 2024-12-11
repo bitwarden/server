@@ -3,12 +3,14 @@ using System.Text.RegularExpressions;
 
 namespace Bit.Sso.Utilities;
 
-public static class ClaimsExtensions
+public static partial class ClaimsExtensions
 {
-    private static readonly Regex _normalizeTextRegEx =
-        new Regex(@"[^a-zA-Z]", RegexOptions.CultureInvariant | RegexOptions.Singleline);
+    private static readonly Regex _normalizeTextRegEx = MyRegex();
 
-    public static string GetFirstMatch(this IEnumerable<Claim> claims, params string[] possibleNames)
+    public static string GetFirstMatch(
+        this IEnumerable<Claim> claims,
+        params string[] possibleNames
+    )
     {
         var normalizedClaims = claims.Select(c => (Normalize(c.Type), c.Value)).ToList();
 
@@ -29,9 +31,9 @@ public static class ClaimsExtensions
 
     private static bool Equals(string text, string compare)
     {
-        return text == compare ||
-            (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(compare)) ||
-            string.Equals(Normalize(text), compare, StringComparison.InvariantCultureIgnoreCase);
+        return text == compare
+            || (string.IsNullOrWhiteSpace(text) && string.IsNullOrWhiteSpace(compare))
+            || string.Equals(Normalize(text), compare, StringComparison.InvariantCultureIgnoreCase);
     }
 
     private static string Normalize(string text)
@@ -42,4 +44,7 @@ public static class ClaimsExtensions
         }
         return _normalizeTextRegEx.Replace(text, string.Empty);
     }
+
+    [GeneratedRegex(@"[^a-zA-Z]", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
+    private static partial Regex MyRegex();
 }

@@ -12,8 +12,14 @@ public class EventReadPageByOrganizationIdServiceAccountIdQuery : IQuery<Event>
     private readonly DateTime? _beforeDate;
     private readonly PageOptions _pageOptions;
 
-    public EventReadPageByOrganizationIdServiceAccountIdQuery(Guid organizationId, Guid serviceAccountId,
-        DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
+    public EventReadPageByOrganizationIdServiceAccountIdQuery(
+        Guid organizationId,
+        Guid serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        DateTime? beforeDate,
+        PageOptions pageOptions
+    )
     {
         _organizationId = organizationId;
         _serviceAccountId = serviceAccountId;
@@ -25,14 +31,16 @@ public class EventReadPageByOrganizationIdServiceAccountIdQuery : IQuery<Event>
 
     public IQueryable<Event> Run(DatabaseContext dbContext)
     {
-        var q = from e in dbContext.Events
-                where e.Date >= _startDate &&
-                      (_beforeDate != null || e.Date <= _endDate) &&
-                      (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                      e.OrganizationId == _organizationId &&
-                      e.ServiceAccountId == _serviceAccountId
-                orderby e.Date descending
-                select e;
+        var q =
+            from e in dbContext.Events
+            where
+                e.Date >= _startDate
+                && (_beforeDate != null || e.Date <= _endDate)
+                && (_beforeDate == null || e.Date < _beforeDate.Value)
+                && e.OrganizationId == _organizationId
+                && e.ServiceAccountId == _serviceAccountId
+            orderby e.Date descending
+            select e;
         return q.Skip(0).Take(_pageOptions.PageSize);
     }
 }

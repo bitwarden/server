@@ -23,7 +23,8 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         GlobalSettings globalSettings,
         IServiceProvider serviceProvider,
         ILogger logger,
-        ILogger<JobListener> listenerLogger)
+        ILogger<JobListener> listenerLogger
+    )
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
@@ -35,10 +36,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
-        var props = new NameValueCollection
-        {
-            {"quartz.serializer.type", "binary"},
-        };
+        var props = new NameValueCollection { { "quartz.serializer.type", "binary" } };
 
         if (!string.IsNullOrEmpty(_globalSettings.SqlServer.JobSchedulerConnectionString))
         {
@@ -46,20 +44,28 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
             props.Add("quartz.scheduler.instanceName", GetType().FullName);
             props.Add("quartz.scheduler.instanceId", "AUTO");
             props.Add("quartz.jobStore.type", "Quartz.Impl.AdoJobStore.JobStoreTX");
-            props.Add("quartz.jobStore.driverDelegateType", "Quartz.Impl.AdoJobStore.SqlServerDelegate");
+            props.Add(
+                "quartz.jobStore.driverDelegateType",
+                "Quartz.Impl.AdoJobStore.SqlServerDelegate"
+            );
             props.Add("quartz.jobStore.useProperties", "true");
             props.Add("quartz.jobStore.dataSource", "default");
             props.Add("quartz.jobStore.tablePrefix", "QRTZ_");
             props.Add("quartz.jobStore.clustered", "true");
             props.Add("quartz.dataSource.default.provider", "SqlServer");
-            props.Add("quartz.dataSource.default.connectionString", _globalSettings.SqlServer.JobSchedulerConnectionString);
+            props.Add(
+                "quartz.dataSource.default.connectionString",
+                _globalSettings.SqlServer.JobSchedulerConnectionString
+            );
         }
 
         var factory = new StdSchedulerFactory(props);
         _scheduler = await factory.GetScheduler(cancellationToken);
         _scheduler.JobFactory = new JobFactory(_serviceProvider);
-        _scheduler.ListenerManager.AddJobListener(new JobListener(_listenerLogger),
-            GroupMatcher<JobKey>.AnyGroup());
+        _scheduler.ListenerManager.AddJobListener(
+            new JobListener(_listenerLogger),
+            GroupMatcher<JobKey>.AnyGroup()
+        );
         await _scheduler.Start(cancellationToken);
         if (Jobs != null)
         {
@@ -76,9 +82,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                             await _scheduler.RescheduleJob(trigger.Key, trigger);
                         }
 
-                        var jobDetail = JobBuilder.Create(job)
-                            .WithIdentity(job.FullName)
-                            .Build();
+                        var jobDetail = JobBuilder.Create(job).WithIdentity(job.FullName).Build();
 
                         var dupeJ = await _scheduler.GetJobDetail(jobDetail.Key);
                         if (dupeJ != null)
@@ -96,7 +100,9 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
                             throw new Exception("Job failed to start after 10 retries.");
                         }
 
-                        _logger.LogWarning($"Exception while trying to schedule job: {job.FullName}, {e}");
+                        _logger.LogWarning(
+                            $"Exception while trying to schedule job: {job.FullName}, {e}"
+                        );
                         var random = new Random();
                         Thread.Sleep(random.Next(50, 250));
                     }
@@ -109,9 +115,7 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         var jobKeys = Jobs.Select(j =>
         {
             var job = j.Item1;
-            return JobBuilder.Create(job)
-                .WithIdentity(job.FullName)
-                .Build().Key;
+            return JobBuilder.Create(job).WithIdentity(job.FullName).Build().Key;
         });
 
         foreach (var key in existingJobKeys)
@@ -125,7 +129,9 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
             await _scheduler.DeleteJob(key);
         }
 
-        var existingTriggerKeys = await _scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.AnyGroup());
+        var existingTriggerKeys = await _scheduler.GetTriggerKeys(
+            GroupMatcher<TriggerKey>.AnyGroup()
+        );
         var triggerKeys = Jobs.Select(j => j.Item2.Key);
 
         foreach (var key in existingTriggerKeys)
@@ -145,6 +151,5 @@ public abstract class BaseJobsHostedService : IHostedService, IDisposable
         await _scheduler?.Shutdown(cancellationToken);
     }
 
-    public virtual void Dispose()
-    { }
+    public virtual void Dispose() { }
 }

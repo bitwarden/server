@@ -20,7 +20,7 @@ public partial class SecurityTasks : Migration
                 Type = table.Column<byte>(type: "INTEGER", nullable: false),
                 Status = table.Column<byte>(type: "INTEGER", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -29,30 +29,34 @@ public partial class SecurityTasks : Migration
                     name: "FK_SecurityTask_Cipher_CipherId",
                     column: x => x.CipherId,
                     principalTable: "Cipher",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_SecurityTask_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_SecurityTask_CipherId",
             table: "SecurityTask",
-            column: "CipherId");
+            column: "CipherId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_SecurityTask_OrganizationId",
             table: "SecurityTask",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "SecurityTask");
+        migrationBuilder.DropTable(name: "SecurityTask");
     }
 }

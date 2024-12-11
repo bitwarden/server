@@ -6,7 +6,8 @@ namespace Bit.Test.Common.Fakes;
 /// Used to fake the IDataProtectorTokenFactory for testing purposes.
 /// Generalized for use with all Tokenables.
 /// </summary>
-public class FakeDataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where T : Tokenable, new()
+public class FakeDataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T>
+    where T : Tokenable, new()
 {
     // Instead of real encryption, use a simple Dictionary to emulate protection/unprotection
     private readonly Dictionary<string, T> _tokenDatabase = new Dictionary<string, T>();

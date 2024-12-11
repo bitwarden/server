@@ -18,7 +18,8 @@ public class UserEditModel
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
         GlobalSettings globalSettings,
-        bool? claimedAccount)
+        bool? claimedAccount
+    )
     {
         User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount);
 
@@ -47,23 +48,32 @@ public class UserEditModel
 
     [Display(Name = "Name")]
     public string Name { get; init; }
+
     [Required]
     [Display(Name = "Email")]
     public string Email { get; init; }
+
     [Display(Name = "Email Verified")]
     public bool EmailVerified { get; init; }
+
     [Display(Name = "Premium")]
     public bool Premium { get; init; }
+
     [Display(Name = "Max. Storage GB")]
     public short? MaxStorageGb { get; init; }
+
     [Display(Name = "Gateway")]
     public Core.Enums.GatewayType? Gateway { get; init; }
+
     [Display(Name = "Gateway Customer Id")]
     public string GatewayCustomerId { get; init; }
+
     [Display(Name = "Gateway Subscription Id")]
     public string GatewaySubscriptionId { get; init; }
+
     [Display(Name = "License Key")]
     public string LicenseKey { get; init; }
+
     [Display(Name = "Premium Expiration Date")]
     public DateTime? PremiumExpirationDate { get; init; }
 }

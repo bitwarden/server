@@ -32,7 +32,8 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         IProviderRepository providerRepository,
         IValidateSponsorshipCommand validateSponsorshipCommand,
         IOrganizationRepository organizationRepository,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService
+    )
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -55,7 +56,10 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         var invoice = await _stripeEventService.GetInvoice(parsedEvent);
         if (string.IsNullOrEmpty(invoice.SubscriptionId))
         {
-            _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
+            _logger.LogWarning(
+                "Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID",
+                parsedEvent.Id
+            );
             return;
         }
 
@@ -64,12 +68,15 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         if (subscription == null)
         {
             throw new Exception(
-                $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
+                $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'"
+            );
         }
 
         var updatedSubscription = await TryEnableAutomaticTaxAsync(subscription);
 
-        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(updatedSubscription.Metadata);
+        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(
+            updatedSubscription.Metadata
+        );
 
         var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
 
@@ -77,14 +84,17 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         {
             if (_stripeEventUtilityService.IsSponsoredSubscription(updatedSubscription))
             {
-                var sponsorshipIsValid =
-                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                var sponsorshipIsValid = await _validateSponsorshipCommand.ValidateSponsorshipAsync(
+                    organizationId.Value
+                );
                 if (!sponsorshipIsValid)
                 {
                     // If the sponsorship is invalid, then the subscription was updated to use the regular families plan
                     // price. Given that this is the case, we need the new invoice amount
-                    subscription = await _stripeFacade.GetSubscription(subscription.Id,
-                        new SubscriptionGetOptions { Expand = ["latest_invoice"] });
+                    subscription = await _stripeFacade.GetSubscription(
+                        subscription.Id,
+                        new SubscriptionGetOptions { Expand = ["latest_invoice"] }
+                    );
 
                     invoice = subscription.LatestInvoice;
                     invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
@@ -129,13 +139,13 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
                 _logger.LogError(
                     "Received invoice.Upcoming webhook ({EventID}) for Provider ({ProviderID}) that does not exist",
                     parsedEvent.Id,
-                    providerId.Value);
+                    providerId.Value
+                );
 
                 return;
             }
 
             await SendEmails(new List<string> { provider.BillingEmail });
-
         }
 
         return;
@@ -154,7 +164,8 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
                     invoice.AmountDue / 100M,
                     invoice.NextPaymentAttempt.Value,
                     invoiceLineItemDescriptions,
-                    true);
+                    true
+                );
             }
         }
     }
@@ -164,8 +175,10 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         var customerGetOptions = new CustomerGetOptions { Expand = ["tax"] };
         var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
 
-        if (subscription.AutomaticTax.Enabled ||
-            customer.Tax?.AutomaticTax != StripeConstants.AutomaticTaxStatus.Supported)
+        if (
+            subscription.AutomaticTax.Enabled
+            || customer.Tax?.AutomaticTax != StripeConstants.AutomaticTaxStatus.Supported
+        )
         {
             return subscription;
         }
@@ -173,11 +186,12 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
             DefaultTaxRates = [],
-            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
         };
 
         return await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
     }
 
-    private static bool OrgPlanForInvoiceNotifications(Organization org) => StaticStore.GetPlan(org.PlanType).IsAnnual;
+    private static bool OrgPlanForInvoiceNotifications(Organization org) =>
+        StaticStore.GetPlan(org.PlanType).IsAnnual;
 }

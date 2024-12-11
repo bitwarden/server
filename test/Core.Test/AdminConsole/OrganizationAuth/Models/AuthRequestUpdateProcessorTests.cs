@@ -30,7 +30,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         authRequest = Approve(authRequest);
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         Assert.ThrowsAny<AuthRequestUpdateCouldNotBeProcessedException>(() => sut.Process());
@@ -44,7 +48,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         authRequest = Deny(authRequest);
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         Assert.ThrowsAny<AuthRequestUpdateCouldNotBeProcessedException>(() => sut.Process());
@@ -58,7 +66,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         processorConfiguration.AuthRequestExpiresAfter = new TimeSpan(0, 10, 0);
         authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-60);
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
@@ -73,7 +85,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         while (authRequest.Id == update.Id)
         {
             authRequest.Id = new Guid();
@@ -90,7 +106,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         while (authRequest.OrganizationId == processorConfiguration.OrganizationId)
         {
             authRequest.OrganizationId = new Guid();
@@ -107,7 +127,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         update.Approved = true;
         update.Key = null;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
@@ -122,7 +146,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         update.Approved = true;
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
@@ -140,7 +168,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         sut.Process();
@@ -157,7 +189,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, Task>>();
@@ -174,7 +210,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         update.Approved = true;
         update.Key = "key";
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
@@ -192,7 +232,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         update.Approved = false;
         var sut = new AuthRequestUpdateProcessor(authRequest, update, processorConfiguration);
         var callback = Substitute.For<Func<OrganizationAdminAuthRequest, string, Task>>();
@@ -209,7 +253,11 @@ public class AuthRequestUpdateProcessorTests
         AuthRequestUpdateProcessorConfiguration processorConfiguration
     )
     {
-        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(authRequest, update, processorConfiguration);
+        (authRequest, processorConfiguration) = UnrespondAndEnsureValid(
+            authRequest,
+            update,
+            processorConfiguration
+        );
         authRequest.RequestDeviceType = DeviceType.iOS;
         authRequest.RequestDeviceIdentifier = "device-id";
         update.Approved = true;
@@ -221,7 +269,8 @@ public class AuthRequestUpdateProcessorTests
         await callback.Received()(sut.ProcessedAuthRequest, "iOS - device-id");
     }
 
-    private static T Approve<T>(T authRequest) where T : AuthRequest
+    private static T Approve<T>(T authRequest)
+        where T : AuthRequest
     {
         authRequest.Key = "key";
         authRequest.Approved = true;
@@ -229,7 +278,8 @@ public class AuthRequestUpdateProcessorTests
         return authRequest;
     }
 
-    private static T Deny<T>(T authRequest) where T : AuthRequest
+    private static T Deny<T>(T authRequest)
+        where T : AuthRequest
     {
         authRequest.Approved = false;
         authRequest.ResponseDate = DateTime.UtcNow;
@@ -243,7 +293,8 @@ public class AuthRequestUpdateProcessorTests
         T authRequest,
         OrganizationAuthRequestUpdate update,
         AuthRequestUpdateProcessorConfiguration processorConfiguration
-    ) where T : AuthRequest
+    )
+        where T : AuthRequest
     {
         authRequest.Id = update.Id;
         authRequest.OrganizationId = processorConfiguration.OrganizationId;

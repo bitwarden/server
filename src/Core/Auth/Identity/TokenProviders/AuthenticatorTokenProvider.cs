@@ -18,14 +18,14 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public AuthenticatorTokenProvider(
         IServiceProvider serviceProvider,
-        [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache)
+        [FromKeyedServices("persistent")] IDistributedCache distributedCache
+    )
     {
         _serviceProvider = serviceProvider;
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2),
         };
     }
 
@@ -36,7 +36,8 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         {
             return false;
         }
-        return await _serviceProvider.GetRequiredService<IUserService>()
+        return await _serviceProvider
+            .GetRequiredService<IUserService>()
             .TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Authenticator, user);
     }
 
@@ -45,7 +46,12 @@ public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
         return Task.FromResult<string>(null);
     }
 
-    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    public async Task<bool> ValidateAsync(
+        string purpose,
+        string token,
+        UserManager<User> manager,
+        User user
+    )
     {
         var cacheKey = string.Format(CacheKeyFormat, user.Id, token);
         var cachedValue = await _distributedCache.GetAsync(cacheKey);

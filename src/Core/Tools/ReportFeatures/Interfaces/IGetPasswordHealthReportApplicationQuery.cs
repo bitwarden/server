@@ -4,5 +4,7 @@ namespace Bit.Core.Tools.ReportFeatures.Interfaces;
 
 public interface IGetPasswordHealthReportApplicationQuery
 {
-    Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplicationAsync(Guid organizationId);
+    Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplicationAsync(
+        Guid organizationId
+    );
 }

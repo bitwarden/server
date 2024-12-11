@@ -23,8 +23,7 @@ public class DatabaseContext : DbContext
     public const string postgresIndetermanisticCollation = "postgresIndetermanisticCollation";
 
     public DatabaseContext(DbContextOptions<DatabaseContext> options)
-        : base(options)
-    { }
+        : base(options) { }
 
     public DbSet<AccessPolicy> AccessPolicies { get; set; }
     public DbSet<UserProjectAccessPolicy> UserProjectAccessPolicy { get; set; }
@@ -130,8 +129,8 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
-        var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
-            Constants.DatabaseFieldProtectorPurpose);
+        var dataProtector = this.GetService<DP.IDataProtectionProvider>()
+            .CreateProtector(Constants.DatabaseFieldProtectorPurpose);
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
         eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
         eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
@@ -140,10 +139,21 @@ public class DatabaseContext : DbContext
         {
             // the postgres provider doesn't currently support database level non-deterministic collations.
             // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation
-            builder.HasCollation(postgresIndetermanisticCollation, locale: "en-u-ks-primary", provider: "icu", deterministic: false);
+            builder.HasCollation(
+                postgresIndetermanisticCollation,
+                locale: "en-u-ks-primary",
+                provider: "icu",
+                deterministic: false
+            );
             eUser.Property(e => e.Email).UseCollation(postgresIndetermanisticCollation);
-            builder.Entity<Organization>().Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
-            builder.Entity<SsoUser>().Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
+            builder
+                .Entity<Organization>()
+                .Property(e => e.Identifier)
+                .UseCollation(postgresIndetermanisticCollation);
+            builder
+                .Entity<SsoUser>()
+                .Property(e => e.ExternalId)
+                .UseCollation(postgresIndetermanisticCollation);
             //
         }
 
@@ -176,13 +186,15 @@ public class DatabaseContext : DbContext
         {
             converter = new ValueConverter<DateTime, DateTime>(
                 v => v,
-                d => new DateTimeOffset(d).UtcDateTime);
+                d => new DateTimeOffset(d).UtcDateTime
+            );
         }
         else
         {
             converter = new ValueConverter<DateTime, DateTime>(
                 v => v,
-                v => new DateTime(v.Ticks, DateTimeKind.Utc));
+                v => new DateTime(v.Ticks, DateTimeKind.Utc)
+            );
         }
 
         foreach (var entityType in builder.Model.GetEntityTypes())

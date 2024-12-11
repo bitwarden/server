@@ -29,7 +29,8 @@ public class FreshdeskController : Controller
         IOptions<BillingSettings> billingSettings,
         ILogger<FreshdeskController> logger,
         GlobalSettings globalSettings,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory
+    )
     {
         _billingSettings = billingSettings?.Value;
         _userRepository = userRepository;
@@ -41,10 +42,15 @@ public class FreshdeskController : Controller
     }
 
     [HttpPost("webhook")]
-    public async Task<IActionResult> PostWebhook([FromQuery, Required] string key,
-        [FromBody, Required] FreshdeskWebhookModel model)
+    public async Task<IActionResult> PostWebhook(
+        [FromQuery, Required] string key,
+        [FromBody, Required] FreshdeskWebhookModel model
+    )
     {
-        if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshDesk.WebhookKey))
+        if (
+            string.IsNullOrWhiteSpace(key)
+            || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshDesk.WebhookKey)
+        )
         {
             return new BadRequestResult();
         }
@@ -54,7 +60,9 @@ public class FreshdeskController : Controller
             var ticketId = model.TicketId;
             var ticketContactEmail = model.TicketContactEmail;
             var ticketTags = model.TicketTags;
-            if (string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail))
+            if (
+                string.IsNullOrWhiteSpace(ticketId) || string.IsNullOrWhiteSpace(ticketContactEmail)
+            )
             {
                 return new BadRequestResult();
             }
@@ -80,10 +88,13 @@ public class FreshdeskController : Controller
                 {
                     // Prevent org names from injecting any additional HTML
                     var orgName = HttpUtility.HtmlEncode(org.Name);
-                    var orgNote = $"{orgName} ({org.Seats.GetValueOrDefault()}): " +
-                        $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
+                    var orgNote =
+                        $"{orgName} ({org.Seats.GetValueOrDefault()}): "
+                        + $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
                     note += $"<li>Org, {orgNote}</li>";
-                    if (!customFields.Any(kvp => kvp.Key == _billingSettings.FreshDesk.OrgFieldName))
+                    if (
+                        !customFields.Any(kvp => kvp.Key == _billingSettings.FreshDesk.OrgFieldName)
+                    )
                     {
                         customFields.Add(_billingSettings.FreshDesk.OrgFieldName, orgNote);
                     }
@@ -92,13 +103,15 @@ public class FreshdeskController : Controller
                         customFields[_billingSettings.FreshDesk.OrgFieldName] += $"\n{orgNote}";
                     }
 
-                    var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();
+                    var planName = GetAttribute<DisplayAttribute>(org.PlanType)
+                        .Name.Split(" ")
+                        .FirstOrDefault();
                     if (!string.IsNullOrWhiteSpace(planName))
                     {
                         tags.Add(string.Format("Org: {0}", planName));
                     }
                 }
-                if (tags.Any())
+                if (tags.Count != 0)
                 {
                     var tagsToUpdate = tags.ToList();
                     if (!string.IsNullOrWhiteSpace(ticketTags))
@@ -112,12 +125,14 @@ public class FreshdeskController : Controller
                     updateBody.Add("tags", tagsToUpdate);
                 }
 
-                if (customFields.Any())
+                if (customFields.Count != 0)
                 {
                     updateBody.Add("custom_fields", customFields);
                 }
-                var updateRequest = new HttpRequestMessage(HttpMethod.Put,
-                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId))
+                var updateRequest = new HttpRequestMessage(
+                    HttpMethod.Put,
+                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", ticketId)
+                )
                 {
                     Content = JsonContent.Create(updateBody),
                 };
@@ -126,10 +141,15 @@ public class FreshdeskController : Controller
                 var noteBody = new Dictionary<string, object>
                 {
                     { "body", $"<ul>{note}</ul>" },
-                    { "private", true }
+                    { "private", true },
                 };
-                var noteRequest = new HttpRequestMessage(HttpMethod.Post,
-                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+                var noteRequest = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    string.Format(
+                        "https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes",
+                        ticketId
+                    )
+                )
                 {
                     Content = JsonContent.Create(noteBody),
                 };
@@ -145,15 +165,23 @@ public class FreshdeskController : Controller
         }
     }
 
-    private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)
+    private async Task<HttpResponseMessage> CallFreshdeskApiAsync(
+        HttpRequestMessage request,
+        int retriedCount = 0
+    )
     {
         try
         {
-            var freshdeskAuthkey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshDesk.ApiKey}:X"));
+            var freshdeskAuthkey = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes($"{_billingSettings.FreshDesk.ApiKey}:X")
+            );
             var httpClient = _httpClientFactory.CreateClient("FreshdeskApi");
             request.Headers.Add("Authorization", $"Basic {freshdeskAuthkey}");
             var response = await httpClient.SendAsync(request);
-            if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
+            if (
+                response.StatusCode != System.Net.HttpStatusCode.TooManyRequests
+                || retriedCount > 3
+            )
             {
                 return response;
             }
@@ -169,8 +197,13 @@ public class FreshdeskController : Controller
         return await CallFreshdeskApiAsync(request, retriedCount++);
     }
 
-    private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute
+    private static TAttribute GetAttribute<TAttribute>(Enum enumValue)
+        where TAttribute : Attribute
     {
-        return enumValue.GetType().GetMember(enumValue.ToString()).First().GetCustomAttribute<TAttribute>();
+        return enumValue
+            .GetType()
+            .GetMember(enumValue.ToString())
+            .First()
+            .GetCustomAttribute<TAttribute>();
     }
 }

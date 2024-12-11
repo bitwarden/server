@@ -16,28 +16,43 @@ public class RestoreTrashCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task RestoreTrash_Throws_NotFoundException(Guid orgId, Secret s1, Secret s2, SutProvider<RestoreTrashCommand> sutProvider)
+    public async Task RestoreTrash_Throws_NotFoundException(
+        Guid orgId,
+        Secret s1,
+        Secret s2,
+        SutProvider<RestoreTrashCommand> sutProvider
+    )
     {
         s1.DeletedDate = DateTime.Now;
 
         var ids = new List<Guid> { s1.Id, s2.Id };
-        sutProvider.GetDependency<ISecretRepository>()
+        sutProvider
+            .GetDependency<ISecretRepository>()
             .GetManyByOrganizationIdInTrashByIdsAsync(orgId, ids)
             .Returns(new List<Secret> { s1 });
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RestoreTrash(orgId, ids));
 
-        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().RestoreManyByIdAsync(default);
+        await sutProvider
+            .GetDependency<ISecretRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .RestoreManyByIdAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RestoreTrash_Success(Guid orgId, Secret s1, Secret s2, SutProvider<RestoreTrashCommand> sutProvider)
+    public async Task RestoreTrash_Success(
+        Guid orgId,
+        Secret s1,
+        Secret s2,
+        SutProvider<RestoreTrashCommand> sutProvider
+    )
     {
         s1.DeletedDate = DateTime.Now;
 
         var ids = new List<Guid> { s1.Id, s2.Id };
-        sutProvider.GetDependency<ISecretRepository>()
+        sutProvider
+            .GetDependency<ISecretRepository>()
             .GetManyByOrganizationIdInTrashByIdsAsync(orgId, ids)
             .Returns(new List<Secret> { s1, s2 });
 

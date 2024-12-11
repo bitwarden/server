@@ -22,7 +22,10 @@ public class RoleStore : IRoleStore<Role>
         throw new NotImplementedException();
     }
 
-    public Task<Role> FindByNameAsync(string normalizedRoleName, CancellationToken cancellationToken)
+    public Task<Role> FindByNameAsync(
+        string normalizedRoleName,
+        CancellationToken cancellationToken
+    )
     {
         throw new NotImplementedException();
     }
@@ -42,7 +45,11 @@ public class RoleStore : IRoleStore<Role>
         return Task.FromResult(role.Name);
     }
 
-    public Task SetNormalizedRoleNameAsync(Role role, string normalizedName, CancellationToken cancellationToken)
+    public Task SetNormalizedRoleNameAsync(
+        Role role,
+        string normalizedName,
+        CancellationToken cancellationToken
+    )
     {
         return Task.FromResult(0);
     }

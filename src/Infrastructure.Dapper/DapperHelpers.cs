@@ -39,7 +39,9 @@ public class DataTableBuilder<T>
         ArgumentNullException.ThrowIfNull(columnExpressions);
         ArgumentOutOfRangeException.ThrowIfZero(columnExpressions.Length);
 
-        var columnBuilders = new Dictionary<string, (Type Type, Func<T, object?>)>(columnExpressions.Length);
+        var columnBuilders = new Dictionary<string, (Type Type, Func<T, object?>)>(
+            columnExpressions.Length
+        );
 
         for (var i = 0; i < columnExpressions.Length; i++)
         {
@@ -47,11 +49,14 @@ public class DataTableBuilder<T>
 
             if (!TryGetPropertyInfo(columnExpression, out var propertyInfo))
             {
-                throw new ArgumentException($"Could not determine the property info from the given expression '{columnExpression}'.");
+                throw new ArgumentException(
+                    $"Could not determine the property info from the given expression '{columnExpression}'."
+                );
             }
 
             // Unwrap possible Nullable<T>
-            var type = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
+            var type =
+                Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
 
             // This needs to be after unwrapping the `Nullable` since enums can be nullable
             if (type.IsEnum)
@@ -62,26 +67,33 @@ public class DataTableBuilder<T>
 
             if (!columnBuilders.TryAdd(propertyInfo.Name, (type, columnExpression.Compile())))
             {
-                throw new ArgumentException($"Property with name '{propertyInfo.Name}' was already added, properties can only be added once.");
+                throw new ArgumentException(
+                    $"Property with name '{propertyInfo.Name}' was already added, properties can only be added once."
+                );
             }
         }
 
         _columnBuilders = columnBuilders.ToFrozenDictionary();
     }
 
-    private static bool TryGetPropertyInfo(Expression<Func<T, object?>> columnExpression, [MaybeNullWhen(false)] out PropertyInfo property)
+    private static bool TryGetPropertyInfo(
+        Expression<Func<T, object?>> columnExpression,
+        [MaybeNullWhen(false)] out PropertyInfo property
+    )
     {
         property = null;
 
         // Reference type properties
         // i => i.Data
-        if (columnExpression.Body is MemberExpression { Member: PropertyInfo referencePropertyInfo })
+        if (
+            columnExpression.Body is MemberExpression { Member: PropertyInfo referencePropertyInfo }
+        )
         {
             property = referencePropertyInfo;
             return true;
         }
 
-        // Value type properties will implicitly box into the object so 
+        // Value type properties will implicitly box into the object so
         // we need to look past the Convert expression
         // i => (System.Object?)i.Id
         if (
@@ -138,20 +150,21 @@ public class DataTableBuilder<T>
 
 public static class DapperHelpers
 {
-    private static readonly DataTableBuilder<OrganizationSponsorship> _organizationSponsorshipTableBuilder = new(
-        [
-            os => os.Id,
-            os => os.SponsoringOrganizationId,
-            os => os.SponsoringOrganizationUserId,
-            os => os.SponsoredOrganizationId,
-            os => os.FriendlyName,
-            os => os.OfferedToEmail,
-            os => os.PlanSponsorshipType,
-            os => os.LastSyncDate,
-            os => os.ValidUntil,
-            os => os.ToDelete,
-        ]
-    );
+    private static readonly DataTableBuilder<OrganizationSponsorship> _organizationSponsorshipTableBuilder =
+        new(
+            [
+                os => os.Id,
+                os => os.SponsoringOrganizationId,
+                os => os.SponsoringOrganizationUserId,
+                os => os.SponsoredOrganizationId,
+                os => os.FriendlyName,
+                os => os.OfferedToEmail,
+                os => os.PlanSponsorshipType,
+                os => os.LastSyncDate,
+                os => os.ValidUntil,
+                os => os.ToDelete,
+            ]
+        );
 
     public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
     {
@@ -205,15 +218,20 @@ public static class DapperHelpers
         return table;
     }
 
-    public static DataTable ToTvp(this IEnumerable<OrganizationSponsorship> organizationSponsorships)
+    public static DataTable ToTvp(
+        this IEnumerable<OrganizationSponsorship> organizationSponsorships
+    )
     {
         var table = _organizationSponsorshipTableBuilder.Build(organizationSponsorships ?? []);
         table.SetTypeName("[dbo].[OrganizationSponsorshipType]");
         return table;
     }
 
-    public static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table,
-        List<(string name, Type type, Func<T, object?> getter)> columnData)
+    public static DataTable BuildTable<T>(
+        this IEnumerable<T> entities,
+        DataTable table,
+        List<(string name, Type type, Func<T, object?> getter)> columnData
+    )
     {
         foreach (var (name, type, getter) in columnData)
         {

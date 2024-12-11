@@ -10,24 +10,30 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>, IOrganizationDomainRepository
+public class OrganizationDomainRepository
+    : Repository<OrganizationDomain, Guid>,
+        IOrganizationDomainRepository
 {
     public OrganizationDomainRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public OrganizationDomainRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
-    public async Task<ICollection<OrganizationDomain>> GetClaimedDomainsByDomainNameAsync(string domainName)
+    public async Task<ICollection<OrganizationDomain>> GetClaimedDomainsByDomainNameAsync(
+        string domainName
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationDomain>(
                 $"[{Schema}].[OrganizationDomain_ReadByClaimedDomain]",
                 new { DomainName = domainName },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -40,7 +46,8 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
             var results = await connection.QueryAsync<OrganizationDomain>(
                 $"[{Schema}].[OrganizationDomain_ReadByOrganizationId]",
                 new { OrganizationId = orgId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -51,60 +58,68 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         using var connection = new SqlConnection(ConnectionString);
         var results = await connection.QueryAsync<OrganizationDomain>(
             $"[{Schema}].[OrganizationDomain_ReadByNextRunDate]",
-            new { Date = date }, commandType: CommandType.StoredProcedure
+            new { Date = date },
+            commandType: CommandType.StoredProcedure
         );
 
         return results.ToList();
     }
 
-    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(
+        string email
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection
-                .QueryAsync<OrganizationDomainSsoDetailsData>(
-                    $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
-                    new { Email = email },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<OrganizationDomainSsoDetailsData>(
+                $"[{Schema}].[OrganizationDomainSsoDetails_ReadByEmail]",
+                new { Email = email },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<IEnumerable<VerifiedOrganizationDomainSsoDetail>> GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
+    public async Task<
+        IEnumerable<VerifiedOrganizationDomainSsoDetail>
+    > GetVerifiedOrganizationDomainSsoDetailsAsync(string email)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
-        return await connection
-            .QueryAsync<VerifiedOrganizationDomainSsoDetail>(
-                $"[{Schema}].[VerifiedOrganizationDomainSsoDetails_ReadByEmail]",
-                new { Email = email },
-                commandType: CommandType.StoredProcedure);
+        return await connection.QueryAsync<VerifiedOrganizationDomainSsoDetail>(
+            $"[{Schema}].[VerifiedOrganizationDomainSsoDetails_ReadByEmail]",
+            new { Email = email },
+            commandType: CommandType.StoredProcedure
+        );
     }
 
     public async Task<OrganizationDomain?> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection
-                .QueryAsync<OrganizationDomain>(
-                    $"[{Schema}].[OrganizationDomain_ReadByIdOrganizationId]",
-                    new { Id = id, OrganizationId = orgId },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<OrganizationDomain>(
+                $"[{Schema}].[OrganizationDomain_ReadByIdOrganizationId]",
+                new { Id = id, OrganizationId = orgId },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<OrganizationDomain?> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
+    public async Task<OrganizationDomain?> GetDomainByOrgIdAndDomainNameAsync(
+        Guid orgId,
+        string domainName
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection
-                .QueryAsync<OrganizationDomain>(
-                    $"[{Schema}].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]",
-                    new { OrganizationId = orgId, DomainName = domainName },
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<OrganizationDomain>(
+                $"[{Schema}].[OrganizationDomain_ReadDomainByOrgIdAndDomainName]",
+                new { OrganizationId = orgId, DomainName = domainName },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -114,11 +129,11 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection
-                .QueryAsync<OrganizationDomain>(
-                    $"[{Schema}].[OrganizationDomain_ReadIfExpired]",
-                    null,
-                    commandType: CommandType.StoredProcedure);
+            var results = await connection.QueryAsync<OrganizationDomain>(
+                $"[{Schema}].[OrganizationDomain_ReadIfExpired]",
+                null,
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -129,9 +144,10 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         using (var connection = new SqlConnection(ConnectionString))
         {
             return await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationDomain_DeleteIfExpired]",
-                new { ExpirationPeriod = expirationPeriod },
-                commandType: CommandType.StoredProcedure) > 0;
+                    $"[{Schema}].[OrganizationDomain_DeleteIfExpired]",
+                    new { ExpirationPeriod = expirationPeriod },
+                    commandType: CommandType.StoredProcedure
+                ) > 0;
         }
     }
 }

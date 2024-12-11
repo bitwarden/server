@@ -1,5 +1,4 @@
-﻿
-#nullable enable
+﻿#nullable enable
 
 namespace Bit.Icons.Extensions;
 
@@ -20,8 +19,9 @@ public static class UriExtension
         return new UriBuilder(uri) { Host = host }.Uri;
     }
 
-    public static Uri ConcatPath(this Uri uri, params string[] paths)
-        => uri.ConcatPath(paths.AsEnumerable());
+    public static Uri ConcatPath(this Uri uri, params string[] paths) =>
+        uri.ConcatPath(paths.AsEnumerable());
+
     public static Uri ConcatPath(this Uri uri, IEnumerable<string> paths)
     {
         if (!paths.Any())

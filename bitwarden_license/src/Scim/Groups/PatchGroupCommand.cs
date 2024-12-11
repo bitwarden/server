@@ -21,7 +21,8 @@ public class PatchGroupCommand : IPatchGroupCommand
         IGroupRepository groupRepository,
         IGroupService groupService,
         IUpdateGroupCommand updateGroupCommand,
-        ILogger<PatchGroupCommand> logger)
+        ILogger<PatchGroupCommand> logger
+    )
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -54,37 +55,55 @@ public class PatchGroupCommand : IPatchGroupCommand
                 else if (operation.Path?.ToLowerInvariant() == "displayname")
                 {
                     group.Name = operation.Value.GetString();
-                    await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+                    await _updateGroupCommand.UpdateGroupAsync(
+                        group,
+                        organization,
+                        EventSystemUser.SCIM
+                    );
                     operationHandled = true;
                 }
                 // Replace group name from value object
-                else if (string.IsNullOrWhiteSpace(operation.Path) &&
-                    operation.Value.TryGetProperty("displayName", out var displayNameProperty))
+                else if (
+                    string.IsNullOrWhiteSpace(operation.Path)
+                    && operation.Value.TryGetProperty("displayName", out var displayNameProperty)
+                )
                 {
                     group.Name = displayNameProperty.GetString();
-                    await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
+                    await _updateGroupCommand.UpdateGroupAsync(
+                        group,
+                        organization,
+                        EventSystemUser.SCIM
+                    );
                     operationHandled = true;
                 }
             }
             // Add a single member
-            else if (operation.Op?.ToLowerInvariant() == "add" &&
-                !string.IsNullOrWhiteSpace(operation.Path) &&
-                operation.Path.ToLowerInvariant().StartsWith("members[value eq "))
+            else if (
+                operation.Op?.ToLowerInvariant() == "add"
+                && !string.IsNullOrWhiteSpace(operation.Path)
+                && operation.Path.StartsWith("members[value eq ", StringComparison.InvariantCultureIgnoreCase)
+            )
             {
                 var addId = GetOperationPathId(operation.Path);
                 if (addId.HasValue)
                 {
-                    var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                    var orgUserIds = (
+                        await _groupRepository.GetManyUserIdsByIdAsync(group.Id)
+                    ).ToHashSet();
                     orgUserIds.Add(addId.Value);
                     await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
                     operationHandled = true;
                 }
             }
             // Add a list of members
-            else if (operation.Op?.ToLowerInvariant() == "add" &&
-                operation.Path?.ToLowerInvariant() == "members")
+            else if (
+                operation.Op?.ToLowerInvariant() == "add"
+                && operation.Path?.ToLowerInvariant() == "members"
+            )
             {
-                var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                var orgUserIds = (
+                    await _groupRepository.GetManyUserIdsByIdAsync(group.Id)
+                ).ToHashSet();
                 foreach (var v in GetOperationValueIds(operation.Value))
                 {
                     orgUserIds.Add(v);
@@ -93,22 +112,32 @@ public class PatchGroupCommand : IPatchGroupCommand
                 operationHandled = true;
             }
             // Remove a single member
-            else if (operation.Op?.ToLowerInvariant() == "remove" &&
-                !string.IsNullOrWhiteSpace(operation.Path) &&
-                operation.Path.ToLowerInvariant().StartsWith("members[value eq "))
+            else if (
+                operation.Op?.ToLowerInvariant() == "remove"
+                && !string.IsNullOrWhiteSpace(operation.Path)
+                && operation.Path.StartsWith("members[value eq ", StringComparison.InvariantCultureIgnoreCase)
+            )
             {
                 var removeId = GetOperationPathId(operation.Path);
                 if (removeId.HasValue)
                 {
-                    await _groupService.DeleteUserAsync(group, removeId.Value, EventSystemUser.SCIM);
+                    await _groupService.DeleteUserAsync(
+                        group,
+                        removeId.Value,
+                        EventSystemUser.SCIM
+                    );
                     operationHandled = true;
                 }
             }
             // Remove a list of members
-            else if (operation.Op?.ToLowerInvariant() == "remove" &&
-                operation.Path?.ToLowerInvariant() == "members")
+            else if (
+                operation.Op?.ToLowerInvariant() == "remove"
+                && operation.Path?.ToLowerInvariant() == "members"
+            )
             {
-                var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
+                var orgUserIds = (
+                    await _groupRepository.GetManyUserIdsByIdAsync(group.Id)
+                ).ToHashSet();
                 foreach (var v in GetOperationValueIds(operation.Value))
                 {
                     orgUserIds.Remove(v);
@@ -120,12 +149,14 @@ public class PatchGroupCommand : IPatchGroupCommand
 
         if (!operationHandled)
         {
-            _logger.LogWarning("Group patch operation not handled: {0} : ",
-                string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}")));
+            _logger.LogWarning(
+                "Group patch operation not handled: {0} : ",
+                string.Join(", ", model.Operations.Select(o => $"{o.Op}:{o.Path}"))
+            );
         }
     }
 
-    private List<Guid> GetOperationValueIds(JsonElement objArray)
+    private static List<Guid> GetOperationValueIds(JsonElement objArray)
     {
         var ids = new List<Guid>();
         foreach (var obj in objArray.EnumerateArray())
@@ -141,7 +172,7 @@ public class PatchGroupCommand : IPatchGroupCommand
         return ids;
     }
 
-    private Guid? GetOperationPathId(string path)
+    private static Guid? GetOperationPathId(string path)
     {
         // Parse Guid from string like: members[value eq "{GUID}"}]
         if (Guid.TryParse(path.Substring(18).Replace("\"]", string.Empty), out var id))

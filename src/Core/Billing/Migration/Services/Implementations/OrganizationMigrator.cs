@@ -19,13 +19,18 @@ public class OrganizationMigrator(
     ILogger<OrganizationMigrator> logger,
     IMigrationTrackerCache migrationTrackerCache,
     IOrganizationRepository organizationRepository,
-    IStripeAdapter stripeAdapter) : IOrganizationMigrator
+    IStripeAdapter stripeAdapter
+) : IOrganizationMigrator
 {
-    private const string _cancellationComment = "Cancelled as part of provider migration to Consolidated Billing";
+    private const string _cancellationComment =
+        "Cancelled as part of provider migration to Consolidated Billing";
 
     public async Task Migrate(Guid providerId, Organization organization)
     {
-        logger.LogInformation("CB: Starting migration for organization ({OrganizationID})", organization.Id);
+        logger.LogInformation(
+            "CB: Starting migration for organization ({OrganizationID})",
+            organization.Id
+        );
 
         await migrationTrackerCache.StartTracker(providerId, organization);
 
@@ -40,84 +45,123 @@ public class OrganizationMigrator(
 
     private async Task CreateMigrationRecordAsync(Guid providerId, Organization organization)
     {
-        logger.LogInformation("CB: Creating ClientOrganizationMigrationRecord for organization ({OrganizationID})", organization.Id);
+        logger.LogInformation(
+            "CB: Creating ClientOrganizationMigrationRecord for organization ({OrganizationID})",
+            organization.Id
+        );
 
-        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id);
+        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(
+            organization.Id
+        );
 
         if (migrationRecord != null)
         {
             logger.LogInformation(
                 "CB: ClientOrganizationMigrationRecord already exists for organization ({OrganizationID}), deleting record",
-                organization.Id);
+                organization.Id
+            );
 
             await clientOrganizationMigrationRecordRepository.DeleteAsync(migrationRecord);
         }
 
-        await clientOrganizationMigrationRecordRepository.CreateAsync(new ClientOrganizationMigrationRecord
-        {
-            OrganizationId = organization.Id,
-            ProviderId = providerId,
-            PlanType = organization.PlanType,
-            Seats = organization.Seats ?? 0,
-            MaxStorageGb = organization.MaxStorageGb,
-            GatewayCustomerId = organization.GatewayCustomerId!,
-            GatewaySubscriptionId = organization.GatewaySubscriptionId!,
-            ExpirationDate = organization.ExpirationDate,
-            MaxAutoscaleSeats = organization.MaxAutoscaleSeats,
-            Status = organization.Status
-        });
+        await clientOrganizationMigrationRecordRepository.CreateAsync(
+            new ClientOrganizationMigrationRecord
+            {
+                OrganizationId = organization.Id,
+                ProviderId = providerId,
+                PlanType = organization.PlanType,
+                Seats = organization.Seats ?? 0,
+                MaxStorageGb = organization.MaxStorageGb,
+                GatewayCustomerId = organization.GatewayCustomerId!,
+                GatewaySubscriptionId = organization.GatewaySubscriptionId!,
+                ExpirationDate = organization.ExpirationDate,
+                MaxAutoscaleSeats = organization.MaxAutoscaleSeats,
+                Status = organization.Status,
+            }
+        );
 
-        logger.LogInformation("CB: Created migration record for organization ({OrganizationID})", organization.Id);
+        logger.LogInformation(
+            "CB: Created migration record for organization ({OrganizationID})",
+            organization.Id
+        );
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
-            ClientMigrationProgress.MigrationRecordCreated);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            organization.Id,
+            ClientMigrationProgress.MigrationRecordCreated
+        );
     }
 
     private async Task CancelSubscriptionAsync(Guid providerId, Organization organization)
     {
-        logger.LogInformation("CB: Cancelling subscription for organization ({OrganizationID})", organization.Id);
+        logger.LogInformation(
+            "CB: Cancelling subscription for organization ({OrganizationID})",
+            organization.Id
+        );
 
-        var subscription = await stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+        var subscription = await stripeAdapter.SubscriptionGetAsync(
+            organization.GatewaySubscriptionId
+        );
 
-        if (subscription is
+        if (
+            subscription is
             {
-                Status:
-                    StripeConstants.SubscriptionStatus.Active or
-                    StripeConstants.SubscriptionStatus.PastDue or
-                    StripeConstants.SubscriptionStatus.Trialing
-            })
+                Status: StripeConstants.SubscriptionStatus.Active
+                    or StripeConstants.SubscriptionStatus.PastDue
+                    or StripeConstants.SubscriptionStatus.Trialing
+            }
+        )
         {
-            await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
-                new SubscriptionUpdateOptions { CancelAtPeriodEnd = false });
+            await stripeAdapter.SubscriptionUpdateAsync(
+                organization.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions { CancelAtPeriodEnd = false }
+            );
 
-            subscription = await stripeAdapter.SubscriptionCancelAsync(organization.GatewaySubscriptionId,
+            subscription = await stripeAdapter.SubscriptionCancelAsync(
+                organization.GatewaySubscriptionId,
                 new SubscriptionCancelOptions
                 {
                     CancellationDetails = new SubscriptionCancellationDetailsOptions
                     {
-                        Comment = _cancellationComment
+                        Comment = _cancellationComment,
                     },
                     InvoiceNow = true,
                     Prorate = true,
-                    Expand = ["latest_invoice", "test_clock"]
-                });
+                    Expand = ["latest_invoice", "test_clock"],
+                }
+            );
 
-            logger.LogInformation("CB: Cancelled subscription for organization ({OrganizationID})", organization.Id);
+            logger.LogInformation(
+                "CB: Cancelled subscription for organization ({OrganizationID})",
+                organization.Id
+            );
 
             var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
 
             var trialing = subscription.TrialEnd.HasValue && subscription.TrialEnd.Value > now;
 
-            if (!trialing && subscription is { Status: StripeConstants.SubscriptionStatus.Canceled, CancellationDetails.Comment: _cancellationComment })
+            if (
+                !trialing
+                && subscription
+                    is {
+                        Status: StripeConstants.SubscriptionStatus.Canceled,
+                        CancellationDetails.Comment: _cancellationComment
+                    }
+            )
             {
                 var latestInvoice = subscription.LatestInvoice;
 
                 if (latestInvoice.Status == "draft")
                 {
-                    await stripeAdapter.InvoiceFinalizeInvoiceAsync(latestInvoice.Id,
-                        new InvoiceFinalizeOptions { AutoAdvance = true });
+                    await stripeAdapter.InvoiceFinalizeInvoiceAsync(
+                        latestInvoice.Id,
+                        new InvoiceFinalizeOptions { AutoAdvance = true }
+                    );
 
-                    logger.LogInformation("CB: Finalized prorated invoice for organization ({OrganizationID})", organization.Id);
+                    logger.LogInformation(
+                        "CB: Finalized prorated invoice for organization ({OrganizationID})",
+                        organization.Id
+                    );
                 }
             }
         }
@@ -125,19 +169,27 @@ public class OrganizationMigrator(
         {
             logger.LogInformation(
                 "CB: Did not need to cancel subscription for organization ({OrganizationID}) as it was inactive",
-                organization.Id);
+                organization.Id
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
-            ClientMigrationProgress.SubscriptionEnded);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            organization.Id,
+            ClientMigrationProgress.SubscriptionEnded
+        );
     }
 
     private async Task UpdateOrganizationAsync(Guid providerId, Organization organization)
     {
-        logger.LogInformation("CB: Bringing organization ({OrganizationID}) under provider management",
-            organization.Id);
+        logger.LogInformation(
+            "CB: Bringing organization ({OrganizationID}) under provider management",
+            organization.Id
+        );
 
-        var plan = StaticStore.GetPlan(organization.Plan.Contains("Teams") ? PlanType.TeamsMonthly : PlanType.EnterpriseMonthly);
+        var plan = StaticStore.GetPlan(
+            organization.Plan.Contains("Teams") ? PlanType.TeamsMonthly : PlanType.EnterpriseMonthly
+        );
 
         ResetOrganizationPlan(organization, plan);
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
@@ -148,11 +200,16 @@ public class OrganizationMigrator(
 
         await organizationRepository.ReplaceAsync(organization);
 
-        logger.LogInformation("CB: Brought organization ({OrganizationID}) under provider management",
-            organization.Id);
+        logger.LogInformation(
+            "CB: Brought organization ({OrganizationID}) under provider management",
+            organization.Id
+        );
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
-            ClientMigrationProgress.Completed);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            organization.Id,
+            ClientMigrationProgress.Completed
+        );
     }
 
     #endregion
@@ -161,9 +218,14 @@ public class OrganizationMigrator(
 
     private async Task RemoveMigrationRecordAsync(Guid providerId, Organization organization)
     {
-        logger.LogInformation("CB: Removing migration record for organization ({OrganizationID})", organization.Id);
+        logger.LogInformation(
+            "CB: Removing migration record for organization ({OrganizationID})",
+            organization.Id
+        );
 
-        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id);
+        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(
+            organization.Id
+        );
 
         if (migrationRecord != null)
         {
@@ -171,19 +233,30 @@ public class OrganizationMigrator(
 
             logger.LogInformation(
                 "CB: Removed migration record for organization ({OrganizationID})",
-                organization.Id);
+                organization.Id
+            );
         }
         else
         {
-            logger.LogInformation("CB: Did not remove migration record for organization ({OrganizationID}) as it does not exist", organization.Id);
+            logger.LogInformation(
+                "CB: Did not remove migration record for organization ({OrganizationID}) as it does not exist",
+                organization.Id
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id, ClientMigrationProgress.Reversed);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            organization.Id,
+            ClientMigrationProgress.Reversed
+        );
     }
 
     private async Task RecreateSubscriptionAsync(Guid providerId, Organization organization)
     {
-        logger.LogInformation("CB: Recreating subscription for organization ({OrganizationID})", organization.Id);
+        logger.LogInformation(
+            "CB: Recreating subscription for organization ({OrganizationID})",
+            organization.Id
+        );
 
         if (!string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
@@ -191,18 +264,24 @@ public class OrganizationMigrator(
             {
                 logger.LogError(
                     "CB: Cannot recreate subscription for organization ({OrganizationID}) as it does not have a Stripe customer",
-                    organization.Id);
+                    organization.Id
+                );
 
                 throw new Exception();
             }
 
-            var customer = await stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId,
-                new CustomerGetOptions { Expand = ["default_source", "invoice_settings.default_payment_method"] });
+            var customer = await stripeAdapter.CustomerGetAsync(
+                organization.GatewayCustomerId,
+                new CustomerGetOptions
+                {
+                    Expand = ["default_source", "invoice_settings.default_payment_method"],
+                }
+            );
 
             var collectionMethod =
-                customer.DefaultSource != null ||
-                customer.InvoiceSettings?.DefaultPaymentMethod != null ||
-                customer.Metadata.ContainsKey(Utilities.BraintreeCustomerIdKey)
+                customer.DefaultSource != null
+                || customer.InvoiceSettings?.DefaultPaymentMethod != null
+                || customer.Metadata.ContainsKey(Utilities.BraintreeCustomerIdKey)
                     ? StripeConstants.CollectionMethod.ChargeAutomatically
                     : StripeConstants.CollectionMethod.SendInvoice;
 
@@ -210,71 +289,88 @@ public class OrganizationMigrator(
 
             var items = new List<SubscriptionItemOptions>
             {
-                new ()
+                new()
                 {
                     Price = plan.PasswordManager.StripeSeatPlanId,
-                    Quantity = organization.Seats
-                }
+                    Quantity = organization.Seats,
+                },
             };
 
-            if (organization.MaxStorageGb.HasValue && plan.PasswordManager.BaseStorageGb.HasValue && organization.MaxStorageGb.Value > plan.PasswordManager.BaseStorageGb.Value)
+            if (
+                organization.MaxStorageGb.HasValue
+                && plan.PasswordManager.BaseStorageGb.HasValue
+                && organization.MaxStorageGb.Value > plan.PasswordManager.BaseStorageGb.Value
+            )
             {
-                var additionalStorage = organization.MaxStorageGb.Value - plan.PasswordManager.BaseStorageGb.Value;
+                var additionalStorage =
+                    organization.MaxStorageGb.Value - plan.PasswordManager.BaseStorageGb.Value;
 
-                items.Add(new SubscriptionItemOptions
-                {
-                    Price = plan.PasswordManager.StripeStoragePlanId,
-                    Quantity = additionalStorage
-                });
+                items.Add(
+                    new SubscriptionItemOptions
+                    {
+                        Price = plan.PasswordManager.StripeStoragePlanId,
+                        Quantity = additionalStorage,
+                    }
+                );
             }
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
-                AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                },
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Customer = customer.Id,
                 CollectionMethod = collectionMethod,
-                DaysUntilDue = collectionMethod == StripeConstants.CollectionMethod.SendInvoice ? 30 : null,
+                DaysUntilDue =
+                    collectionMethod == StripeConstants.CollectionMethod.SendInvoice ? 30 : null,
                 Items = items,
                 Metadata = new Dictionary<string, string>
                 {
-                    [organization.GatewayIdField()] = organization.Id.ToString()
+                    [Organization.GatewayIdField()] = organization.Id.ToString(),
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                TrialPeriodDays = plan.TrialPeriodDays
+                TrialPeriodDays = plan.TrialPeriodDays,
             };
 
-            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await stripeAdapter.SubscriptionCreateAsync(
+                subscriptionCreateOptions
+            );
 
             organization.GatewaySubscriptionId = subscription.Id;
 
             await organizationRepository.ReplaceAsync(organization);
 
-            logger.LogInformation("CB: Recreated subscription for organization ({OrganizationID})", organization.Id);
+            logger.LogInformation(
+                "CB: Recreated subscription for organization ({OrganizationID})",
+                organization.Id
+            );
         }
         else
         {
             logger.LogInformation(
                 "CB: Did not recreate subscription for organization ({OrganizationID}) as it already exists",
-                organization.Id);
+                organization.Id
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
-            ClientMigrationProgress.RecreatedSubscription);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            organization.Id,
+            ClientMigrationProgress.RecreatedSubscription
+        );
     }
 
     private async Task ReverseOrganizationUpdateAsync(Guid providerId, Organization organization)
     {
-        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id);
+        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(
+            organization.Id
+        );
 
         if (migrationRecord == null)
         {
             logger.LogError(
                 "CB: Cannot reverse migration for organization ({OrganizationID}) as it does not have a migration record",
-                organization.Id);
+                organization.Id
+            );
 
             throw new Exception();
         }
@@ -289,11 +385,16 @@ public class OrganizationMigrator(
 
         await organizationRepository.ReplaceAsync(organization);
 
-        logger.LogInformation("CB: Reversed organization ({OrganizationID}) updates",
-            organization.Id);
+        logger.LogInformation(
+            "CB: Reversed organization ({OrganizationID}) updates",
+            organization.Id
+        );
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
-            ClientMigrationProgress.ResetOrganization);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            organization.Id,
+            ClientMigrationProgress.ResetOrganization
+        );
     }
 
     #endregion

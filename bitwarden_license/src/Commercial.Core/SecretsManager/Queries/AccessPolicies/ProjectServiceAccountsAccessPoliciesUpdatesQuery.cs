@@ -7,21 +7,26 @@ using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.AccessPolicies;
 
-public class ProjectServiceAccountsAccessPoliciesUpdatesQuery : IProjectServiceAccountsAccessPoliciesUpdatesQuery
+public class ProjectServiceAccountsAccessPoliciesUpdatesQuery
+    : IProjectServiceAccountsAccessPoliciesUpdatesQuery
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
 
-    public ProjectServiceAccountsAccessPoliciesUpdatesQuery(IAccessPolicyRepository accessPolicyRepository)
+    public ProjectServiceAccountsAccessPoliciesUpdatesQuery(
+        IAccessPolicyRepository accessPolicyRepository
+    )
     {
         _accessPolicyRepository = accessPolicyRepository;
     }
 
     public async Task<ProjectServiceAccountsAccessPoliciesUpdates> GetAsync(
-        ProjectServiceAccountsAccessPolicies projectServiceAccountsAccessPolicies)
+        ProjectServiceAccountsAccessPolicies projectServiceAccountsAccessPolicies
+    )
     {
         var currentPolicies =
             await _accessPolicyRepository.GetProjectServiceAccountsAccessPoliciesAsync(
-                projectServiceAccountsAccessPolicies.ProjectId);
+                projectServiceAccountsAccessPolicies.ProjectId
+            );
 
         if (currentPolicies == null)
         {
@@ -30,12 +35,13 @@ public class ProjectServiceAccountsAccessPoliciesUpdatesQuery : IProjectServiceA
                 ProjectId = projectServiceAccountsAccessPolicies.ProjectId,
                 OrganizationId = projectServiceAccountsAccessPolicies.OrganizationId,
                 ServiceAccountAccessPolicyUpdates =
-                    projectServiceAccountsAccessPolicies.ServiceAccountAccessPolicies.Select(p =>
-                        new ServiceAccountProjectAccessPolicyUpdate
+                    projectServiceAccountsAccessPolicies.ServiceAccountAccessPolicies.Select(
+                        p => new ServiceAccountProjectAccessPolicyUpdate
                         {
                             Operation = AccessPolicyOperation.Create,
-                            AccessPolicy = p
-                        })
+                            AccessPolicy = p,
+                        }
+                    ),
             };
         }
 

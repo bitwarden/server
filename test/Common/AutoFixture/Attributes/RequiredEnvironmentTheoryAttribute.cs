@@ -16,7 +16,8 @@ public class RequiredEnvironmentTheoryAttribute : TheoryAttribute
 
         if (!HasRequiredEnvironmentVariables())
         {
-            Skip = $"Missing one or more required environment variables. ({string.Join(", ", _environmentVariableNames)})";
+            Skip =
+                $"Missing one or more required environment variables. ({string.Join(", ", _environmentVariableNames)})";
         }
     }
 

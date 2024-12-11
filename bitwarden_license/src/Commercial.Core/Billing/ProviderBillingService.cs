@@ -32,7 +32,8 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IProviderBillingService
+    ISubscriberService subscriberService
+) : IProviderBillingService
 {
     public async Task ChangePlan(ChangeProviderPlanCommand command)
     {
@@ -56,7 +57,10 @@ public class ProviderBillingService(
         Subscription subscription;
         try
         {
-            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, plan.ProviderId);
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(
+                command.GatewaySubscriptionId,
+                plan.ProviderId
+            );
         }
         catch (InvalidOperationException)
         {
@@ -64,7 +68,8 @@ public class ProviderBillingService(
         }
 
         var oldSubscriptionItem = subscription.Items.SingleOrDefault(x =>
-            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId);
+            x.Price.Id == oldPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId
+        );
 
         var updateOptions = new SubscriptionUpdateOptions
         {
@@ -72,15 +77,13 @@ public class ProviderBillingService(
             [
                 new SubscriptionItemOptions
                 {
-                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
-                    Quantity = oldSubscriptionItem!.Quantity
+                    Price = StaticStore
+                        .GetPlan(command.NewPlan)
+                        .PasswordManager.StripeProviderPortalSeatPlanId,
+                    Quantity = oldSubscriptionItem!.Quantity,
                 },
-                new SubscriptionItemOptions
-                {
-                    Id = oldSubscriptionItem.Id,
-                    Deleted = true
-                }
-            ]
+                new SubscriptionItemOptions { Id = oldSubscriptionItem.Id, Deleted = true },
+            ],
         };
 
         await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId, updateOptions);
@@ -88,11 +91,14 @@ public class ProviderBillingService(
         // Refactor later to ?ChangeClientPlanCommand? (ProviderPlanId, ProviderId, OrganizationId)
         // 1. Retrieve PlanType and PlanName for ProviderPlan
         // 2. Assign PlanType & PlanName to Organization
-        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
+        var providerOrganizations =
+            await providerOrganizationRepository.GetManyDetailsByProviderAsync(plan.ProviderId);
 
         foreach (var providerOrganization in providerOrganizations)
         {
-            var organization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+            var organization = await organizationRepository.GetByIdAsync(
+                providerOrganization.OrganizationId
+            );
             if (organization == null)
             {
                 throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
@@ -105,22 +111,27 @@ public class ProviderBillingService(
 
     public async Task CreateCustomerForClientOrganization(
         Provider provider,
-        Organization organization)
+        Organization organization
+    )
     {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(organization);
 
         if (!string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            logger.LogWarning("Client organization ({ID}) already has a populated {FieldName}", organization.Id, nameof(organization.GatewayCustomerId));
+            logger.LogWarning(
+                "Client organization ({ID}) already has a populated {FieldName}",
+                organization.Id,
+                nameof(organization.GatewayCustomerId)
+            );
 
             return;
         }
 
-        var providerCustomer = await subscriberService.GetCustomerOrThrow(provider, new CustomerGetOptions
-        {
-            Expand = ["tax_ids"]
-        });
+        var providerCustomer = await subscriberService.GetCustomerOrThrow(
+            provider,
+            new CustomerGetOptions { Expand = ["tax_ids"] }
+        );
 
         var providerTaxId = providerCustomer.TaxIds.FirstOrDefault();
 
@@ -135,7 +146,7 @@ public class ProviderBillingService(
                 Line1 = providerCustomer.Address?.Line1,
                 Line2 = providerCustomer.Address?.Line2,
                 City = providerCustomer.Address?.City,
-                State = providerCustomer.Address?.State
+                State = providerCustomer.Address?.State,
             },
             Name = organizationDisplayName,
             Description = $"{provider.Name} Client Organization",
@@ -147,24 +158,28 @@ public class ProviderBillingService(
                     new CustomerInvoiceSettingsCustomFieldOptions
                     {
                         Name = organization.SubscriberType(),
-                        Value = organizationDisplayName.Length <= 30
-                            ? organizationDisplayName
-                            : organizationDisplayName[..30]
-                    }
-                ]
+                        Value =
+                            organizationDisplayName.Length <= 30
+                                ? organizationDisplayName
+                                : organizationDisplayName[..30],
+                    },
+                ],
             },
             Metadata = new Dictionary<string, string>
             {
-                { "region", globalSettings.BaseServiceUri.CloudRegion }
+                { "region", globalSettings.BaseServiceUri.CloudRegion },
             },
-            TaxIdData = providerTaxId == null ? null :
-            [
-                new CustomerTaxIdDataOptions
-                {
-                    Type = providerTaxId.Type,
-                    Value = providerTaxId.Value
-                }
-            ]
+            TaxIdData =
+                providerTaxId == null
+                    ? null
+                    :
+                    [
+                        new CustomerTaxIdDataOptions
+                        {
+                            Type = providerTaxId.Type,
+                            Value = providerTaxId.Value,
+                        },
+                    ],
         };
 
         var customer = await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
@@ -174,8 +189,7 @@ public class ProviderBillingService(
         await organizationRepository.ReplaceAsync(organization);
     }
 
-    public async Task<byte[]> GenerateClientInvoiceReport(
-        string invoiceId)
+    public async Task<byte[]> GenerateClientInvoiceReport(string invoiceId)
     {
         ArgumentException.ThrowIfNullOrEmpty(invoiceId);
 
@@ -183,7 +197,10 @@ public class ProviderBillingService(
 
         if (invoiceItems.Count == 0)
         {
-            logger.LogError("No provider invoice item records were found for invoice ({InvoiceID})", invoiceId);
+            logger.LogError(
+                "No provider invoice item records were found for invoice ({InvoiceID})",
+                invoiceId
+            );
 
             return null;
         }
@@ -205,10 +222,7 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
-    public async Task ScaleSeats(
-        Provider provider,
-        PlanType planType,
-        int seatAdjustment)
+    public async Task ScaleSeats(Provider provider, PlanType planType, int seatAdjustment)
     {
         var providerPlan = await GetProviderPlanAsync(provider, planType);
 
@@ -218,17 +232,13 @@ public class ProviderBillingService(
 
         var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
 
-        var update = CurrySeatScalingUpdate(
-            provider,
-            providerPlan,
-            newlyAssignedSeatTotal);
+        var update = CurrySeatScalingUpdate(provider, providerPlan, newlyAssignedSeatTotal);
 
         /*
          * Below the limit => Below the limit:
          * No subscription update required. We can safely update the provider's allocated seats.
          */
-        if (currentlyAssignedSeatTotal <= seatMinimum &&
-            newlyAssignedSeatTotal <= seatMinimum)
+        if (currentlyAssignedSeatTotal <= seatMinimum && newlyAssignedSeatTotal <= seatMinimum)
         {
             providerPlan.AllocatedSeats = newlyAssignedSeatTotal;
 
@@ -238,41 +248,33 @@ public class ProviderBillingService(
          * Below the limit => Above the limit:
          * We have to scale the subscription up from the seat minimum to the newly assigned seat total.
          */
-        else if (currentlyAssignedSeatTotal <= seatMinimum &&
-                 newlyAssignedSeatTotal > seatMinimum)
+        else if (currentlyAssignedSeatTotal <= seatMinimum && newlyAssignedSeatTotal > seatMinimum)
         {
-            await update(
-                seatMinimum,
-                newlyAssignedSeatTotal);
+            await update(seatMinimum, newlyAssignedSeatTotal);
         }
         /*
          * Above the limit => Above the limit:
          * We have to scale the subscription from the currently assigned seat total to the newly assigned seat total.
          */
-        else if (currentlyAssignedSeatTotal > seatMinimum &&
-                 newlyAssignedSeatTotal > seatMinimum)
+        else if (currentlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > seatMinimum)
         {
-            await update(
-                currentlyAssignedSeatTotal,
-                newlyAssignedSeatTotal);
+            await update(currentlyAssignedSeatTotal, newlyAssignedSeatTotal);
         }
         /*
          * Above the limit => Below the limit:
          * We have to scale the subscription down from the currently assigned seat total to the seat minimum.
          */
-        else if (currentlyAssignedSeatTotal > seatMinimum &&
-                 newlyAssignedSeatTotal <= seatMinimum)
+        else if (currentlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal <= seatMinimum)
         {
-            await update(
-                currentlyAssignedSeatTotal,
-                seatMinimum);
+            await update(currentlyAssignedSeatTotal, seatMinimum);
         }
     }
 
     public async Task<bool> SeatAdjustmentResultsInPurchase(
         Provider provider,
         PlanType planType,
-        int seatAdjustment)
+        int seatAdjustment
+    )
     {
         var providerPlan = await GetProviderPlanAsync(provider, planType);
 
@@ -284,22 +286,30 @@ public class ProviderBillingService(
 
         return
             // Below the limit to above the limit
-            (currentlyAssignedSeatTotal <= seatMinimum && newlyAssignedSeatTotal > seatMinimum) ||
+            (currentlyAssignedSeatTotal <= seatMinimum && newlyAssignedSeatTotal > seatMinimum)
+            ||
             // Above the limit to further above the limit
-            (currentlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > seatMinimum && newlyAssignedSeatTotal > currentlyAssignedSeatTotal);
+            (
+                currentlyAssignedSeatTotal > seatMinimum
+                && newlyAssignedSeatTotal > seatMinimum
+                && newlyAssignedSeatTotal > currentlyAssignedSeatTotal
+            );
     }
 
-    public async Task<Customer> SetupCustomer(
-        Provider provider,
-        TaxInfo taxInfo)
+    public async Task<Customer> SetupCustomer(Provider provider, TaxInfo taxInfo)
     {
         ArgumentNullException.ThrowIfNull(provider);
         ArgumentNullException.ThrowIfNull(taxInfo);
 
-        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
-            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        if (
+            string.IsNullOrEmpty(taxInfo.BillingAddressCountry)
+            || string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode)
+        )
         {
-            logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
+            logger.LogError(
+                "Cannot create customer for provider ({ProviderID}) without both a country and postal code",
+                provider.Id
+            );
 
             throw new BillingException();
         }
@@ -315,7 +325,7 @@ public class ProviderBillingService(
                 Line1 = taxInfo.BillingAddressLine1,
                 Line2 = taxInfo.BillingAddressLine2,
                 City = taxInfo.BillingAddressCity,
-                State = taxInfo.BillingAddressState
+                State = taxInfo.BillingAddressState,
             },
             Description = provider.DisplayBusinessName(),
             Email = provider.BillingEmail,
@@ -326,35 +336,43 @@ public class ProviderBillingService(
                     new CustomerInvoiceSettingsCustomFieldOptions
                     {
                         Name = provider.SubscriberType(),
-                        Value = providerDisplayName?.Length <= 30
-                            ? providerDisplayName
-                            : providerDisplayName?[..30]
-                    }
-                ]
+                        Value =
+                            providerDisplayName?.Length <= 30
+                                ? providerDisplayName
+                                : providerDisplayName?[..30],
+                    },
+                ],
             },
             Metadata = new Dictionary<string, string>
             {
-                { "region", globalSettings.BaseServiceUri.CloudRegion }
+                { "region", globalSettings.BaseServiceUri.CloudRegion },
             },
-            TaxIdData = taxInfo.HasTaxId ?
+            TaxIdData = taxInfo.HasTaxId
+                ?
                 [
-                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
+                    new CustomerTaxIdDataOptions
+                    {
+                        Type = taxInfo.TaxIdType,
+                        Value = taxInfo.TaxIdNumber,
+                    },
                 ]
-                : null
+                : null,
         };
 
         try
         {
             return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
         }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
+        catch (StripeException stripeException)
+            when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
-            throw new BadRequestException("Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid.");
+            throw new BadRequestException(
+                "Your tax ID wasn't recognized for your selected country. Please ensure your country and tax ID are valid."
+            );
         }
     }
 
-    public async Task<Subscription> SetupSubscription(
-        Provider provider)
+    public async Task<Subscription> SetupSubscription(Provider provider)
     {
         ArgumentNullException.ThrowIfNull(provider);
 
@@ -364,7 +382,10 @@ public class ProviderBillingService(
 
         if (providerPlans == null || providerPlans.Count == 0)
         {
-            logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured plans", provider.Id);
+            logger.LogError(
+                "Cannot start subscription for provider ({ProviderID}) that has no configured plans",
+                provider.Id
+            );
 
             throw new BillingException();
         }
@@ -377,38 +398,40 @@ public class ProviderBillingService(
 
             if (!providerPlan.IsConfigured())
             {
-                logger.LogError("Cannot start subscription for provider ({ProviderID}) that has no configured {ProviderName} plan", provider.Id, plan.Name);
+                logger.LogError(
+                    "Cannot start subscription for provider ({ProviderID}) that has no configured {ProviderName} plan",
+                    provider.Id,
+                    plan.Name
+                );
                 throw new BillingException();
             }
 
-            subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-            {
-                Price = plan.PasswordManager.StripeProviderPortalSeatPlanId,
-                Quantity = providerPlan.SeatMinimum
-            });
+            subscriptionItemOptionsList.Add(
+                new SubscriptionItemOptions
+                {
+                    Price = plan.PasswordManager.StripeProviderPortalSeatPlanId,
+                    Quantity = providerPlan.SeatMinimum,
+                }
+            );
         }
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = true
-            },
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
             Customer = customer.Id,
             DaysUntilDue = 30,
             Items = subscriptionItemOptionsList,
-            Metadata = new Dictionary<string, string>
-            {
-                { "providerId", provider.Id.ToString() }
-            },
+            Metadata = new Dictionary<string, string> { { "providerId", provider.Id.ToString() } },
             OffSession = true,
-            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
+            ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
         };
 
         try
         {
-            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+            var subscription = await stripeAdapter.SubscriptionCreateAsync(
+                subscriptionCreateOptions
+            );
 
             if (subscription.Status == StripeConstants.SubscriptionStatus.Active)
             {
@@ -419,13 +442,19 @@ public class ProviderBillingService(
                 "Newly created provider ({ProviderID}) subscription ({SubscriptionID}) has inactive status: {Status}",
                 provider.Id,
                 subscription.Id,
-                subscription.Status);
+                subscription.Status
+            );
 
             throw new BillingException();
         }
-        catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid)
+        catch (StripeException stripeException)
+            when (stripeException.StripeError?.Code
+                == StripeConstants.ErrorCodes.CustomerTaxLocationInvalid
+            )
         {
-            throw new BadRequestException("Your location wasn't recognized. Please ensure your country and postal code are valid.");
+            throw new BadRequestException(
+                "Your location wasn't recognized. Please ensure your country and postal code are valid."
+            );
         }
     }
 
@@ -439,7 +468,10 @@ public class ProviderBillingService(
         Subscription subscription;
         try
         {
-            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
+            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(
+                command.GatewaySubscriptionId,
+                command.Id
+            );
         }
         catch (InvalidOperationException)
         {
@@ -452,36 +484,43 @@ public class ProviderBillingService(
 
         foreach (var newPlanConfiguration in command.Configuration)
         {
-            var providerPlan =
-                providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Plan);
+            var providerPlan = providerPlans.Single(providerPlan =>
+                providerPlan.PlanType == newPlanConfiguration.Plan
+            );
 
             if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
             {
-                var priceId = StaticStore.GetPlan(newPlanConfiguration.Plan).PasswordManager
-                    .StripeProviderPortalSeatPlanId;
+                var priceId = StaticStore
+                    .GetPlan(newPlanConfiguration.Plan)
+                    .PasswordManager.StripeProviderPortalSeatPlanId;
                 var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
 
                 if (providerPlan.PurchasedSeats == 0)
                 {
                     if (providerPlan.AllocatedSeats > newPlanConfiguration.SeatsMinimum)
                     {
-                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - newPlanConfiguration.SeatsMinimum;
+                        providerPlan.PurchasedSeats =
+                            providerPlan.AllocatedSeats - newPlanConfiguration.SeatsMinimum;
 
-                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                        {
-                            Id = subscriptionItem.Id,
-                            Price = priceId,
-                            Quantity = providerPlan.AllocatedSeats
-                        });
+                        subscriptionItemOptionsList.Add(
+                            new SubscriptionItemOptions
+                            {
+                                Id = subscriptionItem.Id,
+                                Price = priceId,
+                                Quantity = providerPlan.AllocatedSeats,
+                            }
+                        );
                     }
                     else
                     {
-                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                        {
-                            Id = subscriptionItem.Id,
-                            Price = priceId,
-                            Quantity = newPlanConfiguration.SeatsMinimum
-                        });
+                        subscriptionItemOptionsList.Add(
+                            new SubscriptionItemOptions
+                            {
+                                Id = subscriptionItem.Id,
+                                Price = priceId,
+                                Quantity = newPlanConfiguration.SeatsMinimum,
+                            }
+                        );
                     }
                 }
                 else
@@ -490,17 +529,20 @@ public class ProviderBillingService(
 
                     if (newPlanConfiguration.SeatsMinimum <= totalSeats)
                     {
-                        providerPlan.PurchasedSeats = totalSeats - newPlanConfiguration.SeatsMinimum;
+                        providerPlan.PurchasedSeats =
+                            totalSeats - newPlanConfiguration.SeatsMinimum;
                     }
                     else
                     {
                         providerPlan.PurchasedSeats = 0;
-                        subscriptionItemOptionsList.Add(new SubscriptionItemOptions
-                        {
-                            Id = subscriptionItem.Id,
-                            Price = priceId,
-                            Quantity = newPlanConfiguration.SeatsMinimum
-                        });
+                        subscriptionItemOptionsList.Add(
+                            new SubscriptionItemOptions
+                            {
+                                Id = subscriptionItem.Id,
+                                Price = priceId,
+                                Quantity = newPlanConfiguration.SeatsMinimum,
+                            }
+                        );
                     }
                 }
 
@@ -512,33 +554,39 @@ public class ProviderBillingService(
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId,
-                new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
+            await stripeAdapter.SubscriptionUpdateAsync(
+                command.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList }
+            );
         }
     }
 
     private Func<int, int, Task> CurrySeatScalingUpdate(
         Provider provider,
         ProviderPlan providerPlan,
-        int newlyAssignedSeats) => async (currentlySubscribedSeats, newlySubscribedSeats) =>
-    {
-        var plan = StaticStore.GetPlan(providerPlan.PlanType);
+        int newlyAssignedSeats
+    ) =>
+        async (currentlySubscribedSeats, newlySubscribedSeats) =>
+        {
+            var plan = StaticStore.GetPlan(providerPlan.PlanType);
 
-        await paymentService.AdjustSeats(
-            provider,
-            plan,
-            currentlySubscribedSeats,
-            newlySubscribedSeats);
+            await paymentService.AdjustSeats(
+                provider,
+                plan,
+                currentlySubscribedSeats,
+                newlySubscribedSeats
+            );
 
-        var newlyPurchasedSeats = newlySubscribedSeats > providerPlan.SeatMinimum
-            ? newlySubscribedSeats - providerPlan.SeatMinimum
-            : 0;
+            var newlyPurchasedSeats =
+                newlySubscribedSeats > providerPlan.SeatMinimum
+                    ? newlySubscribedSeats - providerPlan.SeatMinimum
+                    : 0;
 
-        providerPlan.PurchasedSeats = newlyPurchasedSeats;
-        providerPlan.AllocatedSeats = newlyAssignedSeats;
+            providerPlan.PurchasedSeats = newlyPurchasedSeats;
+            providerPlan.AllocatedSeats = newlyAssignedSeats;
 
-        await providerPlanRepository.ReplaceAsync(providerPlan);
-    };
+            await providerPlanRepository.ReplaceAsync(providerPlan);
+        };
 
     // TODO: Replace with SPROC
     private async Task<int> GetAssignedSeatTotalAsync(Provider provider, PlanType planType)
@@ -549,7 +597,10 @@ public class ProviderBillingService(
         var plan = StaticStore.GetPlan(planType);
 
         return providerOrganizations
-            .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
+            .Where(providerOrganization =>
+                providerOrganization.Plan == plan.Name
+                && providerOrganization.Status == OrganizationStatusType.Managed
+            )
             .Sum(providerOrganization => providerOrganization.Seats ?? 0);
     }
 

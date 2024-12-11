@@ -16,7 +16,9 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IOrganizationUserRepository
+public class OrganizationUserRepository
+    : Repository<OrganizationUser, Guid>,
+        IOrganizationUserRepository
 {
     /// <summary>
     /// For use with methods with TDS stream issues.
@@ -26,7 +28,10 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     private string _marsConnectionString;
 
     public OrganizationUserRepository(GlobalSettings globalSettings)
-        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        : base(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        )
     {
         var builder = new SqlConnectionStringBuilder(ConnectionString)
         {
@@ -42,7 +47,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadCountByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results;
         }
@@ -55,7 +61,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadCountByFreeOrganizationAdminUser]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results;
         }
@@ -68,20 +75,31 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadCountByOnlyOwner]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results;
         }
     }
 
-    public async Task<int> GetCountByOrganizationAsync(Guid organizationId, string email, bool onlyRegisteredUsers)
+    public async Task<int> GetCountByOrganizationAsync(
+        Guid organizationId,
+        string email,
+        bool onlyRegisteredUsers
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadCountByOrganizationIdEmail]",
-                new { OrganizationId = organizationId, Email = email, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    OrganizationId = organizationId,
+                    Email = email,
+                    OnlyUsers = onlyRegisteredUsers,
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             return result;
         }
@@ -94,7 +112,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return result;
         }
@@ -107,22 +126,32 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return result;
         }
     }
 
-    public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
-        bool onlyRegisteredUsers)
+    public async Task<ICollection<string>> SelectKnownEmailsAsync(
+        Guid organizationId,
+        IEnumerable<string> emails,
+        bool onlyRegisteredUsers
+    )
     {
         var emailsTvp = emails.ToArrayTVP("Email");
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var result = await connection.QueryAsync<string>(
                 "[dbo].[OrganizationUser_SelectKnownEmails]",
-                new { OrganizationId = organizationId, Emails = emailsTvp, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    OrganizationId = organizationId,
+                    Emails = emailsTvp,
+                    OnlyUsers = onlyRegisteredUsers,
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             // Return as a list to avoid timing out the sql connection
             return result.ToList();
@@ -136,7 +165,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByOrganizationIdUserId]",
                 new { OrganizationId = organizationId, UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -149,38 +179,48 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId,
-        OrganizationUserType? type)
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(
+        Guid organizationId,
+        OrganizationUserType? type
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByOrganizationId]",
                 new { OrganizationId = organizationId, Type = type },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<
+        Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>
+    > GetByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
                 "[dbo].[OrganizationUser_ReadWithCollectionsById]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             var user = (await results.ReadAsync<OrganizationUser>()).SingleOrDefault();
             var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
-            return new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(user, collections);
+            return new Tuple<OrganizationUser?, ICollection<CollectionAccessSelection>>(
+                user,
+                collections
+            );
         }
     }
 
@@ -191,34 +231,47 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.QueryAsync<OrganizationUserUserDetails>(
                 "[dbo].[OrganizationUserUserDetails_ReadById]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
-    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
+
+    public async Task<(
+        OrganizationUserUserDetails? OrganizationUser,
+        ICollection<CollectionAccessSelection> Collections
+    )> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
                 "[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
-            var organizationUserUserDetails = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
+            var organizationUserUserDetails = (
+                await results.ReadAsync<OrganizationUserUserDetails>()
+            ).SingleOrDefault();
             var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
             return (organizationUserUserDetails, collections);
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(
+        Guid organizationId,
+        bool includeGroups,
+        bool includeCollections
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserUserDetails>(
                 "[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             List<IGrouping<Guid, GroupUser>>? userGroups = null;
             List<IGrouping<Guid, CollectionUser>>? userCollections = null;
@@ -234,18 +287,28 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             if (includeGroups)
             {
-                userGroups = (await connection.QueryAsync<GroupUser>(
-                    "[dbo].[GroupUser_ReadByOrganizationUserIds]",
-                    new { OrganizationUserIds = orgUserIds },
-                    commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
+                userGroups = (
+                    await connection.QueryAsync<GroupUser>(
+                        "[dbo].[GroupUser_ReadByOrganizationUserIds]",
+                        new { OrganizationUserIds = orgUserIds },
+                        commandType: CommandType.StoredProcedure
+                    )
+                )
+                    .GroupBy(u => u.OrganizationUserId)
+                    .ToList();
             }
 
             if (includeCollections)
             {
-                userCollections = (await connection.QueryAsync<CollectionUser>(
-                    "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
-                    new { OrganizationUserIds = orgUserIds },
-                    commandType: CommandType.StoredProcedure)).GroupBy(u => u.OrganizationUserId).ToList();
+                userCollections = (
+                    await connection.QueryAsync<CollectionUser>(
+                        "[dbo].[CollectionUser_ReadByOrganizationUserIds]",
+                        new { OrganizationUserIds = orgUserIds },
+                        commandType: CommandType.StoredProcedure
+                    )
+                )
+                    .GroupBy(u => u.OrganizationUserId)
+                    .ToList();
             }
 
             // Map any queried collections and groups to their respective users
@@ -253,22 +316,26 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             {
                 if (userGroups != null)
                 {
-                    user.Groups = userGroups
-                        .FirstOrDefault(u => u.Key == user.Id)?
-                        .Select(ug => ug.GroupId).ToList() ?? new List<Guid>();
+                    user.Groups =
+                        userGroups
+                            .FirstOrDefault(u => u.Key == user.Id)
+                            ?.Select(ug => ug.GroupId)
+                            .ToList() ?? new List<Guid>();
                 }
 
                 if (userCollections != null)
                 {
-                    user.Collections = userCollections
-                        .FirstOrDefault(u => u.Key == user.Id)?
-                        .Select(uc => new CollectionAccessSelection
-                        {
-                            Id = uc.CollectionId,
-                            ReadOnly = uc.ReadOnly,
-                            HidePasswords = uc.HidePasswords,
-                            Manage = uc.Manage
-                        }).ToList() ?? new List<CollectionAccessSelection>();
+                    user.Collections =
+                        userCollections
+                            .FirstOrDefault(u => u.Key == user.Id)
+                            ?.Select(uc => new CollectionAccessSelection
+                            {
+                                Id = uc.CollectionId,
+                                ReadOnly = uc.ReadOnly,
+                                HidePasswords = uc.HidePasswords,
+                                Manage = uc.Manage,
+                            })
+                            .ToList() ?? new List<CollectionAccessSelection>();
                 }
             }
 
@@ -276,29 +343,41 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
-        OrganizationUserStatusType? status = null)
+    public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(
+        Guid userId,
+        OrganizationUserStatusType? status = null
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
                 "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]",
                 new { UserId = userId, Status = status },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId,
-        Guid organizationId, OrganizationUserStatusType? status = null)
+    public async Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(
+        Guid userId,
+        Guid organizationId,
+        OrganizationUserStatusType? status = null
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
                 "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]",
-                new { UserId = userId, Status = status, OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    UserId = userId,
+                    Status = status,
+                    OrganizationId = organizationId,
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -311,15 +390,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 "[dbo].[GroupUser_UpdateGroups]",
                 new { OrganizationUserId = orgUserId, GroupIds = groupIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
+    public async Task<Guid> CreateAsync(
+        OrganizationUser obj,
+        IEnumerable<CollectionAccessSelection> collections
+    )
     {
         obj.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
-            JsonSerializer.Serialize(obj))!;
+            JsonSerializer.Serialize(obj)
+        )!;
         objWithCollections.Collections = collections.ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
@@ -327,16 +411,21 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[OrganizationUser_CreateWithCollections]",
                 objWithCollections,
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
 
         return obj.Id;
     }
 
-    public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
+    public async Task ReplaceAsync(
+        OrganizationUser obj,
+        IEnumerable<CollectionAccessSelection> collections
+    )
     {
         var objWithCollections = JsonSerializer.Deserialize<OrganizationUserWithCollections>(
-            JsonSerializer.Serialize(obj))!;
+            JsonSerializer.Serialize(obj)
+        )!;
         objWithCollections.Collections = collections.ToArrayTVP();
 
         using (var connection = new SqlConnection(ConnectionString))
@@ -344,18 +433,22 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[OrganizationUser_UpdateWithCollections]",
                 objWithCollections,
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+    public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(
+        IEnumerable<Guid> userIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByUserIds]",
                 new { UserIds = userIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -368,20 +461,25 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByIds]",
                 new { Ids = Ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email)
+    public async Task<OrganizationUser?> GetByOrganizationEmailAsync(
+        Guid organizationId,
+        string email
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 "[dbo].[OrganizationUser_ReadByOrganizationIdEmail]",
                 new { OrganizationId = organizationId, Email = email },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -391,8 +489,11 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync("[dbo].[OrganizationUser_DeleteByIds]",
-                new { Ids = organizationUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationUser_DeleteByIds]",
+                new { Ids = organizationUserIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -416,7 +517,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         await ReplaceManyAsync(replaceUsers);
     }
 
-    public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
+    public async Task<ICollection<Guid>?> CreateManyAsync(
+        IEnumerable<OrganizationUser> organizationUsers
+    )
     {
         organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
@@ -434,7 +537,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_CreateMany]",
                 new { jsonData = JsonSerializer.Serialize(organizationUsers) },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
 
         return organizationUsers.Select(u => u.Id).ToList();
@@ -453,32 +557,43 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_UpdateMany]",
                 new { jsonData = JsonSerializer.Serialize(organizationUsers) },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPublicKey>> GetManyPublicKeysByOrganizationUserAsync(
-        Guid organizationId, IEnumerable<Guid> Ids)
+    public async Task<
+        IEnumerable<OrganizationUserPublicKey>
+    > GetManyPublicKeysByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> Ids)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserPublicKey>(
                 "[dbo].[User_ReadPublicKeysByOrganizationUserIds]",
-                new { OrganizationId = organizationId, OrganizationUserIds = Ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    OrganizationId = organizationId,
+                    OrganizationUserIds = Ids.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole)
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(
+        Guid organizationId,
+        OrganizationUserType minRole
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserUserDetails>(
                 "[dbo].[OrganizationUser_ReadByMinimumRole]",
                 new { OrganizationId = organizationId, MinRole = minRole },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -491,7 +606,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Deactivate]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -502,32 +618,46 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Activate]",
                 new { Id = id, Status = status },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(
+        Guid userId,
+        PolicyType policyType
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
                 $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
                 new { UserId = userId, PolicyType = policyType },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>> GetManyAccountRecoveryDetailsByOrganizationUserAsync(
-        Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    public async Task<
+        IEnumerable<OrganizationUserResetPasswordDetails>
+    > GetManyAccountRecoveryDetailsByOrganizationUserAsync(
+        Guid organizationId,
+        IEnumerable<Guid> organizationUserIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserResetPasswordDetails>(
                 "[dbo].[OrganizationUser_ReadManyAccountRecoveryDetailsByOrganizationUserIds]",
-                new { OrganizationId = organizationId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    OrganizationId = organizationId,
+                    OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -535,24 +665,34 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
-        Guid userId, IEnumerable<OrganizationUser> resetPasswordKeys)
+        Guid userId,
+        IEnumerable<OrganizationUser> resetPasswordKeys
+    )
     {
         return async (connection, transaction) =>
             await connection.ExecuteAsync(
                 $"[{Schema}].[OrganizationUser_UpdateDataForKeyRotation]",
-                new { UserId = userId, OrganizationUserJson = JsonSerializer.Serialize(resetPasswordKeys) },
+                new
+                {
+                    UserId = userId,
+                    OrganizationUserJson = JsonSerializer.Serialize(resetPasswordKeys),
+                },
                 transaction: transaction,
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
     }
 
-    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(
+        Guid organizationId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUser>(
                 $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -564,7 +704,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
         await connection.ExecuteAsync(
             "[dbo].[OrganizationUser_SetStatusForUsersById]",
-            new { OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds), Status = OrganizationUserStatusType.Revoked },
-            commandType: CommandType.StoredProcedure);
+            new
+            {
+                OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds),
+                Status = OrganizationUserStatusType.Revoked,
+            },
+            commandType: CommandType.StoredProcedure
+        );
     }
 }

@@ -17,16 +17,23 @@ public class SecretsManagerSubscriptionUpdateTests
     [BitAutoData(PlanType.FamiliesAnnually2019)]
     public Task UpdateSubscriptionAsync_WithNonSecretsManagerPlanType_ThrowsBadRequestException(
         PlanType planType,
-        Organization organization)
+        Organization organization
+    )
     {
         // Arrange
         organization.PlanType = planType;
 
         // Act
-        var exception = Assert.Throws<NotFoundException>(() => new SecretsManagerSubscriptionUpdate(organization, false));
+        var exception = Assert.Throws<NotFoundException>(
+            () => new SecretsManagerSubscriptionUpdate(organization, false)
+        );
 
         // Assert
-        Assert.Contains("Invalid Secrets Manager plan", exception.Message, StringComparison.InvariantCultureIgnoreCase);
+        Assert.Contains(
+            "Invalid Secrets Manager plan",
+            exception.Message,
+            StringComparison.InvariantCultureIgnoreCase
+        );
         return Task.CompletedTask;
     }
 
@@ -46,7 +53,8 @@ public class SecretsManagerSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsStarter)]
     public void UpdateSubscription_WithNonSecretsManagerPlanType_DoesNotThrowException(
         PlanType planType,
-        Organization organization)
+        Organization organization
+    )
     {
         // Arrange
         organization.PlanType = planType;

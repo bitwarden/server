@@ -26,7 +26,8 @@ public class OrganizationController : Controller
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        ILogger<OrganizationController> logger)
+        ILogger<OrganizationController> logger
+    )
     {
         _organizationService = organizationService;
         _currentContext = currentContext;
@@ -44,13 +45,18 @@ public class OrganizationController : Controller
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PostSubscriptionAsync([FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task<IActionResult> PostSubscriptionAsync(
+        [FromBody] OrganizationSubscriptionUpdateRequestModel model
+    )
     {
         try
         {
             await UpdatePasswordManagerAsync(model, _currentContext.OrganizationId.Value);
 
-            var secretsManagerResult = await UpdateSecretsManagerAsync(model, _currentContext.OrganizationId.Value);
+            var secretsManagerResult = await UpdateSecretsManagerAsync(
+                model,
+                _currentContext.OrganizationId.Value
+            );
 
             if (!string.IsNullOrEmpty(secretsManagerResult))
             {
@@ -62,27 +68,42 @@ public class OrganizationController : Controller
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled error while updating the subscription");
-            return StatusCode(500, new { Message = "An error occurred while updating the subscription." });
+            return StatusCode(
+                500,
+                new { Message = "An error occurred while updating the subscription." }
+            );
         }
     }
 
-    private async Task UpdatePasswordManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
+    private async Task UpdatePasswordManagerAsync(
+        OrganizationSubscriptionUpdateRequestModel model,
+        Guid organizationId
+    )
     {
         if (model.PasswordManager != null)
         {
             var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
             model.PasswordManager.ToPasswordManagerSubscriptionUpdate(organization);
-            await _organizationService.UpdateSubscription(organization.Id, (int)model.PasswordManager.Seats,
-                model.PasswordManager.MaxAutoScaleSeats);
+            await _organizationService.UpdateSubscription(
+                organization.Id,
+                (int)model.PasswordManager.Seats,
+                model.PasswordManager.MaxAutoScaleSeats
+            );
             if (model.PasswordManager.Storage.HasValue)
             {
-                await _organizationService.AdjustStorageAsync(organization.Id, (short)model.PasswordManager.Storage);
+                await _organizationService.AdjustStorageAsync(
+                    organization.Id,
+                    (short)model.PasswordManager.Storage
+                );
             }
         }
     }
 
-    private async Task<string> UpdateSecretsManagerAsync(OrganizationSubscriptionUpdateRequestModel model, Guid organizationId)
+    private async Task<string> UpdateSecretsManagerAsync(
+        OrganizationSubscriptionUpdateRequestModel model,
+        Guid organizationId
+    )
     {
         if (model.SecretsManager == null)
         {
@@ -96,8 +117,12 @@ public class OrganizationController : Controller
             return "Organization has no access to Secrets Manager.";
         }
 
-        var secretsManagerUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
-        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(secretsManagerUpdate);
+        var secretsManagerUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(
+            organization
+        );
+        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(
+            secretsManagerUpdate
+        );
 
         return string.Empty;
     }

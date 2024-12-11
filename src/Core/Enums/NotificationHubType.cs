@@ -7,5 +7,5 @@ public enum NotificationHubType
     iOS = 2,
     GeneralWeb = 3,
     GeneralBrowserExtension = 4,
-    GeneralDesktop = 5
+    GeneralDesktop = 5,
 }

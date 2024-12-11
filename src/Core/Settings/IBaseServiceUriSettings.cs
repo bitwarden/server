@@ -1,5 +1,4 @@
-﻿
-namespace Bit.Core.Settings;
+﻿namespace Bit.Core.Settings;
 
 public interface IBaseServiceUriSettings
 {

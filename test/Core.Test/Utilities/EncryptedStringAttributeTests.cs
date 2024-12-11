@@ -51,15 +51,21 @@ public class EncryptedStringAttributeTests
     [InlineData("0.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_B64 as a number
     [InlineData("AesCbc256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_B64 as a number
     [InlineData("1.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc128_HmacSha256_B64 as a number
-    [InlineData("AesCbc128_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc128_HmacSha256_B64 as a string
+    [InlineData(
+        "AesCbc128_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
+    )] // Invalid AesCbc128_HmacSha256_B64 as a string
     [InlineData("2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_HmacSha256_B64 as a number
-    [InlineData("AesCbc256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid AesCbc256_HmacSha256_B64 as a string
+    [InlineData(
+        "AesCbc256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
+    )] // Invalid AesCbc256_HmacSha256_B64 as a string
     [InlineData("3.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_B64 as a number
     [InlineData("Rsa2048_OaepSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_B64 as a string
     [InlineData("4.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_B64 as a number
     [InlineData("Rsa2048_OaepSha1_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_B64 as a string
     [InlineData("5.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_HmacSha256_B64 as a number
-    [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha256_HmacSha256_B64 as a string
+    [InlineData(
+        "Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
+    )] // Invalid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_HmacSha256_B64 as a number
     [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==")] // Invalid Rsa2048_OaepSha1_HmacSha256_B64 as a string
     public void IsValid_ReturnsFalse_WhenInvalid(string input)
@@ -75,13 +81,18 @@ public class EncryptedStringAttributeTests
     public void EncryptionTypeMap_HasEntry_ForEachEnumValue()
     {
         var enumValues = Enum.GetValues<EncryptionType>();
-        Assert.Equal(enumValues.Length, EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.Count);
+        Assert.Equal(
+            enumValues.Length,
+            EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.Count
+        );
 
         foreach (var enumValue in enumValues)
         {
             // Go a step further and ensure that the map contains a value for each value instead of just casting
             // a random number for one of the keys.
-            Assert.True(EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.ContainsKey(enumValue));
+            Assert.True(
+                EncryptedStringAttribute._encryptionTypeToRequiredPiecesMap.ContainsKey(enumValue)
+            );
         }
     }
 
@@ -91,10 +102,12 @@ public class EncryptedStringAttributeTests
         var underlyingType = typeof(EncryptionType).GetEnumUnderlyingType();
         var expectedType = typeof(byte);
 
-        Assert.True(underlyingType == expectedType,
-            $"Hello future person, it seems you have changed the underlying type for {nameof(EncryptionType)}, " +
-            $"that is totally fine you just also need to change the line for {expectedType.Name}.TryParse in " +
-            $"{nameof(EncryptedStringAttribute)} to {underlyingType.Name}.TryParse (but you can probably use the alias)" +
-            "and then update this test!");
+        Assert.True(
+            underlyingType == expectedType,
+            $"Hello future person, it seems you have changed the underlying type for {nameof(EncryptionType)}, "
+                + $"that is totally fine you just also need to change the line for {expectedType.Name}.TryParse in "
+                + $"{nameof(EncryptedStringAttribute)} to {underlyingType.Name}.TryParse (but you can probably use the alias)"
+                + "and then update this test!"
+        );
     }
 }

@@ -8,25 +8,29 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 
-public class
-    ServiceAccountAuthorizationHandler : AuthorizationHandler<ServiceAccountOperationRequirement, ServiceAccount>
+public class ServiceAccountAuthorizationHandler
+    : AuthorizationHandler<ServiceAccountOperationRequirement, ServiceAccount>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ServiceAccountAuthorizationHandler(ICurrentContext currentContext,
+    public ServiceAccountAuthorizationHandler(
+        ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository
+    )
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
         ServiceAccountOperationRequirement requirement,
-        ServiceAccount resource)
+        ServiceAccount resource
+    )
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -60,15 +64,23 @@ public class
                 await CanReadEventsAsync(context, requirement, resource);
                 break;
             default:
-                throw new ArgumentException("Unsupported operation requirement type provided.",
-                    nameof(requirement));
+                throw new ArgumentException(
+                    "Unsupported operation requirement type provided.",
+                    nameof(requirement)
+                );
         }
     }
 
-    private async Task CanCreateServiceAccountAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanCreateServiceAccountAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
@@ -83,14 +95,21 @@ public class
         }
     }
 
-    private async Task CanReadServiceAccountAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanReadServiceAccountAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Read)
         {
@@ -98,14 +117,21 @@ public class
         }
     }
 
-    private async Task CanUpdateServiceAccountAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanUpdateServiceAccountAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Write)
         {
@@ -113,14 +139,21 @@ public class
         }
     }
 
-    private async Task CanDeleteServiceAccountAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanDeleteServiceAccountAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Write)
         {
@@ -128,14 +161,21 @@ public class
         }
     }
 
-    private async Task CanCreateAccessTokenAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanCreateAccessTokenAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Write)
         {
@@ -143,14 +183,21 @@ public class
         }
     }
 
-    private async Task CanReadAccessTokensAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanReadAccessTokensAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Read)
         {
@@ -158,14 +205,21 @@ public class
         }
     }
 
-    private async Task CanRevokeAccessTokensAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanRevokeAccessTokensAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Write)
         {
@@ -173,14 +227,21 @@ public class
         }
     }
 
-    private async Task CanReadEventsAsync(AuthorizationHandlerContext context,
-        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    private async Task CanReadEventsAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement,
+        ServiceAccount resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
-                accessClient);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Read)
         {

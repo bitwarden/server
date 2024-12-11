@@ -42,7 +42,9 @@ public class Cipher : ITableObject<Guid>, ICloneable
 
         try
         {
-            _attachmentData = JsonSerializer.Deserialize<Dictionary<string, CipherAttachment.MetaData>>(Attachments);
+            _attachmentData = JsonSerializer.Deserialize<
+                Dictionary<string, CipherAttachment.MetaData>
+            >(Attachments);
             foreach (var kvp in _attachmentData)
             {
                 kvp.Value.AttachmentId = kvp.Key;
@@ -103,6 +105,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
     }
 
     object ICloneable.Clone() => Clone();
+
     public Cipher Clone()
     {
         var clone = CoreHelpers.CloneObject(this);

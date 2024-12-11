@@ -18,12 +18,21 @@ namespace Bit.Core.Test.NotificationCenter.Queries;
 [NotificationStatusDetailsCustomize]
 public class GetNotificationStatusDetailsForUserQueryTest
 {
-    private static void Setup(SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
-        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter statusFilter, Guid? userId)
+    private static void Setup(
+        SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
+        List<NotificationStatusDetails> notificationsStatusDetails,
+        NotificationStatusFilter statusFilter,
+        Guid? userId
+    )
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<INotificationRepository>().GetByUserIdAndStatusAsync(
-                userId.GetValueOrDefault(Guid.NewGuid()), Arg.Any<ClientType>(), statusFilter)
+        sutProvider
+            .GetDependency<INotificationRepository>()
+            .GetByUserIdAndStatusAsync(
+                userId.GetValueOrDefault(Guid.NewGuid()),
+                Arg.Any<ClientType>(),
+                statusFilter
+            )
             .Returns(notificationsStatusDetails);
     }
 
@@ -31,24 +40,30 @@ public class GetNotificationStatusDetailsForUserQueryTest
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_NotLoggedIn_NotFoundException(
         SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
-        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter notificationStatusFilter)
+        List<NotificationStatusDetails> notificationsStatusDetails,
+        NotificationStatusFilter notificationStatusFilter
+    )
     {
         Setup(sutProvider, notificationsStatusDetails, notificationStatusFilter, userId: null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_NotificationsFound_Returned(
         SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
-        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter notificationStatusFilter)
+        List<NotificationStatusDetails> notificationsStatusDetails,
+        NotificationStatusFilter notificationStatusFilter
+    )
     {
         Setup(sutProvider, notificationsStatusDetails, notificationStatusFilter, Guid.NewGuid());
 
-        var actualNotificationsStatusDetails =
-            await sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter);
+        var actualNotificationsStatusDetails = await sutProvider.Sut.GetByUserIdStatusFilterAsync(
+            notificationStatusFilter
+        );
 
         Assert.Equal(notificationsStatusDetails, actualNotificationsStatusDetails);
     }

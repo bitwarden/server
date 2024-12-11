@@ -4,11 +4,14 @@ namespace Bit.Core.Auth.Models.Mail;
 
 public class OrganizationInitiateDeleteModel : BaseMailModel
 {
-    public string Url => string.Format("{0}/verify-recover-delete-org?orgId={1}&token={2}&name={3}",
-        WebVaultUrl,
-        OrganizationId,
-        Token,
-        OrganizationNameUrlEncoded);
+    public string Url =>
+        string.Format(
+            "{0}/verify-recover-delete-org?orgId={1}&token={2}&name={3}",
+            WebVaultUrl,
+            OrganizationId,
+            Token,
+            OrganizationNameUrlEncoded
+        );
 
     public string Token { get; set; }
     public Guid OrganizationId { get; set; }

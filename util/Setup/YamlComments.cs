@@ -15,12 +15,15 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
 
     public CommentGatheringTypeInspector(ITypeInspector innerTypeDescriptor)
     {
-        _innerTypeDescriptor = innerTypeDescriptor ?? throw new ArgumentNullException(nameof(innerTypeDescriptor));
+        _innerTypeDescriptor =
+            innerTypeDescriptor ?? throw new ArgumentNullException(nameof(innerTypeDescriptor));
     }
 
     public override IEnumerable<IPropertyDescriptor> GetProperties(Type type, object container)
     {
-        return _innerTypeDescriptor.GetProperties(type, container).Select(d => new CommentsPropertyDescriptor(d));
+        return _innerTypeDescriptor
+            .GetProperties(type, container)
+            .Select(d => new CommentsPropertyDescriptor(d));
     }
 
     private sealed class CommentsPropertyDescriptor : IPropertyDescriptor
@@ -55,7 +58,8 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
             _baseDescriptor.Write(target, value);
         }
 
-        public T GetCustomAttribute<T>() where T : Attribute
+        public T GetCustomAttribute<T>()
+            where T : Attribute
         {
             return _baseDescriptor.GetCustomAttribute<T>();
         }
@@ -63,9 +67,12 @@ public class CommentGatheringTypeInspector : TypeInspectorSkeleton
         public IObjectDescriptor Read(object target)
         {
             var description = _baseDescriptor.GetCustomAttribute<DescriptionAttribute>();
-            return description != null ?
-                new CommentsObjectDescriptor(_baseDescriptor.Read(target), description.Description) :
-                _baseDescriptor.Read(target);
+            return description != null
+                ? new CommentsObjectDescriptor(
+                    _baseDescriptor.Read(target),
+                    description.Description
+                )
+                : _baseDescriptor.Read(target);
         }
     }
 }
@@ -92,9 +99,16 @@ public class CommentsObjectGraphVisitor : ChainedObjectGraphVisitor
     public CommentsObjectGraphVisitor(IObjectGraphVisitor<IEmitter> nextVisitor)
         : base(nextVisitor) { }
 
-    public override bool EnterMapping(IPropertyDescriptor key, IObjectDescriptor value, IEmitter context)
+    public override bool EnterMapping(
+        IPropertyDescriptor key,
+        IObjectDescriptor value,
+        IEmitter context
+    )
     {
-        if (value is CommentsObjectDescriptor commentsDescriptor && commentsDescriptor.Comment != null)
+        if (
+            value is CommentsObjectDescriptor commentsDescriptor
+            && commentsDescriptor.Comment != null
+        )
         {
             context.Emit(new Comment(string.Empty, false));
             foreach (var comment in commentsDescriptor.Comment.Split(Environment.NewLine))

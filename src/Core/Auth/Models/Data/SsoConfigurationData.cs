@@ -64,7 +64,13 @@ public class SsoConfigurationData
     public string IdpX509PublicCert { get; set; }
     public Saml2BindingType IdpBindingType { get; set; }
     public bool IdpAllowUnsolicitedAuthnResponse { get; set; }
-    public string IdpArtifactResolutionServiceUrl { get => null; set { /*IGNORE*/ } }
+    public static string IdpArtifactResolutionServiceUrl
+    {
+        get => null;
+        set
+        { /*IGNORE*/
+        }
+    }
     public bool IdpDisableOutboundLogoutRequests { get; set; }
     public string IdpOutboundSigningAlgorithm { get; set; }
     public bool IdpWantAuthnRequestsSigned { get; set; }
@@ -90,8 +96,10 @@ public class SsoConfigurationData
 
     public static string BuildSaml2ModulePath(string ssoUri = null, string scheme = null)
     {
-        return string.Concat(BuildSsoUrl(_saml2ModulePath, ssoUri),
-            string.IsNullOrWhiteSpace(scheme) ? string.Empty : $"/{scheme}");
+        return string.Concat(
+            BuildSsoUrl(_saml2ModulePath, ssoUri),
+            string.IsNullOrWhiteSpace(scheme) ? string.Empty : $"/{scheme}"
+        );
     }
 
     public static string BuildSaml2AcsUrl(string ssoUri = null, string scheme = null)
@@ -104,38 +112,46 @@ public class SsoConfigurationData
         return BuildSaml2ModulePath(ssoUri, scheme);
     }
 
-    public IEnumerable<string> GetAdditionalScopes() => AdditionalScopes?
-        .Split(',')?
-        .Where(c => !string.IsNullOrWhiteSpace(c))?
-        .Select(c => c.Trim()) ??
-        Array.Empty<string>();
+    public IEnumerable<string> GetAdditionalScopes() =>
+        AdditionalScopes
+            ?.Split(',')
+            ?.Where(c => !string.IsNullOrWhiteSpace(c))
+            ?.Select(c => c.Trim()) ?? Array.Empty<string>();
 
-    public IEnumerable<string> GetAdditionalUserIdClaimTypes() => AdditionalUserIdClaimTypes?
-        .Split(',')?
-        .Where(c => !string.IsNullOrWhiteSpace(c))?
-        .Select(c => c.Trim()) ??
-        Array.Empty<string>();
+    public IEnumerable<string> GetAdditionalUserIdClaimTypes() =>
+        AdditionalUserIdClaimTypes
+            ?.Split(',')
+            ?.Where(c => !string.IsNullOrWhiteSpace(c))
+            ?.Select(c => c.Trim()) ?? Array.Empty<string>();
 
-    public IEnumerable<string> GetAdditionalEmailClaimTypes() => AdditionalEmailClaimTypes?
-        .Split(',')?
-        .Where(c => !string.IsNullOrWhiteSpace(c))?
-        .Select(c => c.Trim()) ??
-        Array.Empty<string>();
+    public IEnumerable<string> GetAdditionalEmailClaimTypes() =>
+        AdditionalEmailClaimTypes
+            ?.Split(',')
+            ?.Where(c => !string.IsNullOrWhiteSpace(c))
+            ?.Select(c => c.Trim()) ?? Array.Empty<string>();
 
-    public IEnumerable<string> GetAdditionalNameClaimTypes() => AdditionalNameClaimTypes?
-        .Split(',')?
-        .Where(c => !string.IsNullOrWhiteSpace(c))?
-        .Select(c => c.Trim()) ??
-        Array.Empty<string>();
+    public IEnumerable<string> GetAdditionalNameClaimTypes() =>
+        AdditionalNameClaimTypes
+            ?.Split(',')
+            ?.Where(c => !string.IsNullOrWhiteSpace(c))
+            ?.Select(c => c.Trim()) ?? Array.Empty<string>();
 
     private static string BuildSsoUrl(string relativePath, string ssoUri)
     {
-        if (string.IsNullOrWhiteSpace(ssoUri) ||
-            !Uri.IsWellFormedUriString(ssoUri, UriKind.Absolute))
+        if (
+            string.IsNullOrWhiteSpace(ssoUri)
+            || !Uri.IsWellFormedUriString(ssoUri, UriKind.Absolute)
+        )
         {
             return relativePath;
         }
-        if (Uri.TryCreate(string.Concat(ssoUri.TrimEnd('/'), relativePath), UriKind.Absolute, out var newUri))
+        if (
+            Uri.TryCreate(
+                string.Concat(ssoUri.TrimEnd('/'), relativePath),
+                UriKind.Absolute,
+                out var newUri
+            )
+        )
         {
             return newUri.ToString();
         }

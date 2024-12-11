@@ -17,8 +17,8 @@ public class OrganizationConnectionRequestModel
     public OrganizationConnectionRequestModel() { }
 }
 
-
-public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel where T : IConnectionConfig
+public class OrganizationConnectionRequestModel<T> : OrganizationConnectionRequestModel
+    where T : IConnectionConfig
 {
     public T ParsedConfig { get; private set; }
 

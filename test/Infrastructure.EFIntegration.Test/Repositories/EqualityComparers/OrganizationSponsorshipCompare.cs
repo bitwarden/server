@@ -7,12 +7,12 @@ public class OrganizationSponsorshipCompare : IEqualityComparer<OrganizationSpon
 {
     public bool Equals(OrganizationSponsorship x, OrganizationSponsorship y)
     {
-        return x.SponsoringOrganizationId.Equals(y.SponsoringOrganizationId) &&
-            x.SponsoringOrganizationUserId.Equals(y.SponsoringOrganizationUserId) &&
-            x.SponsoredOrganizationId.Equals(y.SponsoredOrganizationId) &&
-            x.OfferedToEmail.Equals(y.OfferedToEmail) &&
-            x.ToDelete.Equals(y.ToDelete) &&
-            x.ValidUntil.ToString().Equals(y.ValidUntil.ToString());
+        return x.SponsoringOrganizationId.Equals(y.SponsoringOrganizationId)
+            && x.SponsoringOrganizationUserId.Equals(y.SponsoringOrganizationUserId)
+            && x.SponsoredOrganizationId.Equals(y.SponsoredOrganizationId)
+            && x.OfferedToEmail.Equals(y.OfferedToEmail)
+            && x.ToDelete.Equals(y.ToDelete)
+            && x.ValidUntil.ToString().Equals(y.ValidUntil.ToString());
     }
 
     public int GetHashCode([DisallowNull] OrganizationSponsorship obj)

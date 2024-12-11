@@ -7,16 +7,24 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesFo
 public abstract class FamiliesForEnterpriseTestsBase
 {
     public static IEnumerable<object[]> EnterprisePlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier == ProductTierType.Enterprise).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>()
+            .Where(p => StaticStore.GetPlan(p).ProductTier == ProductTierType.Enterprise)
+            .Select(p => new object[] { p });
 
     public static IEnumerable<object[]> NonEnterprisePlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier != ProductTierType.Enterprise).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>()
+            .Where(p => StaticStore.GetPlan(p).ProductTier != ProductTierType.Enterprise)
+            .Select(p => new object[] { p });
 
     public static IEnumerable<object[]> FamiliesPlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier == ProductTierType.Families).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>()
+            .Where(p => StaticStore.GetPlan(p).ProductTier == ProductTierType.Families)
+            .Select(p => new object[] { p });
 
     public static IEnumerable<object[]> NonFamiliesPlanTypes =>
-        Enum.GetValues<PlanType>().Where(p => StaticStore.GetPlan(p).ProductTier != ProductTierType.Families).Select(p => new object[] { p });
+        Enum.GetValues<PlanType>()
+            .Where(p => StaticStore.GetPlan(p).ProductTier != ProductTierType.Families)
+            .Select(p => new object[] { p });
 
     public static IEnumerable<object[]> NonConfirmedOrganizationUsersStatuses =>
         Enum.GetValues<OrganizationUserStatusType>()

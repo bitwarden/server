@@ -12,8 +12,10 @@ public class OrganizationSponsorship : ITableObject<Guid>
     public Guid? SponsoringOrganizationId { get; set; }
     public Guid SponsoringOrganizationUserId { get; set; }
     public Guid? SponsoredOrganizationId { get; set; }
+
     [MaxLength(256)]
     public string? FriendlyName { get; set; }
+
     [MaxLength(256)]
     public string? OfferedToEmail { get; set; }
     public PlanSponsorshipType? PlanSponsorshipType { get; set; }

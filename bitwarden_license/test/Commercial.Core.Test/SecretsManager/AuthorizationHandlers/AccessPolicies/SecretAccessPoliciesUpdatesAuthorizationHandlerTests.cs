@@ -26,8 +26,9 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
     [Fact]
     public void SecretAccessPoliciesOperations_OnlyPublicStatic()
     {
-        var publicStaticFields =
-            typeof(SecretAccessPoliciesOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var publicStaticFields = typeof(SecretAccessPoliciesOperations).GetFields(
+            BindingFlags.Public | BindingFlags.Static
+        );
         var allFields = typeof(SecretAccessPoliciesOperations).GetFields();
         Assert.Equal(publicStaticFields.Length, allFields.Length);
     }
@@ -37,13 +38,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
     public async Task Handler_AccessSecretsManagerFalse_DoesNotSucceed(
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessSecretsManager(resource.OrganizationId)
             .Returns(false);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -57,12 +64,16 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         AccessClientType accessClientType,
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
         SetupUserSubstitutes(sutProvider, accessClientType, resource);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -74,14 +85,20 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
     public async Task Handler_UnsupportedServiceAccountGrantedPoliciesOperationRequirement_Throws(
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = new SecretAccessPoliciesOperationRequirement();
         SetupUserSubstitutes(sutProvider, AccessClientType.NoAccessCheck, resource);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
-        await Assert.ThrowsAsync<ArgumentException>(() => sutProvider.Sut.HandleAsync(authzContext));
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => sutProvider.Sut.HandleAsync(authzContext)
+        );
     }
 
     [Theory]
@@ -96,15 +113,20 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
-        sutProvider.GetDependency<ISecretRepository>()
+        sutProvider
+            .GetDependency<ISecretRepository>()
             .AccessToSecretAsync(resource.SecretId, userId, accessClientType)
             .Returns((readAccess, writeAccess));
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -126,13 +148,24 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
-        SetupSameOrganizationRequest(sutProvider, AccessClientType.NoAccessCheck, resource, userId, orgUsersInSameOrg,
-            groupsInSameOrg, serviceAccountsInSameOrg);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        SetupSameOrganizationRequest(
+            sutProvider,
+            AccessClientType.NoAccessCheck,
+            resource,
+            userId,
+            orgUsersInSameOrg,
+            groupsInSameOrg,
+            serviceAccountsInSameOrg
+        );
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -154,15 +187,31 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
-        resource = ClearAccessPolicyUpdate(resource, orgUsersCountZero, groupsCountZero, serviceAccountsCountZero);
-        SetupSameOrganizationRequest(sutProvider, AccessClientType.NoAccessCheck, resource, userId, false, false,
-            false);
+        resource = ClearAccessPolicyUpdate(
+            resource,
+            orgUsersCountZero,
+            groupsCountZero,
+            serviceAccountsCountZero
+        );
+        SetupSameOrganizationRequest(
+            sutProvider,
+            AccessClientType.NoAccessCheck,
+            resource,
+            userId,
+            false,
+            false,
+            false
+        );
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -177,15 +226,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
 
         resource = RemoveAllServiceAccountCreates(resource);
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -200,15 +253,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
 
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupNoServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -223,15 +280,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupPartialServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -246,15 +307,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupSomeServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -269,15 +334,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Updates;
         resource = AddServiceAccountCreateUpdate(resource);
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupAllServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -292,12 +361,16 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -319,14 +392,25 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
-        SetupSameOrganizationRequest(sutProvider, AccessClientType.NoAccessCheck, resource, userId, orgUsersInSameOrg,
-            groupsInSameOrg, serviceAccountsInSameOrg);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        SetupSameOrganizationRequest(
+            sutProvider,
+            AccessClientType.NoAccessCheck,
+            resource,
+            userId,
+            orgUsersInSameOrg,
+            groupsInSameOrg,
+            serviceAccountsInSameOrg
+        );
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -348,16 +432,32 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
-        resource = ClearAccessPolicyUpdate(resource, orgUsersCountZero, groupsCountZero, serviceAccountsCountZero);
-        SetupSameOrganizationRequest(sutProvider, AccessClientType.NoAccessCheck, resource, userId, false, false,
-            false);
+        resource = ClearAccessPolicyUpdate(
+            resource,
+            orgUsersCountZero,
+            groupsCountZero,
+            serviceAccountsCountZero
+        );
+        SetupSameOrganizationRequest(
+            sutProvider,
+            AccessClientType.NoAccessCheck,
+            resource,
+            userId,
+            false,
+            false,
+            false
+        );
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -372,15 +472,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
         resource = RemoveAllServiceAccountCreates(resource);
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -395,15 +499,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupNoServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -418,7 +526,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
@@ -426,8 +535,11 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupPartialServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -442,7 +554,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
@@ -450,8 +563,11 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupSomeServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -466,7 +582,8 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        ClaimsPrincipal claimsPrincipal)
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var requirement = SecretAccessPoliciesOperations.Create;
         resource = SetAllToCreates(resource);
@@ -474,8 +591,11 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SetupSameOrganizationRequest(sutProvider, accessClientType, resource, userId);
         SetupAllServiceAccountAccess(sutProvider, resource, userId, accessClientType);
 
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
+        var authzContext = new AuthorizationHandlerContext(
+            new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal,
+            resource
+        );
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
@@ -486,13 +606,17 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        AccessClientType accessClientType)
+        AccessClientType accessClientType
+    )
     {
-        var createServiceAccountIds = resource.ServiceAccountAccessPolicyUpdates
-            .Where(ap => ap.Operation == AccessPolicyOperation.Create)
+        var createServiceAccountIds = resource
+            .ServiceAccountAccessPolicyUpdates.Where(ap =>
+                ap.Operation == AccessPolicyOperation.Create
+            )
             .Select(uap => uap.AccessPolicy.ServiceAccountId!.Value)
             .ToList();
-        sutProvider.GetDependency<IServiceAccountRepository>()
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(createServiceAccountIds.ToDictionary(id => id, _ => (false, false)));
     }
@@ -501,15 +625,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        AccessClientType accessClientType)
+        AccessClientType accessClientType
+    )
     {
-        var accessResult = resource.ServiceAccountAccessPolicyUpdates
-            .Where(x => x.Operation == AccessPolicyOperation.Create)
+        var accessResult = resource
+            .ServiceAccountAccessPolicyUpdates.Where(x =>
+                x.Operation == AccessPolicyOperation.Create
+            )
             .Select(x => x.AccessPolicy.ServiceAccountId!.Value)
             .ToDictionary(id => id, _ => (true, true));
         accessResult[accessResult.First().Key] = (true, true);
         accessResult.Remove(accessResult.Last().Key);
-        sutProvider.GetDependency<IServiceAccountRepository>()
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(accessResult);
     }
@@ -518,15 +646,19 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        AccessClientType accessClientType)
+        AccessClientType accessClientType
+    )
     {
-        var accessResult = resource.ServiceAccountAccessPolicyUpdates
-            .Where(x => x.Operation == AccessPolicyOperation.Create)
+        var accessResult = resource
+            .ServiceAccountAccessPolicyUpdates.Where(x =>
+                x.Operation == AccessPolicyOperation.Create
+            )
             .Select(x => x.AccessPolicy.ServiceAccountId!.Value)
             .ToDictionary(id => id, _ => (false, false));
 
         accessResult[accessResult.First().Key] = (true, true);
-        sutProvider.GetDependency<IServiceAccountRepository>()
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(accessResult);
     }
@@ -535,13 +667,17 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         SecretAccessPoliciesUpdates resource,
         Guid userId,
-        AccessClientType accessClientType)
+        AccessClientType accessClientType
+    )
     {
-        var accessResult = resource.ServiceAccountAccessPolicyUpdates
-            .Where(x => x.Operation == AccessPolicyOperation.Create)
+        var accessResult = resource
+            .ServiceAccountAccessPolicyUpdates.Where(x =>
+                x.Operation == AccessPolicyOperation.Create
+            )
             .Select(x => x.AccessPolicy.ServiceAccountId!.Value)
             .ToDictionary(id => id, _ => (true, true));
-        sutProvider.GetDependency<IServiceAccountRepository>()
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountsAsync(Arg.Any<List<Guid>>(), userId, accessClientType)
             .Returns(accessResult);
     }
@@ -550,11 +686,16 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         SutProvider<SecretAccessPoliciesUpdatesAuthorizationHandler> sutProvider,
         AccessClientType accessClientType,
         SecretAccessPoliciesUpdates resource,
-        Guid userId = new())
+        Guid userId = new()
+    )
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessSecretsManager(resource.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.OrganizationId)
+        sutProvider
+            .GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(default, resource.OrganizationId)
             .ReturnsForAnyArgs((accessClientType, userId));
     }
 
@@ -565,35 +706,42 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
         Guid userId = new(),
         bool orgUsersInSameOrg = true,
         bool groupsInSameOrg = true,
-        bool serviceAccountsInSameOrg = true)
+        bool serviceAccountsInSameOrg = true
+    )
     {
         SetupUserSubstitutes(sutProvider, accessClientType, resource, userId);
 
-        sutProvider.GetDependency<ISecretRepository>()
+        sutProvider
+            .GetDependency<ISecretRepository>()
             .AccessToSecretAsync(resource.SecretId, userId, accessClientType)
             .Returns((true, true));
 
-        sutProvider.GetDependency<ISameOrganizationQuery>()
+        sutProvider
+            .GetDependency<ISameOrganizationQuery>()
             .OrgUsersInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
             .Returns(orgUsersInSameOrg);
-        sutProvider.GetDependency<ISameOrganizationQuery>()
+        sutProvider
+            .GetDependency<ISameOrganizationQuery>()
             .GroupsInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
             .Returns(groupsInSameOrg);
-        sutProvider.GetDependency<IServiceAccountRepository>()
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
             .ServiceAccountsAreInOrganizationAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
             .Returns(serviceAccountsInSameOrg);
     }
 
     private static SecretAccessPoliciesUpdates RemoveAllServiceAccountCreates(
-        SecretAccessPoliciesUpdates resource)
+        SecretAccessPoliciesUpdates resource
+    )
     {
         resource.ServiceAccountAccessPolicyUpdates =
-            resource.ServiceAccountAccessPolicyUpdates.Where(x => x.Operation != AccessPolicyOperation.Create);
+            resource.ServiceAccountAccessPolicyUpdates.Where(x =>
+                x.Operation != AccessPolicyOperation.Create
+            );
         return resource;
     }
 
-    private static SecretAccessPoliciesUpdates SetAllToCreates(
-        SecretAccessPoliciesUpdates resource)
+    private static SecretAccessPoliciesUpdates SetAllToCreates(SecretAccessPoliciesUpdates resource)
     {
         resource.UserAccessPolicyUpdates = resource.UserAccessPolicyUpdates.Select(x =>
         {
@@ -605,36 +753,42 @@ public class SecretAccessPoliciesUpdatesAuthorizationHandlerTests
             x.Operation = AccessPolicyOperation.Create;
             return x;
         });
-        resource.ServiceAccountAccessPolicyUpdates = resource.ServiceAccountAccessPolicyUpdates.Select(x =>
-        {
-            x.Operation = AccessPolicyOperation.Create;
-            return x;
-        });
+        resource.ServiceAccountAccessPolicyUpdates =
+            resource.ServiceAccountAccessPolicyUpdates.Select(x =>
+            {
+                x.Operation = AccessPolicyOperation.Create;
+                return x;
+            });
 
         return resource;
     }
 
     private static SecretAccessPoliciesUpdates AddServiceAccountCreateUpdate(
-        SecretAccessPoliciesUpdates resource)
+        SecretAccessPoliciesUpdates resource
+    )
     {
-        resource.ServiceAccountAccessPolicyUpdates = resource.ServiceAccountAccessPolicyUpdates.Append(
-            new ServiceAccountSecretAccessPolicyUpdate
-            {
-                AccessPolicy = new ServiceAccountSecretAccessPolicy
+        resource.ServiceAccountAccessPolicyUpdates =
+            resource.ServiceAccountAccessPolicyUpdates.Append(
+                new ServiceAccountSecretAccessPolicyUpdate
                 {
-                    ServiceAccountId = Guid.NewGuid(),
-                    GrantedSecretId = resource.SecretId,
-                    Read = true,
-                    Write = true
+                    AccessPolicy = new ServiceAccountSecretAccessPolicy
+                    {
+                        ServiceAccountId = Guid.NewGuid(),
+                        GrantedSecretId = resource.SecretId,
+                        Read = true,
+                        Write = true,
+                    },
                 }
-            });
+            );
         return resource;
     }
 
-    private static SecretAccessPoliciesUpdates ClearAccessPolicyUpdate(SecretAccessPoliciesUpdates resource,
+    private static SecretAccessPoliciesUpdates ClearAccessPolicyUpdate(
+        SecretAccessPoliciesUpdates resource,
         bool orgUsersCountZero,
         bool groupsCountZero,
-        bool serviceAccountsCountZero)
+        bool serviceAccountsCountZero
+    )
     {
         if (orgUsersCountZero)
         {

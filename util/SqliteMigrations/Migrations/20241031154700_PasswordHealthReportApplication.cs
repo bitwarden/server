@@ -18,7 +18,7 @@ public partial class PasswordHealthReportApplication : Migration
                 OrganizationId = table.Column<Guid>(type: "TEXT", nullable: true),
                 Uri = table.Column<string>(type: "TEXT", nullable: true),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -27,12 +27,15 @@ public partial class PasswordHealthReportApplication : Migration
                     name: "FK_PasswordHealthReportApplication_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
         migrationBuilder.CreateIndex(
             name: "IX_PasswordHealthReportApplication_OrganizationId",
             table: "PasswordHealthReportApplication",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
     }
 
     /// <inheritdoc />

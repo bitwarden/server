@@ -13,11 +13,14 @@ namespace Bit.Core.Models.Business;
 
 public class UserLicense : ILicense
 {
-    public UserLicense()
-    { }
+    public UserLicense() { }
 
-    public UserLicense(User user, SubscriptionInfo subscriptionInfo, ILicensingService licenseService,
-        int? version = null)
+    public UserLicense(
+        User user,
+        SubscriptionInfo subscriptionInfo,
+        ILicensingService licenseService,
+        int? version = null
+    )
     {
         LicenseType = Enums.LicenseType.User;
         LicenseKey = user.LicenseKey;
@@ -28,12 +31,14 @@ public class UserLicense : ILicense
         Premium = user.Premium;
         MaxStorageGb = user.MaxStorageGb;
         Issued = DateTime.UtcNow;
-        Expires = subscriptionInfo?.UpcomingInvoice?.Date != null ?
-            subscriptionInfo.UpcomingInvoice.Date.Value.AddDays(7) :
-            user.PremiumExpirationDate?.AddDays(7);
+        Expires =
+            subscriptionInfo?.UpcomingInvoice?.Date != null
+                ? subscriptionInfo.UpcomingInvoice.Date.Value.AddDays(7)
+                : user.PremiumExpirationDate?.AddDays(7);
         Refresh = subscriptionInfo?.UpcomingInvoice?.Date;
-        Trial = (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
-            subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+        Trial =
+            (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false)
+            && subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
 
         Hash = Convert.ToBase64String(ComputeHash());
         Signature = Convert.ToBase64String(licenseService.SignLicense(this));
@@ -73,6 +78,7 @@ public class UserLicense : ILicense
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
+
     [JsonIgnore]
     public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
@@ -84,20 +90,23 @@ public class UserLicense : ILicense
             var props = typeof(UserLicense)
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p =>
-                    !p.Name.Equals(nameof(Signature)) &&
-                    !p.Name.Equals(nameof(SignatureBytes)) &&
-                    !p.Name.Equals(nameof(LicenseType)) &&
-                    !p.Name.Equals(nameof(Token)) &&
-                    (
-                        !forHash ||
-                        (
-                            !p.Name.Equals(nameof(Hash)) &&
-                            !p.Name.Equals(nameof(Issued)) &&
-                            !p.Name.Equals(nameof(Refresh))
+                    !p.Name.Equals(nameof(Signature))
+                    && !p.Name.Equals(nameof(SignatureBytes))
+                    && !p.Name.Equals(nameof(LicenseType))
+                    && !p.Name.Equals(nameof(Token))
+                    && (
+                        !forHash
+                        || (
+                            !p.Name.Equals(nameof(Hash))
+                            && !p.Name.Equals(nameof(Issued))
+                            && !p.Name.Equals(nameof(Refresh))
                         )
-                    ))
+                    )
+                )
                 .OrderBy(p => p.Name)
-                .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+                .Select(p =>
+                    $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}"
+                )
                 .Aggregate((c, n) => $"{c}|{n}");
             data = $"license:user|{props}";
         }
@@ -206,9 +215,9 @@ public class UserLicense : ILicense
         var premium = claimsPrincipal.GetValue<bool>(nameof(Premium));
         var email = claimsPrincipal.GetValue<string>(nameof(Email));
 
-        return licenseKey == user.LicenseKey &&
-               premium == user.Premium &&
-               email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
+        return licenseKey == user.LicenseKey
+            && premium == user.Premium
+            && email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     /// <summary>
@@ -231,17 +240,22 @@ public class UserLicense : ILicense
             throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
-        return
-            user.LicenseKey != null && user.LicenseKey.Equals(LicenseKey) &&
-            user.Premium == Premium &&
-            user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+        return user.LicenseKey != null
+            && user.LicenseKey.Equals(LicenseKey)
+            && user.Premium == Premium
+            && user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     public bool VerifySignature(X509Certificate2 certificate)
     {
         using (var rsa = certificate.GetRSAPublicKey())
         {
-            return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return rsa.VerifyData(
+                GetDataBytes(),
+                SignatureBytes,
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1
+            );
         }
     }
 
@@ -254,7 +268,11 @@ public class UserLicense : ILicense
 
         using (var rsa = certificate.GetRSAPrivateKey())
         {
-            return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return rsa.SignData(
+                GetDataBytes(),
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1
+            );
         }
     }
 }

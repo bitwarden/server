@@ -31,7 +31,8 @@ public class OrgUserInviteTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.Add(GetTokenLifetime());
     }
 
-    public OrgUserInviteTokenable(OrganizationUser orgUser) : this()
+    public OrgUserInviteTokenable(OrganizationUser orgUser)
+        : this()
     {
         OrgUserId = orgUser?.Id ?? default;
         OrgUserEmail = orgUser?.Email;
@@ -44,41 +45,58 @@ public class OrgUserInviteTokenable : ExpiringTokenable
             return false;
         }
 
-        return OrgUserId == orgUser.Id &&
-               OrgUserEmail.Equals(orgUser.Email, StringComparison.InvariantCultureIgnoreCase);
+        return OrgUserId == orgUser.Id
+            && OrgUserEmail.Equals(orgUser.Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     public bool TokenIsValid(Guid orgUserId, string orgUserEmail)
     {
-        if (OrgUserId == default || OrgUserEmail == default || orgUserId == default || orgUserEmail == default)
+        if (
+            OrgUserId == default
+            || OrgUserEmail == default
+            || orgUserId == default
+            || orgUserEmail == default
+        )
         {
             return false;
         }
 
-        return OrgUserId == orgUserId &&
-               OrgUserEmail.Equals(orgUserEmail, StringComparison.InvariantCultureIgnoreCase);
+        return OrgUserId == orgUserId
+            && OrgUserEmail.Equals(orgUserEmail, StringComparison.InvariantCultureIgnoreCase);
     }
 
     // Validates deserialized
     protected override bool TokenIsValid() =>
-        Identifier == TokenIdentifier && OrgUserId != default && !string.IsNullOrWhiteSpace(OrgUserEmail);
-
+        Identifier == TokenIdentifier
+        && OrgUserId != default
+        && !string.IsNullOrWhiteSpace(OrgUserEmail);
 
     public static bool ValidateOrgUserInviteStringToken(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        string orgUserInviteToken, OrganizationUser orgUser)
+        string orgUserInviteToken,
+        OrganizationUser orgUser
+    )
     {
-        return orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUser);
+        return orgUserInviteTokenDataFactory.TryUnprotect(
+                orgUserInviteToken,
+                out var decryptedToken
+            )
+            && decryptedToken.Valid
+            && decryptedToken.TokenIsValid(orgUser);
     }
 
     public static bool ValidateOrgUserInviteStringToken(
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        string orgUserInviteToken, Guid orgUserId, string orgUserEmail)
+        string orgUserInviteToken,
+        Guid orgUserId,
+        string orgUserEmail
+    )
     {
-        return orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUserId, orgUserEmail);
+        return orgUserInviteTokenDataFactory.TryUnprotect(
+                orgUserInviteToken,
+                out var decryptedToken
+            )
+            && decryptedToken.Valid
+            && decryptedToken.TokenIsValid(orgUserId, orgUserEmail);
     }
 }

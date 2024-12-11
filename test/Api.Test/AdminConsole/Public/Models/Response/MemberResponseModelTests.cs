@@ -6,7 +6,6 @@ using Xunit;
 
 namespace Bit.Api.Test.AdminConsole.Public.Models.Response;
 
-
 public class MemberResponseModelTests
 {
     [Fact]
@@ -16,7 +15,6 @@ public class MemberResponseModelTests
         var user = Substitute.For<OrganizationUser>();
         var collections = Substitute.For<IEnumerable<CollectionAccessSelection>>();
         user.ResetPasswordKey = "none-empty";
-
 
         // Act
         var sut = new MemberResponseModel(user, collections);

@@ -15,7 +15,7 @@ public class OidcIdentityClient : Client
         AllowedScopes = new[]
         {
             IdentityServerConstants.StandardScopes.OpenId,
-            IdentityServerConstants.StandardScopes.Profile
+            IdentityServerConstants.StandardScopes.Profile,
         };
         AllowedGrantTypes = GrantTypes.Code;
         Enabled = true;

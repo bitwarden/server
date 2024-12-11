@@ -8,7 +8,11 @@ public class ProviderViewModel
 {
     public ProviderViewModel() { }
 
-    public ProviderViewModel(Provider provider, IEnumerable<ProviderUserUserDetails> providerUsers, IEnumerable<ProviderOrganizationOrganizationDetails> organizations)
+    public ProviderViewModel(
+        Provider provider,
+        IEnumerable<ProviderUserUserDetails> providerUsers,
+        IEnumerable<ProviderOrganizationOrganizationDetails> organizations
+    )
     {
         Provider = provider;
         UserCount = providerUsers.Count();

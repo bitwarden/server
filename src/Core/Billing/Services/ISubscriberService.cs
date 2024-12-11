@@ -20,7 +20,8 @@ public interface ISubscriberService
     Task CancelSubscription(
         ISubscriber subscriber,
         OffboardingSurveyResponse offboardingSurveyResponse,
-        bool cancelImmediately);
+        bool cancelImmediately
+    );
 
     /// <summary>
     /// Creates a Braintree <see cref="Braintree.Customer"/> for the provided <paramref name="subscriber"/> while attaching the provided <paramref name="paymentMethodNonce"/>.
@@ -28,9 +29,7 @@ public interface ISubscriberService
     /// <param name="subscriber">The subscriber to create a Braintree customer for.</param>
     /// <param name="paymentMethodNonce">A nonce representing the PayPal payment method the customer will use for payments.</param>
     /// <returns>The <see cref="Braintree.Customer.Id"/> of the created Braintree customer.</returns>
-    Task<string> CreateBraintreeCustomer(
-        ISubscriber subscriber,
-        string paymentMethodNonce);
+    Task<string> CreateBraintreeCustomer(ISubscriber subscriber, string paymentMethodNonce);
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
@@ -42,7 +41,8 @@ public interface ISubscriberService
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
     Task<Customer> GetCustomer(
         ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null);
+        CustomerGetOptions customerGetOptions = null
+    );
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Customer"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewayCustomerId"/> property.
@@ -55,7 +55,8 @@ public interface ISubscriberService
     /// <exception cref="BillingException">Thrown when the <see cref="Customer"/> returned from Stripe's API is null.</exception>
     Task<Customer> GetCustomerOrThrow(
         ISubscriber subscriber,
-        CustomerGetOptions customerGetOptions = null);
+        CustomerGetOptions customerGetOptions = null
+    );
 
     /// <summary>
     /// Retrieves the account credit, a masked representation of the default payment source and the tax information for the
@@ -64,16 +65,14 @@ public interface ISubscriberService
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve payment method for.</param>
     /// <returns>A <see cref="Models.PaymentMethod"/> containing the subscriber's account credit, payment source and tax information.</returns>
-    Task<PaymentMethod> GetPaymentMethod(
-        ISubscriber subscriber);
+    Task<PaymentMethod> GetPaymentMethod(ISubscriber subscriber);
 
     /// <summary>
     /// Retrieves a masked representation of the subscriber's payment source for presentation to a client.
     /// </summary>
     /// <param name="subscriber">The subscriber to retrieve the payment source for.</param>
     /// <returns>A <see cref="PaymentSource"/> containing a non-identifiable description of the subscriber's payment source. Example: VISA, *4242, 10/2026</returns>
-    Task<PaymentSource> GetPaymentSource(
-        ISubscriber subscriber);
+    Task<PaymentSource> GetPaymentSource(ISubscriber subscriber);
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Subscription"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> property.
@@ -85,7 +84,8 @@ public interface ISubscriberService
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
     Task<Subscription> GetSubscription(
         ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null);
+        SubscriptionGetOptions subscriptionGetOptions = null
+    );
 
     /// <summary>
     /// Retrieves a Stripe <see cref="Subscription"/> using the <paramref name="subscriber"/>'s <see cref="ISubscriber.GatewaySubscriptionId"/> property.
@@ -98,7 +98,8 @@ public interface ISubscriberService
     /// <exception cref="BillingException">Thrown when the <see cref="Subscription"/> returned from Stripe's API is null.</exception>
     Task<Subscription> GetSubscriptionOrThrow(
         ISubscriber subscriber,
-        SubscriptionGetOptions subscriptionGetOptions = null);
+        SubscriptionGetOptions subscriptionGetOptions = null
+    );
 
     /// <summary>
     /// Retrieves the <paramref name="subscriber"/>'s tax information using their Stripe <see cref="Stripe.Customer"/>'s <see cref="Stripe.Customer.Address"/>.
@@ -107,8 +108,7 @@ public interface ISubscriberService
     /// <returns>A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s tax information.</returns>
     /// <exception cref="ArgumentNullException">Thrown when the <paramref name="subscriber"/> is <see langword="null"/>.</exception>
     /// <remarks>This method opts for returning <see langword="null"/> rather than throwing exceptions, making it ideal for surfacing data from API endpoints.</remarks>
-    Task<TaxInformation> GetTaxInformation(
-        ISubscriber subscriber);
+    Task<TaxInformation> GetTaxInformation(ISubscriber subscriber);
 
     /// <summary>
     /// Attempts to remove a subscriber's saved payment source. If the Stripe <see cref="Stripe.Customer"/> representing the
@@ -127,18 +127,14 @@ public interface ISubscriberService
     /// </summary>
     /// <param name="subscriber">The subscriber to update the payment method for.</param>
     /// <param name="tokenizedPaymentSource">A DTO representing a tokenized payment method.</param>
-    Task UpdatePaymentSource(
-        ISubscriber subscriber,
-        TokenizedPaymentSource tokenizedPaymentSource);
+    Task UpdatePaymentSource(ISubscriber subscriber, TokenizedPaymentSource tokenizedPaymentSource);
 
     /// <summary>
     /// Updates the tax information for the provided <paramref name="subscriber"/>.
     /// </summary>
     /// <param name="subscriber">The <paramref name="subscriber"/> to update the tax information for.</param>
     /// <param name="taxInformation">A <see cref="TaxInformation"/> representing the <paramref name="subscriber"/>'s updated tax information.</param>
-    Task UpdateTaxInformation(
-        ISubscriber subscriber,
-        TaxInformation taxInformation);
+    Task UpdateTaxInformation(ISubscriber subscriber, TaxInformation taxInformation);
 
     /// <summary>
     /// Verifies the subscriber's pending bank account using the provided <paramref name="descriptorCode"/>.
@@ -147,7 +143,5 @@ public interface ISubscriberService
     /// <param name="descriptorCode">The code attached to a deposit made to the subscriber's bank account in order to ensure they have access to it.
     /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
     /// <returns></returns>
-    Task VerifyBankAccount(
-        ISubscriber subscriber,
-        string descriptorCode);
+    Task VerifyBankAccount(ISubscriber subscriber, string descriptorCode);
 }

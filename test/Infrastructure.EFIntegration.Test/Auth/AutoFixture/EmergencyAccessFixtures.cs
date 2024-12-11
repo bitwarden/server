@@ -49,14 +49,12 @@ internal class EfEmergencyAccess : ICustomization
 
 internal class EfEmergencyAccessAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfEmergencyAccessAutoDataAttribute() : base(new SutProviderCustomization(), new EfEmergencyAccess())
-    { }
+    public EfEmergencyAccessAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfEmergencyAccess()) { }
 }
 
 internal class InlineEfEmergencyAccessAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfEmergencyAccessAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfEmergencyAccess) }, values)
-    { }
+    public InlineEfEmergencyAccessAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfEmergencyAccess) }, values) { }
 }
-

@@ -14,7 +14,9 @@ public class SecretVerificationRequestModel : IValidatableObject
     {
         if (string.IsNullOrEmpty(Secret) && string.IsNullOrEmpty(AuthRequestAccessCode))
         {
-            yield return new ValidationResult("MasterPasswordHash, OTP, or AccessCode must be supplied.");
+            yield return new ValidationResult(
+                "MasterPasswordHash, OTP, or AccessCode must be supplied."
+            );
         }
     }
 }

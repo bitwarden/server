@@ -12,13 +12,12 @@ public partial class EventsSystemUser : Migration
             name: "SystemUser",
             table: "Event",
             type: "tinyint unsigned",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "SystemUser",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "SystemUser", table: "Event");
     }
 }

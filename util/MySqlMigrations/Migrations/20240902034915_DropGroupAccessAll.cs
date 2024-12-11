@@ -10,9 +10,7 @@ public partial class DropGroupAccessAll : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "AccessAll",
-            table: "Group");
+        migrationBuilder.DropColumn(name: "AccessAll", table: "Group");
     }
 
     /// <inheritdoc />
@@ -23,6 +21,7 @@ public partial class DropGroupAccessAll : Migration
             table: "Group",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 }

@@ -19,7 +19,9 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
-public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
+public class WebAuthnGrantValidator
+    : BaseRequestValidator<ExtensionGrantValidationContext>,
+        IExtensionGrantValidator
 {
     public const string GrantType = "webauthn";
 
@@ -45,7 +47,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
-        )
+    )
         : base(
             userManager,
             userService,
@@ -61,7 +63,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder
+        )
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
@@ -80,9 +83,12 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             return;
         }
 
-        var verified = _assertionOptionsDataProtector.TryUnprotect(rawToken, out var token) &&
-            token.TokenIsValid(WebAuthnLoginAssertionOptionsScope.Authentication);
-        var deviceResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(rawDeviceResponse);
+        var verified =
+            _assertionOptionsDataProtector.TryUnprotect(rawToken, out var token)
+            && token.TokenIsValid(WebAuthnLoginAssertionOptionsScope.Authentication);
+        var deviceResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(
+            rawDeviceResponse
+        );
 
         if (!verified)
         {
@@ -90,11 +96,15 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             return;
         }
 
-        var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
+        var (user, credential) =
+            await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(
+                token.Options,
+                deviceResponse
+            );
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
+            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request),
         };
 
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
@@ -102,8 +112,10 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         await ValidateAsync(context, context.Request, validatorContext);
     }
 
-    protected override Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
-        CustomValidatorRequestContext validatorContext)
+    protected override Task<bool> ValidateContextAsync(
+        ExtensionGrantValidationContext context,
+        CustomValidatorRequestContext validatorContext
+    )
     {
         if (validatorContext.User == null)
         {
@@ -113,13 +125,20 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         return Task.FromResult(true);
     }
 
-    protected override Task SetSuccessResult(ExtensionGrantValidationContext context, User user,
-        List<Claim> claims, Dictionary<string, object> customResponse)
+    protected override Task SetSuccessResult(
+        ExtensionGrantValidationContext context,
+        User user,
+        List<Claim> claims,
+        Dictionary<string, object> customResponse
+    )
     {
-        context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
+        context.Result = new GrantValidationResult(
+            user.Id.ToString(),
+            "Application",
             identityProvider: Constants.IdentityProvider,
             claims: claims.Count > 0 ? claims : null,
-            customResponse: customResponse);
+            customResponse: customResponse
+        );
         return Task.CompletedTask;
     }
 
@@ -128,23 +147,38 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         return context.Result.Subject;
     }
 
-    protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
+    protected override void SetTwoFactorResult(
+        ExtensionGrantValidationContext context,
+        Dictionary<string, object> customResponse
+    )
     {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Two factor required.",
-            customResponse);
+        context.Result = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant,
+            "Two factor required.",
+            customResponse
+        );
     }
 
-    protected override void SetSsoResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
+    protected override void SetSsoResult(
+        ExtensionGrantValidationContext context,
+        Dictionary<string, object> customResponse
+    )
     {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, "Sso authentication required.",
-            customResponse);
+        context.Result = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant,
+            "Sso authentication required.",
+            customResponse
+        );
     }
 
-    protected override void SetErrorResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
+    protected override void SetErrorResult(
+        ExtensionGrantValidationContext context,
+        Dictionary<string, object> customResponse
+    )
     {
-        context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+        context.Result = new GrantValidationResult(
+            TokenRequestErrors.InvalidGrant,
+            customResponse: customResponse
+        );
     }
 }

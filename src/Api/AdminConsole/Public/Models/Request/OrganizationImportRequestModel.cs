@@ -13,15 +13,18 @@ public class OrganizationImportRequestModel
     /// Groups to import.
     /// </summary>
     public OrganizationImportGroupRequestModel[] Groups { get; set; }
+
     /// <summary>
     /// Members to import.
     /// </summary>
     public OrganizationImportMemberRequestModel[] Members { get; set; }
+
     /// <summary>
     /// Determines if the data in this request should overwrite or append to the existing organization data.
     /// </summary>
     [Required]
     public bool? OverwriteExisting { get; set; }
+
     /// <summary>
     /// Indicates an import of over 2000 users and/or groups is expected
     /// </summary>
@@ -36,6 +39,7 @@ public class OrganizationImportRequestModel
         [Required]
         [StringLength(100)]
         public string Name { get; set; }
+
         /// <summary>
         /// External identifier for reference or linking this group to another system, such as a user directory.
         /// </summary>
@@ -44,6 +48,7 @@ public class OrganizationImportRequestModel
         [StringLength(300)]
         [JsonConverter(typeof(PermissiveStringConverter))]
         public string ExternalId { get; set; }
+
         /// <summary>
         /// The associated external ids for members in this group.
         /// </summary>
@@ -58,9 +63,9 @@ public class OrganizationImportRequestModel
                 {
                     OrganizationId = organizationId,
                     Name = Name,
-                    ExternalId = ExternalId
+                    ExternalId = ExternalId,
                 },
-                ExternalUserIds = new HashSet<string>(MemberExternalIds)
+                ExternalUserIds = new HashSet<string>(MemberExternalIds),
             };
 
             return importedGroup;
@@ -76,6 +81,7 @@ public class OrganizationImportRequestModel
         [EmailAddress]
         [StringLength(256)]
         public string Email { get; set; }
+
         /// <summary>
         /// External identifier for reference or linking this member to another system, such as a user directory.
         /// </summary>
@@ -84,6 +90,7 @@ public class OrganizationImportRequestModel
         [StringLength(300)]
         [JsonConverter(typeof(PermissiveStringConverter))]
         public string ExternalId { get; set; }
+
         /// <summary>
         /// Determines if this member should be removed from the organization during import.
         /// </summary>
@@ -94,7 +101,7 @@ public class OrganizationImportRequestModel
             var importedUser = new ImportedOrganizationUser
             {
                 Email = Email.ToLowerInvariant(),
-                ExternalId = ExternalId
+                ExternalId = ExternalId,
             };
 
             return importedUser;
@@ -104,8 +111,10 @@ public class OrganizationImportRequestModel
         {
             if (string.IsNullOrWhiteSpace(Email) && !Deleted)
             {
-                yield return new ValidationResult("Email is required for enabled members.",
-                    new string[] { nameof(Email) });
+                yield return new ValidationResult(
+                    "Email is required for enabled members.",
+                    new string[] { nameof(Email) }
+                );
             }
         }
     }

@@ -10,13 +10,17 @@ public class SetPasswordRequestModel
     [Required]
     [StringLength(300)]
     public string MasterPasswordHash { get; set; }
+
     [Required]
     public string Key { get; set; }
+
     [StringLength(50)]
     public string MasterPasswordHint { get; set; }
     public KeysRequestModel Keys { get; set; }
+
     [Required]
     public KdfType Kdf { get; set; }
+
     [Required]
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }

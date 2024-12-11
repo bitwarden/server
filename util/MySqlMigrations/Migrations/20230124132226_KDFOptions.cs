@@ -12,23 +12,21 @@ public partial class KDFOptions : Migration
             name: "KdfMemory",
             table: "User",
             type: "int",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<int>(
             name: "KdfParallelism",
             table: "User",
             type: "int",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "KdfMemory",
-            table: "User");
+        migrationBuilder.DropColumn(name: "KdfMemory", table: "User");
 
-        migrationBuilder.DropColumn(
-            name: "KdfParallelism",
-            table: "User");
+        migrationBuilder.DropColumn(name: "KdfParallelism", table: "User");
     }
 }

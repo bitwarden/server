@@ -10,8 +10,10 @@ public class EnumMatchesAttributeTests
     [Fact]
     public void IsValid_NullInput_False()
     {
-        var enumMatchesAttribute =
-            new EnumMatchesAttribute<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly);
+        var enumMatchesAttribute = new EnumMatchesAttribute<PlanType>(
+            PlanType.TeamsMonthly,
+            PlanType.EnterpriseMonthly
+        );
 
         var result = enumMatchesAttribute.IsValid(null);
 
@@ -21,8 +23,7 @@ public class EnumMatchesAttributeTests
     [Fact]
     public void IsValid_NullAccepted_False()
     {
-        var enumMatchesAttribute =
-            new EnumMatchesAttribute<PlanType>();
+        var enumMatchesAttribute = new EnumMatchesAttribute<PlanType>();
 
         var result = enumMatchesAttribute.IsValid(PlanType.TeamsMonthly);
 
@@ -32,8 +33,7 @@ public class EnumMatchesAttributeTests
     [Fact]
     public void IsValid_EmptyAccepted_False()
     {
-        var enumMatchesAttribute =
-            new EnumMatchesAttribute<PlanType>([]);
+        var enumMatchesAttribute = new EnumMatchesAttribute<PlanType>([]);
 
         var result = enumMatchesAttribute.IsValid(PlanType.TeamsMonthly);
 
@@ -43,8 +43,10 @@ public class EnumMatchesAttributeTests
     [Fact]
     public void IsValid_ParseFails_False()
     {
-        var enumMatchesAttribute =
-            new EnumMatchesAttribute<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly);
+        var enumMatchesAttribute = new EnumMatchesAttribute<PlanType>(
+            PlanType.TeamsMonthly,
+            PlanType.EnterpriseMonthly
+        );
 
         var result = enumMatchesAttribute.IsValid(GatewayType.Stripe);
 
@@ -54,8 +56,10 @@ public class EnumMatchesAttributeTests
     [Fact]
     public void IsValid_Matches_True()
     {
-        var enumMatchesAttribute =
-            new EnumMatchesAttribute<PlanType>(PlanType.TeamsMonthly, PlanType.EnterpriseMonthly);
+        var enumMatchesAttribute = new EnumMatchesAttribute<PlanType>(
+            PlanType.TeamsMonthly,
+            PlanType.EnterpriseMonthly
+        );
 
         var result = enumMatchesAttribute.IsValid(PlanType.TeamsMonthly);
 

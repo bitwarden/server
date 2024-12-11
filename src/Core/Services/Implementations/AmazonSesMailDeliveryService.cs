@@ -22,21 +22,25 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
     public AmazonSesMailDeliveryService(
         GlobalSettings globalSettings,
         IWebHostEnvironment hostingEnvironment,
-        ILogger<AmazonSesMailDeliveryService> logger)
-    : this(globalSettings, hostingEnvironment, logger,
-          new AmazonSimpleEmailServiceClient(
-            globalSettings.Amazon.AccessKeyId,
-            globalSettings.Amazon.AccessKeySecret,
-            RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region))
-          )
-    {
-    }
+        ILogger<AmazonSesMailDeliveryService> logger
+    )
+        : this(
+            globalSettings,
+            hostingEnvironment,
+            logger,
+            new AmazonSimpleEmailServiceClient(
+                globalSettings.Amazon.AccessKeyId,
+                globalSettings.Amazon.AccessKeySecret,
+                RegionEndpoint.GetBySystemName(globalSettings.Amazon.Region)
+            )
+        ) { }
 
     public AmazonSesMailDeliveryService(
         GlobalSettings globalSettings,
         IWebHostEnvironment hostingEnvironment,
         ILogger<AmazonSesMailDeliveryService> logger,
-        IAmazonSimpleEmailService amazonSimpleEmailService)
+        IAmazonSimpleEmailService amazonSimpleEmailService
+    )
     {
         if (string.IsNullOrWhiteSpace(globalSettings.Amazon?.AccessKeyId))
         {
@@ -78,38 +82,34 @@ public class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
             Source = _source,
             Destination = new Destination
             {
-                ToAddresses = message.ToEmails
-                    .Select(email => CoreHelpers.PunyEncode(email))
-                    .ToList()
+                ToAddresses = message
+                    .ToEmails.Select(email => CoreHelpers.PunyEncode(email))
+                    .ToList(),
             },
             Message = new Message
             {
                 Subject = new Content(message.Subject),
                 Body = new Body
                 {
-                    Html = new Content
-                    {
-                        Charset = "UTF-8",
-                        Data = message.HtmlContent
-                    },
-                    Text = new Content
-                    {
-                        Charset = "UTF-8",
-                        Data = message.TextContent
-                    }
-                }
+                    Html = new Content { Charset = "UTF-8", Data = message.HtmlContent },
+                    Text = new Content { Charset = "UTF-8", Data = message.TextContent },
+                },
             },
             Tags = new List<MessageTag>
             {
-                new MessageTag { Name = "Environment", Value = _hostingEnvironment.EnvironmentName },
-                new MessageTag { Name = "Sender", Value = _senderTag }
-            }
+                new MessageTag
+                {
+                    Name = "Environment",
+                    Value = _hostingEnvironment.EnvironmentName,
+                },
+                new MessageTag { Name = "Sender", Value = _senderTag },
+            },
         };
 
         if (message.BccEmails?.Any() ?? false)
         {
-            request.Destination.BccAddresses = message.BccEmails
-                .Select(email => CoreHelpers.PunyEncode(email))
+            request.Destination.BccAddresses = message
+                .BccEmails.Select(email => CoreHelpers.PunyEncode(email))
                 .ToList();
         }
 

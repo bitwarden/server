@@ -26,7 +26,7 @@ public class AuthRequestRepositoryTests
         List<EfRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo
-        )
+    )
     {
         authRequest.ResponseDeviceId = null;
         var savedAuthRequests = new List<AuthRequest>();

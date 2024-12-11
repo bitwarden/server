@@ -52,14 +52,12 @@ internal class EfAuthRequest : ICustomization
 
 internal class EfAuthRequestAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfAuthRequestAutoDataAttribute() : base(new SutProviderCustomization(), new EfAuthRequest())
-    { }
+    public EfAuthRequestAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfAuthRequest()) { }
 }
 
 internal class InlineEfAuthRequestAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfAuthRequestAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfAuthRequest) }, values)
-    { }
+    public InlineEfAuthRequestAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfAuthRequest) }, values) { }
 }
-

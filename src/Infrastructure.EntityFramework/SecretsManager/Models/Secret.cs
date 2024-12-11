@@ -16,8 +16,6 @@ public class SecretMapperProfile : Profile
 {
     public SecretMapperProfile()
     {
-        CreateMap<Core.SecretsManager.Entities.Secret, Secret>()
-            .PreserveReferences()
-            .ReverseMap();
+        CreateMap<Core.SecretsManager.Entities.Secret, Secret>().PreserveReferences().ReverseMap();
     }
 }

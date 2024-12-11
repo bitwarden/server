@@ -6,8 +6,13 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 public record RevokeOrganizationUsersRequest(
     Guid OrganizationId,
     IEnumerable<OrganizationUserUserDetails> OrganizationUsers,
-    IActingUser ActionPerformedBy)
+    IActingUser ActionPerformedBy
+)
 {
-    public RevokeOrganizationUsersRequest(Guid organizationId, OrganizationUserUserDetails organizationUser, IActingUser actionPerformedBy)
+    public RevokeOrganizationUsersRequest(
+        Guid organizationId,
+        OrganizationUserUserDetails organizationUser,
+        IActingUser actionPerformedBy
+    )
         : this(organizationId, [organizationUser], actionPerformedBy) { }
 }

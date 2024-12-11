@@ -37,7 +37,10 @@ public class OrganizationLicenseTests
     [Theory]
     [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion)] // Previous version (this property is 1 behind)
     [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion + 1)] // Current version
-    public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion, ClaimsPrincipal claimsPrincipal)
+    public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(
+        int licenseVersion,
+        ClaimsPrincipal claimsPrincipal
+    )
     {
         var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
 
@@ -46,10 +49,12 @@ public class OrganizationLicenseTests
 
         var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var globalSettings = Substitute.For<IGlobalSettings>();
-        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
-        {
-            Id = new Guid(OrganizationLicenseFileFixtures.InstallationId)
-        });
+        globalSettings.Installation.Returns(
+            new GlobalSettings.InstallationSettings
+            {
+                Id = new Guid(OrganizationLicenseFileFixtures.InstallationId),
+            }
+        );
         Assert.True(license.VerifyData(organization, claimsPrincipal, globalSettings));
     }
 

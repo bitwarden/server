@@ -23,7 +23,8 @@ public class StripeController : Controller
         IWebHostEnvironment hostingEnvironment,
         ILogger<StripeController> logger,
         IStripeEventService stripeEventService,
-        IStripeEventProcessor stripeEventProcessor)
+        IStripeEventProcessor stripeEventProcessor
+    )
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -44,11 +45,13 @@ public class StripeController : Controller
         var parsedEvent = await TryParseEventFromRequestBodyAsync();
         if (parsedEvent is null)
         {
-            return Ok(new
-            {
-                Processed = false,
-                Message = "Could not find a configured webhook secret to process this event with"
-            });
+            return Ok(
+                new
+                {
+                    Processed = false,
+                    Message = "Could not find a configured webhook secret to process this event with",
+                }
+            );
         }
 
         if (StripeConfiguration.ApiVersion != parsedEvent.ApiVersion)
@@ -57,13 +60,16 @@ public class StripeController : Controller
                 "Stripe {WebhookType} webhook's API version ({WebhookAPIVersion}) does not match SDK API Version ({SDKAPIVersion})",
                 parsedEvent.Type,
                 parsedEvent.ApiVersion,
-                StripeConfiguration.ApiVersion);
+                StripeConfiguration.ApiVersion
+            );
 
-            return Ok(new
-            {
-                Processed = false,
-                Message = "SDK API version does not match the event's API version"
-            });
+            return Ok(
+                new
+                {
+                    Processed = false,
+                    Message = "SDK API version does not match the event's API version",
+                }
+            );
         }
 
         if (string.IsNullOrWhiteSpace(parsedEvent?.Id))
@@ -81,19 +87,11 @@ public class StripeController : Controller
         // If the customer and server cloud regions don't match, early return 200 to avoid unnecessary errors
         if (!await _stripeEventService.ValidateCloudRegion(parsedEvent))
         {
-            return Ok(new
-            {
-                Processed = false,
-                Message = "Event is not for this cloud region"
-            });
+            return Ok(new { Processed = false, Message = "Event is not for this cloud region" });
         }
 
         await _stripeEventProcessor.ProcessEventAsync(parsedEvent);
-        return Ok(new
-        {
-            Processed = true,
-            Message = "Processed"
-        });
+        return Ok(new { Processed = true, Message = "Processed" });
     }
 
     /// <summary>
@@ -106,41 +104,53 @@ public class StripeController : Controller
     /// </returns>
     private string PickStripeWebhookSecret(string webhookBody)
     {
-        var deliveryContainer = JsonSerializer.Deserialize<StripeWebhookDeliveryContainer>(webhookBody);
+        var deliveryContainer = JsonSerializer.Deserialize<StripeWebhookDeliveryContainer>(
+            webhookBody
+        );
 
         _logger.LogInformation(
             "Picking secret for Stripe webhook | {EventID}: {EventType} | Version: {APIVersion} | Initiating Request ID: {RequestID}",
             deliveryContainer.Id,
             deliveryContainer.Type,
             deliveryContainer.ApiVersion,
-            deliveryContainer.Request?.Id);
+            deliveryContainer.Request?.Id
+        );
 
         return deliveryContainer.ApiVersion switch
         {
             "2024-06-20" => HandleVersionWith(_billingSettings.StripeWebhookSecret20240620),
             "2023-10-16" => HandleVersionWith(_billingSettings.StripeWebhookSecret20231016),
             "2022-08-01" => HandleVersionWith(_billingSettings.StripeWebhookSecret),
-            _ => HandleDefault(deliveryContainer.ApiVersion)
+            _ => HandleDefault(deliveryContainer.ApiVersion),
         };
 
         string HandleVersionWith(string secret)
         {
             if (string.IsNullOrEmpty(secret))
             {
-                _logger.LogError("No webhook secret is configured for API version {APIVersion}", deliveryContainer.ApiVersion);
+                _logger.LogError(
+                    "No webhook secret is configured for API version {APIVersion}",
+                    deliveryContainer.ApiVersion
+                );
                 return null;
             }
 
             if (!secret.StartsWith("whsec_"))
             {
-                _logger.LogError("Webhook secret configured for API version {APIVersion} does not start with whsec_",
-                    deliveryContainer.ApiVersion);
+                _logger.LogError(
+                    "Webhook secret configured for API version {APIVersion} does not start with whsec_",
+                    deliveryContainer.ApiVersion
+                );
                 return null;
             }
 
             var truncatedSecret = secret[..10];
 
-            _logger.LogInformation("Picked webhook secret {TruncatedSecret}... for API version {APIVersion}", truncatedSecret, deliveryContainer.ApiVersion);
+            _logger.LogInformation(
+                "Picked webhook secret {TruncatedSecret}... for API version {APIVersion}",
+                truncatedSecret,
+                deliveryContainer.ApiVersion
+            );
 
             return secret;
         }
@@ -149,7 +159,8 @@ public class StripeController : Controller
         {
             _logger.LogWarning(
                 "Stripe webhook contained an API version ({APIVersion}) we do not process",
-                version);
+                version
+            );
 
             return null;
         }
@@ -175,6 +186,7 @@ public class StripeController : Controller
             json,
             Request.Headers["Stripe-Signature"],
             webhookSecret,
-            throwOnApiVersionMismatch: false);
+            throwOnApiVersionMismatch: false
+        );
     }
 }

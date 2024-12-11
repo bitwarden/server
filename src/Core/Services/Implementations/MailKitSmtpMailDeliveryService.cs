@@ -15,7 +15,8 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
 
     public MailKitSmtpMailDeliveryService(
         GlobalSettings globalSettings,
-        ILogger<MailKitSmtpMailDeliveryService> logger)
+        ILogger<MailKitSmtpMailDeliveryService> logger
+    )
     {
         if (globalSettings.Mail?.Smtp?.Host == null)
         {
@@ -73,24 +74,40 @@ public class MailKitSmtpMailDeliveryService : IMailDeliveryService
                 client.ServerCertificateValidationCallback = (s, c, h, e) => true;
             }
 
-            if (!_globalSettings.Mail.Smtp.StartTls && !_globalSettings.Mail.Smtp.Ssl &&
-                _globalSettings.Mail.Smtp.Port == 25)
+            if (
+                !_globalSettings.Mail.Smtp.StartTls
+                && !_globalSettings.Mail.Smtp.Ssl
+                && _globalSettings.Mail.Smtp.Port == 25
+            )
             {
-                await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port,
-                    MailKit.Security.SecureSocketOptions.None);
+                await client.ConnectAsync(
+                    _globalSettings.Mail.Smtp.Host,
+                    _globalSettings.Mail.Smtp.Port,
+                    MailKit.Security.SecureSocketOptions.None
+                );
             }
             else
             {
-                var useSsl = _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride ?
-                    false : _globalSettings.Mail.Smtp.Ssl;
-                await client.ConnectAsync(_globalSettings.Mail.Smtp.Host, _globalSettings.Mail.Smtp.Port, useSsl);
+                var useSsl =
+                    _globalSettings.Mail.Smtp.Port == 587 && !_globalSettings.Mail.Smtp.SslOverride
+                        ? false
+                        : _globalSettings.Mail.Smtp.Ssl;
+                await client.ConnectAsync(
+                    _globalSettings.Mail.Smtp.Host,
+                    _globalSettings.Mail.Smtp.Port,
+                    useSsl
+                );
             }
 
-            if (CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username) &&
-                CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password))
+            if (
+                CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Username)
+                && CoreHelpers.SettingHasValue(_globalSettings.Mail.Smtp.Password)
+            )
             {
-                await client.AuthenticateAsync(_globalSettings.Mail.Smtp.Username,
-                    _globalSettings.Mail.Smtp.Password);
+                await client.AuthenticateAsync(
+                    _globalSettings.Mail.Smtp.Username,
+                    _globalSettings.Mail.Smtp.Password
+                );
             }
 
             await client.SendAsync(mimeMessage);

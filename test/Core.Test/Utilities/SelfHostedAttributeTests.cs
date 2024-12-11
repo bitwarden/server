@@ -21,7 +21,9 @@ public class SelfHostedAttributeTests
         var sha = new SelfHostedAttribute { NotSelfHostedOnly = true };
 
         // Act & Assert
-        Assert.Throws<BadRequestException>(() => sha.OnActionExecuting(GetContext(selfHosted: true)));
+        Assert.Throws<BadRequestException>(
+            () => sha.OnActionExecuting(GetContext(selfHosted: true))
+        );
     }
 
     [Fact]
@@ -36,7 +38,6 @@ public class SelfHostedAttributeTests
         // Assert
         // The Assert here is just NOT throwing an exception
     }
-
 
     [Fact]
     public void SelfHosted_Success_When_SelfHosted()
@@ -58,9 +59,10 @@ public class SelfHostedAttributeTests
         var sha = new SelfHostedAttribute { SelfHostedOnly = true };
 
         // Act & Assert
-        Assert.Throws<BadRequestException>(() => sha.OnActionExecuting(GetContext(selfHosted: false)));
+        Assert.Throws<BadRequestException>(
+            () => sha.OnActionExecuting(GetContext(selfHosted: false))
+        );
     }
-
 
     // This generates a ActionExecutingContext with the needed injected
     // service with the given value.
@@ -68,10 +70,7 @@ public class SelfHostedAttributeTests
     {
         IServiceCollection services = new ServiceCollection();
 
-        var globalSettings = new GlobalSettings
-        {
-            SelfHosted = selfHosted
-        };
+        var globalSettings = new GlobalSettings { SelfHosted = selfHosted };
 
         services.AddSingleton(globalSettings);
 
@@ -79,12 +78,15 @@ public class SelfHostedAttributeTests
         httpContext.RequestServices = services.BuildServiceProvider();
 
         var context = Substitute.For<ActionExecutingContext>(
-            Substitute.For<ActionContext>(httpContext,
+            Substitute.For<ActionContext>(
+                httpContext,
                 new RouteData(),
-                Substitute.For<ActionDescriptor>()),
+                Substitute.For<ActionDescriptor>()
+            ),
             new List<IFilterMetadata>(),
             new Dictionary<string, object>(),
-            Substitute.For<Controller>());
+            Substitute.For<Controller>()
+        );
 
         return context;
     }

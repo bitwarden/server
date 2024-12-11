@@ -10,7 +10,9 @@ public class I18nService : II18nService
 
     public I18nService(IStringLocalizerFactory factory)
     {
-        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
+        var assemblyName = new AssemblyName(
+            typeof(SharedResources).GetTypeInfo().Assembly.FullName
+        );
         _localizer = factory.Create("SharedResources", assemblyName.Name);
     }
 

@@ -9,17 +9,17 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 public class MaintenanceRepository : BaseEntityFrameworkRepository, IMaintenanceRepository
 {
     public MaintenanceRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper)
-    { }
+        : base(serviceScopeFactory, mapper) { }
 
     public async Task DeleteExpiredGrantsAsync()
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from g in dbContext.Grants
-                        where g.ExpirationDate < DateTime.UtcNow
-                        select g;
+            var query =
+                from g in dbContext.Grants
+                where g.ExpirationDate < DateTime.UtcNow
+                select g;
             dbContext.RemoveRange(query);
             await dbContext.SaveChangesAsync();
         }
@@ -30,9 +30,10 @@ public class MaintenanceRepository : BaseEntityFrameworkRepository, IMaintenance
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from s in dbContext.OrganizationSponsorships
-                        where s.ValidUntil < validUntilBeforeDate
-                        select s;
+            var query =
+                from s in dbContext.OrganizationSponsorships
+                where s.ValidUntil < validUntilBeforeDate
+                select s;
             dbContext.RemoveRange(query);
             await dbContext.SaveChangesAsync();
         }

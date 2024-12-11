@@ -4,17 +4,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Bit.Infrastructure.EntityFramework.Configurations;
 
-public class OrganizationSponsorshipEntityTypeConfiguration : IEntityTypeConfiguration<OrganizationSponsorship>
+public class OrganizationSponsorshipEntityTypeConfiguration
+    : IEntityTypeConfiguration<OrganizationSponsorship>
 {
     public void Configure(EntityTypeBuilder<OrganizationSponsorship> builder)
     {
-        builder
-            .Property(o => o.Id)
-            .ValueGeneratedNever();
+        builder.Property(o => o.Id).ValueGeneratedNever();
 
-        builder
-            .HasIndex(o => o.SponsoringOrganizationUserId)
-            .IsClustered(false);
+        builder.HasIndex(o => o.SponsoringOrganizationUserId).IsClustered(false);
 
         builder.ToTable(nameof(OrganizationSponsorship));
     }

@@ -34,14 +34,16 @@ public class DeviceValidatorTests
             _deviceRepository,
             _globalSettings,
             _mailService,
-            _currentContext);
+            _currentContext
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async void SaveDeviceAsync_DeviceNull_ShouldReturnNull(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
-        User user)
+        User user
+    )
     {
         // Arrange
         request.Raw["DeviceIdentifier"] = null;
@@ -51,14 +53,21 @@ public class DeviceValidatorTests
 
         // Assert
         Assert.Null(device);
-        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .DidNotReceive()
+            .SendNewDeviceLoggedInEmail(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async void SaveDeviceAsync_UserIsNull_ShouldReturnNull(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
@@ -68,15 +77,22 @@ public class DeviceValidatorTests
 
         // Assert
         Assert.Null(device);
-        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .DidNotReceive()
+            .SendNewDeviceLoggedInEmail(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async void SaveDeviceAsync_ExistingUser_NewDevice_ReturnsDevice_SendsEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
-        User user)
+        User user
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
@@ -92,15 +108,22 @@ public class DeviceValidatorTests
         Assert.Equal(user.Id, device.UserId);
         Assert.Equal("DeviceIdentifier", device.Identifier);
         Assert.Equal(DeviceType.Android, device.Type);
-        await _mailService.Received(1).SendNewDeviceLoggedInEmail(
-            user.Email, "Android", Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .Received(1)
+            .SendNewDeviceLoggedInEmail(
+                user.Email,
+                "Android",
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async void SaveDeviceAsync_ExistingUser_NewDevice_ReturnsDevice_SendEmailFalse(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
-        User user)
+        User user
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
@@ -116,8 +139,14 @@ public class DeviceValidatorTests
         Assert.Equal(user.Id, device.UserId);
         Assert.Equal("DeviceIdentifier", device.Identifier);
         Assert.Equal(DeviceType.Android, device.Type);
-        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
-            user.Email, "Android", Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .DidNotReceive()
+            .SendNewDeviceLoggedInEmail(
+                user.Email,
+                "Android",
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
@@ -125,7 +154,8 @@ public class DeviceValidatorTests
     public async void SaveDeviceAsync_DeviceIsKnown_ShouldReturnDevice(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user,
-        Device device)
+        Device device
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
@@ -142,20 +172,29 @@ public class DeviceValidatorTests
 
         // Assert
         Assert.Equal(device, resultDevice);
-        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .DidNotReceive()
+            .SendNewDeviceLoggedInEmail(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async void SaveDeviceAsync_NewUser_DeviceUnknown_ShouldSaveDevice_NoEmail(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
-        User user)
+        User user
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
         user.CreationDate = DateTime.UtcNow;
-        _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>()).Returns(null as Device);
+        _deviceRepository
+            .GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
+            .Returns(null as Device);
 
         // Act
         var device = await _sut.SaveDeviceAsync(user, request);
@@ -166,14 +205,21 @@ public class DeviceValidatorTests
         Assert.Equal("DeviceIdentifier", device.Identifier);
         Assert.Equal(DeviceType.Android, device.Type);
         await _deviceService.Received(1).SaveAsync(device);
-        await _mailService.DidNotReceive().SendNewDeviceLoggedInEmail(
-            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await _mailService
+            .DidNotReceive()
+            .SendNewDeviceLoggedInEmail(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async void KnownDeviceAsync_UserNull_ReturnsFalse(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
@@ -189,7 +235,8 @@ public class DeviceValidatorTests
     [BitAutoData]
     public async void KnownDeviceAsync_DeviceNull_ReturnsFalse(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
-        User user)
+        User user
+    )
     {
         // Arrange
         // Device raw data is null which will cause the device to be null
@@ -205,12 +252,14 @@ public class DeviceValidatorTests
     [BitAutoData]
     public async void KnownDeviceAsync_DeviceNotInDatabase_ReturnsFalse(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
-        User user)
+        User user
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
-        _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
-                         .Returns(null as Device);
+        _deviceRepository
+            .GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
+            .Returns(null as Device);
         // Act
         var result = await _sut.KnownDeviceAsync(user, request);
 
@@ -223,12 +272,12 @@ public class DeviceValidatorTests
     public async void KnownDeviceAsync_UserAndDeviceValid_ReturnsTrue(
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request,
         User user,
-        Device device)
+        Device device
+    )
     {
         // Arrange
         request = AddValidDeviceToRequest(request);
-        _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>())
-                         .Returns(device);
+        _deviceRepository.GetByIdentifierAsync(Arg.Any<string>(), Arg.Any<Guid>()).Returns(device);
         // Act
         var result = await _sut.KnownDeviceAsync(user, request);
 

@@ -11,23 +11,21 @@ public partial class FailedLoginCaptcha : Migration
             table: "User",
             type: "integer",
             nullable: false,
-            defaultValue: 0);
+            defaultValue: 0
+        );
 
         migrationBuilder.AddColumn<DateTime>(
             name: "LastFailedLoginDate",
             table: "User",
             type: "timestamp without time zone",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "FailedLoginCount",
-            table: "User");
+        migrationBuilder.DropColumn(name: "FailedLoginCount", table: "User");
 
-        migrationBuilder.DropColumn(
-            name: "LastFailedLoginDate",
-            table: "User");
+        migrationBuilder.DropColumn(name: "LastFailedLoginDate", table: "User");
     }
 }

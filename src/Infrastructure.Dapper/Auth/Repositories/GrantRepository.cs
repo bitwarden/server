@@ -14,12 +14,13 @@ namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 public class GrantRepository : BaseRepository, IGrantRepository
 {
     public GrantRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public GrantRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<IGrant?> GetByKeyAsync(string key)
     {
@@ -28,21 +29,33 @@ public class GrantRepository : BaseRepository, IGrantRepository
             var results = await connection.QueryAsync<Grant>(
                 "[dbo].[Grant_ReadByKey]",
                 new { Key = key },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId,
-        string clientId, string type)
+    public async Task<ICollection<IGrant>> GetManyAsync(
+        string subjectId,
+        string sessionId,
+        string clientId,
+        string type
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<Grant>(
                 "[dbo].[Grant_Read]",
-                new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    SubjectId = subjectId,
+                    SessionId = sessionId,
+                    ClientId = clientId,
+                    Type = type,
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList<IGrant>();
         }
@@ -70,9 +83,10 @@ public class GrantRepository : BaseRepository, IGrantRepository
                     obj.CreationDate,
                     obj.ExpirationDate,
                     obj.ConsumedDate,
-                    obj.Data
+                    obj.Data,
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -83,18 +97,31 @@ public class GrantRepository : BaseRepository, IGrantRepository
             await connection.ExecuteAsync(
                 "[dbo].[Grant_DeleteByKey]",
                 new { Key = key },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
+    public async Task DeleteManyAsync(
+        string subjectId,
+        string sessionId,
+        string clientId,
+        string type
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
                 "[dbo].[Grant_Delete]",
-                new { SubjectId = subjectId, SessionId = sessionId, ClientId = clientId, Type = type },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    SubjectId = subjectId,
+                    SessionId = sessionId,
+                    ClientId = clientId,
+                    Type = type,
+                },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

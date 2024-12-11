@@ -7,5 +7,9 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 /// </summary>
 public interface IAddSecretsManagerSubscriptionCommand
 {
-    Task SignUpAsync(Organization organization, int additionalSmSeats, int additionalServiceAccounts);
+    Task SignUpAsync(
+        Organization organization,
+        int additionalSmSeats,
+        int additionalServiceAccounts
+    );
 }

@@ -21,7 +21,8 @@ public class FolderRepositoryTests
         List<EfVaultRepo.FolderRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
         SqlVaultRepo.FolderRepository sqlFolderRepo,
-        SqlRepo.UserRepository sqlUserRepo)
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var savedFolders = new List<Folder>();
         foreach (var sut in suts)

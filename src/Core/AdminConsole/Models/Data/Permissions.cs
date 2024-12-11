@@ -18,19 +18,20 @@ public class Permissions
     public bool ManageScim { get; set; }
 
     [JsonIgnore]
-    public List<(bool Permission, string ClaimName)> ClaimsMap => new()
-    {
-        (AccessEventLogs, "accesseventlogs"),
-        (AccessImportExport, "accessimportexport"),
-        (AccessReports, "accessreports"),
-        (CreateNewCollections, "createnewcollections"),
-        (EditAnyCollection, "editanycollection"),
-        (DeleteAnyCollection, "deleteanycollection"),
-        (ManageGroups, "managegroups"),
-        (ManagePolicies, "managepolicies"),
-        (ManageSso, "managesso"),
-        (ManageUsers, "manageusers"),
-        (ManageResetPassword, "manageresetpassword"),
-        (ManageScim, "managescim"),
-    };
+    public List<(bool Permission, string ClaimName)> ClaimsMap =>
+        new()
+        {
+            (AccessEventLogs, "accesseventlogs"),
+            (AccessImportExport, "accessimportexport"),
+            (AccessReports, "accessreports"),
+            (CreateNewCollections, "createnewcollections"),
+            (EditAnyCollection, "editanycollection"),
+            (DeleteAnyCollection, "deleteanycollection"),
+            (ManageGroups, "managegroups"),
+            (ManagePolicies, "managepolicies"),
+            (ManageSso, "managesso"),
+            (ManageUsers, "manageusers"),
+            (ManageResetPassword, "manageresetpassword"),
+            (ManageScim, "managescim"),
+        };
 }

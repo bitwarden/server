@@ -24,16 +24,22 @@ public class Grant : IGrant
     }
 
     public int Id { get; set; }
+
     [MaxLength(200)]
     public string Key { get; set; } = null!;
+
     [MaxLength(50)]
     public string Type { get; set; } = null!;
+
     [MaxLength(200)]
     public string? SubjectId { get; set; }
+
     [MaxLength(100)]
     public string? SessionId { get; set; }
+
     [MaxLength(200)]
     public string ClientId { get; set; } = null!;
+
     [MaxLength(200)]
     public string? Description { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;

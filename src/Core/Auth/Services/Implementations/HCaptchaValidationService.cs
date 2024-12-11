@@ -21,7 +21,8 @@ public class HCaptchaValidationService : ICaptchaValidationService
         ILogger<HCaptchaValidationService> logger,
         IHttpClientFactory httpClientFactory,
         IDataProtectorTokenFactory<HCaptchaTokenable> tokenizer,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -32,10 +33,14 @@ public class HCaptchaValidationService : ICaptchaValidationService
     public string SiteKeyResponseKeyName => "HCaptcha_SiteKey";
     public string SiteKey => _globalSettings.Captcha.HCaptchaSiteKey;
 
-    public string GenerateCaptchaBypassToken(User user) => _tokenizer.Protect(new HCaptchaTokenable(user));
+    public string GenerateCaptchaBypassToken(User user) =>
+        _tokenizer.Protect(new HCaptchaTokenable(user));
 
-    public async Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress,
-        User user = null)
+    public async Task<CaptchaResponse> ValidateCaptchaResponseAsync(
+        string captchaResponse,
+        string clientIpAddress,
+        User user = null
+    )
     {
         var response = new CaptchaResponse { Success = false };
         if (string.IsNullOrWhiteSpace(captchaResponse))
@@ -55,13 +60,15 @@ public class HCaptchaValidationService : ICaptchaValidationService
         {
             Method = HttpMethod.Post,
             RequestUri = new Uri("https://hcaptcha.com/siteverify"),
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "response", captchaResponse.TrimStart("hcaptcha|".ToCharArray()) },
-                { "secret", _globalSettings.Captcha.HCaptchaSecretKey },
-                { "sitekey", SiteKey },
-                { "remoteip", clientIpAddress }
-            })
+            Content = new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "response", captchaResponse.TrimStart("hcaptcha|".ToCharArray()) },
+                    { "secret", _globalSettings.Captcha.HCaptchaSecretKey },
+                    { "sitekey", SiteKey },
+                    { "remoteip", clientIpAddress },
+                }
+            ),
         };
 
         HttpResponseMessage responseMessage;
@@ -80,7 +87,8 @@ public class HCaptchaValidationService : ICaptchaValidationService
             return response;
         }
 
-        using var hcaptchaResponse = await responseMessage.Content.ReadFromJsonAsync<HCaptchaResponse>();
+        using var hcaptchaResponse =
+            await responseMessage.Content.ReadFromJsonAsync<HCaptchaResponse>();
         response.Success = hcaptchaResponse.Success;
         var score = hcaptchaResponse.Score.GetValueOrDefault();
         response.MaybeBot = score >= _globalSettings.Captcha.MaybeBotScoreThreshold;
@@ -98,12 +106,14 @@ public class HCaptchaValidationService : ICaptchaValidationService
 
         var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
         var failedLoginCount = user?.FailedLoginCount ?? 0;
-        var requireOnCloud = !_globalSettings.SelfHosted && !user.EmailVerified &&
-            user.CreationDate < DateTime.UtcNow.AddHours(-24);
-        return currentContext.IsBot ||
-               _globalSettings.Captcha.ForceCaptchaRequired ||
-               requireOnCloud ||
-               failedLoginCeiling > 0 && failedLoginCount >= failedLoginCeiling;
+        var requireOnCloud =
+            !_globalSettings.SelfHosted
+            && !user.EmailVerified
+            && user.CreationDate < DateTime.UtcNow.AddHours(-24);
+        return currentContext.IsBot
+            || _globalSettings.Captcha.ForceCaptchaRequired
+            || requireOnCloud
+            || failedLoginCeiling > 0 && failedLoginCount >= failedLoginCeiling;
     }
 
     private static bool TokenIsValidApiKey(string bypassToken, User user) =>
@@ -111,8 +121,9 @@ public class HCaptchaValidationService : ICaptchaValidationService
 
     private bool TokenIsValidCaptchaBypassToken(string encryptedToken, User user)
     {
-        return _tokenizer.TryUnprotect(encryptedToken, out var data) &&
-            data.Valid && data.TokenIsValid(user);
+        return _tokenizer.TryUnprotect(encryptedToken, out var data)
+            && data.Valid
+            && data.TokenIsValid(user);
     }
 
     private bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
@@ -122,8 +133,10 @@ public class HCaptchaValidationService : ICaptchaValidationService
     {
         [JsonPropertyName("success")]
         public bool Success { get; set; }
+
         [JsonPropertyName("score")]
         public double? Score { get; set; }
+
         [JsonPropertyName("score_reason")]
         public List<string> ScoreReason { get; set; }
 

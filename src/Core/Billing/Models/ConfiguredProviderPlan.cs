@@ -9,7 +9,8 @@ public record ConfiguredProviderPlan(
     PlanType PlanType,
     int SeatMinimum,
     int PurchasedSeats,
-    int AssignedSeats)
+    int AssignedSeats
+)
 {
     public static ConfiguredProviderPlan From(ProviderPlan providerPlan) =>
         providerPlan.IsConfigured()
@@ -19,6 +20,7 @@ public record ConfiguredProviderPlan(
                 providerPlan.PlanType,
                 providerPlan.SeatMinimum.GetValueOrDefault(0),
                 providerPlan.PurchasedSeats.GetValueOrDefault(0),
-                providerPlan.AllocatedSeats.GetValueOrDefault(0))
+                providerPlan.AllocatedSeats.GetValueOrDefault(0)
+            )
             : null;
 }

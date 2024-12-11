@@ -18,33 +18,48 @@ public class SecretsSyncQueryTests
     [Theory, BitAutoData]
     public async Task GetAsync_NullLastSyncedDate_ReturnsHasChanges(
         SutProvider<SecretsSyncQuery> sutProvider,
-        SecretsSyncRequest data)
+        SecretsSyncRequest data
+    )
     {
         data.LastSyncedDate = null;
 
         var result = await sutProvider.Sut.GetAsync(data);
 
         Assert.True(result.HasChanges);
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(data.OrganizationId),
+        await sutProvider
+            .GetDependency<ISecretRepository>()
+            .Received(1)
+            .GetManyByOrganizationIdAsync(
+                Arg.Is(data.OrganizationId),
                 Arg.Is(data.ServiceAccountId),
-                Arg.Is(data.AccessClientType));
+                Arg.Is(data.AccessClientType)
+            );
     }
 
     [Theory, BitAutoData]
     public async Task GetAsync_HasLastSyncedDateServiceAccountNotFound_Throws(
         SutProvider<SecretsSyncQuery> sutProvider,
-        SecretsSyncRequest data)
+        SecretsSyncRequest data
+    )
     {
         data.LastSyncedDate = DateTime.UtcNow;
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.ServiceAccountId)
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetByIdAsync(data.ServiceAccountId)
             .Returns((ServiceAccount?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAsync(data));
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.GetAsync(data)
+        );
 
-        await sutProvider.GetDependency<ISecretRepository>()
+        await sutProvider
+            .GetDependency<ISecretRepository>()
             .DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<Guid>(),
+                Arg.Any<AccessClientType>()
+            );
     }
 
     [Theory]
@@ -54,43 +69,60 @@ public class SecretsSyncQueryTests
         bool datesEqual,
         SutProvider<SecretsSyncQuery> sutProvider,
         SecretsSyncRequest data,
-        ServiceAccount serviceAccount)
+        ServiceAccount serviceAccount
+    )
     {
         data.LastSyncedDate = DateTime.UtcNow.AddDays(-1);
         serviceAccount.Id = data.ServiceAccountId;
-        serviceAccount.RevisionDate = datesEqual ? data.LastSyncedDate.Value : data.LastSyncedDate.Value.AddSeconds(600);
+        serviceAccount.RevisionDate = datesEqual
+            ? data.LastSyncedDate.Value
+            : data.LastSyncedDate.Value.AddSeconds(600);
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.ServiceAccountId)
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetByIdAsync(data.ServiceAccountId)
             .Returns(serviceAccount);
 
         var result = await sutProvider.Sut.GetAsync(data);
 
         Assert.True(result.HasChanges);
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(data.OrganizationId),
+        await sutProvider
+            .GetDependency<ISecretRepository>()
+            .Received(1)
+            .GetManyByOrganizationIdAsync(
+                Arg.Is(data.OrganizationId),
                 Arg.Is(data.ServiceAccountId),
-                Arg.Is(data.AccessClientType));
+                Arg.Is(data.AccessClientType)
+            );
     }
 
     [Theory, BitAutoData]
     public async Task GetAsync_HasLastSyncedDateServiceAccountWithEarlierRevisionDate_ReturnsNoChanges(
         SutProvider<SecretsSyncQuery> sutProvider,
         SecretsSyncRequest data,
-        ServiceAccount serviceAccount)
+        ServiceAccount serviceAccount
+    )
     {
         data.LastSyncedDate = DateTime.UtcNow.AddDays(-1);
         serviceAccount.Id = data.ServiceAccountId;
         serviceAccount.RevisionDate = data.LastSyncedDate.Value.AddDays(-2);
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.ServiceAccountId)
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetByIdAsync(data.ServiceAccountId)
             .Returns(serviceAccount);
 
         var result = await sutProvider.Sut.GetAsync(data);
 
         Assert.False(result.HasChanges);
         Assert.Null(result.Secrets);
-        await sutProvider.GetDependency<ISecretRepository>()
+        await sutProvider
+            .GetDependency<ISecretRepository>()
             .DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdAsync(
+                Arg.Any<Guid>(),
+                Arg.Any<Guid>(),
+                Arg.Any<AccessClientType>()
+            );
     }
 }

@@ -8,10 +8,7 @@ public class KeysResponseModel : ResponseModel
     public KeysResponseModel(User user)
         : base("keys")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         Key = user.Key;
         PublicKey = user.PublicKey;

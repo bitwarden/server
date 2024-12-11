@@ -16,9 +16,11 @@ public class UpdateNotificationCommand : IUpdateNotificationCommand
     private readonly IAuthorizationService _authorizationService;
     private readonly INotificationRepository _notificationRepository;
 
-    public UpdateNotificationCommand(ICurrentContext currentContext,
+    public UpdateNotificationCommand(
+        ICurrentContext currentContext,
         IAuthorizationService authorizationService,
-        INotificationRepository notificationRepository)
+        INotificationRepository notificationRepository
+    )
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
@@ -33,8 +35,11 @@ public class UpdateNotificationCommand : IUpdateNotificationCommand
             throw new NotFoundException();
         }
 
-        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User,
-            notification, NotificationOperations.Update);
+        await _authorizationService.AuthorizeOrThrowAsync(
+            _currentContext.HttpContext.User,
+            notification,
+            NotificationOperations.Update
+        );
 
         notification.Priority = notificationToUpdate.Priority;
         notification.ClientType = notificationToUpdate.ClientType;

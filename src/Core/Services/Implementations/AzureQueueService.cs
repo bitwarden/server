@@ -29,7 +29,10 @@ public abstract class AzureQueueService<T>
         }
     }
 
-    protected IEnumerable<string> SerializeMany(IEnumerable<T> messages, JsonSerializerOptions jsonOptions)
+    protected IEnumerable<string> SerializeMany(
+        IEnumerable<T> messages,
+        JsonSerializerOptions jsonOptions
+    )
     {
         // Calculate Base-64 encoded text with padding
         int getBase64Size(int byteCount) => ((4 * byteCount / 3) + 3) & ~3;
@@ -49,11 +52,13 @@ public abstract class AzureQueueService<T>
                 return CoreHelpers.Base64EncodeString(messagesList[0]);
             }
             return CoreHelpers.Base64EncodeString(
-                string.Concat("[", string.Join(',', messagesList), "]"));
+                string.Concat("[", string.Join(',', messagesList), "]")
+            );
         }
 
         var serializedMessages = messages.Select(message =>
-            JsonSerializer.Serialize(message, jsonOptions));
+            JsonSerializer.Serialize(message, jsonOptions)
+        );
 
         foreach (var message in serializedMessages)
         {

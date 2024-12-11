@@ -14,27 +14,25 @@ public class PayPalIPNClientTests
     private readonly Uri _endpoint = new("https://www.sandbox.paypal.com/cgi-bin/webscr");
     private readonly MockHttpMessageHandler _mockHttpMessageHandler = new();
 
-    private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<IOptions<BillingSettings>>();
+    private readonly IOptions<BillingSettings> _billingSettings = Substitute.For<
+        IOptions<BillingSettings>
+    >();
     private readonly ILogger<PayPalIPNClient> _logger = Substitute.For<ILogger<PayPalIPNClient>>();
 
     private readonly IPayPalIPNClient _payPalIPNClient;
 
     public PayPalIPNClientTests()
     {
-        var httpClient = new HttpClient(_mockHttpMessageHandler)
-        {
-            BaseAddress = _endpoint
-        };
+        var httpClient = new HttpClient(_mockHttpMessageHandler) { BaseAddress = _endpoint };
 
-        _payPalIPNClient = new PayPalIPNClient(
-            _billingSettings,
-            httpClient,
-            _logger);
+        _payPalIPNClient = new PayPalIPNClient(_billingSettings, httpClient, _logger);
     }
 
     [Fact]
-    public async Task VerifyIPN_FormDataNull_ThrowsArgumentNullException()
-        => await Assert.ThrowsAsync<ArgumentNullException>(() => _payPalIPNClient.VerifyIPN(string.Empty, null));
+    public async Task VerifyIPN_FormDataNull_ThrowsArgumentNullException() =>
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _payPalIPNClient.VerifyIPN(string.Empty, null)
+        );
 
     [Fact]
     public async Task VerifyIPN_Unauthorized_ReturnsFalse()
@@ -43,7 +41,9 @@ public class PayPalIPNClientTests
 
         var request = _mockHttpMessageHandler
             .Expect(HttpMethod.Post, _endpoint.ToString())
-            .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
+            .WithFormData(
+                new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } }
+            )
             .Respond(HttpStatusCode.Unauthorized);
 
         var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
@@ -59,7 +59,9 @@ public class PayPalIPNClientTests
 
         var request = _mockHttpMessageHandler
             .Expect(HttpMethod.Post, _endpoint.ToString())
-            .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
+            .WithFormData(
+                new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } }
+            )
             .Respond("application/text", "INVALID");
 
         var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);
@@ -75,7 +77,9 @@ public class PayPalIPNClientTests
 
         var request = _mockHttpMessageHandler
             .Expect(HttpMethod.Post, _endpoint.ToString())
-            .WithFormData(new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } })
+            .WithFormData(
+                new Dictionary<string, string> { { "cmd", "_notify-validate" }, { "form", "data" } }
+            )
             .Respond("application/text", "VERIFIED");
 
         var verified = await _payPalIPNClient.VerifyIPN(string.Empty, formData);

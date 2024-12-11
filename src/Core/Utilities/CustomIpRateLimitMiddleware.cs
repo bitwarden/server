@@ -16,13 +16,18 @@ public class CustomIpRateLimitMiddleware : IpRateLimitMiddleware
         IRateLimitConfiguration rateLimitConfiguration,
         IOptions<IpRateLimitOptions> options,
         IIpPolicyStore policyStore,
-        ILogger<CustomIpRateLimitMiddleware> logger)
+        ILogger<CustomIpRateLimitMiddleware> logger
+    )
         : base(next, processingStrategy, options, policyStore, rateLimitConfiguration, logger)
     {
         _options = options.Value;
     }
 
-    public override Task ReturnQuotaExceededResponse(HttpContext httpContext, RateLimitRule rule, string retryAfter)
+    public override Task ReturnQuotaExceededResponse(
+        HttpContext httpContext,
+        RateLimitRule rule,
+        string retryAfter
+    )
     {
         var message = string.IsNullOrWhiteSpace(_options.QuotaExceededMessage)
             ? $"Slow down! Too many requests. Try again in {rule.Period}."

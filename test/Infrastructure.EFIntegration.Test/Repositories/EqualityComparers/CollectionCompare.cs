@@ -7,8 +7,7 @@ public class CollectionCompare : IEqualityComparer<Collection>
 {
     public bool Equals(Collection x, Collection y)
     {
-        return x.Name == y.Name &&
-            x.ExternalId == y.ExternalId;
+        return x.Name == y.Name && x.ExternalId == y.ExternalId;
     }
 
     public int GetHashCode([DisallowNull] Collection obj)

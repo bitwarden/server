@@ -15,10 +15,12 @@ public class CloudRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsB
     [Theory]
     [BitAutoData]
     public async Task RevokeSponsorship_NoExistingSponsorship_ThrowsBadRequest(
-        SutProvider<CloudRevokeSponsorshipCommand> sutProvider)
+        SutProvider<CloudRevokeSponsorshipCommand> sutProvider
+    )
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RevokeSponsorshipAsync(null));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RevokeSponsorshipAsync(null)
+        );
 
         Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
         await AssertDidNotDeleteSponsorshipAsync(sutProvider);
@@ -27,8 +29,10 @@ public class CloudRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsB
 
     [Theory]
     [BitAutoData]
-    public async Task RevokeSponsorship_SponsorshipNotRedeemed_DeletesSponsorship(OrganizationSponsorship sponsorship,
-        SutProvider<CloudRevokeSponsorshipCommand> sutProvider)
+    public async Task RevokeSponsorship_SponsorshipNotRedeemed_DeletesSponsorship(
+        OrganizationSponsorship sponsorship,
+        SutProvider<CloudRevokeSponsorshipCommand> sutProvider
+    )
     {
         sponsorship.SponsoredOrganizationId = null;
 
@@ -38,8 +42,10 @@ public class CloudRevokeSponsorshipCommandTests : CancelSponsorshipCommandTestsB
 
     [Theory]
     [BitAutoData]
-    public async Task RevokeSponsorship_SponsorshipRedeemed_MarksForDelete(OrganizationSponsorship sponsorship,
-        SutProvider<CloudRevokeSponsorshipCommand> sutProvider)
+    public async Task RevokeSponsorship_SponsorshipRedeemed_MarksForDelete(
+        OrganizationSponsorship sponsorship,
+        SutProvider<CloudRevokeSponsorshipCommand> sutProvider
+    )
     {
         await sutProvider.Sut.RevokeSponsorshipAsync(sponsorship);
 

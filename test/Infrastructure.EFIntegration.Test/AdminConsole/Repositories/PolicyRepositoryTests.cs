@@ -22,7 +22,7 @@ public class PolicyRepositoryTests
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
         SqlAdminConsoleRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo
-        )
+    )
     {
         var savedPolicys = new List<Policy>();
         foreach (var sut in suts)

@@ -12,12 +12,13 @@ namespace Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
 {
     public ApiKeyRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public ApiKeyRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<ApiKeyDetails> GetDetailsByIdAsync(Guid id)
     {
@@ -27,7 +28,8 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
         var results = await connection.QueryAsync<ServiceAccountApiKeyDetails>(
             $"[{Schema}].[ApiKeyDetails_ReadById]",
             new { Id = id },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
 
         return results.SingleOrDefault();
     }
@@ -38,7 +40,8 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
         var results = await connection.QueryAsync<ApiKey>(
             $"[{Schema}].[ApiKey_ReadByServiceAccountId]",
             new { ServiceAccountId = serviceAccountId },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
 
         return results.ToList();
     }
@@ -49,6 +52,7 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
         await connection.QueryAsync<ApiKey>(
             $"[{Schema}].[ApiKey_DeleteByIds]",
             new { Ids = objs.Select(obj => obj.Id).ToGuidIdArrayTVP() },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
     }
 }

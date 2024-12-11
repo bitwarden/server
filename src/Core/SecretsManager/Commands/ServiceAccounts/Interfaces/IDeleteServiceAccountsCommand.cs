@@ -6,4 +6,3 @@ public interface IDeleteServiceAccountsCommand
 {
     Task DeleteServiceAccounts(IEnumerable<ServiceAccount> serviceAccounts);
 }
-

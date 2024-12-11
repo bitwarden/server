@@ -9,11 +9,15 @@ public class OrganizationCollectionManagementUpdateRequestModel
     public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 
-    public virtual Organization ToOrganization(Organization existingOrganization, IFeatureService featureService)
+    public virtual Organization ToOrganization(
+        Organization existingOrganization,
+        IFeatureService featureService
+    )
     {
         existingOrganization.LimitCollectionCreation = LimitCollectionCreation;
         existingOrganization.LimitCollectionDeletion = LimitCollectionDeletion;
-        existingOrganization.AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems;
+        existingOrganization.AllowAdminAccessToAllCollectionItems =
+            AllowAdminAccessToAllCollectionItems;
         return existingOrganization;
     }
 }

@@ -12,8 +12,7 @@ public class UsersController : Controller
 {
     private readonly IUserRepository _userRepository;
 
-    public UsersController(
-        IUserRepository userRepository)
+    public UsersController(IUserRepository userRepository)
     {
         _userRepository = userRepository;
     }

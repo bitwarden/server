@@ -12,7 +12,10 @@ public enum AccessClientType
 
 public static class AccessClientHelper
 {
-    public static AccessClientType ToAccessClient(IdentityClientType identityClientType, bool bypassAccessCheck = false)
+    public static AccessClientType ToAccessClient(
+        IdentityClientType identityClientType,
+        bool bypassAccessCheck = false
+    )
     {
         if (bypassAccessCheck)
         {
@@ -24,7 +27,11 @@ public static class AccessClientHelper
             IdentityClientType.User => AccessClientType.User,
             IdentityClientType.Organization => AccessClientType.Organization,
             IdentityClientType.ServiceAccount => AccessClientType.ServiceAccount,
-            _ => throw new ArgumentOutOfRangeException(nameof(identityClientType), identityClientType, null),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(identityClientType),
+                identityClientType,
+                null
+            ),
         };
     }
 }

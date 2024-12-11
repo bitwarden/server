@@ -9,9 +9,9 @@ public class CloudRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSp
 {
     public CloudRevokeSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
-    {
-    }
+        IOrganizationRepository organizationRepository
+    )
+        : base(organizationSponsorshipRepository, organizationRepository) { }
 
     public async Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship)
     {

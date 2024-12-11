@@ -7,6 +7,7 @@ using Bit.Core.Tools.Services;
 using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
+
 namespace Bit.Api.Test.Models.Request;
 
 public class SendRequestModelTests
@@ -26,17 +27,12 @@ public class SendRequestModelTests
             Name = "encrypted_name",
             Notes = null,
             Password = "Password",
-            Text = new SendTextModel()
-            {
-                Hidden = false,
-                Text = "encrypted_text"
-            },
+            Text = new SendTextModel() { Hidden = false, Text = "encrypted_text" },
             Type = SendType.Text,
         };
 
         var sendService = Substitute.For<ISendService>();
-        sendService.HashPassword(Arg.Any<string>())
-            .Returns((info) => $"hashed_{(string)info[0]}");
+        sendService.HashPassword(Arg.Any<string>()).Returns((info) => $"hashed_{(string)info[0]}");
 
         var send = sendRequest.ToSend(Guid.NewGuid(), sendService);
 
@@ -60,10 +56,7 @@ public class SendRequestModelTests
     [Fact]
     public void ValidateEdit_DeletionDateInPast_ThrowsBadRequestException()
     {
-        var send = new SendRequestModel
-        {
-            DeletionDate = DateTime.UtcNow.AddMinutes(-5)
-        };
+        var send = new SendRequestModel { DeletionDate = DateTime.UtcNow.AddMinutes(-5) };
 
         Assert.Throws<BadRequestException>(() => send.ValidateEdit());
     }
@@ -71,10 +64,7 @@ public class SendRequestModelTests
     [Fact]
     public void ValidateEdit_DeletionDateTooFarInFuture_ThrowsBadRequestException()
     {
-        var send = new SendRequestModel
-        {
-            DeletionDate = DateTime.UtcNow.AddDays(32)
-        };
+        var send = new SendRequestModel { DeletionDate = DateTime.UtcNow.AddDays(32) };
 
         Assert.Throws<BadRequestException>(() => send.ValidateEdit());
     }
@@ -82,10 +72,7 @@ public class SendRequestModelTests
     [Fact]
     public void ValidateEdit_ExpirationDateInPast_ThrowsBadRequestException()
     {
-        var send = new SendRequestModel
-        {
-            ExpirationDate = DateTime.UtcNow.AddMinutes(-5)
-        };
+        var send = new SendRequestModel { ExpirationDate = DateTime.UtcNow.AddMinutes(-5) };
 
         Assert.Throws<BadRequestException>(() => send.ValidateEdit());
     }
@@ -96,7 +83,7 @@ public class SendRequestModelTests
         var send = new SendRequestModel
         {
             DeletionDate = DateTime.UtcNow.AddDays(1),
-            ExpirationDate = DateTime.UtcNow.AddDays(2)
+            ExpirationDate = DateTime.UtcNow.AddDays(2),
         };
 
         Assert.Throws<BadRequestException>(() => send.ValidateEdit());
@@ -108,7 +95,7 @@ public class SendRequestModelTests
         var send = new SendRequestModel
         {
             DeletionDate = DateTime.UtcNow.AddDays(10),
-            ExpirationDate = DateTime.UtcNow.AddDays(5)
+            ExpirationDate = DateTime.UtcNow.AddDays(5),
         };
 
         Exception ex = Record.Exception(() => send.ValidateEdit());

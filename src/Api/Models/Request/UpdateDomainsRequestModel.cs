@@ -11,9 +11,12 @@ public class UpdateDomainsRequestModel
 
     public User ToUser(User existingUser)
     {
-        existingUser.EquivalentDomains = EquivalentDomains != null ? JsonSerializer.Serialize(EquivalentDomains) : null;
-        existingUser.ExcludedGlobalEquivalentDomains = ExcludedGlobalEquivalentDomains != null ?
-            JsonSerializer.Serialize(ExcludedGlobalEquivalentDomains) : null;
+        existingUser.EquivalentDomains =
+            EquivalentDomains != null ? JsonSerializer.Serialize(EquivalentDomains) : null;
+        existingUser.ExcludedGlobalEquivalentDomains =
+            ExcludedGlobalEquivalentDomains != null
+                ? JsonSerializer.Serialize(ExcludedGlobalEquivalentDomains)
+                : null;
         return existingUser;
     }
 }

@@ -22,7 +22,7 @@ public class AccessPolicyRequest
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
     public UserSecretAccessPolicy ToUserSecretAccessPolicy(Guid secretId, Guid organizationId) =>
@@ -32,17 +32,20 @@ public class AccessPolicyRequest
             GrantedSecretId = secretId,
             GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
-    public GroupProjectAccessPolicy ToGroupProjectAccessPolicy(Guid projectId, Guid organizationId) =>
+    public GroupProjectAccessPolicy ToGroupProjectAccessPolicy(
+        Guid projectId,
+        Guid organizationId
+    ) =>
         new()
         {
             GroupId = GranteeId,
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
     public GroupSecretAccessPolicy ToGroupSecretAccessPolicy(Guid secretId, Guid organizationId) =>
@@ -52,46 +55,66 @@ public class AccessPolicyRequest
             GrantedSecretId = secretId,
             GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
-    public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(Guid projectId, Guid organizationId) =>
+    public ServiceAccountProjectAccessPolicy ToServiceAccountProjectAccessPolicy(
+        Guid projectId,
+        Guid organizationId
+    ) =>
         new()
         {
             ServiceAccountId = GranteeId,
             GrantedProjectId = projectId,
             GrantedProject = new Project { OrganizationId = organizationId, Id = projectId },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
-    public ServiceAccountSecretAccessPolicy ToServiceAccountSecretAccessPolicy(Guid secretId, Guid organizationId) =>
+    public ServiceAccountSecretAccessPolicy ToServiceAccountSecretAccessPolicy(
+        Guid secretId,
+        Guid organizationId
+    ) =>
         new()
         {
             ServiceAccountId = GranteeId,
             GrantedSecretId = secretId,
             GrantedSecret = new Secret { OrganizationId = organizationId, Id = secretId },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
-    public UserServiceAccountAccessPolicy ToUserServiceAccountAccessPolicy(Guid id, Guid organizationId) =>
+    public UserServiceAccountAccessPolicy ToUserServiceAccountAccessPolicy(
+        Guid id,
+        Guid organizationId
+    ) =>
         new()
         {
             OrganizationUserId = GranteeId,
             GrantedServiceAccountId = id,
-            GrantedServiceAccount = new ServiceAccount() { OrganizationId = organizationId, Id = id },
+            GrantedServiceAccount = new ServiceAccount()
+            {
+                OrganizationId = organizationId,
+                Id = id,
+            },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 
-    public GroupServiceAccountAccessPolicy ToGroupServiceAccountAccessPolicy(Guid id, Guid organizationId) =>
+    public GroupServiceAccountAccessPolicy ToGroupServiceAccountAccessPolicy(
+        Guid id,
+        Guid organizationId
+    ) =>
         new()
         {
             GroupId = GranteeId,
             GrantedServiceAccountId = id,
-            GrantedServiceAccount = new ServiceAccount() { OrganizationId = organizationId, Id = id },
+            GrantedServiceAccount = new ServiceAccount()
+            {
+                OrganizationId = organizationId,
+                Id = id,
+            },
             Read = Read,
-            Write = Write
+            Write = Write,
         };
 }

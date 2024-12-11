@@ -13,24 +13,22 @@ public partial class SecretsManagerEvent : Migration
             table: "Event",
             type: "char(36)",
             nullable: true,
-            collation: "ascii_general_ci");
+            collation: "ascii_general_ci"
+        );
 
         migrationBuilder.AddColumn<Guid>(
             name: "ServiceAccountId",
             table: "Event",
             type: "char(36)",
             nullable: true,
-            collation: "ascii_general_ci");
+            collation: "ascii_general_ci"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "SecretId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "SecretId", table: "Event");
 
-        migrationBuilder.DropColumn(
-            name: "ServiceAccountId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "ServiceAccountId", table: "Event");
     }
 }

@@ -11,8 +11,10 @@ public class EmergencyAccessInviteRequestModel
     [StrictEmailAddress]
     [StringLength(256)]
     public string Email { get; set; }
+
     [Required]
     public EmergencyAccessType? Type { get; set; }
+
     [Required]
     public int WaitTimeDays { get; set; }
 }
@@ -21,6 +23,7 @@ public class EmergencyAccessUpdateRequestModel
 {
     [Required]
     public EmergencyAccessType Type { get; set; }
+
     [Required]
     public int WaitTimeDays { get; set; }
     public string KeyEncrypted { get; set; }
@@ -28,7 +31,10 @@ public class EmergencyAccessUpdateRequestModel
     public EmergencyAccess ToEmergencyAccess(EmergencyAccess existingEmergencyAccess)
     {
         // Ensure we only set keys for a confirmed emergency access.
-        if (!string.IsNullOrWhiteSpace(existingEmergencyAccess.KeyEncrypted) && !string.IsNullOrWhiteSpace(KeyEncrypted))
+        if (
+            !string.IsNullOrWhiteSpace(existingEmergencyAccess.KeyEncrypted)
+            && !string.IsNullOrWhiteSpace(KeyEncrypted)
+        )
         {
             existingEmergencyAccess.KeyEncrypted = KeyEncrypted;
         }
@@ -43,6 +49,7 @@ public class EmergencyAccessPasswordRequestModel
     [Required]
     [StringLength(300)]
     public string NewMasterPasswordHash { get; set; }
+
     [Required]
     public string Key { get; set; }
 }

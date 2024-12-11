@@ -38,9 +38,15 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IInstallationRepository, InstallationRepository>();
         services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
-        services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
+        services.AddSingleton<
+            IOrganizationConnectionRepository,
+            OrganizationConnectionRepository
+        >();
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
-        services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
+        services.AddSingleton<
+            IOrganizationSponsorshipRepository,
+            OrganizationSponsorshipRepository
+        >();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
@@ -58,9 +64,14 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
-        services
-            .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
-        services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
+        services.AddSingleton<
+            IClientOrganizationMigrationRecordRepository,
+            ClientOrganizationMigrationRecordRepository
+        >();
+        services.AddSingleton<
+            IPasswordHealthReportApplicationRepository,
+            PasswordHealthReportApplicationRepository
+        >();
         services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
         services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
 

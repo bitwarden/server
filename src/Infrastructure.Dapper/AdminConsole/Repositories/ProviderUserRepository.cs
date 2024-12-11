@@ -15,21 +15,32 @@ namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderUserRepository
 {
     public ProviderUserRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public ProviderUserRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
-    public async Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers)
+    public async Task<int> GetCountByProviderAsync(
+        Guid providerId,
+        string email,
+        bool onlyRegisteredUsers
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[ProviderUser_ReadCountByProviderIdEmail]",
-                new { ProviderId = providerId, Email = email, OnlyUsers = onlyRegisteredUsers },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    ProviderId = providerId,
+                    Email = email,
+                    OnlyUsers = onlyRegisteredUsers,
+                },
+                commandType: CommandType.StoredProcedure
+            );
 
             return result;
         }
@@ -42,7 +53,8 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
             var results = await connection.QueryAsync<ProviderUser>(
                 "[dbo].[ProviderUser_ReadByIds]",
                 new { Ids = ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -55,7 +67,8 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
             var results = await connection.QueryAsync<ProviderUser>(
                 "[dbo].[ProviderUser_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -68,61 +81,75 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
             var results = await connection.QueryAsync<ProviderUser>(
                 "[dbo].[ProviderUser_ReadByProviderIdUserId]",
                 new { ProviderId = providerId, UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type)
+    public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(
+        Guid providerId,
+        ProviderUserType? type
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUser>(
                 "[dbo].[ProviderUser_ReadByProviderId]",
                 new { ProviderId = providerId, Type = type },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status)
+    public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(
+        Guid providerId,
+        ProviderUserStatusType? status
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUserUserDetails>(
                 "[dbo].[ProviderUserUserDetails_ReadByProviderId]",
                 new { ProviderId = providerId, Status = status },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId,
-        ProviderUserStatusType? status = null)
+    public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(
+        Guid userId,
+        ProviderUserStatusType? status = null
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUserProviderDetails>(
                 "[dbo].[ProviderUserProviderDetails_ReadByUserIdStatus]",
                 new { UserId = userId, Status = status },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId,
-        ProviderUserStatusType? status = null)
+    public async Task<
+        IEnumerable<ProviderUserOrganizationDetails>
+    > GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUserOrganizationDetails>(
                 "[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]",
                 new { UserId = userId, Status = status },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -132,20 +159,26 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync("[dbo].[ProviderUser_DeleteByIds]",
-                new { Ids = providerUserIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            await connection.ExecuteAsync(
+                "[dbo].[ProviderUser_DeleteByIds]",
+                new { Ids = providerUserIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
     public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(
-        Guid providerId, IEnumerable<Guid> Ids)
+        Guid providerId,
+        IEnumerable<Guid> Ids
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUserPublicKey>(
                 "[dbo].[User_ReadPublicKeysByProviderUserIds]",
                 new { ProviderId = providerId, ProviderUserIds = Ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -158,20 +191,25 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
             var results = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[ProviderUser_ReadCountByOnlyOwner]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results;
         }
     }
 
-    public async Task<ICollection<ProviderUser>> GetManyByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null)
+    public async Task<ICollection<ProviderUser>> GetManyByOrganizationAsync(
+        Guid organizationId,
+        ProviderUserStatusType? status = null
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUser>(
                 "[dbo].[ProviderUser_ReadByOrganizationIdStatus]",
                 new { OrganizationId = organizationId, Status = status },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }

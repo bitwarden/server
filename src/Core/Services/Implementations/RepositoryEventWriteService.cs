@@ -7,8 +7,7 @@ public class RepositoryEventWriteService : IEventWriteService
 {
     private readonly IEventRepository _eventRepository;
 
-    public RepositoryEventWriteService(
-        IEventRepository eventRepository)
+    public RepositoryEventWriteService(IEventRepository eventRepository)
     {
         _eventRepository = eventRepository;
     }

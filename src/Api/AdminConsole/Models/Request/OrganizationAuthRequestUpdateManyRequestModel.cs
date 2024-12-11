@@ -18,7 +18,7 @@ public class OrganizationAuthRequestUpdateManyRequestModel
         {
             Id = Id,
             Key = Key,
-            Approved = Approved
+            Approved = Approved,
         };
     }
 }

@@ -5,5 +5,8 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfa
 
 public interface ICreateOrganizationApiKeyCommand
 {
-    Task<OrganizationApiKey> CreateAsync(Guid organizationId, OrganizationApiKeyType organizationApiKeyType);
+    Task<OrganizationApiKey> CreateAsync(
+        Guid organizationId,
+        OrganizationApiKeyType organizationApiKeyType
+    );
 }

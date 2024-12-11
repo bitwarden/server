@@ -8,18 +8,22 @@ public class EventFilterRequestModel
     /// The start date. Must be less than the end date.
     /// </summary>
     public DateTime? Start { get; set; }
+
     /// <summary>
     /// The end date. Must be greater than the start date.
     /// </summary>
     public DateTime? End { get; set; }
+
     /// <summary>
     /// The unique identifier of the user that performed the event.
     /// </summary>
     public Guid? ActingUserId { get; set; }
+
     /// <summary>
     /// The unique identifier of the related item that the event describes.
     /// </summary>
     public Guid? ItemId { get; set; }
+
     /// <summary>
     /// A cursor for use in pagination.
     /// </summary>

@@ -12,12 +12,13 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 public class TaxRateRepository : Repository<TaxRate, string>, ITaxRateRepository
 {
     public TaxRateRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public TaxRateRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<ICollection<TaxRate>> SearchAsync(int skip, int count)
     {
@@ -26,7 +27,8 @@ public class TaxRateRepository : Repository<TaxRate, string>, ITaxRateRepository
             var results = await connection.QueryAsync<TaxRate>(
                 $"[{Schema}].[TaxRate_Search]",
                 new { Skip = skip, Count = count },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -38,7 +40,8 @@ public class TaxRateRepository : Repository<TaxRate, string>, ITaxRateRepository
         {
             var results = await connection.QueryAsync<TaxRate>(
                 $"[{Schema}].[TaxRate_ReadAllActive]",
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -51,7 +54,8 @@ public class TaxRateRepository : Repository<TaxRate, string>, ITaxRateRepository
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[TaxRate_Archive]",
                 new { Id = model.Id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -62,7 +66,8 @@ public class TaxRateRepository : Repository<TaxRate, string>, ITaxRateRepository
             var results = await connection.QueryAsync<TaxRate>(
                 $"[{Schema}].[TaxRate_ReadByLocation]",
                 new { Country = model.Country, PostalCode = model.PostalCode },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }

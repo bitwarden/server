@@ -11,5 +11,6 @@ public class AttachmentUploadDataResponseModel : ResponseModel
     public CipherResponseModel CipherResponse { get; set; }
     public CipherMiniResponseModel CipherMiniResponse { get; set; }
 
-    public AttachmentUploadDataResponseModel() : base("attachment-fileUpload") { }
+    public AttachmentUploadDataResponseModel()
+        : base("attachment-fileUpload") { }
 }

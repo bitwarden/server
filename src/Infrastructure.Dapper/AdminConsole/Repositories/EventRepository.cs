@@ -14,75 +14,123 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 public class EventRepository : Repository<Event, Guid>, IEventRepository
 {
     public EventRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public EventRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
-    public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,
-        PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByUserAsync(
+        Guid userId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByUserId]",
-            new Dictionary<string, object?>
-            {
-                ["@UserId"] = userId
-            }, startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByUserId]",
+            new Dictionary<string, object?> { ["@UserId"] = userId },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(
+        Guid organizationId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationId]",
-            new Dictionary<string, object?>
-            {
-                ["@OrganizationId"] = organizationId
-            }, startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByOrganizationId]",
+            new Dictionary<string, object?> { ["@OrganizationId"] = organizationId },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(
+        Guid organizationId,
+        Guid actingUserId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdActingUserId]",
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByOrganizationIdActingUserId]",
             new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = organizationId,
-                ["@ActingUserId"] = actingUserId
-            }, startDate, endDate, pageOptions);
+                ["@ActingUserId"] = actingUserId,
+            },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByProviderAsync(
+        Guid providerId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderId]",
-            new Dictionary<string, object?>
-            {
-                ["@ProviderId"] = providerId
-            }, startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByProviderId]",
+            new Dictionary<string, object?> { ["@ProviderId"] = providerId },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(
+        Guid providerId,
+        Guid actingUserId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByProviderIdActingUserId]",
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByProviderIdActingUserId]",
             new Dictionary<string, object?>
             {
                 ["@ProviderId"] = providerId,
-                ["@ActingUserId"] = actingUserId
-            }, startDate, endDate, pageOptions);
+                ["@ActingUserId"] = actingUserId,
+            },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
-        PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByCipherAsync(
+        Cipher cipher,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByCipherId]",
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByCipherId]",
             new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = cipher.OrganizationId,
                 ["@UserId"] = cipher.UserId,
-                ["@CipherId"] = cipher.Id
-            }, startDate, endDate, pageOptions);
+                ["@CipherId"] = cipher.Id,
+            },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
     public async Task CreateAsync(IEvent e)
@@ -111,33 +159,54 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             connection.Open();
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
+            using (
+                var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null)
+            )
             {
                 bulkCopy.DestinationTableName = "[dbo].[Event]";
-                var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event @event ? @event : new Event(e)));
+                var dataTable = BuildEventsTable(
+                    bulkCopy,
+                    entities.Select(e => e is Event @event ? @event : new Event(e))
+                );
                 await bulkCopy.WriteToServerAsync(dataTable);
             }
         }
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
-        DateTime startDate, DateTime endDate,
-        PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(
+        Guid organizationId,
+        Guid serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByOrganizationIdServiceAccountId]",
+        return await GetManyAsync(
+            $"[{Schema}].[Event_ReadPageByOrganizationIdServiceAccountId]",
             new Dictionary<string, object?>
             {
                 ["@OrganizationId"] = organizationId,
-                ["@ServiceAccountId"] = serviceAccountId
-            }, startDate, endDate, pageOptions);
+                ["@ServiceAccountId"] = serviceAccountId,
+            },
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,
-        IDictionary<string, object?> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    private async Task<PagedResult<IEvent>> GetManyAsync(
+        string sprocName,
+        IDictionary<string, object?> sprocParams,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
         DateTime? beforeDate = null;
-        if (!string.IsNullOrWhiteSpace(pageOptions.ContinuationToken) &&
-            long.TryParse(pageOptions.ContinuationToken, out var binaryDate))
+        if (
+            !string.IsNullOrWhiteSpace(pageOptions.ContinuationToken)
+            && long.TryParse(pageOptions.ContinuationToken, out var binaryDate)
+        )
         {
             beforeDate = DateTime.SpecifyKind(DateTime.FromBinary(binaryDate), DateTimeKind.Utc);
         }
@@ -152,8 +221,13 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
 
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var events = (await connection.QueryAsync<Event>(sprocName, parameters,
-                commandType: CommandType.StoredProcedure)).ToList();
+            var events = (
+                await connection.QueryAsync<Event>(
+                    sprocName,
+                    parameters,
+                    commandType: CommandType.StoredProcedure
+                )
+            ).ToList();
 
             var result = new PagedResult<IEvent>();
             if (events.Any() && events.Count >= pageOptions.PageSize)
@@ -224,19 +298,30 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[idColumn] = ev.Id;
             row[typeColumn] = (int)ev.Type;
             row[userIdColumn] = ev.UserId.HasValue ? (object)ev.UserId.Value : DBNull.Value;
-            row[organizationIdColumn] = ev.OrganizationId.HasValue ? (object)ev.OrganizationId.Value : DBNull.Value;
+            row[organizationIdColumn] = ev.OrganizationId.HasValue
+                ? (object)ev.OrganizationId.Value
+                : DBNull.Value;
             row[cipherIdColumn] = ev.CipherId.HasValue ? (object)ev.CipherId.Value : DBNull.Value;
-            row[collectionIdColumn] = ev.CollectionId.HasValue ? (object)ev.CollectionId.Value : DBNull.Value;
+            row[collectionIdColumn] = ev.CollectionId.HasValue
+                ? (object)ev.CollectionId.Value
+                : DBNull.Value;
             row[policyIdColumn] = ev.PolicyId.HasValue ? (object)ev.PolicyId.Value : DBNull.Value;
             row[groupIdColumn] = ev.GroupId.HasValue ? (object)ev.GroupId.Value : DBNull.Value;
-            row[organizationUserIdColumn] = ev.OrganizationUserId.HasValue ?
-                (object)ev.OrganizationUserId.Value : DBNull.Value;
-            row[actingUserIdColumn] = ev.ActingUserId.HasValue ? (object)ev.ActingUserId.Value : DBNull.Value;
-            row[deviceTypeColumn] = ev.DeviceType.HasValue ? (object)ev.DeviceType.Value : DBNull.Value;
+            row[organizationUserIdColumn] = ev.OrganizationUserId.HasValue
+                ? (object)ev.OrganizationUserId.Value
+                : DBNull.Value;
+            row[actingUserIdColumn] = ev.ActingUserId.HasValue
+                ? (object)ev.ActingUserId.Value
+                : DBNull.Value;
+            row[deviceTypeColumn] = ev.DeviceType.HasValue
+                ? (object)ev.DeviceType.Value
+                : DBNull.Value;
             row[ipAddressColumn] = ev.IpAddress != null ? (object)ev.IpAddress : DBNull.Value;
             row[dateColumn] = ev.Date;
             row[secretIdColumn] = ev.SecretId.HasValue ? ev.SecretId.Value : DBNull.Value;
-            row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue ? ev.ServiceAccountId.Value : DBNull.Value;
+            row[serviceAccountIdColumn] = ev.ServiceAccountId.HasValue
+                ? ev.ServiceAccountId.Value
+                : DBNull.Value;
 
             eventsTable.Rows.Add(row);
         }

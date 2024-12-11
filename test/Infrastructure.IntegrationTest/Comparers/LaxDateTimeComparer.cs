@@ -7,7 +7,9 @@ namespace Bit.Infrastructure.IntegrationTest.Comparers;
 /// </summary>
 public class LaxDateTimeComparer : IEqualityComparer<DateTime>
 {
-    public static readonly IEqualityComparer<DateTime> Default = new LaxDateTimeComparer(TimeSpan.FromMilliseconds(2));
+    public static readonly IEqualityComparer<DateTime> Default = new LaxDateTimeComparer(
+        TimeSpan.FromMilliseconds(2)
+    );
     private readonly TimeSpan _allowedDifference;
 
     public LaxDateTimeComparer(TimeSpan allowedDifference)

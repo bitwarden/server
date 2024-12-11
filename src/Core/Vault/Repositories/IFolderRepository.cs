@@ -14,6 +14,8 @@ public interface IFolderRepository : IRepository<Folder, Guid>
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
     /// <param name="folders">A list of folders with updated data</param>
-    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
-        IEnumerable<Folder> folders);
+    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId,
+        IEnumerable<Folder> folders
+    );
 }

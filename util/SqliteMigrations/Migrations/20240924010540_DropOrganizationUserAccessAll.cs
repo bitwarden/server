@@ -10,9 +10,7 @@ public partial class DropOrganizationUserAccessAll : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "AccessAll",
-            table: "OrganizationUser");
+        migrationBuilder.DropColumn(name: "AccessAll", table: "OrganizationUser");
     }
 
     /// <inheritdoc />
@@ -23,6 +21,7 @@ public partial class DropOrganizationUserAccessAll : Migration
             table: "OrganizationUser",
             type: "INTEGER",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 }

@@ -18,11 +18,16 @@ public class CipherPasswordHistoryModel
     [EncryptedStringLength(5000)]
     [Required]
     public string Password { get; set; }
+
     [Required]
     public DateTime? LastUsedDate { get; set; }
 
     public CipherPasswordHistoryData ToCipherPasswordHistoryData()
     {
-        return new CipherPasswordHistoryData { Password = Password, LastUsedDate = LastUsedDate.Value, };
+        return new CipherPasswordHistoryData
+        {
+            Password = Password,
+            LastUsedDate = LastUsedDate.Value,
+        };
     }
 }

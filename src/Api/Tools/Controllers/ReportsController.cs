@@ -45,16 +45,20 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberCipherDetailsResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-cipher-details/{orgId}")]
-    public async Task<IEnumerable<MemberCipherDetailsResponseModel>> GetMemberCipherDetails(Guid orgId)
+    public async Task<IEnumerable<MemberCipherDetailsResponseModel>> GetMemberCipherDetails(
+        Guid orgId
+    )
     {
-        // Using the AccessReports permission here until new permissions  
+        // Using the AccessReports permission here until new permissions
         // are needed for more control over reports
         if (!await _currentContext.AccessReports(orgId))
         {
             throw new NotFoundException();
         }
 
-        var memberCipherDetails = await GetMemberCipherDetails(new MemberAccessCipherDetailsRequest { OrganizationId = orgId });
+        var memberCipherDetails = await GetMemberCipherDetails(
+            new MemberAccessCipherDetailsRequest { OrganizationId = orgId }
+        );
 
         var responses = memberCipherDetails.Select(x => new MemberCipherDetailsResponseModel(x));
 
@@ -69,14 +73,18 @@ public class ReportsController : Controller
     /// <returns>IEnumerable of MemberAccessReportResponseModel</returns>
     /// <exception cref="NotFoundException">If Access reports permission is not assigned</exception>
     [HttpGet("member-access/{orgId}")]
-    public async Task<IEnumerable<MemberAccessReportResponseModel>> GetMemberAccessReport(Guid orgId)
+    public async Task<IEnumerable<MemberAccessReportResponseModel>> GetMemberAccessReport(
+        Guid orgId
+    )
     {
         if (!await _currentContext.AccessReports(orgId))
         {
             throw new NotFoundException();
         }
 
-        var memberCipherDetails = await GetMemberCipherDetails(new MemberAccessCipherDetailsRequest { OrganizationId = orgId });
+        var memberCipherDetails = await GetMemberCipherDetails(
+            new MemberAccessCipherDetailsRequest { OrganizationId = orgId }
+        );
 
         var responses = memberCipherDetails.Select(x => new MemberAccessReportResponseModel(x));
 
@@ -84,12 +92,14 @@ public class ReportsController : Controller
     }
 
     /// <summary>
-    /// Contains the organization member info, the cipher ids associated with the member, 
+    /// Contains the organization member info, the cipher ids associated with the member,
     /// and details on their collections, groups, and permissions
     /// </summary>
     /// <param name="request">Request to the MemberAccessCipherDetailsQuery</param>
     /// <returns>IEnumerable of MemberAccessCipherDetails</returns>
-    private async Task<IEnumerable<MemberAccessCipherDetails>> GetMemberCipherDetails(MemberAccessCipherDetailsRequest request)
+    private async Task<IEnumerable<MemberAccessCipherDetails>> GetMemberCipherDetails(
+        MemberAccessCipherDetailsRequest request
+    )
     {
         var memberCipherDetails =
             await _memberAccessCipherDetailsQuery.GetMemberAccessCipherDetails(request);
@@ -104,7 +114,9 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If the user lacks access</exception>
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     [HttpGet("password-health-report-applications/{orgId}")]
-    public async Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplications(Guid orgId)
+    public async Task<
+        IEnumerable<PasswordHealthReportApplication>
+    > GetPasswordHealthReportApplications(Guid orgId)
     {
         if (!await _currentContext.AccessReports(orgId))
         {
@@ -123,7 +135,8 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If the user lacks access</exception>
     [HttpPost("password-health-report-application")]
     public async Task<PasswordHealthReportApplication> AddPasswordHealthReportApplication(
-        [FromBody] PasswordHealthReportApplicationModel request)
+        [FromBody] PasswordHealthReportApplicationModel request
+    )
     {
         if (!await _currentContext.AccessReports(request.OrganizationId))
         {
@@ -133,10 +146,12 @@ public class ReportsController : Controller
         var commandRequest = new AddPasswordHealthReportApplicationRequest
         {
             OrganizationId = request.OrganizationId,
-            Url = request.Url
+            Url = request.Url,
         };
 
-        return await _addPwdHealthReportAppCommand.AddPasswordHealthReportApplicationAsync(commandRequest);
+        return await _addPwdHealthReportAppCommand.AddPasswordHealthReportApplicationAsync(
+            commandRequest
+        );
     }
 
     /// <summary>
@@ -147,21 +162,28 @@ public class ReportsController : Controller
     /// <exception cref="NotFoundException">If user does not have access to the OrganizationId</exception>
     /// <exception cref="BadRequestException">If the organization Id is not valid</exception>
     [HttpPost("password-health-report-applications")]
-    public async Task<IEnumerable<PasswordHealthReportApplication>> AddPasswordHealthReportApplications(
-        [FromBody] IEnumerable<PasswordHealthReportApplicationModel> request)
+    public async Task<
+        IEnumerable<PasswordHealthReportApplication>
+    > AddPasswordHealthReportApplications(
+        [FromBody] IEnumerable<PasswordHealthReportApplicationModel> request
+    )
     {
         if (request.Any(_ => _currentContext.AccessReports(_.OrganizationId).Result == false))
         {
             throw new NotFoundException();
         }
 
-        var commandRequests = request.Select(request => new AddPasswordHealthReportApplicationRequest
-        {
-            OrganizationId = request.OrganizationId,
-            Url = request.Url
-        }).ToList();
+        var commandRequests = request
+            .Select(request => new AddPasswordHealthReportApplicationRequest
+            {
+                OrganizationId = request.OrganizationId,
+                Url = request.Url,
+            })
+            .ToList();
 
-        return await _addPwdHealthReportAppCommand.AddPasswordHealthReportApplicationAsync(commandRequests);
+        return await _addPwdHealthReportAppCommand.AddPasswordHealthReportApplicationAsync(
+            commandRequests
+        );
     }
 
     /// <summary>
@@ -176,7 +198,8 @@ public class ReportsController : Controller
     /// <exception cref="BadRequestException">If the organization does not have any records</exception>
     [HttpDelete("password-health-report-application")]
     public async Task DropPasswordHealthReportApplication(
-        [FromBody] DropPasswordHealthReportApplicationRequest request)
+        [FromBody] DropPasswordHealthReportApplicationRequest request
+    )
     {
         if (!await _currentContext.AccessReports(request.OrganizationId))
         {

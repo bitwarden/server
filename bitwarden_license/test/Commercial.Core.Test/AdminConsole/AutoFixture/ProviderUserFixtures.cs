@@ -18,9 +18,9 @@ internal class ProviderUser : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<Bit.Core.AdminConsole.Entities.Provider.ProviderUser>(composer => composer
-            .With(o => o.Type, Type)
-            .With(o => o.Status, Status));
+        fixture.Customize<Bit.Core.AdminConsole.Entities.Provider.ProviderUser>(composer =>
+            composer.With(o => o.Type, Type).With(o => o.Status, Status)
+        );
     }
 }
 
@@ -31,7 +31,8 @@ public class ProviderUserAttribute : CustomizeAttribute
 
     public ProviderUserAttribute(
         ProviderUserStatusType status = ProviderUserStatusType.Confirmed,
-        ProviderUserType type = ProviderUserType.ProviderAdmin)
+        ProviderUserType type = ProviderUserType.ProviderAdmin
+    )
     {
         _status = status;
         _type = type;

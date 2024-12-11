@@ -13,12 +13,13 @@ namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigRepository
 {
     public SsoConfigRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public SsoConfigRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<SsoConfig?> GetByOrganizationIdAsync(Guid organizationId)
     {
@@ -27,7 +28,8 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
             var results = await connection.QueryAsync<SsoConfig>(
                 $"[{Schema}].[{Table}_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -40,7 +42,8 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
             var results = await connection.QueryAsync<SsoConfig>(
                 $"[{Schema}].[{Table}_ReadByIdentifier]",
                 new { Identifier = identifier },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -53,7 +56,8 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
             var results = await connection.QueryAsync<SsoConfig>(
                 $"[{Schema}].[{Table}_ReadManyByNotBeforeRevisionDate]",
                 new { NotBefore = notBefore },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }

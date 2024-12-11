@@ -1,24 +1,27 @@
-﻿
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Identity.Test.Wrappers;
 
-public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : class
+public class UserManagerTestWrapper<TUser> : UserManager<TUser>
+    where TUser : class
 {
     /// <summary>
     /// Modify this value to mock the responses from UserManager.GetTwoFactorEnabledAsync()
     /// </summary>
     public bool TWO_FACTOR_ENABLED { get; set; } = false;
+
     /// <summary>
     /// Modify this value to mock the responses from UserManager.GetValidTwoFactorProvidersAsync()
     /// </summary>
     public IList<string> TWO_FACTOR_PROVIDERS { get; set; } = [];
+
     /// <summary>
     /// Modify this value to mock the responses from UserManager.GenerateTwoFactorTokenAsync()
     /// </summary>
     public string TWO_FACTOR_TOKEN { get; set; } = string.Empty;
+
     /// <summary>
     /// Modify this value to mock the responses from UserManager.VerifyTwoFactorTokenAsync()
     /// </summary>
@@ -31,10 +34,7 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
 
     public override bool SupportsUserTwoFactor
     {
-        get
-        {
-            return SUPPORTS_TWO_FACTOR;
-        }
+        get { return SUPPORTS_TWO_FACTOR; }
     }
 
     public UserManagerTestWrapper(
@@ -46,10 +46,19 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
         ILookupNormalizer keyNormalizer,
         IdentityErrorDescriber errors,
         IServiceProvider services,
-        ILogger<UserManager<TUser>> logger)
-        : base(store, optionsAccessor, passwordHasher, userValidators, passwordValidators,
-            keyNormalizer, errors, services, logger)
-    { }
+        ILogger<UserManager<TUser>> logger
+    )
+        : base(
+            store,
+            optionsAccessor,
+            passwordHasher,
+            userValidators,
+            passwordValidators,
+            keyNormalizer,
+            errors,
+            services,
+            logger
+        ) { }
 
     /// <summary>
     /// return class variable TWO_FACTOR_ENABLED
@@ -89,7 +98,11 @@ public class UserManagerTestWrapper<TUser> : UserManager<TUser> where TUser : cl
     /// <param name="tokenProvider"></param>
     /// <param name="token"></param>
     /// <returns></returns>
-    public override async Task<bool> VerifyTwoFactorTokenAsync(TUser user, string tokenProvider, string token)
+    public override async Task<bool> VerifyTwoFactorTokenAsync(
+        TUser user,
+        string tokenProvider,
+        string token
+    )
     {
         return TWO_FACTOR_TOKEN_VERIFIED;
     }

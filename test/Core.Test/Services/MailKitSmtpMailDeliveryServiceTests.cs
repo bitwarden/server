@@ -21,10 +21,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         _globalSettings.Mail.Smtp.Host = "unittests.example.com";
         _globalSettings.Mail.ReplyToEmail = "noreply@unittests.example.com";
 
-        _sut = new MailKitSmtpMailDeliveryService(
-            _globalSettings,
-            _logger
-        );
+        _sut = new MailKitSmtpMailDeliveryService(_globalSettings, _logger);
     }
 
     // Remove this test when we add actual tests. It only proves that

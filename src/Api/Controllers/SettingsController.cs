@@ -12,8 +12,7 @@ public class SettingsController : Controller
 {
     private readonly IUserService _userService;
 
-    public SettingsController(
-        IUserService userService)
+    public SettingsController(IUserService userService)
     {
         _userService = userService;
     }

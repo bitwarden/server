@@ -15,14 +15,14 @@ public class PolicyDetailResponsesTests
     {
         var fixture = new Fixture();
 
-        var policy = fixture.Build<Policy>()
+        var policy = fixture
+            .Build<Policy>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.SingleOrg)
             .Create();
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
-        querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
-            .Returns(true);
+        querySub.HasVerifiedDomainsAsync(policy.OrganizationId).Returns(true);
 
         var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
 
@@ -34,14 +34,14 @@ public class PolicyDetailResponsesTests
     {
         var fixture = new Fixture();
 
-        var policy = fixture.Build<Policy>()
+        var policy = fixture
+            .Build<Policy>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.TwoFactorAuthentication)
             .Create();
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
-        querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
-            .Returns(true);
+        querySub.HasVerifiedDomainsAsync(policy.OrganizationId).Returns(true);
 
         var action = async () => await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
 
@@ -53,14 +53,14 @@ public class PolicyDetailResponsesTests
     {
         var fixture = new Fixture();
 
-        var policy = fixture.Build<Policy>()
+        var policy = fixture
+            .Build<Policy>()
             .Without(p => p.Data)
             .With(p => p.Type, PolicyType.SingleOrg)
             .Create();
 
         var querySub = Substitute.For<IOrganizationHasVerifiedDomainsQuery>();
-        querySub.HasVerifiedDomainsAsync(policy.OrganizationId)
-            .Returns(false);
+        querySub.HasVerifiedDomainsAsync(policy.OrganizationId).Returns(false);
 
         var result = await policy.GetSingleOrgPolicyDetailResponseAsync(querySub);
 

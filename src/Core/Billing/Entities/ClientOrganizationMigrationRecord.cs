@@ -16,8 +16,12 @@ public class ClientOrganizationMigrationRecord : ITableObject<Guid>
     public PlanType PlanType { get; set; }
     public int Seats { get; set; }
     public short? MaxStorageGb { get; set; }
-    [MaxLength(50)] public string GatewayCustomerId { get; set; } = null!;
-    [MaxLength(50)] public string GatewaySubscriptionId { get; set; } = null!;
+
+    [MaxLength(50)]
+    public string GatewayCustomerId { get; set; } = null!;
+
+    [MaxLength(50)]
+    public string GatewaySubscriptionId { get; set; } = null!;
     public DateTime? ExpirationDate { get; set; }
     public int? MaxAutoscaleSeats { get; set; }
     public OrganizationStatusType Status { get; set; }

@@ -26,7 +26,8 @@ public class CreateGroupCommand : ICreateGroupCommand
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
@@ -35,9 +36,12 @@ public class CreateGroupCommand : ICreateGroupCommand
         _currentContext = currentContext;
     }
 
-    public async Task CreateGroupAsync(Group group, Organization organization,
+    public async Task CreateGroupAsync(
+        Group group,
+        Organization organization,
         ICollection<CollectionAccessSelection> collections = null,
-        IEnumerable<Guid> users = null)
+        IEnumerable<Guid> users = null
+    )
     {
         Validate(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
@@ -50,9 +54,13 @@ public class CreateGroupCommand : ICreateGroupCommand
         await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Created);
     }
 
-    public async Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
+    public async Task CreateGroupAsync(
+        Group group,
+        Organization organization,
+        EventSystemUser systemUser,
         ICollection<CollectionAccessSelection> collections = null,
-        IEnumerable<Guid> users = null)
+        IEnumerable<Guid> users = null
+    )
     {
         Validate(organization, group, collections);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
@@ -62,10 +70,18 @@ public class CreateGroupCommand : ICreateGroupCommand
             await GroupRepositoryUpdateUsersAsync(group, users, systemUser);
         }
 
-        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Created, systemUser);
+        await _eventService.LogGroupEventAsync(
+            group,
+            Core.Enums.EventType.Group_Created,
+            systemUser
+        );
     }
 
-    private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<CollectionAccessSelection> collections = null)
+    private async Task GroupRepositoryCreateGroupAsync(
+        Group group,
+        Organization organization,
+        IEnumerable<CollectionAccessSelection> collections = null
+    )
     {
         group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
@@ -78,11 +94,16 @@ public class CreateGroupCommand : ICreateGroupCommand
             await _groupRepository.CreateAsync(group, collections);
         }
 
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, organization, _currentContext));
+        await _referenceEventService.RaiseEventAsync(
+            new ReferenceEvent(ReferenceEventType.GroupCreated, organization, _currentContext)
+        );
     }
 
-    private async Task GroupRepositoryUpdateUsersAsync(Group group, IEnumerable<Guid> userIds,
-        EventSystemUser? systemUser = null)
+    private async Task GroupRepositoryUpdateUsersAsync(
+        Group group,
+        IEnumerable<Guid> userIds,
+        EventSystemUser? systemUser = null
+    )
     {
         var usersToAddToGroup = userIds as Guid[] ?? userIds.ToArray();
 
@@ -93,17 +114,32 @@ public class CreateGroupCommand : ICreateGroupCommand
 
         if (systemUser.HasValue)
         {
-            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
-                (u, EventType.OrganizationUser_UpdatedGroups, systemUser.Value, (DateTime?)eventDate)));
+            await _eventService.LogOrganizationUserEventsAsync(
+                users.Select(u =>
+                    (
+                        u,
+                        EventType.OrganizationUser_UpdatedGroups,
+                        systemUser.Value,
+                        (DateTime?)eventDate
+                    )
+                )
+            );
         }
         else
         {
-            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
-                (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+            await _eventService.LogOrganizationUserEventsAsync(
+                users.Select(u =>
+                    (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)
+                )
+            );
         }
     }
 
-    private static void Validate(Organization organization, Group group, IEnumerable<CollectionAccessSelection> collections)
+    private static void Validate(
+        Organization organization,
+        Group group,
+        IEnumerable<CollectionAccessSelection> collections
+    )
     {
         if (organization == null)
         {
@@ -115,10 +151,14 @@ public class CreateGroupCommand : ICreateGroupCommand
             throw new BadRequestException("This organization cannot use groups.");
         }
 
-        var invalidAssociations = collections?.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+        var invalidAssociations = collections?.Where(cas =>
+            cas.Manage && (cas.ReadOnly || cas.HidePasswords)
+        );
         if (invalidAssociations?.Any() ?? false)
         {
-            throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
+            throw new BadRequestException(
+                "The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true."
+            );
         }
     }
 }

@@ -10,7 +10,8 @@ namespace Bit.Api.KeyManagement.Validators;
 /// <summary>
 /// Send implementation for <see cref="IRotationValidator{T,R}"/>
 /// </summary>
-public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>
+public class SendRotationValidator
+    : IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>
 {
     private readonly ISendService _sendService;
     private readonly ISendRepository _sendRepository;
@@ -26,7 +27,10 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
         _sendRepository = sendRepository;
     }
 
-    public async Task<IReadOnlyList<Send>> ValidateAsync(User user, IEnumerable<SendWithIdRequestModel> sends)
+    public async Task<IReadOnlyList<Send>> ValidateAsync(
+        User user,
+        IEnumerable<SendWithIdRequestModel> sends
+    )
     {
         var result = new List<Send>();
 
@@ -41,7 +45,9 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
             var send = sends.FirstOrDefault(c => c.Id == existing.Id);
             if (send == null)
             {
-                throw new BadRequestException("All existing sends must be included in the rotation.");
+                throw new BadRequestException(
+                    "All existing sends must be included in the rotation."
+                );
             }
 
             result.Add(send.ToSend(existing, _sendService));

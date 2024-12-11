@@ -15,7 +15,8 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         ILogger<PaymentMethodAttachedHandler> logger,
         IStripeEventService stripeEventService,
         IStripeFacade stripeFacade,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService
+    )
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -28,7 +29,9 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         var paymentMethod = await _stripeEventService.GetPaymentMethod(parsedEvent);
         if (paymentMethod is null)
         {
-            _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
+            _logger.LogWarning(
+                "Attempted to handle the event payment_method.attached but paymentMethod was null"
+            );
             return;
         }
 
@@ -36,7 +39,7 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         {
             Customer = paymentMethod.CustomerId,
             Status = StripeSubscriptionStatus.Unpaid,
-            Expand = ["data.latest_invoice"]
+            Expand = ["data.latest_invoice"],
         };
 
         StripeList<Subscription> unpaidSubscriptions;
@@ -46,9 +49,11 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         }
         catch (Exception e)
         {
-            _logger.LogError(e,
+            _logger.LogError(
+                e,
                 "Attempted to get unpaid invoices for customer {CustomerId} but encountered an error while calling Stripe",
-                paymentMethod.CustomerId);
+                paymentMethod.CustomerId
+            );
 
             return;
         }
@@ -67,7 +72,8 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         {
             _logger.LogWarning(
                 "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice didn't exist",
-                unpaidSubscription.Id);
+                unpaidSubscription.Id
+            );
 
             return;
         }
@@ -76,7 +82,8 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         {
             _logger.LogWarning(
                 "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\"",
-                unpaidSubscription.Id);
+                unpaidSubscription.Id
+            );
 
             return;
         }
@@ -87,9 +94,12 @@ public class PaymentMethodAttachedHandler : IPaymentMethodAttachedHandler
         }
         catch (Exception e)
         {
-            _logger.LogError(e,
+            _logger.LogError(
+                e,
                 "Attempted to pay open invoice {InvoiceId} on unpaid subscription {SubscriptionId} but encountered an error",
-                latestInvoice.Id, unpaidSubscription.Id);
+                latestInvoice.Id,
+                unpaidSubscription.Id
+            );
             throw;
         }
     }

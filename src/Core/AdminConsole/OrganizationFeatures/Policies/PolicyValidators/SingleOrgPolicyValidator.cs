@@ -21,7 +21,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
 {
     public PolicyType Type => PolicyType.SingleOrg;
     private const string OrganizationNotFoundErrorMessage = "Organization not found.";
-    private const string ClaimedDomainSingleOrganizationRequiredErrorMessage = "The Single organization policy is required for organizations that have enabled domain verification.";
+    private const string ClaimedDomainSingleOrganizationRequiredErrorMessage =
+        "The Single organization policy is required for organizations that have enabled domain verification.";
 
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
@@ -42,7 +43,8 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         IFeatureService featureService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
-        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand
+    )
     {
         _organizationUserRepository = organizationUserRepository;
         _mailService = mailService;
@@ -64,8 +66,13 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
             {
                 var currentUser = _currentContext.UserId ?? Guid.Empty;
-                var isOwnerOrProvider = await _currentContext.OrganizationOwner(policyUpdate.OrganizationId);
-                await RevokeNonCompliantUsersAsync(policyUpdate.OrganizationId, policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider));
+                var isOwnerOrProvider = await _currentContext.OrganizationOwner(
+                    policyUpdate.OrganizationId
+                );
+                await RevokeNonCompliantUsersAsync(
+                    policyUpdate.OrganizationId,
+                    policyUpdate.PerformedBy ?? new StandardUser(currentUser, isOwnerOrProvider)
+                );
             }
             else
             {
@@ -83,13 +90,16 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             throw new NotFoundException(OrganizationNotFoundErrorMessage);
         }
 
-        var currentActiveRevocableOrganizationUsers =
-            (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
-            .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
-                         ou.Type != OrganizationUserType.Owner &&
-                         ou.Type != OrganizationUserType.Admin &&
-                         !(performedBy is StandardUser stdUser && stdUser.UserId == ou.UserId))
+        var currentActiveRevocableOrganizationUsers = (
+            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId)
+        )
+            .Where(ou =>
+                ou.Status != OrganizationUserStatusType.Invited
+                && ou.Status != OrganizationUserStatusType.Revoked
+                && ou.Type != OrganizationUserType.Owner
+                && ou.Type != OrganizationUserType.Admin
+                && !(performedBy is StandardUser stdUser && stdUser.UserId == ou.UserId)
+            )
             .ToList();
 
         if (currentActiveRevocableOrganizationUsers.Count == 0)
@@ -97,16 +107,28 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             return;
         }
 
-        var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, currentActiveRevocableOrganizationUsers, performedBy));
+        var commandResult =
+            await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                new RevokeOrganizationUsersRequest(
+                    organizationId,
+                    currentActiveRevocableOrganizationUsers,
+                    performedBy
+                )
+            );
 
         if (commandResult.HasErrors)
         {
             throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
         }
 
-        await Task.WhenAll(currentActiveRevocableOrganizationUsers.Select(x =>
-            _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
+        await Task.WhenAll(
+            currentActiveRevocableOrganizationUsers.Select(x =>
+                _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(
+                    organization.DisplayName(),
+                    x.Email
+                )
+            )
+        );
     }
 
     private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
@@ -114,33 +136,48 @@ public class SingleOrgPolicyValidator : IPolicyValidator
         // Remove non-compliant users
         var savingUserId = _currentContext.UserId;
         // Note: must get OrganizationUserUserDetails so that Email is always populated from the User object
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            organizationId
+        );
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
             throw new NotFoundException(OrganizationNotFoundErrorMessage);
         }
 
-        var removableOrgUsers = orgUsers.Where(ou =>
-            ou.Status != OrganizationUserStatusType.Invited &&
-            ou.Status != OrganizationUserStatusType.Revoked &&
-            ou.Type != OrganizationUserType.Owner &&
-            ou.Type != OrganizationUserType.Admin &&
-            ou.UserId != savingUserId
-        ).ToList();
+        var removableOrgUsers = orgUsers
+            .Where(ou =>
+                ou.Status != OrganizationUserStatusType.Invited
+                && ou.Status != OrganizationUserStatusType.Revoked
+                && ou.Type != OrganizationUserType.Owner
+                && ou.Type != OrganizationUserType.Admin
+                && ou.UserId != savingUserId
+            )
+            .ToList();
 
         var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
-            removableOrgUsers.Select(ou => ou.UserId!.Value));
+            removableOrgUsers.Select(ou => ou.UserId!.Value)
+        );
         foreach (var orgUser in removableOrgUsers)
         {
-            if (userOrgs.Any(ou => ou.UserId == orgUser.UserId
-                                   && ou.OrganizationId != org.Id
-                                   && ou.Status != OrganizationUserStatusType.Invited))
+            if (
+                userOrgs.Any(ou =>
+                    ou.UserId == orgUser.UserId
+                    && ou.OrganizationId != org.Id
+                    && ou.Status != OrganizationUserStatusType.Invited
+                )
+            )
             {
-                await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, orgUser.Id, savingUserId);
+                await _removeOrganizationUserCommand.RemoveUserAsync(
+                    organizationId,
+                    orgUser.Id,
+                    savingUserId
+                );
 
                 await _mailService.SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
-                    org.DisplayName(), orgUser.Email);
+                    org.DisplayName(),
+                    orgUser.Email
+                );
             }
         }
     }
@@ -149,17 +186,25 @@ public class SingleOrgPolicyValidator : IPolicyValidator
     {
         if (policyUpdate is not { Enabled: true })
         {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(
+                policyUpdate.OrganizationId
+            );
 
-            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+            var validateDecryptionErrorMessage = ssoConfig.ValidateDecryptionOptionsNotEnabled(
+                [MemberDecryptionType.KeyConnector]
+            );
 
             if (!string.IsNullOrWhiteSpace(validateDecryptionErrorMessage))
             {
                 return validateDecryptionErrorMessage;
             }
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-                && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policyUpdate.OrganizationId))
+            if (
+                _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _organizationHasVerifiedDomainsQuery.HasVerifiedDomainsAsync(
+                    policyUpdate.OrganizationId
+                )
+            )
             {
                 return ClaimedDomainSingleOrganizationRequiredErrorMessage;
             }

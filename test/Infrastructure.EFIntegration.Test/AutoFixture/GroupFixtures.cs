@@ -46,13 +46,12 @@ internal class EfGroup : ICustomization
 
 internal class EfGroupAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfGroupAutoDataAttribute() : base(new SutProviderCustomization(), new EfGroup())
-    { }
+    public EfGroupAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfGroup()) { }
 }
 
 internal class InlineEfGroupAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfGroupAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfGroup) }, values)
-    { }
+    public InlineEfGroupAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfGroup) }, values) { }
 }

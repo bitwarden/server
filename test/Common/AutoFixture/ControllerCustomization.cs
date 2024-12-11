@@ -10,11 +10,14 @@ namespace Bit.Test.Common.AutoFixture;
 public class ControllerCustomization : ICustomization
 {
     private readonly Type _controllerType;
+
     public ControllerCustomization(Type controllerType)
     {
         if (!controllerType.IsAssignableTo(typeof(Controller)))
         {
-            throw new Exception($"{nameof(controllerType)} must derive from {typeof(Controller).Name}");
+            throw new Exception(
+                $"{nameof(controllerType)} must derive from {typeof(Controller).Name}"
+            );
         }
 
         _controllerType = controllerType;
@@ -25,7 +28,10 @@ public class ControllerCustomization : ICustomization
         fixture.Customizations.Add(new BuilderWithoutAutoProperties(_controllerType));
     }
 }
-public class ControllerCustomization<T> : ICustomization where T : Controller
+
+public class ControllerCustomization<T> : ICustomization
+    where T : Controller
 {
-    public void Customize(IFixture fixture) => new ControllerCustomization(typeof(T)).Customize(fixture);
+    public void Customize(IFixture fixture) =>
+        new ControllerCustomization(typeof(T)).Customize(fixture);
 }

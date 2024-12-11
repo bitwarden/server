@@ -25,7 +25,8 @@ public abstract class BaseIdentityClientService : IDisposable
         string identityScope,
         string identityClientId,
         string identityClientSecret,
-        ILogger<BaseIdentityClientService> logger)
+        ILogger<BaseIdentityClientService> logger
+    )
     {
         _httpFactory = httpFactory;
         _identityScope = identityScope;
@@ -35,11 +36,15 @@ public abstract class BaseIdentityClientService : IDisposable
 
         Client = _httpFactory.CreateClient("client");
         Client.BaseAddress = new Uri(baseClientServerUri);
-        Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        Client.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("application/json")
+        );
 
         IdentityClient = _httpFactory.CreateClient("identity");
         IdentityClient.BaseAddress = new Uri(baseIdentityServerUri);
-        IdentityClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        IdentityClient.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("application/json")
+        );
     }
 
     protected HttpClient Client { get; private set; }
@@ -52,23 +57,30 @@ public abstract class BaseIdentityClientService : IDisposable
     protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel) =>
         SendAsync<TRequest, object>(method, path, requestModel, false);
 
-    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path,
-        TRequest requestModel, bool hasJsonResult)
+    protected async Task<TResult> SendAsync<TRequest, TResult>(
+        HttpMethod method,
+        string path,
+        TRequest requestModel,
+        bool hasJsonResult
+    )
     {
         var fullRequestPath = string.Concat(Client.BaseAddress, path);
 
         var tokenStateResponse = await HandleTokenStateAsync();
         if (!tokenStateResponse)
         {
-            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained",
-                method.Method, fullRequestPath);
+            _logger.LogError(
+                "Unable to send {method} request to {requestUri} because an access token was unable to be obtained",
+                method.Method,
+                fullRequestPath
+            );
             return default;
         }
 
         var message = new TokenHttpRequestMessage(requestModel, AccessToken)
         {
             Method = method,
-            RequestUri = new Uri(fullRequestPath)
+            RequestUri = new Uri(fullRequestPath),
         };
         try
         {
@@ -82,8 +94,12 @@ public abstract class BaseIdentityClientService : IDisposable
             }
             else
             {
-                _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}",
-                    message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
+                _logger.LogError(
+                    "Request to {url} is unsuccessful with status of {code}-{reason}",
+                    message.RequestUri.ToString(),
+                    response.StatusCode,
+                    response.ReasonPhrase
+                );
             }
             return default;
         }
@@ -98,7 +114,11 @@ public abstract class BaseIdentityClientService : IDisposable
     {
         if (_nextAuthAttempt.HasValue && DateTime.UtcNow < _nextAuthAttempt.Value)
         {
-            _logger.LogInformation("Not requesting a token at {now} because the next request time is {nextAttempt}", DateTime.UtcNow, _nextAuthAttempt.Value);
+            _logger.LogInformation(
+                "Not requesting a token at {now} because the next request time is {nextAttempt}",
+                DateTime.UtcNow,
+                _nextAuthAttempt.Value
+            );
             return false;
         }
         _nextAuthAttempt = null;
@@ -112,13 +132,15 @@ public abstract class BaseIdentityClientService : IDisposable
         {
             Method = HttpMethod.Post,
             RequestUri = new Uri(string.Concat(IdentityClient.BaseAddress, "connect/token")),
-            Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "grant_type", "client_credentials" },
-                { "scope", _identityScope },
-                { "client_id", _identityClientId },
-                { "client_secret", _identityClientSecret }
-            })
+            Content = new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "grant_type", "client_credentials" },
+                    { "scope", _identityScope },
+                    { "client_id", _identityClientId },
+                    { "client_secret", _identityClientSecret },
+                }
+            ),
         };
 
         HttpResponseMessage response = null;
@@ -133,13 +155,23 @@ public abstract class BaseIdentityClientService : IDisposable
 
         if (response == null)
         {
-            _logger.LogError("Empty token response from {identity} for client {clientId}", IdentityClient.BaseAddress, _identityClientId);
+            _logger.LogError(
+                "Empty token response from {identity} for client {clientId}",
+                IdentityClient.BaseAddress,
+                _identityClientId
+            );
             return false;
         }
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Unsuccessful token response from {identity} for client {clientId} with status {code}-{reason}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode, response.ReasonPhrase);
+            _logger.LogError(
+                "Unsuccessful token response from {identity} for client {clientId} with status {code}-{reason}",
+                IdentityClient.BaseAddress,
+                _identityClientId,
+                response.StatusCode,
+                response.ReasonPhrase
+            );
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {

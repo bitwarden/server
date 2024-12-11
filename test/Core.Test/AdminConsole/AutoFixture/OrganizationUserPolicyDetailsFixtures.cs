@@ -17,10 +17,12 @@ internal class OrganizationUserPolicyDetailsCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<OrganizationUserPolicyDetails>(composer => composer
-            .With(o => o.OrganizationId, Guid.NewGuid())
-            .With(o => o.PolicyType, Type)
-            .With(o => o.PolicyEnabled, true));
+        fixture.Customize<OrganizationUserPolicyDetails>(composer =>
+            composer
+                .With(o => o.OrganizationId, Guid.NewGuid())
+                .With(o => o.PolicyType, Type)
+                .With(o => o.PolicyEnabled, true)
+        );
     }
 }
 

@@ -5,10 +5,10 @@ namespace Bit.Core.AdminConsole.OrganizationAuth.Models;
 
 public class BatchAuthRequestUpdateProcessor
 {
-    public List<AuthRequestUpdateProcessor> Processors { get; } = new List<AuthRequestUpdateProcessor>();
-    private List<AuthRequestUpdateProcessor> _processed => Processors
-        .Where(p => p.ProcessedAuthRequest != null)
-        .ToList();
+    public List<AuthRequestUpdateProcessor> Processors { get; } =
+        new List<AuthRequestUpdateProcessor>();
+    private List<AuthRequestUpdateProcessor> _processed =>
+        Processors.Where(p => p.ProcessedAuthRequest != null).ToList();
 
     public BatchAuthRequestUpdateProcessor(
         ICollection<OrganizationAdminAuthRequest> authRequests,
@@ -16,14 +16,17 @@ public class BatchAuthRequestUpdateProcessor
         AuthRequestUpdateProcessorConfiguration configuration
     )
     {
-        Processors = authRequests?.Select(ar =>
-        {
-            return new AuthRequestUpdateProcessor(
-                ar,
-                updates.FirstOrDefault(u => u.Id == ar.Id),
-                configuration
-            );
-        }).ToList() ?? Processors;
+        Processors =
+            authRequests
+                ?.Select(ar =>
+                {
+                    return new AuthRequestUpdateProcessor(
+                        ar,
+                        updates.FirstOrDefault(u => u.Id == ar.Id),
+                        configuration
+                    );
+                })
+                .ToList() ?? Processors;
     }
 
     public BatchAuthRequestUpdateProcessor Process(Action<Exception> errorHandlerCallback)
@@ -65,7 +68,9 @@ public class BatchAuthRequestUpdateProcessor
         }
     }
 
-    public async Task SendApprovalEmailsForProcessedRequests(Func<OrganizationAdminAuthRequest, string, Task> callback)
+    public async Task SendApprovalEmailsForProcessedRequests(
+        Func<OrganizationAdminAuthRequest, string, Task> callback
+    )
     {
         foreach (var processor in _processed)
         {
@@ -73,14 +78,18 @@ public class BatchAuthRequestUpdateProcessor
         }
     }
 
-    public async Task LogOrganizationEventsForProcessedRequests(Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback)
+    public async Task LogOrganizationEventsForProcessedRequests(
+        Func<IEnumerable<(OrganizationAdminAuthRequest, EventType)>, Task> callback
+    )
     {
         if (_processed.Any())
         {
-            await callback(_processed.Select(p =>
-            {
-                return (p.ProcessedAuthRequest, p.OrganizationEventType);
-            }));
+            await callback(
+                _processed.Select(p =>
+                {
+                    return (p.ProcessedAuthRequest, p.OrganizationEventType);
+                })
+            );
         }
     }
 }

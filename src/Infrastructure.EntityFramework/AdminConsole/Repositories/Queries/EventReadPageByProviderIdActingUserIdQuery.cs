@@ -12,8 +12,14 @@ public class EventReadPageByProviderIdActingUserIdQuery : IQuery<Event>
     private readonly DateTime? _beforeDate;
     private readonly PageOptions _pageOptions;
 
-    public EventReadPageByProviderIdActingUserIdQuery(Guid providerId, Guid actingUserId,
-            DateTime startDate, DateTime endDate, DateTime? beforeDate, PageOptions pageOptions)
+    public EventReadPageByProviderIdActingUserIdQuery(
+        Guid providerId,
+        Guid actingUserId,
+        DateTime startDate,
+        DateTime endDate,
+        DateTime? beforeDate,
+        PageOptions pageOptions
+    )
     {
         _providerId = providerId;
         _actingUserId = actingUserId;
@@ -25,14 +31,16 @@ public class EventReadPageByProviderIdActingUserIdQuery : IQuery<Event>
 
     public IQueryable<Event> Run(DatabaseContext dbContext)
     {
-        var q = from e in dbContext.Events
-                where e.Date >= _startDate &&
-                (_beforeDate != null || e.Date <= _endDate) &&
-                (_beforeDate == null || e.Date < _beforeDate.Value) &&
-                e.ProviderId == _providerId &&
-                e.ActingUserId == _actingUserId
-                orderby e.Date descending
-                select e;
+        var q =
+            from e in dbContext.Events
+            where
+                e.Date >= _startDate
+                && (_beforeDate != null || e.Date <= _endDate)
+                && (_beforeDate == null || e.Date < _beforeDate.Value)
+                && e.ProviderId == _providerId
+                && e.ActingUserId == _actingUserId
+            orderby e.Date descending
+            select e;
         return q.Skip(0).Take(_pageOptions.PageSize);
     }
 }

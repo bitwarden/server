@@ -11,10 +11,7 @@ public class AppIdBuilder
 
     public void Build()
     {
-        var model = new TemplateModel
-        {
-            Url = _context.Config.Url
-        };
+        var model = new TemplateModel { Url = _context.Config.Url };
 
         // Needed for backwards compatability with migrated U2F tokens.
         Helpers.WriteLine(_context, "Building FIDO U2F app id.");

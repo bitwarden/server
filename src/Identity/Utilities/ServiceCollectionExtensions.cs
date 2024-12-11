@@ -13,8 +13,11 @@ namespace Bit.Identity.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static IIdentityServerBuilder AddCustomIdentityServerServices(this IServiceCollection services,
-        IWebHostEnvironment env, GlobalSettings globalSettings)
+    public static IIdentityServerBuilder AddCustomIdentityServerServices(
+        this IServiceCollection services,
+        IWebHostEnvironment env,
+        GlobalSettings globalSettings
+    )
     {
         services.AddTransient<IDiscoveryResponseGenerator, DiscoveryResponseGenerator>();
 
@@ -22,7 +25,10 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
         services.AddTransient<IDeviceValidator, DeviceValidator>();
-        services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<
+            ITwoFactorAuthenticationValidator,
+            TwoFactorAuthenticationValidator
+        >();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -38,7 +44,11 @@ public static class ServiceCollectionExtensions
                 options.Caching.ClientStoreExpiration = new TimeSpan(0, 5, 0);
                 if (env.IsDevelopment())
                 {
-                    options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
+                    options.Authentication.CookieSameSiteMode = Microsoft
+                        .AspNetCore
+                        .Http
+                        .SameSiteMode
+                        .Unspecified;
                 }
                 options.InputLengthRestrictions.UserName = 256;
                 options.KeyManagement.Enabled = false;
@@ -57,15 +67,17 @@ public static class ServiceCollectionExtensions
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {
-            services.AddSingleton<IPersistedGrantStore>(sp =>
-                new PersistedGrantStore(sp.GetRequiredKeyedService<IGrantRepository>("cosmos"),
-                    g => new Core.Auth.Models.Data.GrantItem(g)));
+            services.AddSingleton<IPersistedGrantStore>(sp => new PersistedGrantStore(
+                sp.GetRequiredKeyedService<IGrantRepository>("cosmos"),
+                g => new Core.Auth.Models.Data.GrantItem(g)
+            ));
         }
         else
         {
-            services.AddTransient<IPersistedGrantStore>(sp =>
-                new PersistedGrantStore(sp.GetRequiredService<IGrantRepository>(),
-                    g => new Core.Auth.Entities.Grant(g)));
+            services.AddTransient<IPersistedGrantStore>(sp => new PersistedGrantStore(
+                sp.GetRequiredService<IGrantRepository>(),
+                g => new Core.Auth.Entities.Grant(g)
+            ));
         }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();

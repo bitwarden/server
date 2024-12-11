@@ -12,11 +12,12 @@ public class ProviderClientInvoiceReportRow
     public int Used { get; set; }
     public int Remaining { get; set; }
     public string Plan { get; set; }
+
     [Name("Estimated total")]
     public string Total { get; set; }
 
-    public static ProviderClientInvoiceReportRow From(ProviderInvoiceItem providerInvoiceItem)
-        => new()
+    public static ProviderClientInvoiceReportRow From(ProviderInvoiceItem providerInvoiceItem) =>
+        new()
         {
             Client = providerInvoiceItem.ClientName,
             Id = providerInvoiceItem.ClientId?.ToString(),
@@ -24,6 +25,10 @@ public class ProviderClientInvoiceReportRow
             Used = providerInvoiceItem.UsedSeats,
             Remaining = providerInvoiceItem.AssignedSeats - providerInvoiceItem.UsedSeats,
             Plan = providerInvoiceItem.PlanName,
-            Total = string.Format(new CultureInfo("en-US", false), "{0:C}", providerInvoiceItem.Total)
+            Total = string.Format(
+                new CultureInfo("en-US", false),
+                "{0:C}",
+                providerInvoiceItem.Total
+            ),
         };
 }

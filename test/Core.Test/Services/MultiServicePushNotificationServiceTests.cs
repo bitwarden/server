@@ -24,15 +24,13 @@ public class MultiServicePushNotificationServiceTests
         _relayLogger = Substitute.For<ILogger<RelayPushNotificationService>>();
         _hubLogger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
 
-        var fixture = new Fixture().WithAutoNSubstitutions().Customize(new GlobalSettingsCustomization());
+        var fixture = new Fixture()
+            .WithAutoNSubstitutions()
+            .Customize(new GlobalSettingsCustomization());
         _services = fixture.CreateMany<IPushNotificationService>();
         _globalSettings = fixture.Create<Settings.GlobalSettings>();
 
-        _sut = new MultiServicePushNotificationService(
-            _services,
-            _logger,
-            _globalSettings
-        );
+        _sut = new MultiServicePushNotificationService(_services, _logger, _globalSettings);
     }
 
     // Remove this test when we add actual tests. It only proves that

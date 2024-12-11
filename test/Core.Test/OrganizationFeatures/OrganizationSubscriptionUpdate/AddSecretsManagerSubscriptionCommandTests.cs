@@ -15,6 +15,7 @@ using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
+
 [SutProviderCustomize]
 public class AddSecretsManagerSubscriptionCommandTests
 {
@@ -32,35 +33,61 @@ public class AddSecretsManagerSubscriptionCommandTests
     [BitAutoData(PlanType.EnterpriseMonthly2019)]
     [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
-    public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(PlanType planType,
+    public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(
+        PlanType planType,
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         int additionalServiceAccounts,
         int additionalSmSeats,
         Organization organization,
-        bool useSecretsManager)
+        bool useSecretsManager
+    )
     {
         organization.PlanType = planType;
 
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
 
-        await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
+        await sutProvider.Sut.SignUpAsync(
+            organization,
+            additionalSmSeats,
+            additionalServiceAccounts
+        );
 
-        sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .ValidateSecretsManagerPlan(plan, Arg.Is<OrganizationUpgrade>(c =>
-                c.UseSecretsManager == useSecretsManager &&
-                c.AdditionalSmSeats == additionalSmSeats &&
-                c.AdditionalServiceAccounts == additionalServiceAccounts &&
-                c.AdditionalSeats == organization.Seats.GetValueOrDefault()));
+        sutProvider
+            .GetDependency<IOrganizationService>()
+            .Received(1)
+            .ValidateSecretsManagerPlan(
+                plan,
+                Arg.Is<OrganizationUpgrade>(c =>
+                    c.UseSecretsManager == useSecretsManager
+                    && c.AdditionalSmSeats == additionalSmSeats
+                    && c.AdditionalServiceAccounts == additionalServiceAccounts
+                    && c.AdditionalSeats == organization.Seats.GetValueOrDefault()
+                )
+            );
 
-        await sutProvider.GetDependency<IPaymentService>().Received()
-            .AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
+        await sutProvider
+            .GetDependency<IPaymentService>()
+            .Received()
+            .AddSecretsManagerToSubscription(
+                organization,
+                plan,
+                additionalSmSeats,
+                additionalServiceAccounts
+            );
 
         // TODO: call ReferenceEventService - see AC-1481
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(c =>
-            c.SmSeats == plan.SecretsManager.BaseSeats + additionalSmSeats &&
-            c.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts &&
-            c.UseSecretsManager == true));
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(
+                Arg.Is<Organization>(c =>
+                    c.SmSeats == plan.SecretsManager.BaseSeats + additionalSmSeats
+                    && c.SmServiceAccounts
+                        == plan.SecretsManager.BaseServiceAccount + additionalServiceAccounts
+                    && c.UseSecretsManager == true
+                )
+            );
     }
 
     [Theory]
@@ -68,10 +95,12 @@ public class AddSecretsManagerSubscriptionCommandTests
     public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         int additionalServiceAccounts,
-        int additionalSmSeats)
+        int additionalSmSeats
+    )
     {
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.SignUpAsync(null, additionalSmSeats, additionalServiceAccounts));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SignUpAsync(null, additionalSmSeats, additionalServiceAccounts)
+        );
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -81,12 +110,19 @@ public class AddSecretsManagerSubscriptionCommandTests
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization,
         int additionalServiceAccounts,
-        int additionalSmSeats)
+        int additionalSmSeats
+    )
     {
         organization.GatewayCustomerId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.SignUpAsync(
+                    organization,
+                    additionalSmSeats,
+                    additionalServiceAccounts
+                )
+        );
         Assert.Contains("No payment method found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -97,12 +133,19 @@ public class AddSecretsManagerSubscriptionCommandTests
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization,
         int additionalServiceAccounts,
-        int additionalSmSeats)
+        int additionalSmSeats
+    )
     {
         organization.GatewaySubscriptionId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.SignUpAsync(
+                    organization,
+                    additionalSmSeats,
+                    additionalServiceAccounts
+                )
+        );
         Assert.Contains("No subscription found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -111,12 +154,14 @@ public class AddSecretsManagerSubscriptionCommandTests
     [BitAutoData]
     public async Task SignUpAsync_ThrowsException_WhenOrganizationAlreadyHasSecretsManager(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
-        Organization organization)
+        Organization organization
+    )
     {
         organization.UseSecretsManager = true;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
+            () => sutProvider.Sut.SignUpAsync(organization, 10, 10)
+        );
 
         Assert.Contains("Organization already uses Secrets Manager", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
@@ -127,26 +172,46 @@ public class AddSecretsManagerSubscriptionCommandTests
     public async Task SignUpAsync_ThrowsException_WhenOrganizationIsManagedByMSP(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization,
-        Provider provider)
+        Provider provider
+    )
     {
         organization.UseSecretsManager = false;
         provider.Type = ProviderType.Msp;
-        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+        sutProvider
+            .GetDependency<IProviderRepository>()
+            .GetByOrganizationIdAsync(organization.Id)
+            .Returns(provider);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
+            () => sutProvider.Sut.SignUpAsync(organization, 10, 10)
+        );
 
-        Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
+        Assert.Contains(
+            "Organizations with a Managed Service Provider do not support Secrets Manager.",
+            exception.Message
+        );
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
-    private static async Task VerifyDependencyNotCalledAsync(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
+    private static async Task VerifyDependencyNotCalledAsync(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider
+    )
     {
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(), Arg.Any<int>());
+        await sutProvider
+            .GetDependency<IPaymentService>()
+            .DidNotReceive()
+            .AddSecretsManagerToSubscription(
+                Arg.Any<Organization>(),
+                Arg.Any<Plan>(),
+                Arg.Any<int>(),
+                Arg.Any<int>()
+            );
 
         // TODO: call ReferenceEventService - see AC-1481
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
     }
 }

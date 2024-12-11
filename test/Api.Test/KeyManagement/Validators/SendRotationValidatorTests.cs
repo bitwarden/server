@@ -26,10 +26,7 @@ public class SendRotationValidatorTests
         var sendService = Substitute.For<ISendService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
-        var sut = new SendRotationValidator(
-            sendService,
-            sendRepository
-        );
+        var sut = new SendRotationValidator(sendService, sendRepository);
 
         var user = new User { Id = new Guid() };
         var sends = CreateInputSendRequests();
@@ -42,7 +39,8 @@ public class SendRotationValidatorTests
         // Assert
         var sendIds = new Guid[]
         {
-            new("72e9ac6d-05f4-4227-ae0d-8a5207623a1a"), new("6b55836c-9280-4589-8762-01b0d8172c97"),
+            new("72e9ac6d-05f4-4227-ae0d-8a5207623a1a"),
+            new("6b55836c-9280-4589-8762-01b0d8172c97"),
             new("9a65bbfb-8138-4aa5-a572-e5c0a41b540e"),
         };
         Assert.All(result, c => Assert.Contains(c.Id, sendIds));
@@ -55,10 +53,7 @@ public class SendRotationValidatorTests
         var sendService = Substitute.For<ISendService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
-        var sut = new SendRotationValidator(
-            sendService,
-            sendRepository
-        );
+        var sut = new SendRotationValidator(sendService, sendRepository);
 
         var user = new User { Id = new Guid() };
         var sends = CreateInputSendRequests();
@@ -69,7 +64,10 @@ public class SendRotationValidatorTests
 
         var result = await sut.ValidateAsync(user, sends);
 
-        Assert.DoesNotContain(result, c => c.Id == new Guid("72e9ac6d-05f4-4227-ae0d-8a5207623a1a"));
+        Assert.DoesNotContain(
+            result,
+            c => c.Id == new Guid("72e9ac6d-05f4-4227-ae0d-8a5207623a1a")
+        );
     }
 
     [Fact]
@@ -79,10 +77,7 @@ public class SendRotationValidatorTests
         var sendService = Substitute.For<ISendService>();
         var sendRepository = Substitute.For<ISendRepository>();
 
-        var sut = new SendRotationValidator(
-            sendService,
-            sendRepository
-        );
+        var sut = new SendRotationValidator(sendService, sendRepository);
 
         var user = new User { Id = new Guid() };
         var sends = CreateInputSendRequests();
@@ -92,8 +87,9 @@ public class SendRotationValidatorTests
         sendRepository.GetManyByUserIdAsync(user.Id).Returns(userSends);
 
         // Act, Assert
-        await Assert.ThrowsAsync<BadRequestException>(async () =>
-            await sut.ValidateAsync(user, sends));
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sut.ValidateAsync(user, sends)
+        );
     }
 
     private IEnumerable<SendWithIdRequestModel> CreateInputSendRequests()
@@ -108,7 +104,9 @@ public class SendRotationValidatorTests
                 Key = "Send1Key",
                 Name = "Send 1",
                 Type = SendType.Text,
-                Text = new SendTextModel(new SendTextData("Text name", "Notes", "Encrypted text for Send 1", false))
+                Text = new SendTextModel(
+                    new SendTextData("Text name", "Notes", "Encrypted text for Send 1", false)
+                ),
             },
             new SendWithIdRequestModel
             {
@@ -118,8 +116,9 @@ public class SendRotationValidatorTests
                 Key = "Send2Key",
                 Name = "Send 2",
                 Type = SendType.Text,
-                Text = new SendTextModel(new SendTextData("Text name", "Notes", "Encrypted text for Send 2",
-                    false)),
+                Text = new SendTextModel(
+                    new SendTextData("Text name", "Notes", "Encrypted text for Send 2", false)
+                ),
             },
             new SendWithIdRequestModel
             {
@@ -130,55 +129,71 @@ public class SendRotationValidatorTests
                 Name = "Send 3",
                 Type = SendType.File,
                 File = new SendFileModel(new SendFileData("File name", "Notes", "File name here")),
-                HideEmail = true
-            }
+                HideEmail = true,
+            },
         };
     }
 
     private List<Send> MockUserSends(User user)
     {
-        return new List<Send>(new[]
-        {
-            new Send
+        return new List<Send>(
+            new[]
             {
-                DeletionDate = new DateTime(2080, 12, 31),
-                Disabled = false,
-                Id = new Guid("72e9ac6d-05f4-4227-ae0d-8a5207623a1a"),
-                UserId = user.Id,
-                Key = "Send1Key",
-                Type = SendType.Text,
-                Data = JsonSerializer.Serialize(
-                    new SendTextModel(new SendTextData("Text name", "Notes", "Encrypted text for Send 1", false)),
-                    JsonHelpers.IgnoreWritingNull),
-            },
-            new Send
-            {
-                DeletionDate = new DateTime(2080, 12, 31),
-                Disabled = true,
-                Id = new Guid("6b55836c-9280-4589-8762-01b0d8172c97"),
-                UserId = user.Id,
-                Key = "Send2Key",
-                Type = SendType.Text,
-                Data = JsonSerializer.Serialize(
-                    new SendTextModel(new SendTextData("Text name", "Notes", "Encrypted text for Send 2",
-                        false)),
-                    JsonHelpers.IgnoreWritingNull),
-            },
-            new Send
-            {
-                DeletionDate = new DateTime(2080, 12, 31),
-                Disabled = false,
-                Id = new Guid("9a65bbfb-8138-4aa5-a572-e5c0a41b540e"),
-                UserId = user.Id,
-                Key = "Send3Key",
-                Type = SendType.File,
-                Data = JsonSerializer.Serialize(
-                    new SendFileModel(new SendFileData("File name", "Notes", "File name here")),
-                    JsonHelpers.IgnoreWritingNull),
-                HideEmail = true
+                new Send
+                {
+                    DeletionDate = new DateTime(2080, 12, 31),
+                    Disabled = false,
+                    Id = new Guid("72e9ac6d-05f4-4227-ae0d-8a5207623a1a"),
+                    UserId = user.Id,
+                    Key = "Send1Key",
+                    Type = SendType.Text,
+                    Data = JsonSerializer.Serialize(
+                        new SendTextModel(
+                            new SendTextData(
+                                "Text name",
+                                "Notes",
+                                "Encrypted text for Send 1",
+                                false
+                            )
+                        ),
+                        JsonHelpers.IgnoreWritingNull
+                    ),
+                },
+                new Send
+                {
+                    DeletionDate = new DateTime(2080, 12, 31),
+                    Disabled = true,
+                    Id = new Guid("6b55836c-9280-4589-8762-01b0d8172c97"),
+                    UserId = user.Id,
+                    Key = "Send2Key",
+                    Type = SendType.Text,
+                    Data = JsonSerializer.Serialize(
+                        new SendTextModel(
+                            new SendTextData(
+                                "Text name",
+                                "Notes",
+                                "Encrypted text for Send 2",
+                                false
+                            )
+                        ),
+                        JsonHelpers.IgnoreWritingNull
+                    ),
+                },
+                new Send
+                {
+                    DeletionDate = new DateTime(2080, 12, 31),
+                    Disabled = false,
+                    Id = new Guid("9a65bbfb-8138-4aa5-a572-e5c0a41b540e"),
+                    UserId = user.Id,
+                    Key = "Send3Key",
+                    Type = SendType.File,
+                    Data = JsonSerializer.Serialize(
+                        new SendFileModel(new SendFileData("File name", "Notes", "File name here")),
+                        JsonHelpers.IgnoreWritingNull
+                    ),
+                    HideEmail = true,
+                },
             }
-        });
+        );
     }
-
-
 }

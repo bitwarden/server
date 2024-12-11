@@ -8,24 +8,34 @@ using ToolsEntities = Bit.Core.Tools.Entities;
 
 namespace Bit.Infrastructure.Dapper.Tools.Repositories;
 
-public class PasswordHealthReportApplicationRepository : Repository<ToolsEntities.PasswordHealthReportApplication, Guid>, IPasswordHealthReportApplicationRepository
+public class PasswordHealthReportApplicationRepository
+    : Repository<ToolsEntities.PasswordHealthReportApplication, Guid>,
+        IPasswordHealthReportApplicationRepository
 {
     public PasswordHealthReportApplicationRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
-    public PasswordHealthReportApplicationRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+    public PasswordHealthReportApplicationRepository(
+        string connectionString,
+        string readOnlyConnectionString
+    )
+        : base(connectionString, readOnlyConnectionString) { }
 
-    public async Task<ICollection<ToolsEntities.PasswordHealthReportApplication>> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<
+        ICollection<ToolsEntities.PasswordHealthReportApplication>
+    > GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
-            var results = await connection.QueryAsync<ToolsEntities.PasswordHealthReportApplication>(
-                $"[{Schema}].[PasswordHealthReportApplication_ReadByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+            var results =
+                await connection.QueryAsync<ToolsEntities.PasswordHealthReportApplication>(
+                    $"[{Schema}].[PasswordHealthReportApplication_ReadByOrganizationId]",
+                    new { OrganizationId = organizationId },
+                    commandType: CommandType.StoredProcedure
+                );
 
             return results.ToList();
         }

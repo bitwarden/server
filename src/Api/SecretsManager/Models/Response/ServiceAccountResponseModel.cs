@@ -8,12 +8,10 @@ public class ServiceAccountResponseModel : ResponseModel
 {
     private const string _objectName = "serviceAccount";
 
-    public ServiceAccountResponseModel(ServiceAccount serviceAccount) : base(_objectName)
+    public ServiceAccountResponseModel(ServiceAccount serviceAccount)
+        : base(_objectName)
     {
-        if (serviceAccount == null)
-        {
-            throw new ArgumentNullException(nameof(serviceAccount));
-        }
+        ArgumentNullException.ThrowIfNull(serviceAccount);
 
         Id = serviceAccount.Id;
         OrganizationId = serviceAccount.OrganizationId;
@@ -22,9 +20,8 @@ public class ServiceAccountResponseModel : ResponseModel
         RevisionDate = serviceAccount.RevisionDate;
     }
 
-    public ServiceAccountResponseModel() : base(_objectName)
-    {
-    }
+    public ServiceAccountResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
 
@@ -39,19 +36,18 @@ public class ServiceAccountResponseModel : ResponseModel
 
 public class ServiceAccountSecretsDetailsResponseModel : ServiceAccountResponseModel
 {
-    public ServiceAccountSecretsDetailsResponseModel(ServiceAccountSecretsDetails serviceAccountDetails) : base(serviceAccountDetails.ServiceAccount)
+    public ServiceAccountSecretsDetailsResponseModel(
+        ServiceAccountSecretsDetails serviceAccountDetails
+    )
+        : base(serviceAccountDetails.ServiceAccount)
     {
-        if (serviceAccountDetails == null)
-        {
-            throw new ArgumentNullException(nameof(serviceAccountDetails));
-        }
+        ArgumentNullException.ThrowIfNull(serviceAccountDetails);
 
         AccessToSecrets = serviceAccountDetails.AccessToSecrets;
     }
 
-    public ServiceAccountSecretsDetailsResponseModel() : base(new ServiceAccount())
-    {
-    }
+    public ServiceAccountSecretsDetailsResponseModel()
+        : base(new ServiceAccount()) { }
 
     public int AccessToSecrets { get; set; }
 }

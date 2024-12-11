@@ -12,6 +12,7 @@ public class PermissionsModel
 {
     [JsonConstructor]
     public PermissionsModel() { }
+
     public PermissionsModel(Permissions? data)
     {
         if (data is null)
@@ -61,7 +62,7 @@ public class PermissionsModel
             ManageSso = ManageSso,
             ManageUsers = ManageUsers,
             ManageResetPassword = ManageResetPassword,
-            ManageScim = ManageScim
+            ManageScim = ManageScim,
         };
     }
 }

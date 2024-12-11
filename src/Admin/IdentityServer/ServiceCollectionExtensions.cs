@@ -9,8 +9,14 @@ namespace Bit.Admin.IdentityServer;
 
 public static class ServiceCollectionExtensions
 {
-    public static Tuple<IdentityBuilder, IdentityBuilder> AddPasswordlessIdentityServices<TUserStore>(
-        this IServiceCollection services, GlobalSettings globalSettings) where TUserStore : class
+    public static Tuple<
+        IdentityBuilder,
+        IdentityBuilder
+    > AddPasswordlessIdentityServices<TUserStore>(
+        this IServiceCollection services,
+        GlobalSettings globalSettings
+    )
+        where TUserStore : class
     {
         services.TryAddTransient<ILookupNormalizer, LowerInvariantLookupNormalizer>();
         services.Configure<DataProtectionTokenProviderOptions>(options =>
@@ -18,16 +24,19 @@ public static class ServiceCollectionExtensions
             options.TokenLifespan = TimeSpan.FromMinutes(15);
         });
 
-        var passwordlessIdentityBuilder = services.AddIdentity<IdentityUser, Role>()
+        var passwordlessIdentityBuilder = services
+            .AddIdentity<IdentityUser, Role>()
             .AddUserStore<TUserStore>()
             .AddRoleStore<RoleStore>()
             .AddDefaultTokenProviders()
             .AddClaimsPrincipalFactory<CustomClaimsPrincipalFactory>();
 
-        var regularIdentityBuilder = services.AddIdentityCore<User>()
-            .AddUserStore<UserStore>();
+        var regularIdentityBuilder = services.AddIdentityCore<User>().AddUserStore<UserStore>();
 
-        services.TryAddScoped<PasswordlessSignInManager<IdentityUser>, PasswordlessSignInManager<IdentityUser>>();
+        services.TryAddScoped<
+            PasswordlessSignInManager<IdentityUser>,
+            PasswordlessSignInManager<IdentityUser>
+        >();
 
         services.ConfigureApplicationCookie(options =>
         {
@@ -41,6 +50,9 @@ public static class ServiceCollectionExtensions
             options.SlidingExpiration = true;
         });
 
-        return new Tuple<IdentityBuilder, IdentityBuilder>(passwordlessIdentityBuilder, regularIdentityBuilder);
+        return new Tuple<IdentityBuilder, IdentityBuilder>(
+            passwordlessIdentityBuilder,
+            regularIdentityBuilder
+        );
     }
 }

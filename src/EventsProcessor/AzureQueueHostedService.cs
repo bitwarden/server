@@ -19,7 +19,8 @@ public class AzureQueueHostedService : IHostedService, IDisposable
 
     public AzureQueueHostedService(
         ILogger<AzureQueueHostedService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration
+    )
     {
         _logger = logger;
         _configuration = configuration;
@@ -48,8 +49,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    public void Dispose()
-    { }
+    public void Dispose() { }
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -67,15 +67,23 @@ public class AzureQueueHostedService : IHostedService, IDisposable
         {
             try
             {
-                var messages = await _queueClient.ReceiveMessagesAsync(32,
-                    cancellationToken: cancellationToken);
+                var messages = await _queueClient.ReceiveMessagesAsync(
+                    32,
+                    cancellationToken: cancellationToken
+                );
                 if (messages.Value?.Any() ?? false)
                 {
                     foreach (var message in messages.Value)
                     {
-                        await ProcessQueueMessageAsync(message.DecodeMessageText(), cancellationToken);
-                        await _queueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt,
-                            cancellationToken);
+                        await ProcessQueueMessageAsync(
+                            message.DecodeMessageText(),
+                            cancellationToken
+                        );
+                        await _queueClient.DeleteMessageAsync(
+                            message.MessageId,
+                            message.PopReceipt,
+                            cancellationToken
+                        );
                     }
                 }
                 else

@@ -16,10 +16,12 @@ public class AccessPolicyHelpersTests
     [Theory]
     [BitAutoData]
     public void CheckForDistinctAccessPolicies_DuplicateAccessPolicies_ThrowsBadRequestException(
-        UserProjectAccessPolicy userProjectAccessPolicy, UserServiceAccountAccessPolicy userServiceAccountAccessPolicy,
+        UserProjectAccessPolicy userProjectAccessPolicy,
+        UserServiceAccountAccessPolicy userServiceAccountAccessPolicy,
         GroupProjectAccessPolicy groupProjectAccessPolicy,
         GroupServiceAccountAccessPolicy groupServiceAccountAccessPolicy,
-        ServiceAccountProjectAccessPolicy serviceAccountProjectAccessPolicy)
+        ServiceAccountProjectAccessPolicy serviceAccountProjectAccessPolicy
+    )
     {
         var accessPolicies = new List<BaseAccessPolicy>
         {
@@ -32,7 +34,7 @@ public class AccessPolicyHelpersTests
             groupServiceAccountAccessPolicy,
             groupServiceAccountAccessPolicy,
             serviceAccountProjectAccessPolicy,
-            serviceAccountProjectAccessPolicy
+            serviceAccountProjectAccessPolicy,
         };
 
         Assert.Throws<BadRequestException>(() =>
@@ -46,17 +48,21 @@ public class AccessPolicyHelpersTests
     {
         var accessPolicies = new List<BaseAccessPolicy> { new UnsupportedAccessPolicy() };
 
-        Assert.Throws<ArgumentException>(() => { AccessPolicyHelpers.CheckForDistinctAccessPolicies(accessPolicies); });
+        Assert.Throws<ArgumentException>(() =>
+        {
+            AccessPolicyHelpers.CheckForDistinctAccessPolicies(accessPolicies);
+        });
     }
-
 
     [Theory]
     [BitAutoData]
-    public void CheckForDistinctAccessPolicies_DistinctPolicies_Success(UserProjectAccessPolicy userProjectAccessPolicy,
+    public void CheckForDistinctAccessPolicies_DistinctPolicies_Success(
+        UserProjectAccessPolicy userProjectAccessPolicy,
         UserServiceAccountAccessPolicy userServiceAccountAccessPolicy,
         GroupProjectAccessPolicy groupProjectAccessPolicy,
         GroupServiceAccountAccessPolicy groupServiceAccountAccessPolicy,
-        ServiceAccountProjectAccessPolicy serviceAccountProjectAccessPolicy)
+        ServiceAccountProjectAccessPolicy serviceAccountProjectAccessPolicy
+    )
     {
         var accessPolicies = new List<BaseAccessPolicy>
         {
@@ -64,7 +70,7 @@ public class AccessPolicyHelpersTests
             userServiceAccountAccessPolicy,
             groupProjectAccessPolicy,
             groupServiceAccountAccessPolicy,
-            serviceAccountProjectAccessPolicy
+            serviceAccountProjectAccessPolicy,
         };
 
         AccessPolicyHelpers.CheckForDistinctAccessPolicies(accessPolicies);
@@ -76,7 +82,7 @@ public class AccessPolicyHelpersTests
         var accessPolicies = new List<BaseAccessPolicy>
         {
             new UserProjectAccessPolicy { Read = false, Write = true },
-            new GroupProjectAccessPolicy { Read = true, Write = false }
+            new GroupProjectAccessPolicy { Read = true, Write = false },
         };
 
         Assert.Throws<BadRequestException>(() =>
@@ -91,7 +97,7 @@ public class AccessPolicyHelpersTests
         var accessPolicies = new List<BaseAccessPolicy>
         {
             new UserProjectAccessPolicy { Read = true, Write = true },
-            new GroupProjectAccessPolicy { Read = true, Write = false }
+            new GroupProjectAccessPolicy { Read = true, Write = false },
         };
 
         AccessPolicyHelpers.CheckAccessPoliciesHaveReadPermission(accessPolicies);

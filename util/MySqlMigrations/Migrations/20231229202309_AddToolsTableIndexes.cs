@@ -13,23 +13,21 @@ public partial class AddToolsTableIndexes : Migration
         migrationBuilder.CreateIndex(
             name: "IX_Send_DeletionDate",
             table: "Send",
-            column: "DeletionDate");
+            column: "DeletionDate"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Send_UserId_OrganizationId",
             table: "Send",
-            columns: new[] { "UserId", "OrganizationId" });
+            columns: new[] { "UserId", "OrganizationId" }
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_Send_DeletionDate",
-            table: "Send");
+        migrationBuilder.DropIndex(name: "IX_Send_DeletionDate", table: "Send");
 
-        migrationBuilder.DropIndex(
-            name: "IX_Send_UserId_OrganizationId",
-            table: "Send");
+        migrationBuilder.DropIndex(name: "IX_Send_UserId_OrganizationId", table: "Send");
     }
 }

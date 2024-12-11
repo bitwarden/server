@@ -15,14 +15,13 @@ public partial class DeviceActivation : Migration
             table: "Device",
             type: "boolean",
             nullable: false,
-            defaultValue: true);
+            defaultValue: true
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "Active",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "Active", table: "Device");
     }
 }

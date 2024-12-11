@@ -1,6 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.Services;
 using Event = Stripe.Event;
+
 namespace Bit.Billing.Services.Implementations;
 
 public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
@@ -14,7 +15,8 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         IStripeEventService stripeEventService,
         IOrganizationService organizationService,
         IUserService userService,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService
+    )
     {
         _stripeEventService = stripeEventService;
         _organizationService = organizationService;
@@ -29,19 +31,29 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
     public async Task HandleAsync(Event parsedEvent)
     {
         var subscription = await _stripeEventService.GetSubscription(parsedEvent, true);
-        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
+        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(
+            subscription.Metadata
+        );
         var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
-        const string providerMigrationCancellationComment = "Cancelled as part of provider migration to Consolidated Billing";
+        const string providerMigrationCancellationComment =
+            "Cancelled as part of provider migration to Consolidated Billing";
 
         if (!subCanceled)
         {
             return;
         }
 
-        if (organizationId.HasValue && subscription is not { CancellationDetails.Comment: providerMigrationCancellationComment })
+        if (
+            organizationId.HasValue
+            && subscription
+                is not { CancellationDetails.Comment: providerMigrationCancellationComment }
+        )
         {
-            await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationService.DisableAsync(
+                organizationId.Value,
+                subscription.CurrentPeriodEnd
+            );
         }
         else if (userId.HasValue)
         {

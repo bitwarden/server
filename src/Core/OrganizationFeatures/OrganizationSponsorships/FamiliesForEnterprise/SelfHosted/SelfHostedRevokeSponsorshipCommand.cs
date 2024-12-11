@@ -5,13 +5,15 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 
-public class SelfHostedRevokeSponsorshipCommand : CancelSponsorshipCommand, IRevokeSponsorshipCommand
+public class SelfHostedRevokeSponsorshipCommand
+    : CancelSponsorshipCommand,
+        IRevokeSponsorshipCommand
 {
     public SelfHostedRevokeSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
-    {
-    }
+        IOrganizationRepository organizationRepository
+    )
+        : base(organizationSponsorshipRepository, organizationRepository) { }
 
     public async Task RevokeSponsorshipAsync(OrganizationSponsorship sponsorship)
     {

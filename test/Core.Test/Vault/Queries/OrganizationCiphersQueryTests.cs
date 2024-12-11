@@ -16,7 +16,9 @@ public class OrganizationCiphersQueryTests
 {
     [Theory, BitAutoData]
     public async Task GetOrganizationCiphersInCollections_ReturnsFilteredCiphers(
-        Guid organizationId, SutProvider<OrganizationCiphersQuery> sutProvider)
+        Guid organizationId,
+        SutProvider<OrganizationCiphersQuery> sutProvider
+    )
     {
         var fixture = new Fixture();
 
@@ -30,10 +32,10 @@ public class OrganizationCiphersQueryTests
 
         var ciphers = new List<CipherOrganizationDetails>
         {
-            otherCipher,    // not in the target collection
-            targetCipher,   // in the target collection
-            bothCipher,     // in both collections
-            noCipher        // not in any collection
+            otherCipher, // not in the target collection
+            targetCipher, // in the target collection
+            bothCipher, // in both collections
+            noCipher, // not in any collection
         };
         ciphers.ForEach(c =>
         {
@@ -44,49 +46,62 @@ public class OrganizationCiphersQueryTests
         var otherCollectionCipher = new CollectionCipher
         {
             CollectionId = otherCollectionId,
-            CipherId = otherCipher.Id
+            CipherId = otherCipher.Id,
         };
         var targetCollectionCipher = new CollectionCipher
         {
             CollectionId = targetCollectionId,
-            CipherId = targetCipher.Id
+            CipherId = targetCipher.Id,
         };
         var bothCollectionCipher1 = new CollectionCipher
         {
             CollectionId = targetCollectionId,
-            CipherId = bothCipher.Id
+            CipherId = bothCipher.Id,
         };
         var bothCollectionCipher2 = new CollectionCipher
         {
             CollectionId = otherCollectionId,
-            CipherId = bothCipher.Id
+            CipherId = bothCipher.Id,
         };
 
-        sutProvider.GetDependency<ICipherRepository>().GetManyOrganizationDetailsByOrganizationIdAsync(organizationId)
+        sutProvider
+            .GetDependency<ICipherRepository>()
+            .GetManyOrganizationDetailsByOrganizationIdAsync(organizationId)
             .Returns(ciphers);
 
-        sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByOrganizationIdAsync(organizationId).Returns(
-        [
-            targetCollectionCipher,
-            otherCollectionCipher,
-            bothCollectionCipher1,
-            bothCollectionCipher2
-        ]);
+        sutProvider
+            .GetDependency<ICollectionCipherRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(
+                [
+                    targetCollectionCipher,
+                    otherCollectionCipher,
+                    bothCollectionCipher1,
+                    bothCollectionCipher2,
+                ]
+            );
 
-        var result = await sutProvider
-            .Sut
-            .GetOrganizationCiphersByCollectionIds(organizationId, [targetCollectionId]);
+        var result = await sutProvider.Sut.GetOrganizationCiphersByCollectionIds(
+            organizationId,
+            [targetCollectionId]
+        );
         result = result.ToList();
 
         Assert.Equal(2, result.Count());
-        Assert.Contains(result, c =>
-            c.Id == targetCipher.Id &&
-            c.CollectionIds.Count() == 1 &&
-            c.CollectionIds.Any(cId => cId == targetCollectionId));
-        Assert.Contains(result, c =>
-            c.Id == bothCipher.Id &&
-            c.CollectionIds.Count() == 2 &&
-            c.CollectionIds.Any(cId => cId == targetCollectionId) &&
-            c.CollectionIds.Any(cId => cId == otherCollectionId));
+        Assert.Contains(
+            result,
+            c =>
+                c.Id == targetCipher.Id
+                && c.CollectionIds.Count() == 1
+                && c.CollectionIds.Any(cId => cId == targetCollectionId)
+        );
+        Assert.Contains(
+            result,
+            c =>
+                c.Id == bothCipher.Id
+                && c.CollectionIds.Count() == 2
+                && c.CollectionIds.Any(cId => cId == targetCollectionId)
+                && c.CollectionIds.Any(cId => cId == otherCollectionId)
+        );
     }
 }

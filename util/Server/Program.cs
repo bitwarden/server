@@ -4,18 +4,18 @@ public class Program
 {
     public static void Main(string[] args)
     {
-        var config = new ConfigurationBuilder()
-            .AddCommandLine(args)
-            .Build();
+        var config = new ConfigurationBuilder().AddCommandLine(args).Build();
 
         var builder = new WebHostBuilder()
             .UseConfiguration(config)
             .UseKestrel()
             .UseStartup<Startup>()
-            .ConfigureLogging((hostingContext, logging) =>
-            {
-                logging.AddConsole().AddDebug();
-            })
+            .ConfigureLogging(
+                (hostingContext, logging) =>
+                {
+                    logging.AddConsole().AddDebug();
+                }
+            )
             .ConfigureKestrel((context, options) => { });
 
         var contentRoot = config.GetValue<string>("contentRoot");

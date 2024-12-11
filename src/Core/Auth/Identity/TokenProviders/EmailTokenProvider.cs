@@ -14,14 +14,12 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
     private readonly IDistributedCache _distributedCache;
     private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
 
-    public EmailTokenProvider(
-        [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache)
+    public EmailTokenProvider([FromKeyedServices("persistent")] IDistributedCache distributedCache)
     {
         _distributedCache = distributedCache;
         _distributedCacheEntryOptions = new DistributedCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
         };
     }
 
@@ -34,15 +32,35 @@ public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
         return Task.FromResult(!string.IsNullOrEmpty(user.Email));
     }
 
-    public virtual async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+    public virtual async Task<string> GenerateAsync(
+        string purpose,
+        UserManager<User> manager,
+        User user
+    )
     {
-        var code = CoreHelpers.SecureRandomString(TokenLength, TokenAlpha, true, false, TokenNumeric, false);
+        var code = CoreHelpers.SecureRandomString(
+            TokenLength,
+            TokenAlpha,
+            true,
+            false,
+            TokenNumeric,
+            false
+        );
         var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
-        await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(code), _distributedCacheEntryOptions);
+        await _distributedCache.SetAsync(
+            cacheKey,
+            Encoding.UTF8.GetBytes(code),
+            _distributedCacheEntryOptions
+        );
         return code;
     }
 
-    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    public async Task<bool> ValidateAsync(
+        string purpose,
+        string token,
+        UserManager<User> manager,
+        User user
+    )
     {
         var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
         var cachedValue = await _distributedCache.GetAsync(cacheKey);

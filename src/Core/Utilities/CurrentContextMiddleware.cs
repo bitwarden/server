@@ -13,7 +13,11 @@ public class CurrentContextMiddleware
         _next = next;
     }
 
-    public async Task Invoke(HttpContext httpContext, ICurrentContext currentContext, GlobalSettings globalSettings)
+    public async Task Invoke(
+        HttpContext httpContext,
+        ICurrentContext currentContext,
+        GlobalSettings globalSettings
+    )
     {
         await currentContext.BuildAsync(httpContext, globalSettings);
         await _next.Invoke(httpContext);

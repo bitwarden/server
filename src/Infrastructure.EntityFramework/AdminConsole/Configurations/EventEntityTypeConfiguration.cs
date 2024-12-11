@@ -8,12 +8,16 @@ public class EventEntityTypeConfiguration : IEntityTypeConfiguration<Event>
 {
     public void Configure(EntityTypeBuilder<Event> builder)
     {
-        builder
-            .Property(e => e.Id)
-            .ValueGeneratedNever();
+        builder.Property(e => e.Id).ValueGeneratedNever();
 
         builder
-            .HasIndex(e => new { e.Date, e.OrganizationId, e.ActingUserId, e.CipherId })
+            .HasIndex(e => new
+            {
+                e.Date,
+                e.OrganizationId,
+                e.ActingUserId,
+                e.CipherId,
+            })
             .IsClustered(false);
 
         builder.ToTable(nameof(Event));

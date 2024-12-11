@@ -12,10 +12,13 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
     {
         var subscriptionInfo = licenseContext.SubscriptionInfo;
 
-        var expires = subscriptionInfo.UpcomingInvoice?.Date?.AddDays(7) ?? entity.PremiumExpirationDate?.AddDays(7);
+        var expires =
+            subscriptionInfo.UpcomingInvoice?.Date?.AddDays(7)
+            ?? entity.PremiumExpirationDate?.AddDays(7);
         var refresh = subscriptionInfo.UpcomingInvoice?.Date ?? entity.PremiumExpirationDate;
-        var trial = (subscriptionInfo.Subscription?.TrialEndDate.HasValue ?? false) &&
-                    subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
+        var trial =
+            (subscriptionInfo.Subscription?.TrialEndDate.HasValue ?? false)
+            && subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
 
         var claims = new List<Claim>
         {
@@ -26,7 +29,10 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
             new(nameof(UserLicenseConstants.Email), entity.Email),
             new(nameof(UserLicenseConstants.Premium), entity.Premium.ToString()),
             new(nameof(UserLicenseConstants.MaxStorageGb), entity.MaxStorageGb.ToString()),
-            new(nameof(UserLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
+            new(
+                nameof(UserLicenseConstants.Issued),
+                DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)
+            ),
             new(nameof(UserLicenseConstants.Expires), expires.ToString()),
             new(nameof(UserLicenseConstants.Refresh), refresh.ToString()),
             new(nameof(UserLicenseConstants.Trial), trial.ToString()),

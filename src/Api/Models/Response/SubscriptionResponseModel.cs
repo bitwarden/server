@@ -10,10 +10,17 @@ public class SubscriptionResponseModel : ResponseModel
     public SubscriptionResponseModel(User user, SubscriptionInfo subscription, UserLicense license)
         : base("subscription")
     {
-        Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
-        UpcomingInvoice = subscription.UpcomingInvoice != null ?
-            new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-        StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
+        Subscription =
+            subscription.Subscription != null
+                ? new BillingSubscription(subscription.Subscription)
+                : null;
+        UpcomingInvoice =
+            subscription.UpcomingInvoice != null
+                ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice)
+                : null;
+        StorageName = user.Storage.HasValue
+            ? CoreHelpers.ReadableBytesSize(user.Storage.Value)
+            : null;
         StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         MaxStorageGb = user.MaxStorageGb;
         License = license;
@@ -23,7 +30,9 @@ public class SubscriptionResponseModel : ResponseModel
     public SubscriptionResponseModel(User user, UserLicense license = null)
         : base("subscription")
     {
-        StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
+        StorageName = user.Storage.HasValue
+            ? CoreHelpers.ReadableBytesSize(user.Storage.Value)
+            : null;
         StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         MaxStorageGb = user.MaxStorageGb;
         Expiration = user.PremiumExpirationDate;
@@ -81,7 +90,8 @@ public class BillingSubscription
     public bool CancelAtEndDate { get; set; }
     public string Status { get; set; }
     public bool Cancelled { get; set; }
-    public IEnumerable<BillingSubscriptionItem> Items { get; set; } = new List<BillingSubscriptionItem>();
+    public IEnumerable<BillingSubscriptionItem> Items { get; set; } =
+        new List<BillingSubscriptionItem>();
     public string CollectionMethod { get; set; }
     public DateTime? SuspensionDate { get; set; }
     public DateTime? UnpaidPeriodEndDate { get; set; }
@@ -89,7 +99,9 @@ public class BillingSubscription
 
     public class BillingSubscriptionItem
     {
-        public BillingSubscriptionItem(SubscriptionInfo.BillingSubscription.BillingSubscriptionItem item)
+        public BillingSubscriptionItem(
+            SubscriptionInfo.BillingSubscription.BillingSubscriptionItem item
+        )
         {
             ProductId = item.ProductId;
             Name = item.Name;

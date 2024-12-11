@@ -19,8 +19,8 @@ public class CustomRedisProcessingStrategyTests
         {
             Enabled = true,
             MaxRedisTimeoutsThreshold = 2,
-            SlidingWindowSeconds = 5
-        }
+            SlidingWindowSeconds = 5,
+        },
     };
 
     private readonly ClientRequestIdentity _sampleClientId = new()
@@ -28,21 +28,29 @@ public class CustomRedisProcessingStrategyTests
         ClientId = "test",
         ClientIp = "127.0.0.1",
         HttpVerb = "GET",
-        Path = "/"
+        Path = "/",
     };
 
-    private readonly RateLimitRule _sampleRule = new() { Endpoint = "/", Limit = 5, Period = "1m", PeriodTimespan = TimeSpan.FromMinutes(1) };
+    private readonly RateLimitRule _sampleRule = new()
+    {
+        Endpoint = "/",
+        Limit = 5,
+        Period = "1m",
+        PeriodTimespan = TimeSpan.FromMinutes(1),
+    };
 
     private readonly RateLimitOptions _sampleOptions = new() { };
 
     #endregion
 
-    private readonly ICounterKeyBuilder _mockCounterKeyBuilder = Substitute.For<ICounterKeyBuilder>();
+    private readonly ICounterKeyBuilder _mockCounterKeyBuilder =
+        Substitute.For<ICounterKeyBuilder>();
     private IDatabase _mockDb;
 
     public CustomRedisProcessingStrategyTests()
     {
-        _mockCounterKeyBuilder.Build(Arg.Any<ClientRequestIdentity>(), Arg.Any<RateLimitRule>())
+        _mockCounterKeyBuilder
+            .Build(Arg.Any<ClientRequestIdentity>(), Arg.Any<RateLimitRule>())
             .Returns(_sampleClientId.ClientId);
     }
 
@@ -53,8 +61,13 @@ public class CustomRedisProcessingStrategyTests
         var strategy = BuildProcessingStrategy();
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        var result = await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         // Assert
         Assert.Equal(1, result.Count);
@@ -68,8 +81,13 @@ public class CustomRedisProcessingStrategyTests
         var strategy = BuildProcessingStrategy(false);
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        var result = await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         // Assert
         Assert.Equal(0, result.Count);
@@ -83,19 +101,26 @@ public class CustomRedisProcessingStrategyTests
         var mockCache = Substitute.For<IMemoryCache>();
         object existingCount = new CustomRedisProcessingStrategy.TimeoutCounter
         {
-            Count = _sampleSettings.DistributedIpRateLimiting.MaxRedisTimeoutsThreshold + 1
+            Count = _sampleSettings.DistributedIpRateLimiting.MaxRedisTimeoutsThreshold + 1,
         };
-        mockCache.TryGetValue(Arg.Any<object>(), out existingCount).ReturnsForAnyArgs(x =>
-        {
-            x[1] = existingCount;
-            return true;
-        });
+        mockCache
+            .TryGetValue(Arg.Any<object>(), out existingCount)
+            .ReturnsForAnyArgs(x =>
+            {
+                x[1] = existingCount;
+                return true;
+            });
 
         var strategy = BuildProcessingStrategy(mockCache: mockCache);
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        var result = await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         // Assert
         Assert.Equal(0, result.Count);
@@ -113,8 +138,13 @@ public class CustomRedisProcessingStrategyTests
         var strategy = BuildProcessingStrategy(mockCache: mockCache, throwRedisTimeout: true);
 
         // Act
-        var result = await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        var result = await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         var timeoutCounter = ((CustomRedisProcessingStrategy.TimeoutCounter)mockCacheEntry.Value);
 
@@ -137,16 +167,31 @@ public class CustomRedisProcessingStrategyTests
         // Act
 
         // Redis Timeout 1
-        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         // Redis Timeout 2
-        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         // Skip Redis
-        await strategy.ProcessRequestAsync(_sampleClientId, _sampleRule, _mockCounterKeyBuilder, _sampleOptions,
-            CancellationToken.None);
+        await strategy.ProcessRequestAsync(
+            _sampleClientId,
+            _sampleRule,
+            _mockCounterKeyBuilder,
+            _sampleOptions,
+            CancellationToken.None
+        );
 
         // Assert
         VerifyRedisCalls(_sampleSettings.DistributedIpRateLimiting.MaxRedisTimeoutsThreshold);
@@ -169,7 +214,8 @@ public class CustomRedisProcessingStrategyTests
     private CustomRedisProcessingStrategy BuildProcessingStrategy(
         bool isRedisConnected = true,
         bool throwRedisTimeout = false,
-        IMemoryCache mockCache = null)
+        IMemoryCache mockCache = null
+    )
     {
         var mockRedisConnection = Substitute.For<IConnectionMultiplexer>();
 
@@ -177,27 +223,36 @@ public class CustomRedisProcessingStrategyTests
 
         _mockDb = Substitute.For<IDatabase>();
 
-        var mockScriptEvaluate = _mockDb
-            .ScriptEvaluateAsync(Arg.Any<LuaScript>(), Arg.Any<object>(), Arg.Any<CommandFlags>());
+        var mockScriptEvaluate = _mockDb.ScriptEvaluateAsync(
+            Arg.Any<LuaScript>(),
+            Arg.Any<object>(),
+            Arg.Any<CommandFlags>()
+        );
 
         if (throwRedisTimeout)
         {
-            mockScriptEvaluate.Returns<RedisResult>(x => throw new RedisTimeoutException("Timeout", CommandStatus.WaitingToBeSent));
+            mockScriptEvaluate.Returns<RedisResult>(x =>
+                throw new RedisTimeoutException("Timeout", CommandStatus.WaitingToBeSent)
+            );
         }
         else
         {
             mockScriptEvaluate.Returns(RedisResult.Create(1));
         }
 
-        mockRedisConnection.GetDatabase(Arg.Any<int>(), Arg.Any<object>())
-            .Returns(_mockDb);
+        mockRedisConnection.GetDatabase(Arg.Any<int>(), Arg.Any<object>()).Returns(_mockDb);
 
         var mockLogger = Substitute.For<ILogger<CustomRedisProcessingStrategy>>();
         var mockConfig = Substitute.For<IRateLimitConfiguration>();
 
         mockCache ??= Substitute.For<IMemoryCache>();
 
-        return new CustomRedisProcessingStrategy(mockRedisConnection, mockConfig,
-            mockLogger, mockCache, _sampleSettings);
+        return new CustomRedisProcessingStrategy(
+            mockRedisConnection,
+            mockConfig,
+            mockLogger,
+            mockCache,
+            _sampleSettings
+        );
     }
 }

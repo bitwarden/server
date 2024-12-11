@@ -12,8 +12,10 @@ public class ReadOnlyEnvIdentityUserStore : ReadOnlyIdentityUserStore
         _configuration = configuration;
     }
 
-    public override Task<IdentityUser> FindByEmailAsync(string normalizedEmail,
-        CancellationToken cancellationToken = default)
+    public override Task<IdentityUser> FindByEmailAsync(
+        string normalizedEmail,
+        CancellationToken cancellationToken = default
+    )
     {
         var usersCsv = _configuration["adminSettings:admins"];
         if (!CoreHelpers.SettingHasValue(usersCsv))
@@ -39,26 +41,30 @@ public class ReadOnlyEnvIdentityUserStore : ReadOnlyIdentityUserStore
             }
         }
 
-        var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
+        var userStamp = usersDict.TryGetValue(normalizedEmail, out var value) ? value : null;
         if (userStamp == null)
         {
             return Task.FromResult<IdentityUser>(null);
         }
 
-        return Task.FromResult(new IdentityUser
-        {
-            Id = normalizedEmail,
-            Email = normalizedEmail,
-            NormalizedEmail = normalizedEmail,
-            EmailConfirmed = true,
-            UserName = normalizedEmail,
-            NormalizedUserName = normalizedEmail,
-            SecurityStamp = userStamp
-        });
+        return Task.FromResult(
+            new IdentityUser
+            {
+                Id = normalizedEmail,
+                Email = normalizedEmail,
+                NormalizedEmail = normalizedEmail,
+                EmailConfirmed = true,
+                UserName = normalizedEmail,
+                NormalizedUserName = normalizedEmail,
+                SecurityStamp = userStamp,
+            }
+        );
     }
 
-    public override Task<IdentityUser> FindByIdAsync(string userId,
-        CancellationToken cancellationToken = default)
+    public override Task<IdentityUser> FindByIdAsync(
+        string userId,
+        CancellationToken cancellationToken = default
+    )
     {
         return FindByEmailAsync(userId, cancellationToken);
     }

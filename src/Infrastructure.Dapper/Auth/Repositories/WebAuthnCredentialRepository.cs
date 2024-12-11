@@ -14,15 +14,18 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
-public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>, IWebAuthnCredentialRepository
+public class WebAuthnCredentialRepository
+    : Repository<WebAuthnCredential, Guid>,
+        IWebAuthnCredentialRepository
 {
     public WebAuthnCredentialRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public WebAuthnCredentialRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<WebAuthnCredential?> GetByIdAsync(Guid id, Guid userId)
     {
@@ -31,7 +34,8 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
             var results = await connection.QueryAsync<WebAuthnCredential>(
                 $"[{Schema}].[{Table}_ReadByIdUserId]",
                 new { Id = id, UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.FirstOrDefault();
         }
@@ -44,7 +48,8 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
             var results = await connection.QueryAsync<WebAuthnCredential>(
                 $"[{Schema}].[{Table}_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -56,16 +61,21 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
         var affectedRows = await connection.ExecuteAsync(
             $"[{Schema}].[{Table}_Update]",
             credential,
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
 
         return affectedRows > 0;
     }
 
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<WebAuthnLoginRotateKeyData> credentials)
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(
+        Guid userId,
+        IEnumerable<WebAuthnLoginRotateKeyData> credentials
+    )
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
-            const string sql = @"
+            const string sql =
+                @"
                 UPDATE WC
                 SET
                     WC.[EncryptedPublicKey] = UW.[encryptedPublicKey],
@@ -89,8 +99,8 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
                 sql,
                 new { UserId = userId, JsonCredentials = jsonCredentials },
                 transaction: transaction,
-                commandType: CommandType.Text);
+                commandType: CommandType.Text
+            );
         };
     }
-
 }

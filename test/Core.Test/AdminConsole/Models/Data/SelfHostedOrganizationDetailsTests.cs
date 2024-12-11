@@ -20,10 +20,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
 
         var result = orgDetails.CanUseLicense(license, out var exception);
 
@@ -34,10 +45,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_OccupiedSeatCount_ExceedsLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_OccupiedSeatCount_ExceedsLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.Seats = 1;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -49,10 +71,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_MaxCollections_ExceedsLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_MaxCollections_ExceedsLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.MaxCollections = 1;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -64,10 +97,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_Groups_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_Groups_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseGroups = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -79,10 +123,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_Policies_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_Policies_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UsePolicies = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -94,10 +149,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_DisabledPolicies_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_DisabledPolicies_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UsePolicies = false;
         ((List<Policy>)orgDetails.Policies).ForEach(p => p.Enabled = false);
 
@@ -110,10 +176,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_Sso_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_Sso_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseSso = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -125,10 +202,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_DisabledSso_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_DisabledSso_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseSso = false;
         orgDetails.SsoConfig.Enabled = false;
 
@@ -141,10 +229,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_NoSso_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_NoSso_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseSso = false;
         orgDetails.SsoConfig = null;
 
@@ -157,10 +256,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_KeyConnector_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_KeyConnector_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseKeyConnector = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -172,12 +282,28 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_DisabledKeyConnector_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_DisabledKeyConnector_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseKeyConnector = false;
-        orgDetails.SsoConfig.SetData(new SsoConfigurationData() { MemberDecryptionType = MemberDecryptionType.MasterPassword });
+        orgDetails.SsoConfig.SetData(
+            new SsoConfigurationData()
+            {
+                MemberDecryptionType = MemberDecryptionType.MasterPassword,
+            }
+        );
 
         var result = orgDetails.CanUseLicense(license, out var exception);
 
@@ -188,10 +314,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_NoSsoKeyConnector_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_NoSsoKeyConnector_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseKeyConnector = false;
         orgDetails.SsoConfig = null;
 
@@ -204,10 +341,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_Scim_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_Scim_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseScim = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -219,13 +367,25 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_DisabledScim_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_DisabledScim_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseScim = false;
-        ((List<OrganizationConnection<ScimConfig>>)orgDetails.ScimConnections)
-            .ForEach(c => c.SetConfig(new ScimConfig() { Enabled = false }));
+        ((List<OrganizationConnection<ScimConfig>>)orgDetails.ScimConnections).ForEach(c =>
+            c.SetConfig(new ScimConfig() { Enabled = false })
+        );
 
         var result = orgDetails.CanUseLicense(license, out var exception);
 
@@ -236,10 +396,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_NoScimConfig_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_NoScimConfig_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseScim = false;
         orgDetails.ScimConnections = null;
 
@@ -252,10 +423,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_CustomPermissions_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_CustomPermissions_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseCustomPermissions = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -267,12 +449,25 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_NoCustomPermissions_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_NoCustomPermissions_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseCustomPermissions = false;
-        ((List<OrganizationUser>)orgDetails.OrganizationUsers).ForEach(ou => ou.Type = OrganizationUserType.User);
+        ((List<OrganizationUser>)orgDetails.OrganizationUsers).ForEach(ou =>
+            ou.Type = OrganizationUserType.User
+        );
 
         var result = orgDetails.CanUseLicense(license, out var exception);
 
@@ -283,10 +478,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_ResetPassword_NotAllowedByLicense_Fail(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_ResetPassword_NotAllowedByLicense_Fail(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseResetPassword = false;
 
         var result = orgDetails.CanUseLicense(license, out var exception);
@@ -298,10 +504,21 @@ public class SelfHostedOrganizationDetailsTests
     [Theory]
     [BitAutoData]
     [OrganizationLicenseCustomize]
-    public void ValidateForOrganization_DisabledResetPassword_NotAllowedByLicense_Success(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    public void ValidateForOrganization_DisabledResetPassword_NotAllowedByLicense_Success(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
-        var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
+        var (orgDetails, orgLicense) = GetOrganizationAndLicense(
+            orgUsers,
+            policies,
+            ssoConfig,
+            scimConnections,
+            license
+        );
         orgLicense.UseResetPassword = false;
         ((List<Policy>)orgDetails.Policies).ForEach(p => p.Enabled = false);
 
@@ -311,8 +528,16 @@ public class SelfHostedOrganizationDetailsTests
         Assert.True(string.IsNullOrEmpty(exception));
     }
 
-    private (SelfHostedOrganizationDetails organization, OrganizationLicense license) GetOrganizationAndLicense(List<OrganizationUser> orgUsers,
-        List<Policy> policies, SsoConfig ssoConfig, List<OrganizationConnection<ScimConfig>> scimConnections, OrganizationLicense license)
+    private (
+        SelfHostedOrganizationDetails organization,
+        OrganizationLicense license
+    ) GetOrganizationAndLicense(
+        List<OrganizationUser> orgUsers,
+        List<Policy> policies,
+        SsoConfig ssoConfig,
+        List<OrganizationConnection<ScimConfig>> scimConnections,
+        OrganizationLicense license
+    )
     {
         // The default state is that all features are used by Org and allowed by License
         // Each test then toggles on/off as necessary
@@ -320,10 +545,9 @@ public class SelfHostedOrganizationDetailsTests
         policies.First().Type = PolicyType.ResetPassword;
 
         ssoConfig.Enabled = true;
-        ssoConfig.SetData(new SsoConfigurationData()
-        {
-            MemberDecryptionType = MemberDecryptionType.KeyConnector,
-        });
+        ssoConfig.SetData(
+            new SsoConfigurationData() { MemberDecryptionType = MemberDecryptionType.KeyConnector }
+        );
 
         var enabledScimConfig = new ScimConfig() { Enabled = true };
         scimConnections.ForEach(c => c.Config = enabledScimConfig);

@@ -12,12 +12,13 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
 {
     public CollectionCipherRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public CollectionCipherRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
     {
@@ -26,62 +27,94 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
             var results = await connection.QueryAsync<CollectionCipher>(
                 "[dbo].[CollectionCipher_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<CollectionCipher>> GetManyByOrganizationIdAsync(
+        Guid organizationId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionCipher>(
                 "[dbo].[CollectionCipher_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(
+        Guid userId,
+        Guid cipherId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionCipher>(
                 "[dbo].[CollectionCipher_ReadByUserIdCipherId]",
                 new { UserId = userId, CipherId = cipherId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
+    public async Task UpdateCollectionsAsync(
+        Guid cipherId,
+        Guid userId,
+        IEnumerable<Guid> collectionIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[CollectionCipher_UpdateCollections]",
-                new { CipherId = cipherId, UserId = userId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    CipherId = cipherId,
+                    UserId = userId,
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task UpdateCollectionsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> collectionIds)
+    public async Task UpdateCollectionsForAdminAsync(
+        Guid cipherId,
+        Guid organizationId,
+        IEnumerable<Guid> collectionIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 "[dbo].[CollectionCipher_UpdateCollectionsAdmin]",
-                new { CipherId = cipherId, OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    CipherId = cipherId,
+                    OrganizationId = organizationId,
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId,
-        Guid organizationId, IEnumerable<Guid> collectionIds)
+    public async Task UpdateCollectionsForCiphersAsync(
+        IEnumerable<Guid> cipherIds,
+        Guid userId,
+        Guid organizationId,
+        IEnumerable<Guid> collectionIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -92,33 +125,52 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
                     CipherIds = cipherIds.ToGuidIdArrayTVP(),
                     UserId = userId,
                     OrganizationId = organizationId,
-                    CollectionIds = collectionIds.ToGuidIdArrayTVP()
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task AddCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
-        IEnumerable<Guid> collectionIds)
+    public async Task AddCollectionsForManyCiphersAsync(
+        Guid organizationId,
+        IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
                 "[dbo].[CollectionCipher_AddCollectionsForManyCiphers]",
-                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    CipherIds = cipherIds.ToGuidIdArrayTVP(),
+                    OrganizationId = organizationId,
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task RemoveCollectionsForManyCiphersAsync(Guid organizationId, IEnumerable<Guid> cipherIds,
-        IEnumerable<Guid> collectionIds)
+    public async Task RemoveCollectionsForManyCiphersAsync(
+        Guid organizationId,
+        IEnumerable<Guid> cipherIds,
+        IEnumerable<Guid> collectionIds
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             await connection.ExecuteAsync(
                 "[dbo].[CollectionCipher_RemoveCollectionsForManyCiphers]",
-                new { CipherIds = cipherIds.ToGuidIdArrayTVP(), OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                new
+                {
+                    CipherIds = cipherIds.ToGuidIdArrayTVP(),
+                    OrganizationId = organizationId,
+                    CollectionIds = collectionIds.ToGuidIdArrayTVP(),
+                },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

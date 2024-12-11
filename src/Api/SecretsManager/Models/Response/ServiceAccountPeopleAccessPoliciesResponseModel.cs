@@ -7,7 +7,10 @@ public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
 {
     private const string _objectName = "serviceAccountAccessPolicies";
 
-    public ServiceAccountPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies, Guid userId)
+    public ServiceAccountPeopleAccessPoliciesResponseModel(
+        IEnumerable<BaseAccessPolicy> baseAccessPolicies,
+        Guid userId
+    )
         : base(_objectName)
     {
         if (baseAccessPolicies == null)
@@ -29,9 +32,8 @@ public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
         }
     }
 
-    public ServiceAccountPeopleAccessPoliciesResponseModel() : base(_objectName)
-    {
-    }
+    public ServiceAccountPeopleAccessPoliciesResponseModel()
+        : base(_objectName) { }
 
     public List<UserAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
 

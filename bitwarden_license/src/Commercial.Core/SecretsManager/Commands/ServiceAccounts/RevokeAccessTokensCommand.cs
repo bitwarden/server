@@ -15,7 +15,9 @@ public class RevokeAccessTokensCommand : IRevokeAccessTokensCommand
 
     public async Task RevokeAsync(ServiceAccount serviceAccount, IEnumerable<Guid> Ids)
     {
-        var accessTokens = await _apiKeyRepository.GetManyByServiceAccountIdAsync(serviceAccount.Id);
+        var accessTokens = await _apiKeyRepository.GetManyByServiceAccountIdAsync(
+            serviceAccount.Id
+        );
 
         var tokensToDelete = accessTokens.Where(at => Ids.Contains(at.Id));
 

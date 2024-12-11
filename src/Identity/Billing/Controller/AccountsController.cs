@@ -16,25 +16,29 @@ namespace Bit.Identity.Billing.Controller;
 public class AccountsController(
     ICurrentContext currentContext,
     ISendTrialInitiationEmailForRegistrationCommand sendTrialInitiationEmailForRegistrationCommand,
-    IReferenceEventService referenceEventService) : Microsoft.AspNetCore.Mvc.Controller
+    IReferenceEventService referenceEventService
+) : Microsoft.AspNetCore.Mvc.Controller
 {
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("trial/send-verification-email")]
-    public async Task<IActionResult> PostTrialInitiationSendVerificationEmailAsync([FromBody] TrialSendVerificationEmailRequestModel model)
+    public async Task<IActionResult> PostTrialInitiationSendVerificationEmailAsync(
+        [FromBody] TrialSendVerificationEmailRequestModel model
+    )
     {
         var token = await sendTrialInitiationEmailForRegistrationCommand.Handle(
             model.Email,
             model.Name,
             model.ReceiveMarketingEmails,
             model.ProductTier,
-            model.Products);
+            model.Products
+        );
 
         var refEvent = new ReferenceEvent
         {
             Type = ReferenceEventType.SignupEmailSubmit,
             ClientId = currentContext.ClientId,
             ClientVersion = currentContext.ClientVersion,
-            Source = ReferenceEventSource.Registration
+            Source = ReferenceEventSource.Registration,
         };
         await referenceEventService.RaiseEventAsync(refEvent);
 

@@ -23,7 +23,8 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
     }
 
-    public WebAuthnCredentialCreateOptionsTokenable(User user, CredentialCreateOptions options) : this()
+    public WebAuthnCredentialCreateOptionsTokenable(User user, CredentialCreateOptions options)
+        : this()
     {
         UserId = user?.Id;
         Options = options;
@@ -39,6 +40,6 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
         return UserId == user.Id;
     }
 
-    protected override bool TokenIsValid() => Identifier == TokenIdentifier && UserId != null && Options != null;
+    protected override bool TokenIsValid() =>
+        Identifier == TokenIdentifier && UserId != null && Options != null;
 }
-

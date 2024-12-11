@@ -8,10 +8,7 @@ public class FolderResponseModel : ResponseModel
     public FolderResponseModel(Folder folder)
         : base("folder")
     {
-        if (folder == null)
-        {
-            throw new ArgumentNullException(nameof(folder));
-        }
+        ArgumentNullException.ThrowIfNull(folder);
 
         Id = folder.Id;
         Name = folder.Name;

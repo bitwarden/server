@@ -16,12 +16,14 @@ public class ProviderSubscriptionUpdate : SubscriptionUpdate
     public ProviderSubscriptionUpdate(
         PlanType planType,
         int previouslyPurchasedSeats,
-        int newlyPurchasedSeats)
+        int newlyPurchasedSeats
+    )
     {
         if (!planType.SupportsConsolidatedBilling())
         {
             throw new BillingException(
-                message: $"Cannot create a {nameof(ProviderSubscriptionUpdate)} for {nameof(PlanType)} that doesn't support consolidated billing");
+                message: $"Cannot create a {nameof(ProviderSubscriptionUpdate)} for {nameof(PlanType)} that doesn't support consolidated billing"
+            );
         }
 
         var plan = Utilities.StaticStore.GetPlan(planType);
@@ -41,8 +43,8 @@ public class ProviderSubscriptionUpdate : SubscriptionUpdate
             {
                 Id = subscriptionItem.Id,
                 Price = _planId,
-                Quantity = _previouslyPurchasedSeats
-            }
+                Quantity = _previouslyPurchasedSeats,
+            },
         ];
     }
 
@@ -56,8 +58,8 @@ public class ProviderSubscriptionUpdate : SubscriptionUpdate
             {
                 Id = subscriptionItem.Id,
                 Price = _planId,
-                Quantity = _newlyPurchasedSeats
-            }
+                Quantity = _newlyPurchasedSeats,
+            },
         ];
     }
 }

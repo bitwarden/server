@@ -10,9 +10,7 @@ public partial class RemoveSMBetaFromOrganization : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "SecretsManagerBeta",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "SecretsManagerBeta", table: "Organization");
     }
 
     /// <inheritdoc />
@@ -23,6 +21,7 @@ public partial class RemoveSMBetaFromOrganization : Migration
             table: "Organization",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 }

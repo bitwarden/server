@@ -8,11 +8,12 @@ class NotificationHubConnection
     public string ConnectionString { get; init; }
     public bool EnableSendTracing { get; init; }
     private NotificationHubClient _hubClient;
+
     /// <summary>
     /// Gets the NotificationHubClient for this connection.
-    /// 
+    ///
     /// If the client is null, it will be initialized.
-    /// 
+    ///
     /// <throws>Exception</throws> if the connection is invalid.
     /// </summary>
     public NotificationHubClient HubClient
@@ -29,23 +30,23 @@ class NotificationHubConnection
             }
             return _hubClient;
         }
-        private set
-        {
-            _hubClient = value;
-        }
+        private set { _hubClient = value; }
     }
+
     /// <summary>
     /// Gets the start date for registration.
-    /// 
+    ///
     /// If null, registration is always disabled.
     /// </summary>
     public DateTime? RegistrationStartDate { get; init; }
+
     /// <summary>
     /// Gets the end date for registration.
-    /// 
+    ///
     /// If null, registration has no end date.
     /// </summary>
     public DateTime? RegistrationEndDate { get; init; }
+
     /// <summary>
     /// Gets whether all data needed to generate a connection to Notification Hub is present.
     /// </summary>
@@ -54,7 +55,9 @@ class NotificationHubConnection
         get
         {
             {
-                var invalid = string.IsNullOrWhiteSpace(HubName) || string.IsNullOrWhiteSpace(ConnectionString);
+                var invalid =
+                    string.IsNullOrWhiteSpace(HubName)
+                    || string.IsNullOrWhiteSpace(ConnectionString);
                 return !invalid;
             }
         }
@@ -110,14 +113,20 @@ class NotificationHubConnection
             ConnectionString = settings.ConnectionString,
             EnableSendTracing = settings.EnableSendTracing,
             // Comb time is not precise enough for millisecond accuracy
-            RegistrationStartDate = settings.RegistrationStartDate.HasValue ? Truncate(settings.RegistrationStartDate.Value, TimeSpan.FromMilliseconds(10)) : null,
-            RegistrationEndDate = settings.RegistrationEndDate
+            RegistrationStartDate = settings.RegistrationStartDate.HasValue
+                ? Truncate(settings.RegistrationStartDate.Value, TimeSpan.FromMilliseconds(10))
+                : null,
+            RegistrationEndDate = settings.RegistrationEndDate,
         };
     }
 
     private NotificationHubConnection Init()
     {
-        HubClient = NotificationHubClient.CreateClientFromConnectionString(ConnectionString, HubName, EnableSendTracing);
+        HubClient = NotificationHubClient.CreateClientFromConnectionString(
+            ConnectionString,
+            HubName,
+            EnableSendTracing
+        );
         return this;
     }
 

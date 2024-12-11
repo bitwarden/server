@@ -16,8 +16,12 @@ public class DbMigrator
     private readonly bool _skipDatabasePreparation;
     private readonly bool _noTransactionMigration;
 
-    public DbMigrator(string connectionString, ILogger<DbMigrator> logger = null,
-       bool skipDatabasePreparation = false, bool noTransactionMigration = false)
+    public DbMigrator(
+        string connectionString,
+        ILogger<DbMigrator> logger = null,
+        bool skipDatabasePreparation = false,
+        bool noTransactionMigration = false
+    )
     {
         _connectionString = connectionString;
         _logger = logger ?? CreateLogger();
@@ -25,11 +29,13 @@ public class DbMigrator
         _noTransactionMigration = noTransactionMigration;
     }
 
-    public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
+    public bool MigrateMsSqlDatabaseWithRetries(
+        bool enableLogging = true,
         bool repeatable = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         bool dryRun = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var attempt = 1;
 
@@ -42,7 +48,13 @@ public class DbMigrator
                     PrepareDatabase(cancellationToken);
                 }
 
-                var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, cancellationToken);
+                var success = MigrateDatabase(
+                    enableLogging,
+                    repeatable,
+                    folderName,
+                    dryRun,
+                    cancellationToken
+                );
                 return success;
             }
             catch (SqlException ex)
@@ -50,7 +62,9 @@ public class DbMigrator
                 if (ex.Message.Contains("Server is in script upgrade mode."))
                 {
                     attempt++;
-                    _logger.LogInformation($"Database is in script upgrade mode, trying again (attempt #{attempt}).");
+                    _logger.LogInformation(
+                        $"Database is in script upgrade mode, trying again (attempt #{attempt})."
+                    );
                     Thread.Sleep(20000);
                 }
                 else
@@ -66,7 +80,7 @@ public class DbMigrator
     {
         var masterConnectionString = new SqlConnectionStringBuilder(_connectionString)
         {
-            InitialCatalog = "master"
+            InitialCatalog = "master",
         }.ConnectionString;
 
         using (var connection = new SqlConnection(masterConnectionString))
@@ -80,15 +94,22 @@ public class DbMigrator
 
             var databaseNameQuoted = new SqlCommandBuilder().QuoteIdentifier(databaseName);
             var command = new SqlCommand(
-                "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = @DatabaseName) = 0) " +
-                "CREATE DATABASE " + databaseNameQuoted + ";", connection);
+                "IF ((SELECT COUNT(1) FROM sys.databases WHERE [name] = @DatabaseName) = 0) "
+                    + "CREATE DATABASE "
+                    + databaseNameQuoted
+                    + ";",
+                connection
+            );
             command.Parameters.Add("@DatabaseName", SqlDbType.VarChar).Value = databaseName;
             command.Connection.Open();
             command.ExecuteNonQuery();
 
-            command.CommandText = "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') " +
-                "FROM sys.databases WHERE [name] = @DatabaseName) = 1) " +
-                "ALTER DATABASE " + databaseNameQuoted + " SET AUTO_CLOSE OFF;";
+            command.CommandText =
+                "IF ((SELECT DATABASEPROPERTYEX([name], 'IsAutoClose') "
+                + "FROM sys.databases WHERE [name] = @DatabaseName) = 1) "
+                + "ALTER DATABASE "
+                + databaseNameQuoted
+                + " SET AUTO_CLOSE OFF;";
             command.ExecuteNonQuery();
         }
 
@@ -98,9 +119,11 @@ public class DbMigrator
         {
             // rename old migration scripts to new namespace
             var command = new SqlCommand(
-                "IF OBJECT_ID('Migration','U') IS NOT NULL " +
-                "UPDATE [dbo].[Migration] SET " +
-                "[ScriptName] = REPLACE([ScriptName], 'Bit.Setup.', 'Bit.Migrator.');", connection);
+                "IF OBJECT_ID('Migration','U') IS NOT NULL "
+                    + "UPDATE [dbo].[Migration] SET "
+                    + "[ScriptName] = REPLACE([ScriptName], 'Bit.Setup.', 'Bit.Migrator.');",
+                connection
+            );
             command.Connection.Open();
             command.ExecuteNonQuery();
         }
@@ -108,11 +131,13 @@ public class DbMigrator
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    private bool MigrateDatabase(bool enableLogging = true,
-    bool repeatable = false,
-    string folderName = MigratorConstants.DefaultMigrationsFolderName,
-    bool dryRun = false,
-    CancellationToken cancellationToken = default)
+    private bool MigrateDatabase(
+        bool enableLogging = true,
+        bool repeatable = false,
+        string folderName = MigratorConstants.DefaultMigrationsFolderName,
+        bool dryRun = false,
+        CancellationToken cancellationToken = default
+    )
     {
         if (enableLogging)
         {
@@ -121,16 +146,17 @@ public class DbMigrator
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var builder = DeployChanges.To
-            .SqlDatabase(_connectionString)
-            .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
+        var builder = DeployChanges
+            .To.SqlDatabase(_connectionString)
+            .WithScriptsAndCodeEmbeddedInAssembly(
+                Assembly.GetExecutingAssembly(),
+                s => s.Contains($".{folderName}.") && !s.Contains(".Archive.")
+            )
             .WithExecutionTimeout(TimeSpan.FromMinutes(5));
 
         if (_noTransactionMigration)
         {
-            builder = builder.WithoutTransaction()
-                .WithExecutionTimeout(TimeSpan.FromMinutes(60));
+            builder = builder.WithoutTransaction().WithExecutionTimeout(TimeSpan.FromMinutes(60));
         }
         else
         {

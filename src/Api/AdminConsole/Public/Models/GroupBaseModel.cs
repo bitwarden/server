@@ -11,6 +11,7 @@ public abstract class GroupBaseModel
     [Required]
     [StringLength(100)]
     public string Name { get; set; }
+
     /// <summary>
     /// External identifier for reference or linking this group to another system, such as a user directory.
     /// </summary>

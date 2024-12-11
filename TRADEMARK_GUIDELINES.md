@@ -36,7 +36,7 @@ non-infringing.
 This Policy covers the following non-exhaustive list of our trademarks:
 
 1. Our trademarks and service marks (the "Marks"):
-    
+
     - Bitwarden®
     - ![Logo](https://i.imgur.com/FIv4bYq.png)
 
@@ -80,7 +80,7 @@ All uses of Bitwarden Marks must conform to the following principles:
     on-premise, in each case under a subscription or license agreement with Bitwarden, you
     may use the Bitwarden Marks to describe or reference the password management
     platform or use the Bitwarden login page shown below for your users or organization:
-    
+
     ![Login page](https://i.imgur.com/J0o51cO.png)
 
 3. You may not use or register, in whole or in part, the Marks as part of your own
@@ -127,7 +127,7 @@ combined with any other word or words).
 - BitWarden
 - Bitward
 
-### Use Marks as Proper Adjectives Followed by a Generic Term.
+### Use Marks as Proper Adjectives Followed by a Generic Term
 
 Trademarks should be used as adjectives followed by a generic modifier, and not as nouns
 or verbs. For example:
@@ -143,7 +143,7 @@ or verbs. For example:
 
 - Bitwarden® is widely used.
 
-### Do Not Use Marks in the Possessive Form.
+### Do Not Use Marks in the Possessive Form
 
 Because trademarks are not nouns, they should not be used in the possessive form.
 For example:
@@ -156,7 +156,7 @@ For example:
 
 - Bitwarden's platform safely stores and protects passwords.
 
-### Do Not Use Marks to Suggest Endorsement by Bitwarden.
+### Do Not Use Marks to Suggest Endorsement by Bitwarden
 
 **Correct**
 

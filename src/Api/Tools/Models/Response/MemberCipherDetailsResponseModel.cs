@@ -9,7 +9,7 @@ public class MemberCipherDetailsResponseModel
     public bool UsesKeyConnector { get; set; }
 
     /// <summary>
-    /// A distinct list of the cipher ids associated with 
+    /// A distinct list of the cipher ids associated with
     /// the organization member
     /// </summary>
     public IEnumerable<string> CipherIds { get; set; }

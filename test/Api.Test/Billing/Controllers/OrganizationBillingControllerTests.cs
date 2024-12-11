@@ -11,7 +11,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using Xunit;
-
 using static Bit.Api.Test.Billing.Utilities;
 
 namespace Bit.Api.Test.Billing.Controllers;
@@ -23,9 +22,13 @@ public class OrganizationBillingControllerTests
     [Theory, BitAutoData]
     public async Task GetMetadataAsync_Unauthorized_ReturnsUnauthorized(
         Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
+        SutProvider<OrganizationBillingController> sutProvider
+    )
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(false);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .AccessMembersTab(organizationId)
+            .Returns(false);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
@@ -35,10 +38,14 @@ public class OrganizationBillingControllerTests
     [Theory, BitAutoData]
     public async Task GetMetadataAsync_MetadataNull_NotFound(
         Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
+        SutProvider<OrganizationBillingController> sutProvider
+    )
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadata)null);
+        sutProvider
+            .GetDependency<IOrganizationBillingService>()
+            .GetMetadata(organizationId)
+            .Returns((OrganizationMetadata)null);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
@@ -48,10 +55,13 @@ public class OrganizationBillingControllerTests
     [Theory, BitAutoData]
     public async Task GetMetadataAsync_OK(
         Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
+        SutProvider<OrganizationBillingController> sutProvider
+    )
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
+        sutProvider
+            .GetDependency<IOrganizationBillingService>()
+            .GetMetadata(organizationId)
             .Returns(new OrganizationMetadata(true, true, true, true, true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
@@ -70,9 +80,13 @@ public class OrganizationBillingControllerTests
     [Theory, BitAutoData]
     public async Task GetHistoryAsync_Unauthorized_ReturnsUnauthorized(
         Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
+        SutProvider<OrganizationBillingController> sutProvider
+    )
     {
-        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(false);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ViewBillingHistory(organizationId)
+            .Returns(false);
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
@@ -82,10 +96,17 @@ public class OrganizationBillingControllerTests
     [Theory, BitAutoData]
     public async Task GetHistoryAsync_OrganizationNotFound_ReturnsNotFound(
         Guid organizationId,
-        SutProvider<OrganizationBillingController> sutProvider)
+        SutProvider<OrganizationBillingController> sutProvider
+    )
     {
-        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ViewBillingHistory(organizationId)
+            .Returns(true);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns((Organization)null);
 
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);
 
@@ -97,16 +118,26 @@ public class OrganizationBillingControllerTests
     public async Task GetHistoryAsync_OK(
         Guid organizationId,
         Organization organization,
-        SutProvider<OrganizationBillingController> sutProvider)
+        SutProvider<OrganizationBillingController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<ICurrentContext>().ViewBillingHistory(organizationId).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ViewBillingHistory(organizationId)
+            .Returns(true);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns(organization);
 
         // Manually create a BillingHistoryInfo object to avoid requiring AutoFixture to create HttpResponseHeaders
         var billingInfo = new BillingHistoryInfo();
 
-        sutProvider.GetDependency<IPaymentService>().GetBillingHistoryAsync(organization).Returns(billingInfo);
+        sutProvider
+            .GetDependency<IPaymentService>()
+            .GetBillingHistoryAsync(organization)
+            .Returns(billingInfo);
 
         // Act
         var result = await sutProvider.Sut.GetHistoryAsync(organizationId);

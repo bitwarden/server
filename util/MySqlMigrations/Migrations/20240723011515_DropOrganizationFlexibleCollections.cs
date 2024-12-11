@@ -10,9 +10,7 @@ public partial class DropOrganizationFlexibleCollections : Migration
     /// <inheritdoc />
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "FlexibleCollections",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "FlexibleCollections", table: "Organization");
     }
 
     /// <inheritdoc />
@@ -23,6 +21,7 @@ public partial class DropOrganizationFlexibleCollections : Migration
             table: "Organization",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 }

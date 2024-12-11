@@ -13,9 +13,11 @@ public class OrganizationUpdateRequestModel
     [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+
     [StringLength(50, ErrorMessage = "The field Business Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
+
     [EmailAddress]
     [Required]
     [StringLength(256)]
@@ -23,7 +25,10 @@ public class OrganizationUpdateRequestModel
     public Permissions Permissions { get; set; }
     public OrganizationKeysRequestModel Keys { get; set; }
 
-    public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)
+    public virtual Organization ToOrganization(
+        Organization existingOrganization,
+        GlobalSettings globalSettings
+    )
     {
         if (!globalSettings.SelfHosted)
         {

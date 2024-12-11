@@ -8,17 +8,11 @@ public class OrganizationUserEntityTypeConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<OrganizationUser> builder)
     {
-        builder
-            .Property(ou => ou.Id)
-            .ValueGeneratedNever();
+        builder.Property(ou => ou.Id).ValueGeneratedNever();
 
-        builder
-            .HasIndex(ou => ou.OrganizationId)
-            .IsClustered(false);
+        builder.HasIndex(ou => ou.OrganizationId).IsClustered(false);
 
-        builder
-            .HasIndex(ou => ou.UserId)
-            .IsClustered(false);
+        builder.HasIndex(ou => ou.UserId).IsClustered(false);
 
         builder.ToTable(nameof(OrganizationUser));
     }

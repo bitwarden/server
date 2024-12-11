@@ -10,10 +10,7 @@ public class ExpiringTokenTests
     [Theory, AutoData]
     public void ExpirationSerializesToEpochMilliseconds(DateTime expirationDate)
     {
-        var sut = new TestExpiringTokenable
-        {
-            ExpirationDate = expirationDate
-        };
+        var sut = new TestExpiringTokenable { ExpirationDate = expirationDate };
 
         var result = JsonSerializer.Serialize(sut);
         var expectedDate = CoreHelpers.ToEpocMilliseconds(expirationDate);
@@ -24,10 +21,7 @@ public class ExpiringTokenTests
     [Theory, AutoData]
     public void ExpirationSerializationRoundTrip(DateTime expirationDate)
     {
-        var sut = new TestExpiringTokenable
-        {
-            ExpirationDate = expirationDate
-        };
+        var sut = new TestExpiringTokenable { ExpirationDate = expirationDate };
 
         var intermediate = JsonSerializer.Serialize(sut);
         var result = JsonSerializer.Deserialize<TestExpiringTokenable>(intermediate);
@@ -38,10 +32,7 @@ public class ExpiringTokenTests
     [Fact]
     public void InvalidIfPastExpiryDate()
     {
-        var sut = new TestExpiringTokenable
-        {
-            ExpirationDate = DateTime.UtcNow.AddHours(-1)
-        };
+        var sut = new TestExpiringTokenable { ExpirationDate = DateTime.UtcNow.AddHours(-1) };
 
         Assert.False(sut.Valid);
     }
@@ -49,10 +40,7 @@ public class ExpiringTokenTests
     [Fact]
     public void ValidIfWithinExpirationAndTokenReportsValid()
     {
-        var sut = new TestExpiringTokenable
-        {
-            ExpirationDate = DateTime.UtcNow.AddHours(1)
-        };
+        var sut = new TestExpiringTokenable { ExpirationDate = DateTime.UtcNow.AddHours(1) };
 
         Assert.True(sut.Valid);
     }
@@ -62,7 +50,7 @@ public class ExpiringTokenTests
     {
         var sut = new TestExpiringTokenable(forceInvalid: true)
         {
-            ExpirationDate = DateTime.UtcNow.AddHours(1)
+            ExpirationDate = DateTime.UtcNow.AddHours(1),
         };
 
         Assert.False(sut.Valid);

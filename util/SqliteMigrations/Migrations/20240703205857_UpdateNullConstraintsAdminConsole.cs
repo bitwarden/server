@@ -20,7 +20,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 10,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "PostalCode",
@@ -32,7 +33,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 10,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Country",
@@ -44,7 +46,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "PlanName",
@@ -56,7 +59,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "InvoiceId",
@@ -68,7 +72,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ClientName",
@@ -80,7 +85,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Txt",
@@ -90,7 +96,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             defaultValue: "",
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "DomainName",
@@ -102,7 +109,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 255,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ApiKey",
@@ -114,7 +122,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 30,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Plan",
@@ -126,7 +135,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -138,7 +148,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "BillingEmail",
@@ -150,7 +161,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 256,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Key",
@@ -162,7 +174,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 150,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Email",
@@ -174,7 +187,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 256,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -186,7 +200,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 100,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -198,7 +213,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Identifier",
@@ -210,7 +226,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -220,7 +237,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             defaultValue: "",
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Scope",
@@ -232,7 +250,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 4000,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -244,7 +263,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 200,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Key",
@@ -254,7 +274,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             defaultValue: "",
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "EncryptedPayload",
@@ -266,7 +287,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             oldClrType: typeof(string),
             oldType: "TEXT",
             oldMaxLength: 4000,
-            oldNullable: true);
+            oldNullable: true
+        );
     }
 
     /// <inheritdoc />
@@ -280,7 +302,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 10);
+            oldMaxLength: 10
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "PostalCode",
@@ -290,7 +313,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 10);
+            oldMaxLength: 10
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Country",
@@ -300,7 +324,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "PlanName",
@@ -310,7 +335,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "InvoiceId",
@@ -320,7 +346,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ClientName",
@@ -330,7 +357,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Txt",
@@ -338,7 +366,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             type: "TEXT",
             nullable: true,
             oldClrType: typeof(string),
-            oldType: "TEXT");
+            oldType: "TEXT"
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "DomainName",
@@ -348,7 +377,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 255);
+            oldMaxLength: 255
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ApiKey",
@@ -358,7 +388,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 30);
+            oldMaxLength: 30
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Plan",
@@ -368,7 +399,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -378,7 +410,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "BillingEmail",
@@ -388,7 +421,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 256);
+            oldMaxLength: 256
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Key",
@@ -398,7 +432,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 150);
+            oldMaxLength: 150
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Email",
@@ -408,7 +443,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 256);
+            oldMaxLength: 256
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -418,7 +454,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 100);
+            oldMaxLength: 100
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -428,7 +465,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Identifier",
@@ -438,7 +476,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 50);
+            oldMaxLength: 50
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -446,7 +485,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             type: "TEXT",
             nullable: true,
             oldClrType: typeof(string),
-            oldType: "TEXT");
+            oldType: "TEXT"
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Scope",
@@ -456,7 +496,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 4000);
+            oldMaxLength: 4000
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Name",
@@ -466,7 +507,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 200);
+            oldMaxLength: 200
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Key",
@@ -474,7 +516,8 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             type: "TEXT",
             nullable: true,
             oldClrType: typeof(string),
-            oldType: "TEXT");
+            oldType: "TEXT"
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "EncryptedPayload",
@@ -484,6 +527,7 @@ public partial class UpdateNullConstraintsAdminConsole : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "TEXT",
-            oldMaxLength: 4000);
+            oldMaxLength: 4000
+        );
     }
 }

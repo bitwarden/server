@@ -16,15 +16,19 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
     public CloudGetOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IPaymentService paymentService,
-        ILicensingService licensingService)
+        ILicensingService licensingService
+    )
     {
         _installationRepository = installationRepository;
         _paymentService = paymentService;
         _licensingService = licensingService;
     }
 
-    public async Task<OrganizationLicense> GetLicenseAsync(Organization organization, Guid installationId,
-        int? version = null)
+    public async Task<OrganizationLicense> GetLicenseAsync(
+        Organization organization,
+        Guid installationId,
+        int? version = null
+    )
     {
         var installation = await _installationRepository.GetByIdAsync(installationId);
         if (installation is not { Enabled: true })
@@ -34,9 +38,19 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
 
         var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
 
-        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version)
+        return new OrganizationLicense(
+            organization,
+            subscriptionInfo,
+            installationId,
+            _licensingService,
+            version
+        )
         {
-            Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo)
+            Token = await _licensingService.CreateOrganizationTokenAsync(
+                organization,
+                installationId,
+                subscriptionInfo
+            ),
         };
     }
 }

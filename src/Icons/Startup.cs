@@ -53,7 +53,8 @@ public class Startup
         IApplicationBuilder app,
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         app.UseSerilog(env, appLifetime, globalSettings);
 
@@ -71,18 +72,23 @@ public class Startup
             app.UseDeveloperExceptionPage();
         }
 
-        app.Use(async (context, next) =>
-        {
-            context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
+        app.Use(
+            async (context, next) =>
             {
-                Public = true,
-                MaxAge = TimeSpan.FromDays(7)
-            };
+                context.Response.GetTypedHeaders().CacheControl = new CacheControlHeaderValue
+                {
+                    Public = true,
+                    MaxAge = TimeSpan.FromDays(7),
+                };
 
-            context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; script-src 'none'");
+                context.Response.Headers.Append(
+                    "Content-Security-Policy",
+                    "default-src 'self'; script-src 'none'"
+                );
 
-            await next();
-        });
+                await next();
+            }
+        );
 
         app.UseRouting();
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());

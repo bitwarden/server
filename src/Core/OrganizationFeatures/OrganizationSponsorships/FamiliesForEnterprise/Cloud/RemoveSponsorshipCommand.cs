@@ -9,15 +9,17 @@ public class RemoveSponsorshipCommand : CancelSponsorshipCommand, IRemoveSponsor
 {
     public RemoveSponsorshipCommand(
         IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-        IOrganizationRepository organizationRepository) : base(organizationSponsorshipRepository, organizationRepository)
-    {
-    }
+        IOrganizationRepository organizationRepository
+    )
+        : base(organizationSponsorshipRepository, organizationRepository) { }
 
     public async Task RemoveSponsorshipAsync(OrganizationSponsorship sponsorship)
     {
         if (sponsorship == null || sponsorship.SponsoredOrganizationId == null)
         {
-            throw new BadRequestException("The requested organization is not currently being sponsored.");
+            throw new BadRequestException(
+                "The requested organization is not currently being sponsored."
+            );
         }
 
         await MarkToDeleteSponsorshipAsync(sponsorship);

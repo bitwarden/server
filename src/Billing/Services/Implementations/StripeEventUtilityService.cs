@@ -28,7 +28,8 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         ILogger<StripeEventUtilityService> logger,
         ITransactionRepository transactionRepository,
         IMailService mailService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _stripeFacade = stripeFacade;
         _logger = logger;
@@ -36,11 +37,12 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         _mailService = mailService;
         _btGateway = new BraintreeGateway
         {
-            Environment = globalSettings.Braintree.Production ?
-                Braintree.Environment.PRODUCTION : Braintree.Environment.SANDBOX,
+            Environment = globalSettings.Braintree.Production
+                ? Braintree.Environment.PRODUCTION
+                : Braintree.Environment.SANDBOX,
             MerchantId = globalSettings.Braintree.MerchantId,
             PublicKey = globalSettings.Braintree.PublicKey,
-            PrivateKey = globalSettings.Braintree.PrivateKey
+            PrivateKey = globalSettings.Braintree.PrivateKey,
         };
         _globalSettings = globalSettings;
     }
@@ -61,18 +63,25 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         metadata.TryGetValue("userId", out var userIdString);
         metadata.TryGetValue("providerId", out var providerIdString);
 
-        orgIdString ??= metadata.FirstOrDefault(x =>
-            x.Key.Equals("organizationId", StringComparison.OrdinalIgnoreCase)).Value;
+        orgIdString ??= metadata
+            .FirstOrDefault(x => x.Key.Equals("organizationId", StringComparison.OrdinalIgnoreCase))
+            .Value;
 
-        userIdString ??= metadata.FirstOrDefault(x =>
-            x.Key.Equals("userId", StringComparison.OrdinalIgnoreCase)).Value;
+        userIdString ??= metadata
+            .FirstOrDefault(x => x.Key.Equals("userId", StringComparison.OrdinalIgnoreCase))
+            .Value;
 
-        providerIdString ??= metadata.FirstOrDefault(x =>
-            x.Key.Equals("providerId", StringComparison.OrdinalIgnoreCase)).Value;
+        providerIdString ??= metadata
+            .FirstOrDefault(x => x.Key.Equals("providerId", StringComparison.OrdinalIgnoreCase))
+            .Value;
 
-        Guid? organizationId = string.IsNullOrWhiteSpace(orgIdString) ? null : new Guid(orgIdString);
+        Guid? organizationId = string.IsNullOrWhiteSpace(orgIdString)
+            ? null
+            : new Guid(orgIdString);
         Guid? userId = string.IsNullOrWhiteSpace(userIdString) ? null : new Guid(userIdString);
-        Guid? providerId = string.IsNullOrWhiteSpace(providerIdString) ? null : new Guid(providerIdString);
+        Guid? providerId = string.IsNullOrWhiteSpace(providerIdString)
+            ? null
+            : new Guid(providerIdString);
 
         return new Tuple<Guid?, Guid?, Guid?>(organizationId, userId, providerId);
     }
@@ -103,14 +112,17 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             return (organizationId, userId, providerId);
         }
 
-        var subscriptions = await _stripeFacade.ListSubscriptions(new SubscriptionListOptions
-        {
-            Customer = charge.CustomerId
-        });
+        var subscriptions = await _stripeFacade.ListSubscriptions(
+            new SubscriptionListOptions { Customer = charge.CustomerId }
+        );
 
         foreach (var subscription in subscriptions)
         {
-            if (subscription.Status is StripeSubscriptionStatus.Canceled or StripeSubscriptionStatus.IncompleteExpired)
+            if (
+                subscription.Status
+                is StripeSubscriptionStatus.Canceled
+                    or StripeSubscriptionStatus.IncompleteExpired
+            )
             {
                 continue;
             }
@@ -127,9 +139,9 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     }
 
     public bool IsSponsoredSubscription(Subscription subscription) =>
-        StaticStore.SponsoredPlans
-            .Any(p => subscription.Items
-                .Any(i => i.Plan.Id == p.StripePlanId));
+        StaticStore.SponsoredPlans.Any(p =>
+            subscription.Items.Any(i => i.Plan.Id == p.StripePlanId)
+        );
 
     /// <summary>
     /// Converts a Stripe Charge object to a Bitwarden Transaction object.
@@ -139,7 +151,12 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     /// <param name="userId"></param>
     /// /// <param name="providerId"></param>
     /// <returns></returns>
-    public Transaction FromChargeToTransaction(Charge charge, Guid? organizationId, Guid? userId, Guid? providerId)
+    public Transaction FromChargeToTransaction(
+        Charge charge,
+        Guid? organizationId,
+        Guid? userId,
+        Guid? providerId
+    )
     {
         var transaction = new Transaction
         {
@@ -150,89 +167,94 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             ProviderId = providerId,
             Type = TransactionType.Charge,
             Gateway = GatewayType.Stripe,
-            GatewayId = charge.Id
+            GatewayId = charge.Id,
         };
 
         switch (charge.Source)
         {
             case Card card:
-                {
-                    transaction.PaymentMethodType = PaymentMethodType.Card;
-                    transaction.Details = $"{card.Brand}, *{card.Last4}";
-                    break;
-                }
+            {
+                transaction.PaymentMethodType = PaymentMethodType.Card;
+                transaction.Details = $"{card.Brand}, *{card.Last4}";
+                break;
+            }
             case BankAccount bankAccount:
-                {
-                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                    transaction.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
-                    break;
-                }
+            {
+                transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                transaction.Details = $"{bankAccount.BankName}, *{bankAccount.Last4}";
+                break;
+            }
             case Source { Card: not null } source:
-                {
-                    transaction.PaymentMethodType = PaymentMethodType.Card;
-                    transaction.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
-                    break;
-                }
+            {
+                transaction.PaymentMethodType = PaymentMethodType.Card;
+                transaction.Details = $"{source.Card.Brand}, *{source.Card.Last4}";
+                break;
+            }
             case Source { AchDebit: not null } source:
-                {
-                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                    transaction.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
-                    break;
-                }
+            {
+                transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                transaction.Details = $"{source.AchDebit.BankName}, *{source.AchDebit.Last4}";
+                break;
+            }
             case Source source:
+            {
+                if (source.AchCreditTransfer == null)
                 {
-                    if (source.AchCreditTransfer == null)
-                    {
-                        break;
-                    }
-
-                    var achCreditTransfer = source.AchCreditTransfer;
-
-                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                    transaction.Details = $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
-
                     break;
                 }
+
+                var achCreditTransfer = source.AchCreditTransfer;
+
+                transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                transaction.Details =
+                    $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
+
+                break;
+            }
             default:
+            {
+                if (charge.PaymentMethodDetails == null)
                 {
-                    if (charge.PaymentMethodDetails == null)
-                    {
-                        break;
-                    }
-
-                    if (charge.PaymentMethodDetails.Card != null)
-                    {
-                        var card = charge.PaymentMethodDetails.Card;
-                        transaction.PaymentMethodType = PaymentMethodType.Card;
-                        transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
-                    }
-                    else if (charge.PaymentMethodDetails.UsBankAccount != null)
-                    {
-                        var usBankAccount = charge.PaymentMethodDetails.UsBankAccount;
-                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                        transaction.Details = $"{usBankAccount.BankName}, *{usBankAccount.Last4}";
-                    }
-                    else if (charge.PaymentMethodDetails.AchDebit != null)
-                    {
-                        var achDebit = charge.PaymentMethodDetails.AchDebit;
-                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                        transaction.Details = $"{achDebit.BankName}, *{achDebit.Last4}";
-                    }
-                    else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
-                    {
-                        var achCreditTransfer = charge.PaymentMethodDetails.AchCreditTransfer;
-                        transaction.PaymentMethodType = PaymentMethodType.BankAccount;
-                        transaction.Details = $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
-                    }
-
                     break;
                 }
+
+                if (charge.PaymentMethodDetails.Card != null)
+                {
+                    var card = charge.PaymentMethodDetails.Card;
+                    transaction.PaymentMethodType = PaymentMethodType.Card;
+                    transaction.Details = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}";
+                }
+                else if (charge.PaymentMethodDetails.UsBankAccount != null)
+                {
+                    var usBankAccount = charge.PaymentMethodDetails.UsBankAccount;
+                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                    transaction.Details = $"{usBankAccount.BankName}, *{usBankAccount.Last4}";
+                }
+                else if (charge.PaymentMethodDetails.AchDebit != null)
+                {
+                    var achDebit = charge.PaymentMethodDetails.AchDebit;
+                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                    transaction.Details = $"{achDebit.BankName}, *{achDebit.Last4}";
+                }
+                else if (charge.PaymentMethodDetails.AchCreditTransfer != null)
+                {
+                    var achCreditTransfer = charge.PaymentMethodDetails.AchCreditTransfer;
+                    transaction.PaymentMethodType = PaymentMethodType.BankAccount;
+                    transaction.Details =
+                        $"ACH => {achCreditTransfer.BankName}, {achCreditTransfer.AccountNumber}";
+                }
+
+                break;
+            }
         }
 
         return transaction;
     }
 
-    public async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
+    public async Task<bool> AttemptToPayInvoiceAsync(
+        Invoice invoice,
+        bool attemptToPayWithStripe = false
+    )
     {
         var customer = await _stripeFacade.GetCustomer(invoice.CustomerId);
 
@@ -250,22 +272,26 @@ public class StripeEventUtilityService : IStripeEventUtilityService
     }
 
     public bool ShouldAttemptToPayInvoice(Invoice invoice) =>
-        invoice is
-        {
-            AmountDue: > 0,
-            Paid: false,
-            CollectionMethod: "charge_automatically",
-            BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
-            SubscriptionId: not null
-        };
+        invoice
+            is {
+                AmountDue: > 0,
+                Paid: false,
+                CollectionMethod: "charge_automatically",
+                BillingReason: "subscription_cycle" or "automatic_pending_invoice_item_invoice",
+                SubscriptionId: not null
+            };
 
-    private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
+    private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(
+        Invoice invoice,
+        Customer customer
+    )
     {
         _logger.LogDebug("Attempting to pay invoice with Braintree");
         if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
         {
             _logger.LogWarning(
-                "Attempted to pay invoice with Braintree but btCustomerId wasn't on Stripe customer metadata");
+                "Attempted to pay invoice with Braintree but btCustomerId wasn't on Stripe customer metadata"
+            );
             return false;
         }
 
@@ -274,7 +300,8 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         if (!organizationId.HasValue && !userId.HasValue && !providerId.HasValue)
         {
             _logger.LogWarning(
-                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId or ");
+                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId or "
+            );
             return false;
         }
 
@@ -298,20 +325,24 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         }
         var btInvoiceAmount = invoice.AmountDue / 100M;
 
-        var existingTransactions = organizationId.HasValue
-            ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
-            : userId.HasValue
-                ? await _transactionRepository.GetManyByUserIdAsync(userId.Value)
-                : await _transactionRepository.GetManyByProviderIdAsync(providerId.Value);
+        var existingTransactions =
+            organizationId.HasValue
+                ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
+            : userId.HasValue ? await _transactionRepository.GetManyByUserIdAsync(userId.Value)
+            : await _transactionRepository.GetManyByProviderIdAsync(providerId.Value);
 
         var duplicateTimeSpan = TimeSpan.FromHours(24);
         var now = DateTime.UtcNow;
-        var duplicateTransaction = existingTransactions?
-            .FirstOrDefault(t => (now - t.CreationDate) < duplicateTimeSpan);
+        var duplicateTransaction = existingTransactions?.FirstOrDefault(t =>
+            (now - t.CreationDate) < duplicateTimeSpan
+        );
         if (duplicateTransaction != null)
         {
-            _logger.LogWarning("There is already a recent PayPal transaction ({0}). " +
-                "Do not charge again to prevent possible duplicate.", duplicateTransaction.GatewayId);
+            _logger.LogWarning(
+                "There is already a recent PayPal transaction ({0}). "
+                    + "Do not charge again to prevent possible duplicate.",
+                duplicateTransaction.GatewayId
+            );
             return false;
         }
 
@@ -329,20 +360,23 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                         PayPal = new Braintree.TransactionOptionsPayPalRequest
                         {
                             CustomField =
-                                $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
-                        }
+                                $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}",
+                        },
                     },
                     CustomFields = new Dictionary<string, string>
                     {
                         [btObjIdField] = btObjId.ToString(),
-                        ["region"] = _globalSettings.BaseServiceUri.CloudRegion
-                    }
-                });
+                        ["region"] = _globalSettings.BaseServiceUri.CloudRegion,
+                    },
+                }
+            );
         }
         catch (NotFoundException e)
         {
-            _logger.LogError(e,
-                "Attempted to make a payment with Braintree, but customer did not exist for the given btCustomerId present on the Stripe metadata");
+            _logger.LogError(
+                e,
+                "Attempted to make a payment with Braintree, but customer did not exist for the given btCustomerId present on the Stripe metadata"
+            );
             throw;
         }
 
@@ -357,26 +391,34 @@ public class StripeEventUtilityService : IStripeEventUtilityService
 
         try
         {
-            await _stripeFacade.UpdateInvoice(invoice.Id, new InvoiceUpdateOptions
-            {
-                Metadata = new Dictionary<string, string>
+            await _stripeFacade.UpdateInvoice(
+                invoice.Id,
+                new InvoiceUpdateOptions
                 {
-                    ["btTransactionId"] = transactionResult.Target.Id,
-                    ["btPayPalTransactionId"] =
-                        transactionResult.Target.PayPalDetails?.AuthorizationId
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["btTransactionId"] = transactionResult.Target.Id,
+                        ["btPayPalTransactionId"] = transactionResult
+                            .Target
+                            .PayPalDetails
+                            ?.AuthorizationId,
+                    },
                 }
-            });
-            await _stripeFacade.PayInvoice(invoice.Id, new InvoicePayOptions { PaidOutOfBand = true });
+            );
+            await _stripeFacade.PayInvoice(
+                invoice.Id,
+                new InvoicePayOptions { PaidOutOfBand = true }
+            );
         }
         catch (Exception e)
         {
             await _btGateway.Transaction.RefundAsync(transactionResult.Target.Id);
             if (e.Message.Contains("Invoice is already paid"))
             {
-                await _stripeFacade.UpdateInvoice(invoice.Id, new InvoiceUpdateOptions
-                {
-                    Metadata = invoice.Metadata
-                });
+                await _stripeFacade.UpdateInvoice(
+                    invoice.Id,
+                    new InvoiceUpdateOptions { Metadata = invoice.Metadata }
+                );
             }
             else
             {
@@ -399,7 +441,8 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             _logger.LogWarning(
                 e,
                 "Exception occurred while trying to pay Stripe invoice with Id: {InvoiceId}",
-                invoice.Id);
+                invoice.Id
+            );
 
             throw;
         }

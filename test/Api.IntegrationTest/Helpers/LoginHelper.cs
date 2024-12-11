@@ -20,17 +20,23 @@ public class LoginHelper
     {
         var (clientId, apiKey) = await GetOrganizationApiKey(_factory, organizationId);
         var token = await _factory.LoginWithOrganizationApiKeyAsync(clientId, apiKey);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            token
+        );
         _client.DefaultRequestHeaders.Add("client_id", clientId);
     }
 
     private async Task<(string clientId, string apiKey)> GetOrganizationApiKey<T>(
         WebApplicationFactoryBase<T> factory,
-        Guid organizationId)
+        Guid organizationId
+    )
         where T : class
     {
         var organizationApiKeyRepository = factory.GetService<IOrganizationApiKeyRepository>();
-        var apiKeys = await organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(organizationId);
+        var apiKeys = await organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(
+            organizationId
+        );
         var clientId = $"organization.{organizationId}";
         return (clientId, apiKeys.Single().ApiKey);
     }

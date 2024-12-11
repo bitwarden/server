@@ -9,6 +9,7 @@ public class ProviderUserUserDetails
     public Guid Id { get; set; }
     public Guid ProviderId { get; set; }
     public Guid? UserId { get; set; }
+
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public string Email { get; set; }

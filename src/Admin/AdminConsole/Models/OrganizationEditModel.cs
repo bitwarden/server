@@ -22,7 +22,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public OrganizationEditModel(Provider provider)
     {
         Provider = provider;
-        BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
+        BillingEmail =
+            provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
         Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
@@ -43,7 +44,8 @@ public class OrganizationEditModel : OrganizationViewModel
         int secrets,
         int projects,
         int serviceAccounts,
-        int occupiedSmSeats)
+        int occupiedSmSeats
+    )
         : base(
             org,
             provider,
@@ -56,14 +58,16 @@ public class OrganizationEditModel : OrganizationViewModel
             secrets,
             projects,
             serviceAccounts,
-            occupiedSmSeats)
+            occupiedSmSeats
+        )
     {
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
         Name = org.DisplayName();
-        BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
+        BillingEmail =
+            provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
         Seats = org.Seats;
@@ -101,79 +105,113 @@ public class OrganizationEditModel : OrganizationViewModel
     public BillingInfo BillingInfo { get; set; }
     public BillingHistoryInfo BillingHistoryInfo { get; set; }
     public string RandomLicenseKey => CoreHelpers.SecureRandomString(20);
-    public string FourteenDayExpirationDate => DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
+    public string FourteenDayExpirationDate =>
+        DateTime.Now.AddDays(14).ToString("yyyy-MM-ddTHH:mm");
     public string BraintreeMerchantId { get; set; }
 
     [Required]
     [Display(Name = "Organization Name")]
     public string Name { get; set; }
+
     [Display(Name = "Billing Email")]
     public string BillingEmail { get; set; }
+
     [Required]
     [Display(Name = "Plan")]
     public PlanType? PlanType { get; set; }
+
     [Required]
     [Display(Name = "Plan Name")]
     public string Plan { get; set; }
+
     [Display(Name = "Seats")]
     public int? Seats { get; set; }
+
     [Display(Name = "Max. Autoscale Seats")]
     public int? MaxAutoscaleSeats { get; set; }
+
     [Display(Name = "Max. Collections")]
     public short? MaxCollections { get; set; }
+
     [Display(Name = "Policies")]
     public bool UsePolicies { get; set; }
+
     [Display(Name = "SSO")]
     public bool UseSso { get; set; }
+
     [Display(Name = "Key Connector with Customer Encryption")]
     public bool UseKeyConnector { get; set; }
+
     [Display(Name = "Groups")]
     public bool UseGroups { get; set; }
+
     [Display(Name = "Directory")]
     public bool UseDirectory { get; set; }
+
     [Display(Name = "Events")]
     public bool UseEvents { get; set; }
+
     [Display(Name = "TOTP")]
     public bool UseTotp { get; set; }
+
     [Display(Name = "2FA")]
     public bool Use2fa { get; set; }
+
     [Display(Name = "API")]
     public bool UseApi { get; set; }
+
     [Display(Name = "Reset Password")]
     public bool UseResetPassword { get; set; }
+
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
+
     [Display(Name = "Secrets Manager")]
     public new bool UseSecretsManager { get; set; }
+
     [Display(Name = "Risk Insights")]
     public new bool UseRiskInsights { get; set; }
+
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
+
     [Display(Name = "Users Get Premium")]
     public bool UsersGetPremium { get; set; }
+
     [Display(Name = "Custom Permissions")]
     public bool UseCustomPermissions { get; set; }
+
     [Display(Name = "Max. Storage GB")]
     public short? MaxStorageGb { get; set; }
+
     [Display(Name = "Gateway")]
     public GatewayType? Gateway { get; set; }
+
     [Display(Name = "Gateway Customer Id")]
     public string GatewayCustomerId { get; set; }
+
     [Display(Name = "Gateway Subscription Id")]
     public string GatewaySubscriptionId { get; set; }
+
     [Display(Name = "Enabled")]
     public bool Enabled { get; set; }
+
     [Display(Name = "License Key")]
     public string LicenseKey { get; set; }
+
     [Display(Name = "Expiration Date")]
     public DateTime? ExpirationDate { get; set; }
     public bool SalesAssistedTrialStarted { get; set; }
+
     [Display(Name = "Seats")]
     public int? SmSeats { get; set; }
+
     [Display(Name = "Max Autoscale Seats")]
     public int? MaxAutoscaleSmSeats { get; set; }
+
     [Display(Name = "Machine Accounts")]
     public int? SmServiceAccounts { get; set; }
+
     [Display(Name = "Max Autoscale Machine Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
 
@@ -183,84 +221,82 @@ public class OrganizationEditModel : OrganizationViewModel
      * Add mappings for individual properties as you need them
      */
     public object GetPlansHelper() =>
-        StaticStore.Plans
-            .Select(p =>
+        StaticStore.Plans.Select(p =>
+        {
+            var plan = new
             {
-                var plan = new
+                Type = p.Type,
+                ProductTier = p.ProductTier,
+                Name = p.Name,
+                IsAnnual = p.IsAnnual,
+                NameLocalizationKey = p.NameLocalizationKey,
+                DescriptionLocalizationKey = p.DescriptionLocalizationKey,
+                CanBeUsedByBusiness = p.CanBeUsedByBusiness,
+                TrialPeriodDays = p.TrialPeriodDays,
+                HasSelfHost = p.HasSelfHost,
+                HasPolicies = p.HasPolicies,
+                HasGroups = p.HasGroups,
+                HasDirectory = p.HasDirectory,
+                HasEvents = p.HasEvents,
+                HasTotp = p.HasTotp,
+                Has2fa = p.Has2fa,
+                HasApi = p.HasApi,
+                HasSso = p.HasSso,
+                HasKeyConnector = p.HasKeyConnector,
+                HasScim = p.HasScim,
+                HasResetPassword = p.HasResetPassword,
+                UsersGetPremium = p.UsersGetPremium,
+                HasCustomPermissions = p.HasCustomPermissions,
+                UpgradeSortOrder = p.UpgradeSortOrder,
+                DisplaySortOrder = p.DisplaySortOrder,
+                LegacyYear = p.LegacyYear,
+                Disabled = p.Disabled,
+                SupportsSecretsManager = p.SupportsSecretsManager,
+                PasswordManager = new
                 {
-                    Type = p.Type,
-                    ProductTier = p.ProductTier,
-                    Name = p.Name,
-                    IsAnnual = p.IsAnnual,
-                    NameLocalizationKey = p.NameLocalizationKey,
-                    DescriptionLocalizationKey = p.DescriptionLocalizationKey,
-                    CanBeUsedByBusiness = p.CanBeUsedByBusiness,
-                    TrialPeriodDays = p.TrialPeriodDays,
-                    HasSelfHost = p.HasSelfHost,
-                    HasPolicies = p.HasPolicies,
-                    HasGroups = p.HasGroups,
-                    HasDirectory = p.HasDirectory,
-                    HasEvents = p.HasEvents,
-                    HasTotp = p.HasTotp,
-                    Has2fa = p.Has2fa,
-                    HasApi = p.HasApi,
-                    HasSso = p.HasSso,
-                    HasKeyConnector = p.HasKeyConnector,
-                    HasScim = p.HasScim,
-                    HasResetPassword = p.HasResetPassword,
-                    UsersGetPremium = p.UsersGetPremium,
-                    HasCustomPermissions = p.HasCustomPermissions,
-                    UpgradeSortOrder = p.UpgradeSortOrder,
-                    DisplaySortOrder = p.DisplaySortOrder,
-                    LegacyYear = p.LegacyYear,
-                    Disabled = p.Disabled,
-                    SupportsSecretsManager = p.SupportsSecretsManager,
-                    PasswordManager =
-                        new
-                        {
-                            StripePlanId = p.PasswordManager?.StripePlanId,
-                            StripeSeatPlanId = p.PasswordManager?.StripeSeatPlanId,
-                            StripeProviderPortalSeatPlanId = p.PasswordManager?.StripeProviderPortalSeatPlanId,
-                            BasePrice = p.PasswordManager?.BasePrice,
-                            SeatPrice = p.PasswordManager?.SeatPrice,
-                            ProviderPortalSeatPrice = p.PasswordManager?.ProviderPortalSeatPrice,
-                            AllowSeatAutoscale = p.PasswordManager?.AllowSeatAutoscale,
-                            HasAdditionalSeatsOption = p.PasswordManager?.HasAdditionalSeatsOption,
-                            MaxAdditionalSeats = p.PasswordManager?.MaxAdditionalSeats,
-                            BaseSeats = p.PasswordManager?.BaseSeats,
-                            HasPremiumAccessOption = p.PasswordManager?.HasPremiumAccessOption,
-                            StripePremiumAccessPlanId = p.PasswordManager?.StripePremiumAccessPlanId,
-                            PremiumAccessOptionPrice = p.PasswordManager?.PremiumAccessOptionPrice,
-                            MaxSeats = p.PasswordManager?.MaxSeats,
-                            BaseStorageGb = p.PasswordManager?.BaseStorageGb,
-                            HasAdditionalStorageOption = p.PasswordManager?.HasAdditionalStorageOption,
-                            AdditionalStoragePricePerGb = p.PasswordManager?.AdditionalStoragePricePerGb,
-                            StripeStoragePlanId = p.PasswordManager?.StripeStoragePlanId,
-                            MaxAdditionalStorage = p.PasswordManager?.MaxAdditionalStorage,
-                            MaxCollections = p.PasswordManager?.MaxCollections
-                        },
-                    SecretsManager = new
-                    {
-                        MaxServiceAccounts = p.SecretsManager?.MaxServiceAccounts,
-                        AllowServiceAccountsAutoscale = p.SecretsManager?.AllowServiceAccountsAutoscale,
-                        StripeServiceAccountPlanId = p.SecretsManager?.StripeServiceAccountPlanId,
-                        AdditionalPricePerServiceAccount = p.SecretsManager?.AdditionalPricePerServiceAccount,
-                        BaseServiceAccount = p.SecretsManager?.BaseServiceAccount,
-                        MaxAdditionalServiceAccount = p.SecretsManager?.MaxAdditionalServiceAccount,
-                        HasAdditionalServiceAccountOption = p.SecretsManager?.HasAdditionalServiceAccountOption,
-                        StripeSeatPlanId = p.SecretsManager?.StripeSeatPlanId,
-                        HasAdditionalSeatsOption = p.SecretsManager?.HasAdditionalSeatsOption,
-                        BasePrice = p.SecretsManager?.BasePrice,
-                        SeatPrice = p.SecretsManager?.SeatPrice,
-                        BaseSeats = p.SecretsManager?.BaseSeats,
-                        MaxSeats = p.SecretsManager?.MaxSeats,
-                        MaxAdditionalSeats = p.SecretsManager?.MaxAdditionalSeats,
-                        AllowSeatAutoscale = p.SecretsManager?.AllowSeatAutoscale,
-                        MaxProjects = p.SecretsManager?.MaxProjects
-                    }
-                };
-                return plan;
-            });
+                    StripePlanId = p.PasswordManager?.StripePlanId,
+                    StripeSeatPlanId = p.PasswordManager?.StripeSeatPlanId,
+                    StripeProviderPortalSeatPlanId = p.PasswordManager?.StripeProviderPortalSeatPlanId,
+                    BasePrice = p.PasswordManager?.BasePrice,
+                    SeatPrice = p.PasswordManager?.SeatPrice,
+                    ProviderPortalSeatPrice = p.PasswordManager?.ProviderPortalSeatPrice,
+                    AllowSeatAutoscale = p.PasswordManager?.AllowSeatAutoscale,
+                    HasAdditionalSeatsOption = p.PasswordManager?.HasAdditionalSeatsOption,
+                    MaxAdditionalSeats = p.PasswordManager?.MaxAdditionalSeats,
+                    BaseSeats = p.PasswordManager?.BaseSeats,
+                    HasPremiumAccessOption = p.PasswordManager?.HasPremiumAccessOption,
+                    StripePremiumAccessPlanId = p.PasswordManager?.StripePremiumAccessPlanId,
+                    PremiumAccessOptionPrice = p.PasswordManager?.PremiumAccessOptionPrice,
+                    MaxSeats = p.PasswordManager?.MaxSeats,
+                    BaseStorageGb = p.PasswordManager?.BaseStorageGb,
+                    HasAdditionalStorageOption = p.PasswordManager?.HasAdditionalStorageOption,
+                    AdditionalStoragePricePerGb = p.PasswordManager?.AdditionalStoragePricePerGb,
+                    StripeStoragePlanId = p.PasswordManager?.StripeStoragePlanId,
+                    MaxAdditionalStorage = p.PasswordManager?.MaxAdditionalStorage,
+                    MaxCollections = p.PasswordManager?.MaxCollections,
+                },
+                SecretsManager = new
+                {
+                    MaxServiceAccounts = p.SecretsManager?.MaxServiceAccounts,
+                    AllowServiceAccountsAutoscale = p.SecretsManager?.AllowServiceAccountsAutoscale,
+                    StripeServiceAccountPlanId = p.SecretsManager?.StripeServiceAccountPlanId,
+                    AdditionalPricePerServiceAccount = p.SecretsManager?.AdditionalPricePerServiceAccount,
+                    BaseServiceAccount = p.SecretsManager?.BaseServiceAccount,
+                    MaxAdditionalServiceAccount = p.SecretsManager?.MaxAdditionalServiceAccount,
+                    HasAdditionalServiceAccountOption = p.SecretsManager?.HasAdditionalServiceAccountOption,
+                    StripeSeatPlanId = p.SecretsManager?.StripeSeatPlanId,
+                    HasAdditionalSeatsOption = p.SecretsManager?.HasAdditionalSeatsOption,
+                    BasePrice = p.SecretsManager?.BasePrice,
+                    SeatPrice = p.SecretsManager?.SeatPrice,
+                    BaseSeats = p.SecretsManager?.BaseSeats,
+                    MaxSeats = p.SecretsManager?.MaxSeats,
+                    MaxAdditionalSeats = p.SecretsManager?.MaxAdditionalSeats,
+                    AllowSeatAutoscale = p.SecretsManager?.AllowSeatAutoscale,
+                    MaxProjects = p.SecretsManager?.MaxProjects,
+                },
+            };
+            return plan;
+        });
 
     public Organization CreateOrganization(Provider provider)
     {

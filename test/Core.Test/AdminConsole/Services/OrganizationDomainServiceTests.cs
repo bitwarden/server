@@ -12,9 +12,10 @@ namespace Bit.Core.Test.AdminConsole.Services;
 [SutProviderCustomize]
 public class OrganizationDomainServiceTests
 {
-
     [Theory, BitAutoData]
-    public async Task ValidateOrganizationsDomainAsync_CallsDnsResolverServiceAndReplace(SutProvider<OrganizationDomainService> sutProvider)
+    public async Task ValidateOrganizationsDomainAsync_CallsDnsResolverServiceAndReplace(
+        SutProvider<OrganizationDomainService> sutProvider
+    )
     {
         var domains = new List<OrganizationDomain>
         {
@@ -32,22 +33,27 @@ public class OrganizationDomainServiceTests
                 OrganizationId = Guid.NewGuid(),
                 CreationDate = DateTime.UtcNow,
                 DomainName = "test2.com",
-                Txt = "btw+6789"
-            }
+                Txt = "btw+6789",
+            },
         };
 
-        sutProvider.GetDependency<IOrganizationDomainRepository>().GetManyByNextRunDateAsync(default)
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
+            .GetManyByNextRunDateAsync(default)
             .ReturnsForAnyArgs(domains);
 
         await sutProvider.Sut.ValidateOrganizationsDomainAsync();
 
-        await sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().ReceivedWithAnyArgs(2)
+        await sutProvider
+            .GetDependency<IVerifyOrganizationDomainCommand>()
+            .ReceivedWithAnyArgs(2)
             .SystemVerifyOrganizationDomainAsync(default);
     }
 
     [Theory, BitAutoData]
     public async Task OrganizationDomainMaintenanceAsync_CallsDeleteExpiredAsync_WhenExpiredDomainsExist(
-        SutProvider<OrganizationDomainService> sutProvider)
+        SutProvider<OrganizationDomainService> sutProvider
+    )
     {
         var expiredDomains = new List<OrganizationDomain>
         {
@@ -65,15 +71,19 @@ public class OrganizationDomainServiceTests
                 OrganizationId = Guid.NewGuid(),
                 CreationDate = DateTime.UtcNow,
                 DomainName = "test2.com",
-                Txt = "btw+6789"
-            }
+                Txt = "btw+6789",
+            },
         };
-        sutProvider.GetDependency<IOrganizationDomainRepository>().GetExpiredOrganizationDomainsAsync()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
+            .GetExpiredOrganizationDomainsAsync()
             .Returns(expiredDomains);
 
         await sutProvider.Sut.OrganizationDomainMaintenanceAsync();
 
-        await sutProvider.GetDependency<IOrganizationDomainRepository>().ReceivedWithAnyArgs(1)
+        await sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
+            .ReceivedWithAnyArgs(1)
             .DeleteExpiredAsync(7);
     }
 }

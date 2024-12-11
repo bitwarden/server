@@ -14,13 +14,16 @@ public class AddPasswordHealthReportApplicationCommand : IAddPasswordHealthRepor
 
     public AddPasswordHealthReportApplicationCommand(
         IOrganizationRepository organizationRepository,
-        IPasswordHealthReportApplicationRepository passwordHealthReportApplicationRepository)
+        IPasswordHealthReportApplicationRepository passwordHealthReportApplicationRepository
+    )
     {
         _organizationRepo = organizationRepository;
         _passwordHealthReportApplicationRepo = passwordHealthReportApplicationRepository;
     }
 
-    public async Task<PasswordHealthReportApplication> AddPasswordHealthReportApplicationAsync(AddPasswordHealthReportApplicationRequest request)
+    public async Task<PasswordHealthReportApplication> AddPasswordHealthReportApplicationAsync(
+        AddPasswordHealthReportApplicationRequest request
+    )
     {
         var (req, IsValid, errorMessage) = await ValidateRequestAsync(request);
         if (!IsValid)
@@ -36,11 +39,17 @@ public class AddPasswordHealthReportApplicationCommand : IAddPasswordHealthRepor
 
         passwordHealthReportApplication.SetNewId();
 
-        var data = await _passwordHealthReportApplicationRepo.CreateAsync(passwordHealthReportApplication);
+        var data = await _passwordHealthReportApplicationRepo.CreateAsync(
+            passwordHealthReportApplication
+        );
         return data;
     }
 
-    public async Task<IEnumerable<PasswordHealthReportApplication>> AddPasswordHealthReportApplicationAsync(IEnumerable<AddPasswordHealthReportApplicationRequest> requests)
+    public async Task<
+        IEnumerable<PasswordHealthReportApplication>
+    > AddPasswordHealthReportApplicationAsync(
+        IEnumerable<AddPasswordHealthReportApplicationRequest> requests
+    )
     {
         var requestsList = requests.ToList();
 
@@ -59,15 +68,15 @@ public class AddPasswordHealthReportApplicationCommand : IAddPasswordHealthRepor
 
         // create PasswordHealthReportApplication entities
         var passwordHealthReportApplications = requestsList.Select(request =>
+        {
+            var pwdHealthReportApplication = new PasswordHealthReportApplication
             {
-                var pwdHealthReportApplication = new PasswordHealthReportApplication
-                {
-                    OrganizationId = request.OrganizationId,
-                    Uri = request.Url,
-                };
-                pwdHealthReportApplication.SetNewId();
-                return pwdHealthReportApplication;
-            });
+                OrganizationId = request.OrganizationId,
+                Uri = request.Url,
+            };
+            pwdHealthReportApplication.SetNewId();
+            return pwdHealthReportApplication;
+        });
 
         // create and return the entities
         var response = new List<PasswordHealthReportApplication>();
@@ -80,22 +89,35 @@ public class AddPasswordHealthReportApplicationCommand : IAddPasswordHealthRepor
         return response;
     }
 
-    private async Task<Tuple<AddPasswordHealthReportApplicationRequest, bool, string>> ValidateRequestAsync(
-        AddPasswordHealthReportApplicationRequest request)
+    private async Task<
+        Tuple<AddPasswordHealthReportApplicationRequest, bool, string>
+    > ValidateRequestAsync(AddPasswordHealthReportApplicationRequest request)
     {
         // verify that the organization exists
         var organization = await _organizationRepo.GetByIdAsync(request.OrganizationId);
         if (organization == null)
         {
-            return new Tuple<AddPasswordHealthReportApplicationRequest, bool, string>(request, false, "Invalid Organization");
+            return new Tuple<AddPasswordHealthReportApplicationRequest, bool, string>(
+                request,
+                false,
+                "Invalid Organization"
+            );
         }
 
         // ensure that we have a URL
         if (string.IsNullOrWhiteSpace(request.Url))
         {
-            return new Tuple<AddPasswordHealthReportApplicationRequest, bool, string>(request, false, "URL is required");
+            return new Tuple<AddPasswordHealthReportApplicationRequest, bool, string>(
+                request,
+                false,
+                "URL is required"
+            );
         }
 
-        return new Tuple<AddPasswordHealthReportApplicationRequest, bool, string>(request, true, string.Empty);
+        return new Tuple<AddPasswordHealthReportApplicationRequest, bool, string>(
+            request,
+            true,
+            string.Empty
+        );
     }
 }

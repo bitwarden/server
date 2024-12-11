@@ -8,10 +8,7 @@ public class TwoFactorRecoverResponseModel : ResponseModel
     public TwoFactorRecoverResponseModel(User user)
         : base("twoFactorRecover")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         Code = user.TwoFactorRecoveryCode;
     }

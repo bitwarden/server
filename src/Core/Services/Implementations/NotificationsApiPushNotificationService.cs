@@ -10,7 +10,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
+public class NotificationsApiPushNotificationService
+    : BaseIdentityClientService,
+        IPushNotificationService
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -19,7 +21,8 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         IHttpClientFactory httpFactory,
         GlobalSettings globalSettings,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationsApiPushNotificationService> logger
+    )
         : base(
             httpFactory,
             globalSettings.BaseServiceUri.InternalNotifications,
@@ -27,7 +30,8 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             "internal",
             $"internal.{globalSettings.ProjectName}",
             globalSettings.InternalIdentityKey,
-            logger)
+            logger
+        )
     {
         _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
@@ -48,7 +52,11 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(
+        Cipher cipher,
+        PushType type,
+        IEnumerable<Guid> collectionIds
+    )
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -97,7 +105,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         {
             Id = folder.Id,
             UserId = folder.UserId,
-            RevisionDate = folder.RevisionDate
+            RevisionDate = folder.RevisionDate,
         };
 
         await SendMessageAsync(type, message, true);
@@ -135,11 +143,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification
-        {
-            UserId = userId,
-            Date = DateTime.UtcNow
-        };
+        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
 
         await SendMessageAsync(type, message, excludeCurrentContext);
     }
@@ -159,7 +163,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         var message = new AuthRequestPushNotification
         {
             Id = authRequest.Id,
-            UserId = authRequest.UserId
+            UserId = authRequest.UserId,
         };
 
         await SendMessageAsync(type, message, true);
@@ -188,7 +192,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             {
                 Id = send.Id,
                 UserId = send.UserId.Value,
-                RevisionDate = send.RevisionDate
+                RevisionDate = send.RevisionDate,
             };
 
             await SendMessageAsync(type, message, false);
@@ -209,20 +213,31 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             return null;
         }
 
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        var currentContext =
+            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext))
+            as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public Task SendPayloadToUserAsync(
+        string userId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
         // Noop
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public Task SendPayloadToOrganizationAsync(
+        string orgId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
         // Noop
         return Task.FromResult(0);

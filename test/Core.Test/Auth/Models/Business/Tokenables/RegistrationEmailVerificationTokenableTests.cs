@@ -2,6 +2,7 @@
 using Bit.Core.Tokens;
 
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
+
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Xunit;
 
@@ -16,7 +17,9 @@ public class RegistrationEmailVerificationTokenableTests
     [Fact]
     public void Constructor_NullEmail_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => new RegistrationEmailVerificationTokenable(null, null, default));
+        Assert.Throws<ArgumentNullException>(
+            () => new RegistrationEmailVerificationTokenable(null, null, default)
+        );
     }
 
     /// <summary>
@@ -36,7 +39,11 @@ public class RegistrationEmailVerificationTokenableTests
     /// Tests that when a valid inputs are provided to the constructor, the resulting token properties match the user.
     /// </summary>
     [Theory, AutoData]
-    public void Constructor_ValidInputs_PropertiesSetFromInputs(string email, string name, bool receiveMarketingEmails)
+    public void Constructor_ValidInputs_PropertiesSetFromInputs(
+        string email,
+        string name,
+        bool receiveMarketingEmails
+    )
     {
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
@@ -66,20 +73,26 @@ public class RegistrationEmailVerificationTokenableTests
         var customExpiration = DateTime.UtcNow.AddHours(3);
         var token = new RegistrationEmailVerificationTokenable
         {
-            ExpirationDate = customExpiration
+            ExpirationDate = customExpiration,
         };
 
         Assert.True((customExpiration - token.ExpirationDate).Duration() < _timeTolerance);
     }
 
-
     /// <summary>
     /// Tests the validity of a token with a non-matching identifier.
     /// </summary>
     [Theory, AutoData]
-    public void Valid_WrongIdentifier_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    public void Valid_WrongIdentifier_ReturnsFalse(
+        string email,
+        string name,
+        bool receiveMarketingEmails
+    )
     {
-        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails) { Identifier = "InvalidIdentifier" };
+        var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
+        {
+            Identifier = "InvalidIdentifier",
+        };
 
         Assert.False(token.Valid);
     }
@@ -88,7 +101,11 @@ public class RegistrationEmailVerificationTokenableTests
     /// Tests the token validity when the token is initialized with valid inputs.
     /// </summary>
     [Theory, AutoData]
-    public void Valid_ValidInputs_ReturnsTrue(string email, string name, bool receiveMarketingEmails)
+    public void Valid_ValidInputs_ReturnsTrue(
+        string email,
+        string name,
+        bool receiveMarketingEmails
+    )
     {
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
@@ -99,24 +116,31 @@ public class RegistrationEmailVerificationTokenableTests
     /// Tests the token validity when an incorrect email is provided
     /// </summary>
     [Theory, AutoData]
-    public void TokenIsValid_WrongEmail_ReturnsFalse(string email, string name, bool receiveMarketingEmails)
+    public void TokenIsValid_WrongEmail_ReturnsFalse(
+        string email,
+        string name,
+        bool receiveMarketingEmails
+    )
     {
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
 
         Assert.False(token.TokenIsValid("wrong@email.com"));
     }
 
-
     /// <summary>
     /// Tests the deserialization of a token to ensure that the expiration date is preserved.
     /// </summary>
     [Theory, AutoData]
-    public void FromToken_SerializedToken_PreservesExpirationDate(string email, string name, bool receiveMarketingEmails)
+    public void FromToken_SerializedToken_PreservesExpirationDate(
+        string email,
+        string name,
+        bool receiveMarketingEmails
+    )
     {
         var expectedDateTime = DateTime.UtcNow.AddHours(-5);
         var token = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails)
         {
-            ExpirationDate = expectedDateTime
+            ExpirationDate = expectedDateTime,
         };
 
         var result = Tokenable.FromToken<RegistrationEmailVerificationTokenable>(token.ToToken());

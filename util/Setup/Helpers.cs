@@ -8,10 +8,19 @@ namespace Bit.Setup;
 
 public static class Helpers
 {
-    public static string SecureRandomString(int length, bool alpha = true, bool upper = true, bool lower = true,
-        bool numeric = true, bool special = false)
+    public static string SecureRandomString(
+        int length,
+        bool alpha = true,
+        bool upper = true,
+        bool lower = true,
+        bool numeric = true,
+        bool special = false
+    )
     {
-        return SecureRandomString(length, RandomStringCharacters(alpha, upper, lower, numeric, special));
+        return SecureRandomString(
+            length,
+            RandomStringCharacters(alpha, upper, lower, numeric, special)
+        );
     }
 
     // ref https://stackoverflow.com/a/8996788/1090359 with modifications
@@ -19,7 +28,10 @@ public static class Helpers
     {
         if (length < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(length), "length cannot be less than zero.");
+            throw new ArgumentOutOfRangeException(
+                nameof(length),
+                "length cannot be less than zero."
+            );
         }
 
         if ((characters?.Length ?? 0) == 0)
@@ -31,8 +43,13 @@ public static class Helpers
         if (byteSize < characters.Length)
         {
             throw new ArgumentException(
-                string.Format("{0} may contain no more than {1} characters.", nameof(characters), byteSize),
-                nameof(characters));
+                string.Format(
+                    "{0} may contain no more than {1} characters.",
+                    nameof(characters),
+                    byteSize
+                ),
+                nameof(characters)
+            );
         }
 
         var outOfRangeStart = byteSize - (byteSize % characters.Length);
@@ -61,7 +78,13 @@ public static class Helpers
         }
     }
 
-    private static string RandomStringCharacters(bool alpha, bool upper, bool lower, bool numeric, bool special)
+    private static string RandomStringCharacters(
+        bool alpha,
+        bool upper,
+        bool lower,
+        bool numeric,
+        bool special
+    )
     {
         var characters = string.Empty;
         if (alpha)
@@ -118,8 +141,8 @@ public static class Helpers
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                WindowStyle = ProcessWindowStyle.Hidden
-            }
+                WindowStyle = ProcessWindowStyle.Hidden,
+            },
         };
 
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -162,7 +185,12 @@ public static class Helpers
         return input == "y" || input == "yes";
     }
 
-    public static void ShowBanner(Context context, string title, string message, ConsoleColor? color = null)
+    public static void ShowBanner(
+        Context context,
+        string title,
+        string message,
+        ConsoleColor? color = null
+    )
     {
         if (!context.PrintToScreen())
         {
@@ -178,7 +206,9 @@ public static class Helpers
         Console.ResetColor();
     }
 
-    public static HandlebarsDotNet.HandlebarsTemplate<object, object> ReadTemplate(string templateName)
+    public static HandlebarsDotNet.HandlebarsTemplate<object, object> ReadTemplate(
+        string templateName
+    )
     {
         var assembly = typeof(Helpers).GetTypeInfo().Assembly;
         var fullTemplateName = $"Bit.Setup.Templates.{templateName}.hbs";
@@ -194,8 +224,13 @@ public static class Helpers
         }
     }
 
-    public static void WriteLine(Context context, string format = null, object arg0 = null, object arg1 = null,
-        object arg2 = null)
+    public static void WriteLine(
+        Context context,
+        string format = null,
+        object arg0 = null,
+        object arg1 = null,
+        object arg2 = null
+    )
     {
         if (!context.PrintToScreen())
         {

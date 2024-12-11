@@ -42,19 +42,33 @@ public class EnvironmentFileBuilder
         Init();
         LoadExistingValues(_globalOverrideValues, "/bitwarden/env/global.override.env");
         LoadExistingValues(_mssqlOverrideValues, "/bitwarden/env/mssql.override.env");
-        LoadExistingValues(_keyConnectorOverrideValues, "/bitwarden/env/key-connector.override.env");
+        LoadExistingValues(
+            _keyConnectorOverrideValues,
+            "/bitwarden/env/key-connector.override.env"
+        );
 
-        if (_context.Config.PushNotifications &&
-            _globalOverrideValues.ContainsKey("globalSettings__pushRelayBaseUri") &&
-            _globalOverrideValues["globalSettings__pushRelayBaseUri"] == "REPLACE")
+        if (
+            _context.Config.PushNotifications
+            && _globalOverrideValues.ContainsKey("globalSettings__pushRelayBaseUri")
+            && _globalOverrideValues["globalSettings__pushRelayBaseUri"] == "REPLACE"
+        )
         {
             _globalOverrideValues.Remove("globalSettings__pushRelayBaseUri");
         }
 
-        if (_globalOverrideValues.TryGetValue("globalSettings__baseServiceUri__vault", out var vaultUri) && vaultUri != _context.Config.Url)
+        if (
+            _globalOverrideValues.TryGetValue(
+                "globalSettings__baseServiceUri__vault",
+                out var vaultUri
+            )
+            && vaultUri != _context.Config.Url
+        )
         {
             _globalOverrideValues["globalSettings__baseServiceUri__vault"] = _context.Config.Url;
-            Helpers.WriteLine(_context, "Updated globalSettings__baseServiceUri__vault to match value in config.yml");
+            Helpers.WriteLine(
+                _context,
+                "Updated globalSettings__baseServiceUri__vault to match value in config.yml"
+            );
         }
 
         Build();
@@ -62,7 +76,9 @@ public class EnvironmentFileBuilder
 
     private void Init()
     {
-        var dbPassword = _context.Stub ? "RANDOM_DATABASE_PASSWORD" : Helpers.SecureRandomString(32);
+        var dbPassword = _context.Stub
+            ? "RANDOM_DATABASE_PASSWORD"
+            : Helpers.SecureRandomString(32);
         var dbConnectionString = new SqlConnectionStringBuilder
         {
             DataSource = "tcp:mssql,1433",
@@ -73,21 +89,28 @@ public class EnvironmentFileBuilder
             Encrypt = true,
             ConnectTimeout = 30,
             TrustServerCertificate = true,
-            PersistSecurityInfo = false
+            PersistSecurityInfo = false,
         }.ConnectionString;
 
         _globalOverrideValues = new Dictionary<string, string>
         {
             ["globalSettings__baseServiceUri__vault"] = _context.Config.Url,
-            ["globalSettings__baseServiceUri__cloudRegion"] = _context.Install?.CloudRegion.ToString(),
-            ["globalSettings__sqlServer__connectionString"] = $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
-            ["globalSettings__identityServer__certificatePassword"] = _context.Install?.IdentityCertPassword,
-            ["globalSettings__internalIdentityKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
-                Helpers.SecureRandomString(64, alpha: true, numeric: true),
-            ["globalSettings__oidcIdentityClientKey"] = _context.Stub ? "RANDOM_IDENTITY_KEY" :
-                Helpers.SecureRandomString(64, alpha: true, numeric: true),
-            ["globalSettings__duo__aKey"] = _context.Stub ? "RANDOM_DUO_AKEY" :
-                Helpers.SecureRandomString(64, alpha: true, numeric: true),
+            ["globalSettings__baseServiceUri__cloudRegion"] =
+                _context.Install?.CloudRegion.ToString(),
+            ["globalSettings__sqlServer__connectionString"] =
+                $"\"{dbConnectionString.Replace("\"", "\\\"")}\"",
+            ["globalSettings__identityServer__certificatePassword"] = _context
+                .Install
+                ?.IdentityCertPassword,
+            ["globalSettings__internalIdentityKey"] = _context.Stub
+                ? "RANDOM_IDENTITY_KEY"
+                : Helpers.SecureRandomString(64, alpha: true, numeric: true),
+            ["globalSettings__oidcIdentityClientKey"] = _context.Stub
+                ? "RANDOM_IDENTITY_KEY"
+                : Helpers.SecureRandomString(64, alpha: true, numeric: true),
+            ["globalSettings__duo__aKey"] = _context.Stub
+                ? "RANDOM_DUO_AKEY"
+                : Helpers.SecureRandomString(64, alpha: true, numeric: true),
             ["globalSettings__installation__id"] = _context.Install?.InstallationId.ToString(),
             ["globalSettings__installation__key"] = _context.Install?.InstallationKey,
             ["globalSettings__yubico__clientId"] = "REPLACE",
@@ -111,7 +134,7 @@ public class EnvironmentFileBuilder
         _mssqlOverrideValues = new Dictionary<string, string>
         {
             ["SA_PASSWORD"] = dbPassword,
-            ["DATABASE"] = _context.Install?.Database ?? "vault"
+            ["DATABASE"] = _context.Install?.Database ?? "vault",
         };
 
         _keyConnectorOverrideValues = new Dictionary<string, string>
@@ -119,11 +142,17 @@ public class EnvironmentFileBuilder
             ["keyConnectorSettings__webVaultUri"] = _context.Config.Url,
             ["keyConnectorSettings__identityServerUri"] = "http://identity:5000",
             ["keyConnectorSettings__database__provider"] = "json",
-            ["keyConnectorSettings__database__jsonFilePath"] = "/etc/bitwarden/key-connector/data.json",
+            ["keyConnectorSettings__database__jsonFilePath"] =
+                "/etc/bitwarden/key-connector/data.json",
             ["keyConnectorSettings__rsaKey__provider"] = "certificate",
             ["keyConnectorSettings__certificate__provider"] = "filesystem",
-            ["keyConnectorSettings__certificate__filesystemPath"] = "/etc/bitwarden/key-connector/bwkc.pfx",
-            ["keyConnectorSettings__certificate__filesystemPassword"] = Helpers.SecureRandomString(32, alpha: true, numeric: true),
+            ["keyConnectorSettings__certificate__filesystemPath"] =
+                "/etc/bitwarden/key-connector/bwkc.pfx",
+            ["keyConnectorSettings__certificate__filesystemPassword"] = Helpers.SecureRandomString(
+                32,
+                alpha: true,
+                numeric: true
+            ),
         };
     }
 

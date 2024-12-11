@@ -26,7 +26,11 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.Add(_tokenLifetime);
     }
 
-    public WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions options) : this()
+    public WebAuthnLoginAssertionOptionsTokenable(
+        WebAuthnLoginAssertionOptionsScope scope,
+        AssertionOptions options
+    )
+        : this()
     {
         Scope = scope;
         Options = options;
@@ -44,4 +48,3 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
 
     protected override bool TokenIsValid() => Identifier == TokenIdentifier && Options != null;
 }
-

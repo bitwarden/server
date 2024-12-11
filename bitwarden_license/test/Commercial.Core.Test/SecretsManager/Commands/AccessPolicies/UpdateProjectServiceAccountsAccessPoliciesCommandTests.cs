@@ -17,26 +17,34 @@ public class UpdateProjectServiceAccountsAccessPoliciesCommandTests
     [BitAutoData]
     public async Task UpdateAsync_NoUpdates_DoesNotCallRepository(
         SutProvider<UpdateProjectServiceAccountsAccessPoliciesCommand> sutProvider,
-        ProjectServiceAccountsAccessPoliciesUpdates data)
+        ProjectServiceAccountsAccessPoliciesUpdates data
+    )
     {
         data.ServiceAccountAccessPolicyUpdates = [];
         await sutProvider.Sut.UpdateAsync(data);
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>()
+        await sutProvider
+            .GetDependency<IAccessPolicyRepository>()
             .DidNotReceiveWithAnyArgs()
-            .UpdateProjectServiceAccountsAccessPoliciesAsync(Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>());
+            .UpdateProjectServiceAccountsAccessPoliciesAsync(
+                Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async Task UpdateAsync_HasUpdates_CallsRepository(
         SutProvider<UpdateProjectServiceAccountsAccessPoliciesCommand> sutProvider,
-        ProjectServiceAccountsAccessPoliciesUpdates data)
+        ProjectServiceAccountsAccessPoliciesUpdates data
+    )
     {
         await sutProvider.Sut.UpdateAsync(data);
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>()
+        await sutProvider
+            .GetDependency<IAccessPolicyRepository>()
             .Received(1)
-            .UpdateProjectServiceAccountsAccessPoliciesAsync(Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>());
+            .UpdateProjectServiceAccountsAccessPoliciesAsync(
+                Arg.Any<ProjectServiceAccountsAccessPoliciesUpdates>()
+            );
     }
 }

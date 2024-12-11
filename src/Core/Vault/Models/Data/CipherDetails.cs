@@ -34,7 +34,8 @@ public class CipherDetailsWithCollections : CipherDetails
 {
     public CipherDetailsWithCollections(
         CipherDetails cipher,
-        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
+        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict
+    )
     {
         Id = cipher.Id;
         UserId = cipher.UserId;
@@ -59,7 +60,10 @@ public class CipherDetailsWithCollections : CipherDetails
             : Array.Empty<Guid>();
     }
 
-    public CipherDetailsWithCollections(CipherOrganizationDetails cipher, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
+    public CipherDetailsWithCollections(
+        CipherOrganizationDetails cipher,
+        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict
+    )
     {
         Id = cipher.Id;
         UserId = cipher.UserId;
@@ -76,9 +80,11 @@ public class CipherDetailsWithCollections : CipherDetails
         Key = cipher.Key;
         OrganizationUseTotp = cipher.OrganizationUseTotp;
 
-        CollectionIds = collectionCiphersGroupDict != null && collectionCiphersGroupDict.TryGetValue(Id, out var value)
-            ? value.Select(cc => cc.CollectionId)
-            : Array.Empty<Guid>();
+        CollectionIds =
+            collectionCiphersGroupDict != null
+            && collectionCiphersGroupDict.TryGetValue(Id, out var value)
+                ? value.Select(cc => cc.CollectionId)
+                : Array.Empty<Guid>();
     }
 
     public IEnumerable<Guid> CollectionIds { get; set; }

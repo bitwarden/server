@@ -10,10 +10,7 @@ public class PolicyResponseModel : ResponseModel
     public PolicyResponseModel(Policy policy, string obj = "policy")
         : base(obj)
     {
-        if (policy == null)
-        {
-            throw new ArgumentNullException(nameof(policy));
-        }
+        ArgumentNullException.ThrowIfNull(policy);
 
         Id = policy.Id;
         OrganizationId = policy.OrganizationId;

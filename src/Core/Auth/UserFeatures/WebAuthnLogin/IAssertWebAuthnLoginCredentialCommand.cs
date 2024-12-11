@@ -6,5 +6,8 @@ namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 
 public interface IAssertWebAuthnLoginCredentialCommand
 {
-    public Task<(User, WebAuthnCredential)> AssertWebAuthnLoginCredential(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse);
+    public Task<(User, WebAuthnCredential)> AssertWebAuthnLoginCredential(
+        AssertionOptions options,
+        AuthenticatorAssertionRawResponse assertionResponse
+    );
 }

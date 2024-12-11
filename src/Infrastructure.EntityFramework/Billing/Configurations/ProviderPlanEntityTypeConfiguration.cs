@@ -8,13 +8,9 @@ public class ProviderPlanEntityTypeConfiguration : IEntityTypeConfiguration<Prov
 {
     public void Configure(EntityTypeBuilder<ProviderPlan> builder)
     {
-        builder
-            .Property(t => t.Id)
-            .ValueGeneratedNever();
+        builder.Property(t => t.Id).ValueGeneratedNever();
 
-        builder
-            .HasIndex(providerPlan => new { providerPlan.Id, providerPlan.PlanType })
-            .IsUnique();
+        builder.HasIndex(providerPlan => new { providerPlan.Id, providerPlan.PlanType }).IsUnique();
 
         builder.ToTable(nameof(ProviderPlan));
     }

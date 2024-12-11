@@ -34,7 +34,8 @@ public class Startup
         IApplicationBuilder app,
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         IdentityModelEventSource.ShowPII = true;
         app.UseSerilog(env, appLifetime, globalSettings);
@@ -43,13 +44,19 @@ public class Startup
         app.UseRouting();
         app.UseEndpoints(endpoints =>
         {
-            endpoints.MapGet("/alive",
-                async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
-            endpoints.MapGet("/now",
-                async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow));
-            endpoints.MapGet("/version",
-                async context => await context.Response.WriteAsJsonAsync(AssemblyHelpers.GetVersion()));
-
+            endpoints.MapGet(
+                "/alive",
+                async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow)
+            );
+            endpoints.MapGet(
+                "/now",
+                async context => await context.Response.WriteAsJsonAsync(System.DateTime.UtcNow)
+            );
+            endpoints.MapGet(
+                "/version",
+                async context =>
+                    await context.Response.WriteAsJsonAsync(AssemblyHelpers.GetVersion())
+            );
         });
     }
 }

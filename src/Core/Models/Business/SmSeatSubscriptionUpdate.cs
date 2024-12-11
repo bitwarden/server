@@ -10,7 +10,11 @@ public class SmSeatSubscriptionUpdate : SubscriptionUpdate
     private readonly long? _additionalSeats;
     protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeSeatPlanId };
 
-    public SmSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+    public SmSeatSubscriptionUpdate(
+        Organization organization,
+        StaticStore.Plan plan,
+        long? additionalSeats
+    )
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
@@ -28,13 +32,12 @@ public class SmSeatSubscriptionUpdate : SubscriptionUpdate
                 Plan = PlanIds.Single(),
                 Quantity = _additionalSeats,
                 Deleted = (item?.Id != null && _additionalSeats == 0) ? true : (bool?)null,
-            }
+            },
         };
     }
 
     public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
     {
-
         var item = FindSubscriptionItem(subscription, PlanIds.Single());
         return new()
         {
@@ -44,7 +47,7 @@ public class SmSeatSubscriptionUpdate : SubscriptionUpdate
                 Plan = PlanIds.Single(),
                 Quantity = _previousSeats,
                 Deleted = _previousSeats == 0 ? true : (bool?)null,
-            }
+            },
         };
     }
 }

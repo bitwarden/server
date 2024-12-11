@@ -12,14 +12,16 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     public int ServiceAccountAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
 
-    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(
+        Organization organization
+    )
     {
         return new SecretsManagerSubscriptionUpdate(organization, false)
         {
             MaxAutoscaleSmSeats = MaxAutoscaleSeats,
-            MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts
+            MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts,
         }
-        .AdjustSeats(SeatAdjustment)
-        .AdjustServiceAccounts(ServiceAccountAdjustment);
+            .AdjustSeats(SeatAdjustment)
+            .AdjustServiceAccounts(ServiceAccountAdjustment);
     }
 }

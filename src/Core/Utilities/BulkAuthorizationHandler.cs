@@ -8,10 +8,14 @@ namespace Bit.Core.Utilities;
 /// </summary>
 /// <typeparam name="TRequirement">The type of the requirement to evaluate.</typeparam>
 /// <typeparam name="TResource">The type of the resource(s) that will be evaluated.</typeparam>
-public abstract class BulkAuthorizationHandler<TRequirement, TResource> : AuthorizationHandler<TRequirement>
+public abstract class BulkAuthorizationHandler<TRequirement, TResource>
+    : AuthorizationHandler<TRequirement>
     where TRequirement : IAuthorizationRequirement
 {
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, TRequirement requirement)
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        TRequirement requirement
+    )
     {
         // Attempt to get the resource(s) from the context
         var bulkResources = GetBulkResourceFromContext(context);
@@ -25,16 +29,21 @@ public abstract class BulkAuthorizationHandler<TRequirement, TResource> : Author
         await HandleRequirementAsync(context, requirement, bulkResources);
     }
 
-    private static ICollection<TResource> GetBulkResourceFromContext(AuthorizationHandlerContext context)
+    private static ICollection<TResource> GetBulkResourceFromContext(
+        AuthorizationHandlerContext context
+    )
     {
         return context.Resource switch
         {
             TResource resource => new List<TResource> { resource },
             IEnumerable<TResource> resources => resources.ToList(),
-            _ => null
+            _ => null,
         };
     }
 
-    protected abstract Task HandleRequirementAsync(AuthorizationHandlerContext context, TRequirement requirement,
-        ICollection<TResource> resources);
+    protected abstract Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        TRequirement requirement,
+        ICollection<TResource> resources
+    );
 }

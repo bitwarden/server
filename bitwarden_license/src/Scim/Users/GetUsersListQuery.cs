@@ -13,7 +13,10 @@ public class GetUsersListQuery : IGetUsersListQuery
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task<(IEnumerable<OrganizationUserUserDetails> userList, int totalResults)> GetUsersListAsync(Guid organizationId, GetUsersQueryParamModel userQueryParams)
+    public async Task<(
+        IEnumerable<OrganizationUserUserDetails> userList,
+        int totalResults
+    )> GetUsersListAsync(Guid organizationId, GetUsersQueryParamModel userQueryParams)
     {
         string emailFilter = null;
         string usernameFilter = null;
@@ -29,7 +32,7 @@ public class GetUsersListQuery : IGetUsersListQuery
             if (filterLower.StartsWith("username eq "))
             {
                 usernameFilter = filterLower.Substring(12).Trim('"');
-                if (usernameFilter.Contains("@"))
+                if (usernameFilter.Contains('@'))
                 {
                     emailFilter = usernameFilter;
                 }
@@ -41,11 +44,13 @@ public class GetUsersListQuery : IGetUsersListQuery
         }
 
         var userList = new List<OrganizationUserUserDetails>();
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            organizationId
+        );
         var totalResults = 0;
         if (!string.IsNullOrWhiteSpace(emailFilter))
         {
-            var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.ToLowerInvariant() == emailFilter);
+            var orgUser = orgUsers.FirstOrDefault(ou => ou.Email.Equals(emailFilter, StringComparison.InvariantCultureIgnoreCase));
             if (orgUser != null)
             {
                 userList.Add(orgUser);
@@ -63,10 +68,7 @@ public class GetUsersListQuery : IGetUsersListQuery
         }
         else if (string.IsNullOrWhiteSpace(filter))
         {
-            userList = orgUsers.OrderBy(ou => ou.Email)
-                .Skip(startIndex - 1)
-                .Take(count)
-                .ToList();
+            userList = orgUsers.OrderBy(ou => ou.Email).Skip(startIndex - 1).Take(count).ToList();
             totalResults = orgUsers.Count;
         }
 

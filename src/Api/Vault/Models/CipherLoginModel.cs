@@ -18,7 +18,9 @@ public class CipherLoginModel
 
         if (data.Fido2Credentials != null)
         {
-            Fido2Credentials = data.Fido2Credentials.Select(key => new CipherFido2CredentialModel(key)).ToArray();
+            Fido2Credentials = data
+                .Fido2Credentials.Select(key => new CipherFido2CredentialModel(key))
+                .ToArray();
         }
 
         Username = data.Username;
@@ -49,13 +51,16 @@ public class CipherLoginModel
         }
     }
     public List<CipherLoginUriModel> Uris { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Username { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(5000)]
     public string Password { get; set; }
     public DateTime? PasswordRevisionDate { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Totp { get; set; }
@@ -81,6 +86,7 @@ public class CipherLoginModel
         [EncryptedString]
         [EncryptedStringLength(10000)]
         public string Uri { get; set; }
+
         [EncryptedString]
         [EncryptedStringLength(10000)]
         public string UriChecksum { get; set; }
@@ -88,7 +94,12 @@ public class CipherLoginModel
 
         public CipherLoginData.CipherLoginUriData ToCipherLoginUriData()
         {
-            return new CipherLoginData.CipherLoginUriData { Uri = Uri, UriChecksum = UriChecksum, Match = Match, };
+            return new CipherLoginData.CipherLoginUriData
+            {
+                Uri = Uri,
+                UriChecksum = UriChecksum,
+                Match = Match,
+            };
         }
     }
 }

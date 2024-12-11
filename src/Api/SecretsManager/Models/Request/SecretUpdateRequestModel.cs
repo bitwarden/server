@@ -38,9 +38,10 @@ public class SecretUpdateRequestModel : IValidatableObject
         }
         else
         {
-            secret.Projects = ProjectIds != null && ProjectIds.Length != 0
-                ? ProjectIds.Select(x => new Project() { Id = x }).ToList()
-                : [];
+            secret.Projects =
+                ProjectIds != null && ProjectIds.Length != 0
+                    ? ProjectIds.Select(x => new Project() { Id = x }).ToList()
+                    : [];
         }
 
         return secret;
@@ -52,7 +53,8 @@ public class SecretUpdateRequestModel : IValidatableObject
         {
             yield return new ValidationResult(
                 $"Only one project assignment is supported.",
-                new[] { nameof(ProjectIds) });
+                new[] { nameof(ProjectIds) }
+            );
         }
     }
 }

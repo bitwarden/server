@@ -29,7 +29,10 @@ public class WebAuthnCredentialCreateOptionsTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void Valid_NewlyCreatedToken_ReturnsTrue(User user, CredentialCreateOptions createOptions)
+    public void Valid_NewlyCreatedToken_ReturnsTrue(
+        User user,
+        CredentialCreateOptions createOptions
+    )
     {
         var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
 
@@ -39,7 +42,10 @@ public class WebAuthnCredentialCreateOptionsTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void ValidIsValid_TokenWithoutUser_ReturnsFalse(User user, CredentialCreateOptions createOptions)
+    public void ValidIsValid_TokenWithoutUser_ReturnsFalse(
+        User user,
+        CredentialCreateOptions createOptions
+    )
     {
         var token = new WebAuthnCredentialCreateOptionsTokenable(null, createOptions);
 
@@ -59,7 +65,11 @@ public class WebAuthnCredentialCreateOptionsTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void ValidIsValid_NonMatchingUsers_ReturnsFalse(User user1, User user2, CredentialCreateOptions createOptions)
+    public void ValidIsValid_NonMatchingUsers_ReturnsFalse(
+        User user1,
+        User user2,
+        CredentialCreateOptions createOptions
+    )
     {
         var token = new WebAuthnCredentialCreateOptionsTokenable(user1, createOptions);
 
@@ -78,4 +88,3 @@ public class WebAuthnCredentialCreateOptionsTokenableTests
         Assert.True(isValid);
     }
 }
-

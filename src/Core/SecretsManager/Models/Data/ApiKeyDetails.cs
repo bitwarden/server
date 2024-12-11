@@ -24,13 +24,11 @@ public class ApiKeyDetails : ApiKey
 
 public class ServiceAccountApiKeyDetails : ApiKeyDetails
 {
-    public ServiceAccountApiKeyDetails()
-    {
-
-    }
+    public ServiceAccountApiKeyDetails() { }
 
     [SetsRequiredMembers]
-    public ServiceAccountApiKeyDetails(ApiKey apiKey, Guid organizationId) : base(apiKey)
+    public ServiceAccountApiKeyDetails(ApiKey apiKey, Guid organizationId)
+        : base(apiKey)
     {
         ServiceAccountOrganizationId = organizationId;
     }

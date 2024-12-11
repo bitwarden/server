@@ -22,7 +22,7 @@ public class CollectionRepositoryTests
         List<EfRepo.OrganizationRepository> efOrganizationRepos,
         SqlRepo.CollectionRepository sqlCollectionRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo
-        )
+    )
     {
         var savedCollections = new List<Collection>();
         foreach (var sut in suts)

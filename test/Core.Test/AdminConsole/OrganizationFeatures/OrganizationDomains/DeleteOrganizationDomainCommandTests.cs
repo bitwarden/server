@@ -14,20 +14,31 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationDomains;
 public class DeleteOrganizationDomainCommandTests
 {
     [Theory, BitAutoData]
-    public async Task DeleteAsync_Success(Guid id, SutProvider<DeleteOrganizationDomainCommand> sutProvider)
+    public async Task DeleteAsync_Success(
+        Guid id,
+        SutProvider<DeleteOrganizationDomainCommand> sutProvider
+    )
     {
         var expected = new OrganizationDomain
         {
             Id = id,
             OrganizationId = Guid.NewGuid(),
             DomainName = "Test Domain",
-            Txt = "btw+test18383838383"
+            Txt = "btw+test18383838383",
         };
 
         await sutProvider.Sut.DeleteAsync(expected);
 
-        await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1).DeleteAsync(expected);
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Removed);
+        await sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
+            .DeleteAsync(expected);
+        await sutProvider
+            .GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationDomainEventAsync(
+                Arg.Any<OrganizationDomain>(),
+                EventType.OrganizationDomain_Removed
+            );
     }
 }

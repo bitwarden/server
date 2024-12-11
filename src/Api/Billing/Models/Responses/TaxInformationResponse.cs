@@ -9,15 +9,17 @@ public record TaxInformationResponse(
     string Line1,
     string Line2,
     string City,
-    string State)
+    string State
+)
 {
-    public static TaxInformationResponse From(TaxInformation taxInformation)
-        => new(
+    public static TaxInformationResponse From(TaxInformation taxInformation) =>
+        new(
             taxInformation.Country,
             taxInformation.PostalCode,
             taxInformation.TaxId,
             taxInformation.Line1,
             taxInformation.Line2,
             taxInformation.City,
-            taxInformation.State);
+            taxInformation.State
+        );
 }

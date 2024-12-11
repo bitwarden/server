@@ -12,7 +12,6 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 [SutProviderCustomize]
 public class OrganizationAuthRequestsControllerTests
 {
-
     [Theory]
     [BitAutoData]
     public async Task ValidateAdminRequest_UserDoesNotHaveManageResetPasswordPermissions_ThrowsUnauthorized(
@@ -20,10 +19,14 @@ public class OrganizationAuthRequestsControllerTests
         Guid organizationId
     )
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ManageResetPassword(organizationId)
+            .Returns(false);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            sutProvider.Sut.ValidateAdminRequest(organizationId));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => sutProvider.Sut.ValidateAdminRequest(organizationId)
+        );
     }
 
     [Theory]
@@ -33,7 +36,10 @@ public class OrganizationAuthRequestsControllerTests
         Guid organizationId
     )
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ManageResetPassword(organizationId)
+            .Returns(true);
         await sutProvider.Sut.ValidateAdminRequest(organizationId);
     }
 
@@ -45,7 +51,10 @@ public class OrganizationAuthRequestsControllerTests
         Guid organizationId
     )
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ManageResetPassword(organizationId)
+            .Returns(true);
         await sutProvider.Sut.UpdateManyAuthRequests(organizationId, request);
     }
 
@@ -57,8 +66,12 @@ public class OrganizationAuthRequestsControllerTests
         Guid organizationId
     )
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            sutProvider.Sut.UpdateManyAuthRequests(organizationId, request));
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ManageResetPassword(organizationId)
+            .Returns(false);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => sutProvider.Sut.UpdateManyAuthRequests(organizationId, request)
+        );
     }
 }

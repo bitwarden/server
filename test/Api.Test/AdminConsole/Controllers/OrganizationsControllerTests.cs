@@ -72,7 +72,9 @@ public class OrganizationsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _providerRepository = Substitute.For<IProviderRepository>();
         _providerBillingService = Substitute.For<IProviderBillingService>();
-        _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
+        _orgDeleteTokenDataFactory = Substitute.For<
+            IDataProtectorTokenFactory<OrgDeleteTokenable>
+        >();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _cloudOrganizationSignUpCommand = Substitute.For<ICloudOrganizationSignUpCommand>();
 
@@ -95,7 +97,8 @@ public class OrganizationsControllerTests : IDisposable
             _providerBillingService,
             _orgDeleteTokenDataFactory,
             _removeOrganizationUserCommand,
-            _cloudOrganizationSignUpCommand);
+            _cloudOrganizationSignUpCommand
+        );
     }
 
     public void Dispose()
@@ -105,14 +108,16 @@ public class OrganizationsControllerTests : IDisposable
 
     [Theory, AutoData]
     public async Task OrganizationsController_UserCannotLeaveOrganizationThatProvidesKeyConnector(
-        Guid orgId, User user)
+        Guid orgId,
+        User user
+    )
     {
         var ssoConfig = new SsoConfig
         {
             Id = default,
             Data = new SsoConfigurationData
             {
-                MemberDecryptionType = MemberDecryptionType.KeyConnector
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = orgId,
@@ -124,25 +129,33 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization> { null });
+        _userService
+            .GetOrganizationsManagingUserAsync(user.Id)
+            .Returns(new List<Organization> { null });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
-        Assert.Contains("Your organization's Single Sign-On settings prevent you from leaving.",
-            exception.Message);
+        Assert.Contains(
+            "Your organization's Single Sign-On settings prevent you from leaving.",
+            exception.Message
+        );
 
-        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().UserLeaveAsync(default, default);
+        await _removeOrganizationUserCommand
+            .DidNotReceiveWithAnyArgs()
+            .UserLeaveAsync(default, default);
     }
 
     [Theory, AutoData]
     public async Task OrganizationsController_UserCannotLeaveOrganizationThatManagesUser(
-        Guid orgId, User user)
+        Guid orgId,
+        User user
+    )
     {
         var ssoConfig = new SsoConfig
         {
             Id = default,
             Data = new SsoConfigurationData
             {
-                MemberDecryptionType = MemberDecryptionType.KeyConnector
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = orgId,
@@ -154,13 +167,19 @@ public class OrganizationsControllerTests : IDisposable
         _ssoConfigRepository.GetByOrganizationIdAsync(orgId).Returns(ssoConfig);
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.GetOrganizationsManagingUserAsync(user.Id).Returns(new List<Organization> { { foundOrg } });
+        _userService
+            .GetOrganizationsManagingUserAsync(user.Id)
+            .Returns(new List<Organization> { { foundOrg } });
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Leave(orgId));
 
-        Assert.Contains("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.",
-            exception.Message);
+        Assert.Contains(
+            "Managed user account cannot leave managing organization. Contact your organization administrator for additional details.",
+            exception.Message
+        );
 
-        await _removeOrganizationUserCommand.DidNotReceiveWithAnyArgs().RemoveUserAsync(default, default);
+        await _removeOrganizationUserCommand
+            .DidNotReceiveWithAnyArgs()
+            .RemoveUserAsync(default, default);
     }
 
     [Theory]
@@ -168,7 +187,11 @@ public class OrganizationsControllerTests : IDisposable
     [InlineAutoData(false, true)]
     [InlineAutoData(false, false)]
     public async Task OrganizationsController_UserCanLeaveOrganizationThatDoesntProvideKeyConnector(
-        bool keyConnectorEnabled, bool userUsesKeyConnector, Guid orgId, User user)
+        bool keyConnectorEnabled,
+        bool userUsesKeyConnector,
+        Guid orgId,
+        User user
+    )
     {
         var ssoConfig = new SsoConfig
         {
@@ -177,7 +200,7 @@ public class OrganizationsControllerTests : IDisposable
             {
                 MemberDecryptionType = keyConnectorEnabled
                     ? MemberDecryptionType.KeyConnector
-                    : MemberDecryptionType.MasterPassword
+                    : MemberDecryptionType.MasterPassword,
             }.Serialize(),
             Enabled = true,
             OrganizationId = orgId,
@@ -202,7 +225,8 @@ public class OrganizationsControllerTests : IDisposable
         Organization organization,
         User user,
         Guid organizationId,
-        SecretVerificationRequestModel requestModel)
+        SecretVerificationRequestModel requestModel
+    )
     {
         organization.Status = OrganizationStatusType.Managed;
         organization.PlanType = PlanType.TeamsMonthly;
@@ -223,7 +247,8 @@ public class OrganizationsControllerTests : IDisposable
 
         await _sut.Delete(organizationId.ToString(), requestModel);
 
-        await _providerBillingService.Received(1)
+        await _providerBillingService
+            .Received(1)
             .ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
 
         await _organizationService.Received(1).DeleteAsync(organization);

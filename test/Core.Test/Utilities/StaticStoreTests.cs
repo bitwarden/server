@@ -4,7 +4,6 @@ using Xunit;
 
 namespace Bit.Core.Test.Utilities;
 
-
 public class StaticStoreTests
 {
     [Fact]

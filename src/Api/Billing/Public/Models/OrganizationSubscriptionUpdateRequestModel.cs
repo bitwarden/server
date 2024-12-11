@@ -13,7 +13,9 @@ public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
     {
         if (PasswordManager == null && SecretsManager == null)
         {
-            yield return new ValidationResult("At least one of PasswordManager or SecretsManager must be provided.");
+            yield return new ValidationResult(
+                "At least one of PasswordManager or SecretsManager must be provided."
+            );
         }
 
         yield return ValidationResult.Success;
@@ -93,7 +95,9 @@ public class SecretsManagerSubscriptionUpdateModel
         set { _maxAutoScaleServiceAccounts = value < 0 ? null : value; }
     }
 
-    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(
+        Organization organization
+    )
     {
         var update = UpdateUpdateMaxAutoScale(organization);
         UpdateSeats(organization, update);
@@ -106,7 +110,8 @@ public class SecretsManagerSubscriptionUpdateModel
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             MaxAutoscaleSmSeats = MaxAutoScaleSeats ?? organization.MaxAutoscaleSmSeats,
-            MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts
+            MaxAutoscaleSmServiceAccounts =
+                MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts,
         };
         return update;
     }
@@ -118,13 +123,15 @@ public class SecretsManagerSubscriptionUpdateModel
             if (organization.SmSeats.HasValue)
             {
                 Seats = Seats.Value - organization.SmSeats.Value;
-
             }
             update.AdjustSeats(Seats.Value);
         }
     }
 
-    private void UpdateServiceAccounts(Organization organization, SecretsManagerSubscriptionUpdate update)
+    private void UpdateServiceAccounts(
+        Organization organization,
+        SecretsManagerSubscriptionUpdate update
+    )
     {
         if (ServiceAccounts is > 0)
         {

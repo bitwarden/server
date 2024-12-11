@@ -17,10 +17,14 @@ public class SendFileModel
     }
 
     public string Id { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string FileName { get; set; }
-    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
+
+    [JsonNumberHandling(
+        JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
+    )]
     public long? Size { get; set; }
     public string SizeName { get; set; }
 }

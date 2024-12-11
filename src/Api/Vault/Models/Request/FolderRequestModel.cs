@@ -13,10 +13,7 @@ public class FolderRequestModel
 
     public Folder ToFolder(Guid userId)
     {
-        return ToFolder(new Folder
-        {
-            UserId = userId
-        });
+        return ToFolder(new Folder { UserId = userId });
     }
 
     public virtual Folder ToFolder(Folder existingFolder)

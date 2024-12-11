@@ -17,11 +17,14 @@ public class OrganizationUserUserDetailsQueryTests
     public async Task Get_HandlesNullPermissionsObject(
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUserUserDetailsQuery> sutProvider,
-        Guid organizationId)
+        Guid organizationId
+    )
     {
         Get_Setup(organizationUsers, sutProvider, organizationId);
         organizationUsers.First().Permissions = "null";
-        var response = await sutProvider.Sut.GetOrganizationUserUserDetails(new OrganizationUserUserDetailsQueryRequest { OrganizationId = organizationId });
+        var response = await sutProvider.Sut.GetOrganizationUserUserDetails(
+            new OrganizationUserUserDetailsQueryRequest { OrganizationId = organizationId }
+        );
 
         Assert.True(response.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
     }
@@ -31,10 +34,13 @@ public class OrganizationUserUserDetailsQueryTests
     public async Task Get_ReturnsUsers(
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUserUserDetailsQuery> sutProvider,
-        Guid organizationId)
+        Guid organizationId
+    )
     {
         Get_Setup(organizationUsers, sutProvider, organizationId);
-        var response = await sutProvider.Sut.GetOrganizationUserUserDetails(new OrganizationUserUserDetailsQueryRequest { OrganizationId = organizationId });
+        var response = await sutProvider.Sut.GetOrganizationUserUserDetails(
+            new OrganizationUserUserDetailsQueryRequest { OrganizationId = organizationId }
+        );
 
         Assert.True(response.All(r => organizationUsers.Any(ou => ou.Id == r.Id)));
     }
@@ -42,14 +48,16 @@ public class OrganizationUserUserDetailsQueryTests
     private void Get_Setup(
         ICollection<OrganizationUserUserDetails> organizationUsers,
         SutProvider<OrganizationUserUserDetailsQuery> sutProvider,
-        Guid organizationId)
+        Guid organizationId
+    )
     {
         foreach (var orgUser in organizationUsers)
         {
             orgUser.Permissions = null;
         }
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(organizationId, Arg.Any<bool>(), Arg.Any<bool>())
             .Returns(organizationUsers);
     }

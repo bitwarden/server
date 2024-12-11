@@ -15,17 +15,15 @@ public partial class SyncOrganizationLimitCollectionCreationDeletionColumn : Mig
         // automatically. Quoting the entity names here provides explicit &
         // correct casing.
         migrationBuilder.Sql(
-        @"
+            @"
                 UPDATE ""Organization""
                 SET
                   ""LimitCollectionCreation"" = ""LimitCollectionCreationDeletion"",
                   ""LimitCollectionDeletion"" = ""LimitCollectionCreationDeletion"";
-            ");
+            "
+        );
     }
 
     /// <inheritdoc />
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-
-    }
+    protected override void Down(MigrationBuilder migrationBuilder) { }
 }

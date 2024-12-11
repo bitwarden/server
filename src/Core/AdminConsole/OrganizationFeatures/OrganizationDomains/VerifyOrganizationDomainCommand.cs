@@ -26,59 +26,84 @@ public class VerifyOrganizationDomainCommand(
     IMailService mailService,
     IOrganizationUserRepository organizationUserRepository,
     IOrganizationRepository organizationRepository,
-    ILogger<VerifyOrganizationDomainCommand> logger)
-    : IVerifyOrganizationDomainCommand
+    ILogger<VerifyOrganizationDomainCommand> logger
+) : IVerifyOrganizationDomainCommand
 {
-    public async Task<OrganizationDomain> UserVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
+    public async Task<OrganizationDomain> UserVerifyOrganizationDomainAsync(
+        OrganizationDomain organizationDomain
+    )
     {
         if (currentContext.UserId is null)
         {
             throw new InvalidOperationException(
-                $"{nameof(UserVerifyOrganizationDomainAsync)} can only be called by a user. " +
-                $"Please call {nameof(SystemVerifyOrganizationDomainAsync)} for system users.");
+                $"{nameof(UserVerifyOrganizationDomainAsync)} can only be called by a user. "
+                    + $"Please call {nameof(SystemVerifyOrganizationDomainAsync)} for system users."
+            );
         }
 
-        var actingUser = new StandardUser(currentContext.UserId.Value, await currentContext.OrganizationOwner(organizationDomain.OrganizationId));
+        var actingUser = new StandardUser(
+            currentContext.UserId.Value,
+            await currentContext.OrganizationOwner(organizationDomain.OrganizationId)
+        );
 
-        var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain, actingUser);
+        var domainVerificationResult = await VerifyOrganizationDomainAsync(
+            organizationDomain,
+            actingUser
+        );
 
-        await eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+        await eventService.LogOrganizationDomainEventAsync(
+            domainVerificationResult,
             domainVerificationResult.VerifiedDate != null
                 ? EventType.OrganizationDomain_Verified
-                : EventType.OrganizationDomain_NotVerified);
+                : EventType.OrganizationDomain_NotVerified
+        );
 
         await organizationDomainRepository.ReplaceAsync(domainVerificationResult);
 
         return domainVerificationResult;
     }
 
-    public async Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(OrganizationDomain organizationDomain)
+    public async Task<OrganizationDomain> SystemVerifyOrganizationDomainAsync(
+        OrganizationDomain organizationDomain
+    )
     {
         var actingUser = new SystemUser(EventSystemUser.DomainVerification);
 
         organizationDomain.SetJobRunCount();
 
-        var domainVerificationResult = await VerifyOrganizationDomainAsync(organizationDomain, actingUser);
+        var domainVerificationResult = await VerifyOrganizationDomainAsync(
+            organizationDomain,
+            actingUser
+        );
 
         if (domainVerificationResult.VerifiedDate is not null)
         {
             logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
 
-            await eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+            await eventService.LogOrganizationDomainEventAsync(
+                domainVerificationResult,
                 EventType.OrganizationDomain_Verified,
-                EventSystemUser.DomainVerification);
+                EventSystemUser.DomainVerification
+            );
         }
         else
         {
-            domainVerificationResult.SetNextRunDate(globalSettings.DomainVerification.VerificationInterval);
+            domainVerificationResult.SetNextRunDate(
+                globalSettings.DomainVerification.VerificationInterval
+            );
 
-            await eventService.LogOrganizationDomainEventAsync(domainVerificationResult,
+            await eventService.LogOrganizationDomainEventAsync(
+                domainVerificationResult,
                 EventType.OrganizationDomain_NotVerified,
-                EventSystemUser.DomainVerification);
+                EventSystemUser.DomainVerification
+            );
 
-            logger.LogInformation(Constants.BypassFiltersEventId,
+            logger.LogInformation(
+                Constants.BypassFiltersEventId,
                 "Verification for organization {OrgId} with domain {Domain} failed",
-                domainVerificationResult.OrganizationId, domainVerificationResult.DomainName);
+                domainVerificationResult.OrganizationId,
+                domainVerificationResult.DomainName
+            );
         }
 
         await organizationDomainRepository.ReplaceAsync(domainVerificationResult);
@@ -86,7 +111,10 @@ public class VerifyOrganizationDomainCommand(
         return domainVerificationResult;
     }
 
-    private async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain, IActingUser actingUser)
+    private async Task<OrganizationDomain> VerifyOrganizationDomainAsync(
+        OrganizationDomain domain,
+        IActingUser actingUser
+    )
     {
         domain.SetLastCheckedDate();
 
@@ -96,8 +124,9 @@ public class VerifyOrganizationDomainCommand(
             throw new ConflictException("Domain has already been verified.");
         }
 
-        var claimedDomain =
-            await organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
+        var claimedDomain = await organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(
+            domain.DomainName
+        );
 
         if (claimedDomain.Count > 0)
         {
@@ -116,14 +145,20 @@ public class VerifyOrganizationDomainCommand(
         }
         catch (Exception e)
         {
-            logger.LogError("Error verifying Organization domain: {domain}. {errorMessage}",
-                domain.DomainName, e.Message);
+            logger.LogError(
+                "Error verifying Organization domain: {domain}. {errorMessage}",
+                domain.DomainName,
+                e.Message
+            );
         }
 
         return domain;
     }
 
-    private async Task DomainVerificationSideEffectsAsync(OrganizationDomain domain, IActingUser actingUser)
+    private async Task DomainVerificationSideEffectsAsync(
+        OrganizationDomain domain,
+        IActingUser actingUser
+    )
     {
         if (featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
@@ -132,28 +167,38 @@ public class VerifyOrganizationDomainCommand(
         }
     }
 
-    private async Task EnableSingleOrganizationPolicyAsync(Guid organizationId, IActingUser actingUser) =>
+    private async Task EnableSingleOrganizationPolicyAsync(
+        Guid organizationId,
+        IActingUser actingUser
+    ) =>
         await savePolicyCommand.SaveAsync(
             new PolicyUpdate
             {
                 OrganizationId = organizationId,
                 Type = PolicyType.SingleOrg,
                 Enabled = true,
-                PerformedBy = actingUser
-            });
+                PerformedBy = actingUser,
+            }
+        );
 
     private async Task SendVerifiedDomainUserEmailAsync(OrganizationDomain domain)
     {
-        var orgUserUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(domain.OrganizationId);
+        var orgUserUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            domain.OrganizationId
+        );
 
         var domainUserEmails = orgUserUsers
-            .Where(ou => ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}") &&
-                         ou.Status != OrganizationUserStatusType.Revoked &&
-                         ou.Status != OrganizationUserStatusType.Invited)
+            .Where(ou =>
+                ou.Email.ToLower().EndsWith($"@{domain.DomainName.ToLower()}")
+                && ou.Status != OrganizationUserStatusType.Revoked
+                && ou.Status != OrganizationUserStatusType.Invited
+            )
             .Select(ou => ou.Email);
 
         var organization = await organizationRepository.GetByIdAsync(domain.OrganizationId);
 
-        await mailService.SendClaimedDomainUserEmailAsync(new ManagedUserDomainClaimedEmails(domainUserEmails, organization));
+        await mailService.SendClaimedDomainUserEmailAsync(
+            new ManagedUserDomainClaimedEmails(domainUserEmails, organization)
+        );
     }
 }

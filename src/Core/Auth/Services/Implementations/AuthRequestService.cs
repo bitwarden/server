@@ -35,7 +35,8 @@ public class AuthRequestService : IAuthRequestService
         ICurrentContext currentContext,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IOrganizationUserRepository organizationRepository)
+        IOrganizationUserRepository organizationRepository
+    )
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -115,21 +116,30 @@ public class AuthRequestService : IAuthRequestService
             // and create only an AuthRequest for that organization and return only that one
 
             // This will send out the request to all organizations this user belongs to
-            var organizationUsers = await _organizationUserRepository.GetManyByUserAsync(_currentContext.UserId!.Value);
+            var organizationUsers = await _organizationUserRepository.GetManyByUserAsync(
+                _currentContext.UserId!.Value
+            );
 
             if (organizationUsers.Count == 0)
             {
                 throw new BadRequestException("User does not belong to any organizations.");
             }
 
-            Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
+            Debug.Assert(
+                user is not null,
+                "user should have been validated to be non-null and thrown if it's not."
+            );
             // A user event will automatically create logs for each organization/provider this user belongs to.
             await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
 
             AuthRequest? firstAuthRequest = null;
             foreach (var organizationUser in organizationUsers)
             {
-                var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
+                var createdAuthRequest = await CreateAuthRequestAsync(
+                    model,
+                    user,
+                    organizationUser.OrganizationId
+                );
                 firstAuthRequest ??= createdAuthRequest;
             }
 
@@ -137,15 +147,25 @@ public class AuthRequestService : IAuthRequestService
             return firstAuthRequest!;
         }
 
-        Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
+        Debug.Assert(
+            user is not null,
+            "user should have been validated to be non-null and thrown if it's not."
+        );
         var authRequest = await CreateAuthRequestAsync(model, user, organizationId: null);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
         return authRequest;
     }
 
-    private async Task<AuthRequest> CreateAuthRequestAsync(AuthRequestCreateRequestModel model, User user, Guid? organizationId)
+    private async Task<AuthRequest> CreateAuthRequestAsync(
+        AuthRequestCreateRequestModel model,
+        User user,
+        Guid? organizationId
+    )
     {
-        Debug.Assert(_currentContext.DeviceType.HasValue, "DeviceType should have already been validated to have a value.");
+        Debug.Assert(
+            _currentContext.DeviceType.HasValue,
+            "DeviceType should have already been validated to have a value."
+        );
         var authRequest = new AuthRequest
         {
             RequestDeviceIdentifier = model.DeviceIdentifier,
@@ -161,7 +181,11 @@ public class AuthRequestService : IAuthRequestService
         return authRequest;
     }
 
-    public async Task<AuthRequest> UpdateAuthRequestAsync(Guid authRequestId, Guid currentUserId, AuthRequestUpdateRequestModel model)
+    public async Task<AuthRequest> UpdateAuthRequestAsync(
+        Guid authRequestId,
+        Guid currentUserId,
+        AuthRequestUpdateRequestModel model
+    )
     {
         var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
 
@@ -182,14 +206,24 @@ public class AuthRequestService : IAuthRequestService
             case AuthRequestType.AdminApproval:
                 // AdminApproval has a different expiration time, by default is 7 days compared to
                 // non-AdminApproval ones having a default of 15 minutes.
-                if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration))
+                if (
+                    IsDateExpired(
+                        authRequest.CreationDate,
+                        _globalSettings.PasswordlessAuth.AdminRequestExpiration
+                    )
+                )
                 {
                     throw new NotFoundException();
                 }
                 break;
             case AuthRequestType.AuthenticateAndUnlock:
             case AuthRequestType.Unlock:
-                if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.UserRequestExpiration))
+                if (
+                    IsDateExpired(
+                        authRequest.CreationDate,
+                        _globalSettings.PasswordlessAuth.UserRequestExpiration
+                    )
+                )
                 {
                     throw new NotFoundException();
                 }
@@ -200,7 +234,10 @@ public class AuthRequestService : IAuthRequestService
                 }
 
                 // Admin approval responses are not tied to a specific device, but these types are so we need to validate them
-                var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, currentUserId);
+                var device = await _deviceRepository.GetByIdentifierAsync(
+                    model.DeviceIdentifier,
+                    currentUserId
+                );
                 if (device == null)
                 {
                     throw new BadRequestException("Invalid device.");
@@ -226,20 +263,34 @@ public class AuthRequestService : IAuthRequestService
         {
             if (authRequest.OrganizationId.HasValue)
             {
-                var organizationUser = await _organizationUserRepository
-                    .GetByOrganizationAsync(authRequest.OrganizationId.Value, authRequest.UserId);
-                await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_ApprovedAuthRequest);
+                var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(
+                    authRequest.OrganizationId.Value,
+                    authRequest.UserId
+                );
+                await _eventService.LogOrganizationUserEventAsync(
+                    organizationUser,
+                    EventType.OrganizationUser_ApprovedAuthRequest
+                );
             }
 
             // No matter what we want to push out the success notification
             await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
         }
         // If the request is rejected by an organization admin then we want to log an event of that action
-        else if (authRequest.Approved.HasValue && !authRequest.Approved.Value && authRequest.OrganizationId.HasValue)
+        else if (
+            authRequest.Approved.HasValue
+            && !authRequest.Approved.Value
+            && authRequest.OrganizationId.HasValue
+        )
         {
-            var organizationUser = await _organizationUserRepository
-                    .GetByOrganizationAsync(authRequest.OrganizationId.Value, authRequest.UserId);
-            await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_RejectedAuthRequest);
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(
+                authRequest.OrganizationId.Value,
+                authRequest.UserId
+            );
+            await _eventService.LogOrganizationUserEventAsync(
+                organizationUser,
+                EventType.OrganizationUser_RejectedAuthRequest
+            );
         }
 
         return authRequest;
@@ -249,8 +300,10 @@ public class AuthRequestService : IAuthRequestService
     {
         return authRequest.Type switch
         {
-            AuthRequestType.AuthenticateAndUnlock or AuthRequestType.Unlock
-                => !IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.UserRequestExpiration),
+            AuthRequestType.AuthenticateAndUnlock or AuthRequestType.Unlock => !IsDateExpired(
+                authRequest.CreationDate,
+                _globalSettings.PasswordlessAuth.UserRequestExpiration
+            ),
             AuthRequestType.AdminApproval => IsAdminApprovalAuthRequestValid(authRequest),
             _ => false,
         };
@@ -258,16 +311,28 @@ public class AuthRequestService : IAuthRequestService
 
     private bool IsAdminApprovalAuthRequestValid(AuthRequest authRequest)
     {
-        Debug.Assert(authRequest.Type == AuthRequestType.AdminApproval, "This method should only be called on AdminApproval type");
+        Debug.Assert(
+            authRequest.Type == AuthRequestType.AdminApproval,
+            "This method should only be called on AdminApproval type"
+        );
         // If an AdminApproval type has been approved it's expiration time is based on how long it's been since approved.
         if (authRequest.Approved is true)
         {
-            Debug.Assert(authRequest.ResponseDate.HasValue, "The response date should have been set when the request was updated.");
-            return !IsDateExpired(authRequest.ResponseDate.Value, _globalSettings.PasswordlessAuth.AfterAdminApprovalExpiration);
+            Debug.Assert(
+                authRequest.ResponseDate.HasValue,
+                "The response date should have been set when the request was updated."
+            );
+            return !IsDateExpired(
+                authRequest.ResponseDate.Value,
+                _globalSettings.PasswordlessAuth.AfterAdminApprovalExpiration
+            );
         }
         else
         {
-            return !IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration);
+            return !IsDateExpired(
+                authRequest.CreationDate,
+                _globalSettings.PasswordlessAuth.AdminRequestExpiration
+            );
         }
     }
 

@@ -16,22 +16,32 @@ public class CreateServiceAccountCommandTests
     [Theory]
     [BitAutoData]
     public async Task CreateAsync_NoServiceAccountId_ThrowsBadRequestException(
-        SutProvider<CreateAccessTokenCommand> sutProvider, ApiKey data)
+        SutProvider<CreateAccessTokenCommand> sutProvider,
+        ApiKey data
+    )
     {
         data.ServiceAccountId = null;
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(data));
 
-        await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
+        await sutProvider
+            .GetDependency<IApiKeyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task CreateAsync_Success(SutProvider<CreateAccessTokenCommand> sutProvider, ApiKey data)
+    public async Task CreateAsync_Success(
+        SutProvider<CreateAccessTokenCommand> sutProvider,
+        ApiKey data
+    )
     {
         await sutProvider.Sut.CreateAsync(data);
 
-        await sutProvider.GetDependency<IApiKeyRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IApiKeyRepository>()
+            .Received(1)
             .CreateAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
     }
 }

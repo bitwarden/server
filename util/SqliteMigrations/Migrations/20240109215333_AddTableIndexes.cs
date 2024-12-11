@@ -14,97 +14,102 @@ public partial class AddTableIndexes : Migration
             name: "IX_User_Email",
             table: "User",
             column: "Email",
-            unique: true);
+            unique: true
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_User_Premium_PremiumExpirationDate_RenewalReminderDate",
             table: "User",
-            columns: new[] { "Premium", "PremiumExpirationDate", "RenewalReminderDate" });
+            columns: new[] { "Premium", "PremiumExpirationDate", "RenewalReminderDate" }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Transaction_UserId_OrganizationId_CreationDate",
             table: "Transaction",
-            columns: new[] { "UserId", "OrganizationId", "CreationDate" });
+            columns: new[] { "UserId", "OrganizationId", "CreationDate" }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Policy_OrganizationId_Type",
             table: "Policy",
             columns: new[] { "OrganizationId", "Type" },
-            unique: true);
+            unique: true
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationUser_UserId_OrganizationId_Status",
             table: "OrganizationUser",
-            columns: new[] { "UserId", "OrganizationId", "Status" });
+            columns: new[] { "UserId", "OrganizationId", "Status" }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationSponsorship_SponsoringOrganizationUserId",
             table: "OrganizationSponsorship",
-            column: "SponsoringOrganizationUserId");
+            column: "SponsoringOrganizationUserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Organization_Id_Enabled",
             table: "Organization",
-            columns: new[] { "Id", "Enabled" });
+            columns: new[] { "Id", "Enabled" }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Event_Date_OrganizationId_ActingUserId_CipherId",
             table: "Event",
-            columns: new[] { "Date", "OrganizationId", "ActingUserId", "CipherId" });
+            columns: new[] { "Date", "OrganizationId", "ActingUserId", "CipherId" }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Device_Identifier",
             table: "Device",
-            column: "Identifier");
+            column: "Identifier"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Device_UserId_Identifier",
             table: "Device",
             columns: new[] { "UserId", "Identifier" },
-            unique: true);
+            unique: true
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropIndex(
-            name: "IX_User_Email",
-            table: "User");
+        migrationBuilder.DropIndex(name: "IX_User_Email", table: "User");
 
         migrationBuilder.DropIndex(
             name: "IX_User_Premium_PremiumExpirationDate_RenewalReminderDate",
-            table: "User");
+            table: "User"
+        );
 
         migrationBuilder.DropIndex(
             name: "IX_Transaction_UserId_OrganizationId_CreationDate",
-            table: "Transaction");
+            table: "Transaction"
+        );
 
-        migrationBuilder.DropIndex(
-            name: "IX_Policy_OrganizationId_Type",
-            table: "Policy");
+        migrationBuilder.DropIndex(name: "IX_Policy_OrganizationId_Type", table: "Policy");
 
         migrationBuilder.DropIndex(
             name: "IX_OrganizationUser_UserId_OrganizationId_Status",
-            table: "OrganizationUser");
+            table: "OrganizationUser"
+        );
 
         migrationBuilder.DropIndex(
             name: "IX_OrganizationSponsorship_SponsoringOrganizationUserId",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
-        migrationBuilder.DropIndex(
-            name: "IX_Organization_Id_Enabled",
-            table: "Organization");
+        migrationBuilder.DropIndex(name: "IX_Organization_Id_Enabled", table: "Organization");
 
         migrationBuilder.DropIndex(
             name: "IX_Event_Date_OrganizationId_ActingUserId_CipherId",
-            table: "Event");
+            table: "Event"
+        );
 
-        migrationBuilder.DropIndex(
-            name: "IX_Device_Identifier",
-            table: "Device");
+        migrationBuilder.DropIndex(name: "IX_Device_Identifier", table: "Device");
 
-        migrationBuilder.DropIndex(
-            name: "IX_Device_UserId_Identifier",
-            table: "Device");
+        migrationBuilder.DropIndex(name: "IX_Device_UserId_Identifier", table: "Device");
     }
 }

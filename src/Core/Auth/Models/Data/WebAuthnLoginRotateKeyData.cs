@@ -17,5 +17,4 @@ public class WebAuthnLoginRotateKeyData
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPublicKey { get; set; }
-
 }

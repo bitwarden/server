@@ -1,5 +1,4 @@
-﻿
-using Bit.Api.Auth.Models.Response.TwoFactor;
+﻿using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -49,7 +48,6 @@ public class OrganizationTwoFactorDuoResponseModelTests
         try
         {
             var model = new TwoFactorDuoResponseModel(organization);
-
         }
         catch (Exception ex)
         {
@@ -60,7 +58,6 @@ public class OrganizationTwoFactorDuoResponseModelTests
 
     private string GetTwoFactorOrganizationDuoProvidersJson()
     {
-        return
-            "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
+        return "{\"6\":{\"Enabled\":true,\"MetaData\":{\"ClientSecret\":\"secretClientSecret\",\"ClientId\":\"clientId\",\"Host\":\"example.com\"}}}";
     }
 }

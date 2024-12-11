@@ -23,7 +23,8 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
         IOrganizationService organizationService,
-        IFeatureService featureService)
+        IFeatureService featureService
+    )
     {
         _licensingService = licensingService;
         _globalSettings = globalSettings;
@@ -31,17 +32,24 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
         _featureService = featureService;
     }
 
-    public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
-        OrganizationLicense license, Organization? currentOrganizationUsingLicenseKey)
+    public async Task UpdateLicenseAsync(
+        SelfHostedOrganizationDetails selfHostedOrganization,
+        OrganizationLicense license,
+        Organization? currentOrganizationUsingLicenseKey
+    )
     {
-        if (currentOrganizationUsingLicenseKey != null && currentOrganizationUsingLicenseKey.Id != selfHostedOrganization.Id)
+        if (
+            currentOrganizationUsingLicenseKey != null
+            && currentOrganizationUsingLicenseKey.Id != selfHostedOrganization.Id
+        )
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
 
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
-        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
-            selfHostedOrganization.CanUseLicense(license, out exception);
+        var canUse =
+            license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception)
+            && selfHostedOrganization.CanUseLicense(license, out exception);
 
         if (!canUse)
         {
@@ -56,11 +64,17 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     {
         var dir = $"{_globalSettings.LicenseDirectory}/organization";
         Directory.CreateDirectory(dir);
-        await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
+        await using var fs = new FileStream(
+            Path.Combine(dir, $"{organization.Id}.json"),
+            FileMode.Create
+        );
         await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
     }
 
-    private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
+    private async Task UpdateOrganizationAsync(
+        SelfHostedOrganizationDetails selfHostedOrganizationDetails,
+        OrganizationLicense license
+    )
     {
         var organization = selfHostedOrganizationDetails.ToOrganization();
 

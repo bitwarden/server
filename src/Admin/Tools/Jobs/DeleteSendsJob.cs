@@ -15,18 +15,19 @@ public class DeleteSendsJob : BaseJob
     public DeleteSendsJob(
         ISendRepository sendRepository,
         IServiceProvider serviceProvider,
-        ILogger<DatabaseExpiredGrantsJob> logger)
+        ILogger<DatabaseExpiredGrantsJob> logger
+    )
         : base(logger)
     {
         _sendRepository = sendRepository;
         _serviceProvider = serviceProvider;
     }
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+    protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
         var sends = await _sendRepository.GetManyByDeletionDateAsync(DateTime.UtcNow);
         _logger.LogInformation(Constants.BypassFiltersEventId, "Deleting {0} sends.", sends.Count);
-        if (!sends.Any())
+        if (sends.Count == 0)
         {
             return;
         }

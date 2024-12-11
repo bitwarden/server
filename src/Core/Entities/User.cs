@@ -11,27 +11,39 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Entities;
 
-public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFactorProvidersUser, IReferenceable
+public class User
+    : ITableObject<Guid>,
+        IStorableSubscriber,
+        IRevisable,
+        ITwoFactorProvidersUser,
+        IReferenceable
 {
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
     public Guid Id { get; set; }
+
     [MaxLength(50)]
     public string? Name { get; set; }
+
     [Required]
     [MaxLength(256)]
     public string Email { get; set; } = null!;
     public bool EmailVerified { get; set; }
+
     [MaxLength(300)]
     public string? MasterPassword { get; set; }
+
     [MaxLength(50)]
     public string? MasterPasswordHint { get; set; }
+
     [MaxLength(10)]
     public string Culture { get; set; } = "en-US";
+
     [Required]
     [MaxLength(50)]
     public string SecurityStamp { get; set; } = null!;
     public string? TwoFactorProviders { get; set; }
+
     [MaxLength(32)]
     public string? TwoFactorRecoveryCode { get; set; }
     public string? EquivalentDomains { get; set; }
@@ -46,13 +58,17 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public long? Storage { get; set; }
     public short? MaxStorageGb { get; set; }
     public GatewayType? Gateway { get; set; }
+
     [MaxLength(50)]
     public string? GatewayCustomerId { get; set; }
+
     [MaxLength(50)]
     public string? GatewaySubscriptionId { get; set; }
     public string? ReferenceData { get; set; }
+
     [MaxLength(100)]
     public string? LicenseKey { get; set; }
+
     [Required]
     [MaxLength(30)]
     public string ApiKey { get; set; } = null!;
@@ -66,6 +82,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
     public bool UsesKeyConnector { get; set; }
     public int FailedLoginCount { get; set; }
     public DateTime? LastFailedLoginDate { get; set; }
+
     [MaxLength(7)]
     public string? AvatarColor { get; set; }
     public DateTime? LastPasswordChangeDate { get; set; }
@@ -108,7 +125,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return "region";
     }
 
-    public string GatewayIdField()
+    public static string GatewayIdField()
     {
         return "userId";
     }
@@ -125,7 +142,8 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return "Subscriber";
     }
 
-    public bool IsExpired() => PremiumExpirationDate.HasValue && PremiumExpirationDate.Value <= DateTime.UtcNow;
+    public bool IsExpired() =>
+        PremiumExpirationDate.HasValue && PremiumExpirationDate.Value <= DateTime.UtcNow;
 
     public Dictionary<TwoFactorProviderType, TwoFactorProvider>? GetTwoFactorProviders()
     {
@@ -138,9 +156,9 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         {
             if (_twoFactorProviders == null)
             {
-                _twoFactorProviders =
-                    JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
-                        TwoFactorProviders);
+                _twoFactorProviders = JsonHelpers.LegacyDeserialize<
+                    Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                >(TwoFactorProviders);
             }
 
             // U2F is no longer supported, and all users keys should have been migrated to WebAuthn.
@@ -168,10 +186,15 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
         return Premium;
     }
 
-    public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
+    public void SetTwoFactorProviders(
+        Dictionary<TwoFactorProviderType, TwoFactorProvider> providers
+    )
     {
         // When replacing with system.text remember to remove the extra serialization in WebAuthnTokenProvider.
-        TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
+        TwoFactorProviders = JsonHelpers.LegacySerialize(
+            providers,
+            JsonHelpers.LegacyEnumKeyResolver
+        );
         _twoFactorProviders = providers;
     }
 
@@ -223,7 +246,7 @@ public class User : ITableObject<Guid>, IStorableSubscriber, IRevisable, ITwoFac
             UserName = Email,
             NormalizedUserName = Email,
             TwoFactorEnabled = twoFactorEnabled,
-            SecurityStamp = SecurityStamp
+            SecurityStamp = SecurityStamp,
         };
     }
 

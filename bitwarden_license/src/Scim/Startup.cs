@@ -50,18 +50,20 @@ public class Startup
         services.AddScoped<IScimContext, ScimContext>();
 
         // Authentication
-        services.AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
+        services
+            .AddAuthentication(ApiKeyAuthenticationOptions.DefaultScheme)
             .AddScheme<ApiKeyAuthenticationOptions, ApiKeyAuthenticationHandler>(
-                ApiKeyAuthenticationOptions.DefaultScheme, null);
+                ApiKeyAuthenticationOptions.DefaultScheme,
+                null
+            );
 
-        services.AddAuthorization(config =>
-        {
-            config.AddPolicy("Scim", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.scim");
-            });
-        });
+        services.AddAuthorizationBuilder()
+            .AddPolicy("Scim", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim(JwtClaimTypes.Scope, "api.scim");
+                }
+);
 
         // Identity
         services.AddCustomIdentityServices(globalSettings);
@@ -95,7 +97,8 @@ public class Startup
         IApplicationBuilder app,
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         app.UseSerilog(env, appLifetime, globalSettings);
 

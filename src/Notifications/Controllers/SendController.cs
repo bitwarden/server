@@ -13,7 +13,11 @@ public class SendController : Controller
     private readonly IHubContext<AnonymousNotificationsHub> _anonymousHubContext;
     private readonly ILogger<SendController> _logger;
 
-    public SendController(IHubContext<NotificationsHub> hubContext, IHubContext<AnonymousNotificationsHub> anonymousHubContext, ILogger<SendController> logger)
+    public SendController(
+        IHubContext<NotificationsHub> hubContext,
+        IHubContext<AnonymousNotificationsHub> anonymousHubContext,
+        ILogger<SendController> logger
+    )
     {
         _hubContext = hubContext;
         _anonymousHubContext = anonymousHubContext;
@@ -29,7 +33,12 @@ public class SendController : Controller
             var notificationJson = await reader.ReadToEndAsync();
             if (!string.IsNullOrWhiteSpace(notificationJson))
             {
-                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, _anonymousHubContext, _logger);
+                await HubHelpers.SendNotificationToHubAsync(
+                    notificationJson,
+                    _hubContext,
+                    _anonymousHubContext,
+                    _logger
+                );
             }
         }
     }

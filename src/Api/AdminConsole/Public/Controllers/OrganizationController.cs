@@ -22,7 +22,8 @@ public class OrganizationController : Controller
     public OrganizationController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _organizationService = organizationService;
         _currentContext = currentContext;
@@ -41,8 +42,11 @@ public class OrganizationController : Controller
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Import([FromBody] OrganizationImportRequestModel model)
     {
-        if (!_globalSettings.SelfHosted && !model.LargeImport &&
-            (model.Groups.Count() > 2000 || model.Members.Count(u => !u.Deleted) > 2000))
+        if (
+            !_globalSettings.SelfHosted
+            && !model.LargeImport
+            && (model.Groups.Length > 2000 || model.Members.Count(u => !u.Deleted) > 2000)
+        )
         {
             throw new BadRequestException("You cannot import this much data at once.");
         }
@@ -53,7 +57,8 @@ public class OrganizationController : Controller
             model.Members.Where(u => !u.Deleted).Select(u => u.ToImportedOrganizationUser()),
             model.Members.Where(u => u.Deleted).Select(u => u.ExternalId),
             model.OverwriteExisting.GetValueOrDefault(),
-            EventSystemUser.PublicApi);
+            EventSystemUser.PublicApi
+        );
         return new OkResult();
     }
 }

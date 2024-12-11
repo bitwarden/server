@@ -8,10 +8,7 @@ public class TaxRateResponseModel : ResponseModel
     public TaxRateResponseModel(TaxRate taxRate)
         : base("profile")
     {
-        if (taxRate == null)
-        {
-            throw new ArgumentNullException(nameof(taxRate));
-        }
+        ArgumentNullException.ThrowIfNull(taxRate);
 
         Id = taxRate.Id;
         Country = taxRate.Country;

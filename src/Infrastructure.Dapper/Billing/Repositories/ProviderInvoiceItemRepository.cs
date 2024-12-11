@@ -8,11 +8,12 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Billing.Repositories;
 
-public class ProviderInvoiceItemRepository(
-    GlobalSettings globalSettings)
+public class ProviderInvoiceItemRepository(GlobalSettings globalSettings)
     : Repository<ProviderInvoiceItem, Guid>(
         globalSettings.SqlServer.ConnectionString,
-        globalSettings.SqlServer.ReadOnlyConnectionString), IProviderInvoiceItemRepository
+        globalSettings.SqlServer.ReadOnlyConnectionString
+    ),
+        IProviderInvoiceItemRepository
 {
     public async Task<ICollection<ProviderInvoiceItem>> GetByInvoiceId(string invoiceId)
     {
@@ -21,7 +22,8 @@ public class ProviderInvoiceItemRepository(
         var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
             "[dbo].[ProviderInvoiceItem_ReadByInvoiceId]",
             new { InvoiceId = invoiceId },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
 
         return results.ToArray();
     }
@@ -33,7 +35,8 @@ public class ProviderInvoiceItemRepository(
         var results = await sqlConnection.QueryAsync<ProviderInvoiceItem>(
             "[dbo].[ProviderInvoiceItem_ReadByProviderId]",
             new { ProviderId = providerId },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
 
         return results.ToArray();
     }

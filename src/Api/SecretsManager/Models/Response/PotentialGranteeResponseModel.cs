@@ -11,10 +11,7 @@ public class PotentialGranteeResponseModel : ResponseModel
     public PotentialGranteeResponseModel(GroupGrantee grantee)
         : base(_objectName)
     {
-        if (grantee == null)
-        {
-            throw new ArgumentNullException(nameof(grantee));
-        }
+        ArgumentNullException.ThrowIfNull(grantee);
 
         Type = "group";
         Id = grantee.GroupId;
@@ -25,10 +22,7 @@ public class PotentialGranteeResponseModel : ResponseModel
     public PotentialGranteeResponseModel(UserGrantee grantee)
         : base(_objectName)
     {
-        if (grantee == null)
-        {
-            throw new ArgumentNullException(nameof(grantee));
-        }
+        ArgumentNullException.ThrowIfNull(grantee);
 
         Type = "user";
         Id = grantee.OrganizationUserId;
@@ -40,10 +34,7 @@ public class PotentialGranteeResponseModel : ResponseModel
     public PotentialGranteeResponseModel(ServiceAccount serviceAccount)
         : base(_objectName)
     {
-        if (serviceAccount == null)
-        {
-            throw new ArgumentNullException(nameof(serviceAccount));
-        }
+        ArgumentNullException.ThrowIfNull(serviceAccount);
 
         Id = serviceAccount.Id;
         Name = serviceAccount.Name;
@@ -53,19 +44,15 @@ public class PotentialGranteeResponseModel : ResponseModel
     public PotentialGranteeResponseModel(Project project)
         : base(_objectName)
     {
-        if (project == null)
-        {
-            throw new ArgumentNullException(nameof(project));
-        }
+        ArgumentNullException.ThrowIfNull(project);
 
         Id = project.Id;
         Name = project.Name;
         Type = "project";
     }
 
-    public PotentialGranteeResponseModel() : base(_objectName)
-    {
-    }
+    public PotentialGranteeResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
     public string Name { get; set; }

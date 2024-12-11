@@ -8,13 +8,13 @@ using EFProviderPlan = Bit.Infrastructure.EntityFramework.Billing.Models.Provide
 
 namespace Bit.Infrastructure.EntityFramework.Billing.Repositories;
 
-public class ProviderPlanRepository(
-    IMapper mapper,
-    IServiceScopeFactory serviceScopeFactory)
+public class ProviderPlanRepository(IMapper mapper, IServiceScopeFactory serviceScopeFactory)
     : Repository<ProviderPlan, EFProviderPlan, Guid>(
         serviceScopeFactory,
         mapper,
-        context => context.ProviderPlans), IProviderPlanRepository
+        context => context.ProviderPlans
+    ),
+        IProviderPlanRepository
 {
     public async Task<ICollection<ProviderPlan>> GetByProviderId(Guid providerId)
     {

@@ -18,10 +18,15 @@ public class AccessClientQuery : IAccessClientQuery
     }
 
     public async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientAsync(
-        ClaimsPrincipal claimsPrincipal, Guid organizationId)
+        ClaimsPrincipal claimsPrincipal,
+        Guid organizationId
+    )
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(
+            _currentContext.IdentityClientType,
+            orgAdmin
+        );
         var userId = _userService.GetProperUserId(claimsPrincipal).Value;
         return (accessClient, userId);
     }

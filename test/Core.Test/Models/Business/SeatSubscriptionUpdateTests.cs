@@ -24,8 +24,10 @@ public class SeatSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
-
-    public void UpgradeItemsOptions_ReturnsCorrectOptions(PlanType planType, Organization organization)
+    public void UpgradeItemsOptions_ReturnsCorrectOptions(
+        PlanType planType,
+        Organization organization
+    )
     {
         var plan = StaticStore.GetPlan(planType);
         organization.PlanType = planType;
@@ -35,14 +37,14 @@ public class SeatSubscriptionUpdateTests
             {
                 Data = new List<SubscriptionItem>
                 {
-                    new ()
+                    new()
                     {
                         Id = "subscription_item",
                         Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 1
-                    }
-                }
-            }
+                        Quantity = 1,
+                    },
+                },
+            },
         };
         var update = new SeatSubscriptionUpdate(organization, plan, 100);
 
@@ -67,7 +69,10 @@ public class SeatSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2019)]
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
-    public void RevertItemsOptions_ReturnsCorrectOptions(PlanType planType, Organization organization)
+    public void RevertItemsOptions_ReturnsCorrectOptions(
+        PlanType planType,
+        Organization organization
+    )
     {
         var plan = StaticStore.GetPlan(planType);
         organization.PlanType = planType;
@@ -77,14 +82,14 @@ public class SeatSubscriptionUpdateTests
             {
                 Data = new List<SubscriptionItem>
                 {
-                    new ()
+                    new()
                     {
                         Id = "subscription_item",
                         Price = new Price { Id = plan.PasswordManager.StripeSeatPlanId },
-                        Quantity = 100
-                    }
-                }
-            }
+                        Quantity = 100,
+                    },
+                },
+            },
         };
         var update = new SeatSubscriptionUpdate(organization, plan, 100);
         update.UpgradeItemsOptions(subscription);

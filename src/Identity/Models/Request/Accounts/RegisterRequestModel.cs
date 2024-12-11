@@ -13,13 +13,16 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
 {
     [StringLength(50)]
     public string Name { get; set; }
+
     [Required]
     [StrictEmailAddress]
     [StringLength(256)]
     public string Email { get; set; }
+
     [Required]
     [StringLength(1000)]
     public string MasterPasswordHash { get; set; }
+
     [StringLength(50)]
     public string MasterPasswordHint { get; set; }
     public string CaptchaResponse { get; set; }
@@ -41,9 +44,11 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
             Email = Email,
             MasterPasswordHint = MasterPasswordHint,
             Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
-            KdfIterations = KdfIterations.GetValueOrDefault(AuthConstants.PBKDF2_ITERATIONS.Default),
+            KdfIterations = KdfIterations.GetValueOrDefault(
+                AuthConstants.PBKDF2_ITERATIONS.Default
+            ),
             KdfMemory = KdfMemory,
-            KdfParallelism = KdfParallelism
+            KdfParallelism = KdfParallelism,
         };
 
         if (ReferenceData != null)
@@ -68,7 +73,12 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
         if (Kdf.HasValue && KdfIterations.HasValue)
         {
-            return KdfSettingsValidator.Validate(Kdf.Value, KdfIterations.Value, KdfMemory, KdfParallelism);
+            return KdfSettingsValidator.Validate(
+                Kdf.Value,
+                KdfIterations.Value,
+                KdfMemory,
+                KdfParallelism
+            );
         }
 
         return Enumerable.Empty<ValidationResult>();

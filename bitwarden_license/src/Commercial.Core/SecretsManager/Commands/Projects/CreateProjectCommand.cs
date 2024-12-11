@@ -15,12 +15,12 @@ public class CreateProjectCommand : ICreateProjectCommand
     private readonly IProjectRepository _projectRepository;
     private readonly ICurrentContext _currentContext;
 
-
     public CreateProjectCommand(
         IAccessPolicyRepository accessPolicyRepository,
         IOrganizationUserRepository organizationUserRepository,
         IProjectRepository projectRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _accessPolicyRepository = accessPolicyRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -28,9 +28,16 @@ public class CreateProjectCommand : ICreateProjectCommand
         _currentContext = currentContext;
     }
 
-    public async Task<Project> CreateAsync(Project project, Guid id, IdentityClientType identityClientType)
+    public async Task<Project> CreateAsync(
+        Project project,
+        Guid id,
+        IdentityClientType identityClientType
+    )
     {
-        if (identityClientType != IdentityClientType.User && identityClientType != IdentityClientType.ServiceAccount)
+        if (
+            identityClientType != IdentityClientType.User
+            && identityClientType != IdentityClientType.ServiceAccount
+        )
         {
             throw new NotFoundException();
         }
@@ -39,7 +46,10 @@ public class CreateProjectCommand : ICreateProjectCommand
 
         if (identityClientType == IdentityClientType.User)
         {
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(
+                createdProject.OrganizationId,
+                id
+            );
 
             var accessPolicy = new UserProjectAccessPolicy()
             {
@@ -49,8 +59,9 @@ public class CreateProjectCommand : ICreateProjectCommand
                 Write = true,
             };
 
-            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
-
+            await _accessPolicyRepository.CreateManyAsync(
+                new List<BaseAccessPolicy> { accessPolicy }
+            );
         }
         else if (identityClientType == IdentityClientType.ServiceAccount)
         {
@@ -62,7 +73,9 @@ public class CreateProjectCommand : ICreateProjectCommand
                 Write = true,
             };
 
-            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { serviceAccountProjectAccessPolicy });
+            await _accessPolicyRepository.CreateManyAsync(
+                new List<BaseAccessPolicy> { serviceAccountProjectAccessPolicy }
+            );
         }
 
         return createdProject;

@@ -15,7 +15,9 @@ public class SpanExtensionsTests
     [InlineData("T.T.T", "T", "T.T")]
     public void TrySplitBy_CanSplit_Success(string fullString, string firstPart, string secondPart)
     {
-        var success = fullString.AsSpan().TrySplitBy('.', out var firstPartSpan, out var secondPartSpan);
+        var success = fullString
+            .AsSpan()
+            .TrySplitBy('.', out var firstPartSpan, out var secondPartSpan);
         Assert.True(success);
         Assert.Equal(firstPart, firstPartSpan.ToString());
         Assert.Equal(secondPart, secondPartSpan.ToString());

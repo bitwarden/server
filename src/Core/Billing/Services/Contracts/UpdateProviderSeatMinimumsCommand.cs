@@ -7,4 +7,5 @@ namespace Bit.Core.Billing.Services.Contracts;
 public record UpdateProviderSeatMinimumsCommand(
     Guid Id,
     string GatewaySubscriptionId,
-    IReadOnlyCollection<(PlanType Plan, int SeatsMinimum)> Configuration);
+    IReadOnlyCollection<(PlanType Plan, int SeatsMinimum)> Configuration
+);

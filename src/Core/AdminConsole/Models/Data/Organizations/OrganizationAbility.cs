@@ -11,8 +11,10 @@ public class OrganizationAbility
         Id = organization.Id;
         UseEvents = organization.UseEvents;
         Use2fa = organization.Use2fa;
-        Using2fa = organization.Use2fa && organization.TwoFactorProviders != null &&
-            organization.TwoFactorProviders != "{}";
+        Using2fa =
+            organization.Use2fa
+            && organization.TwoFactorProviders != null
+            && organization.TwoFactorProviders != "{}";
         UsersGetPremium = organization.UsersGetPremium;
         Enabled = organization.Enabled;
         UseSso = organization.UseSso;

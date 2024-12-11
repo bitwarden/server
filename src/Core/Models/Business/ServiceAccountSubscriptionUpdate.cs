@@ -8,9 +8,14 @@ public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
     private long? _prevServiceAccounts;
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalServiceAccounts;
-    protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeServiceAccountPlanId };
+    protected override List<string> PlanIds =>
+        new() { _plan.SecretsManager.StripeServiceAccountPlanId };
 
-    public ServiceAccountSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalServiceAccounts)
+    public ServiceAccountSubscriptionUpdate(
+        Organization organization,
+        StaticStore.Plan plan,
+        long? additionalServiceAccounts
+    )
     {
         _plan = plan;
         _additionalServiceAccounts = additionalServiceAccounts;
@@ -28,8 +33,9 @@ public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
                 Id = item?.Id,
                 Plan = PlanIds.Single(),
                 Quantity = _additionalServiceAccounts,
-                Deleted = (item?.Id != null && _additionalServiceAccounts == 0) ? true : (bool?)null,
-            }
+                Deleted =
+                    (item?.Id != null && _additionalServiceAccounts == 0) ? true : (bool?)null,
+            },
         };
     }
 
@@ -44,7 +50,7 @@ public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
                 Plan = PlanIds.Single(),
                 Quantity = _prevServiceAccounts,
                 Deleted = _prevServiceAccounts == 0 ? true : (bool?)null,
-            }
+            },
         };
     }
 }

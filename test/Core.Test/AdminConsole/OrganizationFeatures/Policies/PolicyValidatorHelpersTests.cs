@@ -12,9 +12,13 @@ public class PolicyValidatorHelpersTests
     public void ValidateDecryptionOptionsNotEnabled_RequiredByKeyConnector_ValidationError()
     {
         var ssoConfig = new SsoConfig();
-        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+        ssoConfig.SetData(
+            new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector }
+        );
 
-        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled(
+            [MemberDecryptionType.KeyConnector]
+        );
 
         Assert.Contains("Key Connector is enabled", result);
     }
@@ -23,9 +27,16 @@ public class PolicyValidatorHelpersTests
     public void ValidateDecryptionOptionsNotEnabled_RequiredByTDE_ValidationError()
     {
         var ssoConfig = new SsoConfig();
-        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+        ssoConfig.SetData(
+            new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            }
+        );
 
-        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.TrustedDeviceEncryption]);
+        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled(
+            [MemberDecryptionType.TrustedDeviceEncryption]
+        );
 
         Assert.Contains("Trusted device encryption is on", result);
     }
@@ -34,7 +45,9 @@ public class PolicyValidatorHelpersTests
     public void ValidateDecryptionOptionsNotEnabled_NullSsoConfig_NoValidationError()
     {
         var ssoConfig = new SsoConfig();
-        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled(
+            [MemberDecryptionType.KeyConnector]
+        );
 
         Assert.True(string.IsNullOrEmpty(result));
     }
@@ -43,9 +56,13 @@ public class PolicyValidatorHelpersTests
     public void ValidateDecryptionOptionsNotEnabled_RequiredOptionNotEnabled_NoValidationError()
     {
         var ssoConfig = new SsoConfig();
-        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+        ssoConfig.SetData(
+            new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector }
+        );
 
-        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.TrustedDeviceEncryption]);
+        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled(
+            [MemberDecryptionType.TrustedDeviceEncryption]
+        );
 
         Assert.True(string.IsNullOrEmpty(result));
     }
@@ -55,9 +72,13 @@ public class PolicyValidatorHelpersTests
     {
         var ssoConfig = new SsoConfig();
         ssoConfig.Enabled = false;
-        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+        ssoConfig.SetData(
+            new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector }
+        );
 
-        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.KeyConnector]);
+        var result = ssoConfig.ValidateDecryptionOptionsNotEnabled(
+            [MemberDecryptionType.KeyConnector]
+        );
 
         Assert.True(string.IsNullOrEmpty(result));
     }

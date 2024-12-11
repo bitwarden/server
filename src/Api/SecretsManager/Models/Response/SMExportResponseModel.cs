@@ -5,7 +5,12 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class SMExportResponseModel : ResponseModel
 {
-    public SMExportResponseModel(IEnumerable<Project> projects, IEnumerable<Secret> secrets, string obj = "SecretsManagerExportResponseModel") : base(obj)
+    public SMExportResponseModel(
+        IEnumerable<Project> projects,
+        IEnumerable<Secret> secrets,
+        string obj = "SecretsManagerExportResponseModel"
+    )
+        : base(obj)
     {
         Secrets = secrets?.Select(s => new InnerSecretExportResponseModel(s));
         Projects = projects?.Select(p => new InnerProjectExportResponseModel(p));

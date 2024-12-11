@@ -8,8 +8,11 @@ namespace Bit.Api.Tools.Authorization;
 public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
     : AuthorizationHandler<VaultExportOperationRequirement, OrganizationScope>
 {
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        VaultExportOperationRequirement requirement, OrganizationScope organizationScope)
+    protected override Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
+        VaultExportOperationRequirement requirement,
+        OrganizationScope organizationScope
+    )
     {
         var org = currentContext.GetOrganization(organizationScope);
 
@@ -19,7 +22,7 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
                 CanExportWholeVault(org),
             not null when requirement == VaultExportOperations.ExportManagedCollections =>
                 CanExportManagedCollections(org),
-            _ => false
+            _ => false,
         };
 
         if (authorized)
@@ -30,9 +33,11 @@ public class VaultExportAuthorizationHandler(ICurrentContext currentContext)
         return Task.FromResult(0);
     }
 
-    private bool CanExportWholeVault(CurrentContextOrganization organization) => organization is
-    { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-    { Type: OrganizationUserType.Custom, Permissions.AccessImportExport: true };
+    private static bool CanExportWholeVault(CurrentContextOrganization organization) =>
+        organization
+            is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
+                or { Type: OrganizationUserType.Custom, Permissions.AccessImportExport: true };
 
-    private bool CanExportManagedCollections(CurrentContextOrganization organization) => organization is not null;
+    private static bool CanExportManagedCollections(CurrentContextOrganization organization) =>
+        organization is not null;
 }

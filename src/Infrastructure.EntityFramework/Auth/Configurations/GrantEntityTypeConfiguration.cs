@@ -8,18 +8,11 @@ public class GrantEntityTypeConfiguration : IEntityTypeConfiguration<Grant>
 {
     public void Configure(EntityTypeBuilder<Grant> builder)
     {
-        builder
-            .HasKey(s => s.Id)
-            .HasName("PK_Grant")
-            .IsClustered();
+        builder.HasKey(s => s.Id).HasName("PK_Grant").IsClustered();
 
-        builder
-            .HasIndex(s => s.Key)
-            .IsUnique(true);
+        builder.HasIndex(s => s.Key).IsUnique(true);
 
-        builder
-            .HasIndex(s => s.ExpirationDate)
-            .IsClustered(false);
+        builder.HasIndex(s => s.ExpirationDate).IsClustered(false);
 
         builder.ToTable(nameof(Grant));
     }

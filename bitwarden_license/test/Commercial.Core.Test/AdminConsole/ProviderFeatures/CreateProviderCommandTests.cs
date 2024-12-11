@@ -18,21 +18,29 @@ namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
 public class CreateProviderCommandTests
 {
     [Theory, BitAutoData]
-    public async Task CreateMspAsync_UserIdIsInvalid_Throws(Provider provider, SutProvider<CreateProviderCommand> sutProvider)
+    public async Task CreateMspAsync_UserIdIsInvalid_Throws(
+        Provider provider,
+        SutProvider<CreateProviderCommand> sutProvider
+    )
     {
         // Arrange
         provider.Type = ProviderType.Msp;
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateMspAsync(provider, default, default, default));
+            () => sutProvider.Sut.CreateMspAsync(provider, default, default, default)
+        );
 
         // Assert
         Assert.Contains("Invalid owner.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateMspAsync_Success(Provider provider, User user, SutProvider<CreateProviderCommand> sutProvider)
+    public async Task CreateMspAsync_Success(
+        Provider provider,
+        User user,
+        SutProvider<CreateProviderCommand> sutProvider
+    )
     {
         // Arrange
         provider.Type = ProviderType.Msp;
@@ -44,12 +52,21 @@ public class CreateProviderCommandTests
         await sutProvider.Sut.CreateMspAsync(provider, user.Email, default, default);
 
         // Assert
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IProviderService>().Received(1).SendProviderSetupInviteEmailAsync(provider, user.Email);
+        await sutProvider
+            .GetDependency<IProviderRepository>()
+            .ReceivedWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider
+            .GetDependency<IProviderService>()
+            .Received(1)
+            .SendProviderSetupInviteEmailAsync(provider, user.Email);
     }
 
     [Theory, BitAutoData]
-    public async Task CreateResellerAsync_Success(Provider provider, SutProvider<CreateProviderCommand> sutProvider)
+    public async Task CreateResellerAsync_Success(
+        Provider provider,
+        SutProvider<CreateProviderCommand> sutProvider
+    )
     {
         // Arrange
         provider.Type = ProviderType.Reseller;
@@ -58,17 +75,24 @@ public class CreateProviderCommandTests
         await sutProvider.Sut.CreateResellerAsync(provider);
 
         // Assert
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IProviderService>().DidNotReceiveWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default);
+        await sutProvider
+            .GetDependency<IProviderRepository>()
+            .ReceivedWithAnyArgs()
+            .CreateAsync(default);
+        await sutProvider
+            .GetDependency<IProviderService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendProviderSetupInviteEmailAsync(default, default);
     }
 
     [Theory, BitAutoData]
     public async Task CreateMultiOrganizationEnterpriseAsync_Success(
-    Provider provider,
-    User user,
-    PlanType plan,
-    int minimumSeats,
-    SutProvider<CreateProviderCommand> sutProvider)
+        Provider provider,
+        User user,
+        PlanType plan,
+        int minimumSeats,
+        SutProvider<CreateProviderCommand> sutProvider
+    )
     {
         // Arrange
         provider.Type = ProviderType.MultiOrganizationEnterprise;
@@ -77,24 +101,43 @@ public class CreateProviderCommandTests
         userRepository.GetByEmailAsync(user.Email).Returns(user);
 
         // Act
-        await sutProvider.Sut.CreateMultiOrganizationEnterpriseAsync(provider, user.Email, plan, minimumSeats);
+        await sutProvider.Sut.CreateMultiOrganizationEnterpriseAsync(
+            provider,
+            user.Email,
+            plan,
+            minimumSeats
+        );
 
         // Assert
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(provider);
-        await sutProvider.GetDependency<IProviderService>().Received(1).SendProviderSetupInviteEmailAsync(provider, user.Email);
+        await sutProvider
+            .GetDependency<IProviderRepository>()
+            .ReceivedWithAnyArgs()
+            .CreateAsync(provider);
+        await sutProvider
+            .GetDependency<IProviderService>()
+            .Received(1)
+            .SendProviderSetupInviteEmailAsync(provider, user.Email);
     }
 
     [Theory, BitAutoData]
     public async Task CreateMultiOrganizationEnterpriseAsync_UserIdIsInvalid_Throws(
         Provider provider,
-        SutProvider<CreateProviderCommand> sutProvider)
+        SutProvider<CreateProviderCommand> sutProvider
+    )
     {
         // Arrange
         provider.Type = ProviderType.Msp;
 
         // Act
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateMultiOrganizationEnterpriseAsync(provider, default, default, default));
+            () =>
+                sutProvider.Sut.CreateMultiOrganizationEnterpriseAsync(
+                    provider,
+                    default,
+                    default,
+                    default
+                )
+        );
 
         // Assert
         Assert.Contains("Invalid owner.", exception.Message);

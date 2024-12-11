@@ -4,18 +4,20 @@ using Bit.Core.Billing.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-
 using EFClientOrganizationMigrationRecord = Bit.Infrastructure.EntityFramework.Billing.Models.ClientOrganizationMigrationRecord;
 
 namespace Bit.Infrastructure.EntityFramework.Billing.Repositories;
 
 public class ClientOrganizationMigrationRecordRepository(
     IMapper mapper,
-    IServiceScopeFactory serviceScopeFactory)
+    IServiceScopeFactory serviceScopeFactory
+)
     : Repository<ClientOrganizationMigrationRecord, EFClientOrganizationMigrationRecord, Guid>(
         serviceScopeFactory,
         mapper,
-        context => context.ClientOrganizationMigrationRecords), IClientOrganizationMigrationRecordRepository
+        context => context.ClientOrganizationMigrationRecords
+    ),
+        IClientOrganizationMigrationRecordRepository
 {
     public async Task<ClientOrganizationMigrationRecord> GetByOrganizationId(Guid organizationId)
     {
@@ -31,7 +33,9 @@ public class ClientOrganizationMigrationRecordRepository(
         return await query.FirstOrDefaultAsync();
     }
 
-    public async Task<ICollection<ClientOrganizationMigrationRecord>> GetByProviderId(Guid providerId)
+    public async Task<ICollection<ClientOrganizationMigrationRecord>> GetByProviderId(
+        Guid providerId
+    )
     {
         using var serviceScope = ServiceScopeFactory.CreateScope();
 

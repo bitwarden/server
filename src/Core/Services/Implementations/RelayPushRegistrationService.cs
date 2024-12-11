@@ -8,11 +8,11 @@ namespace Bit.Core.Services;
 
 public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegistrationService
 {
-
     public RelayPushRegistrationService(
         IHttpClientFactory httpFactory,
         GlobalSettings globalSettings,
-        ILogger<RelayPushRegistrationService> logger)
+        ILogger<RelayPushRegistrationService> logger
+    )
         : base(
             httpFactory,
             globalSettings.PushRelayBaseUri,
@@ -20,12 +20,16 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             ApiScopes.ApiPush,
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
-            logger)
-    {
-    }
+            logger
+        ) { }
 
-    public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+    public async Task CreateOrUpdateRegistrationAsync(
+        string pushToken,
+        string deviceId,
+        string userId,
+        string identifier,
+        DeviceType type
+    )
     {
         var requestModel = new PushRegistrationRequestModel
         {
@@ -33,22 +37,21 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
             Identifier = identifier,
             PushToken = pushToken,
             Type = type,
-            UserId = userId
+            UserId = userId,
         };
         await SendAsync(HttpMethod.Post, "push/register", requestModel);
     }
 
     public async Task DeleteRegistrationAsync(string deviceId)
     {
-        var requestModel = new PushDeviceRequestModel
-        {
-            Id = deviceId,
-        };
+        var requestModel = new PushDeviceRequestModel { Id = deviceId };
         await SendAsync(HttpMethod.Post, "push/delete", requestModel);
     }
 
     public async Task AddUserRegistrationOrganizationAsync(
-        IEnumerable<string> deviceIds, string organizationId)
+        IEnumerable<string> deviceIds,
+        string organizationId
+    )
     {
         if (!deviceIds.Any())
         {
@@ -60,7 +63,9 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     }
 
     public async Task DeleteUserRegistrationOrganizationAsync(
-        IEnumerable<string> deviceIds, string organizationId)
+        IEnumerable<string> deviceIds,
+        string organizationId
+    )
     {
         if (!deviceIds.Any())
         {

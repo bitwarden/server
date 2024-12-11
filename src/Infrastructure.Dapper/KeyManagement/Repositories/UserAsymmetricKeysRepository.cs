@@ -12,25 +12,27 @@ namespace Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 public class UserAsymmetricKeysRepository : BaseRepository, IUserAsymmetricKeysRepository
 {
     public UserAsymmetricKeysRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    {
-    }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
-    public UserAsymmetricKeysRepository(string connectionString, string readOnlyConnectionString) : base(
-        connectionString, readOnlyConnectionString)
-    {
-    }
+    public UserAsymmetricKeysRepository(string connectionString, string readOnlyConnectionString)
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task RegenerateUserAsymmetricKeysAsync(UserAsymmetricKeys userAsymmetricKeys)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
-        await connection.ExecuteAsync("[dbo].[UserAsymmetricKeys_Regenerate]",
+        await connection.ExecuteAsync(
+            "[dbo].[UserAsymmetricKeys_Regenerate]",
             new
             {
                 userAsymmetricKeys.UserId,
                 userAsymmetricKeys.PublicKey,
-                PrivateKey = userAsymmetricKeys.UserKeyEncryptedPrivateKey
-            }, commandType: CommandType.StoredProcedure);
+                PrivateKey = userAsymmetricKeys.UserKeyEncryptedPrivateKey,
+            },
+            commandType: CommandType.StoredProcedure
+        );
     }
 }

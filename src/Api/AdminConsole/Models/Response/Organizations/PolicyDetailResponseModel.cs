@@ -4,11 +4,11 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class PolicyDetailResponseModel : PolicyResponseModel
 {
-    public PolicyDetailResponseModel(Policy policy, string obj = "policy") : base(policy, obj)
-    {
-    }
+    public PolicyDetailResponseModel(Policy policy, string obj = "policy")
+        : base(policy, obj) { }
 
-    public PolicyDetailResponseModel(Policy policy, bool canToggleState) : base(policy)
+    public PolicyDetailResponseModel(Policy policy, bool canToggleState)
+        : base(policy)
     {
         CanToggleState = canToggleState;
     }

@@ -16,12 +16,14 @@ public class GetPasswordHealthReportApplicationQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetPasswordHealthReportApplicationAsync_WithValidOrganizationId_ShouldReturnPasswordHealthReportApplication(
-        SutProvider<GetPasswordHealthReportApplicationQuery> sutProvider)
+        SutProvider<GetPasswordHealthReportApplicationQuery> sutProvider
+    )
     {
         // Arrange
         var fixture = new Fixture();
         var organizationId = fixture.Create<Guid>();
-        sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .GetByOrganizationIdAsync(Arg.Any<Guid>())
             .Returns(fixture.CreateMany<PasswordHealthReportApplication>(2).ToList());
 
@@ -36,16 +38,20 @@ public class GetPasswordHealthReportApplicationQueryTests
     [Theory]
     [BitAutoData]
     public async Task GetPasswordHealthReportApplicationAsync_WithInvalidOrganizationId_ShouldFail(
-        SutProvider<GetPasswordHealthReportApplicationQuery> sutProvider)
+        SutProvider<GetPasswordHealthReportApplicationQuery> sutProvider
+    )
     {
         // Arrange
         var fixture = new Fixture();
-        sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .GetByOrganizationIdAsync(Arg.Is<Guid>(x => x == Guid.Empty))
             .Returns(new List<PasswordHealthReportApplication>());
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.GetPasswordHealthReportApplicationAsync(Guid.Empty));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.GetPasswordHealthReportApplicationAsync(Guid.Empty)
+        );
 
         // Assert
         Assert.Equal("OrganizationId is required.", exception.Message);

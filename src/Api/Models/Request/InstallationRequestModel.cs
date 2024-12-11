@@ -17,7 +17,7 @@ public class InstallationRequestModel
         {
             Key = CoreHelpers.SecureRandomString(20),
             Email = Email,
-            Enabled = true
+            Enabled = true,
         };
     }
 }

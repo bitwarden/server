@@ -8,6 +8,7 @@ public class KdfRequestModel : PasswordRequestModel, IValidatableObject
 {
     [Required]
     public KdfType? Kdf { get; set; }
+
     [Required]
     public int? KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
@@ -17,7 +18,12 @@ public class KdfRequestModel : PasswordRequestModel, IValidatableObject
     {
         if (Kdf.HasValue && KdfIterations.HasValue)
         {
-            return KdfSettingsValidator.Validate(Kdf.Value, KdfIterations.Value, KdfMemory, KdfParallelism);
+            return KdfSettingsValidator.Validate(
+                Kdf.Value,
+                KdfIterations.Value,
+                KdfMemory,
+                KdfParallelism
+            );
         }
 
         return Enumerable.Empty<ValidationResult>();

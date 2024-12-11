@@ -14,6 +14,10 @@ namespace Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 /// </summary>
 public interface ISetInitialMasterPasswordCommand
 {
-    public Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
-        string orgSsoIdentifier);
+    public Task<IdentityResult> SetInitialMasterPasswordAsync(
+        User user,
+        string masterPassword,
+        string key,
+        string orgSsoIdentifier
+    );
 }

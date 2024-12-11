@@ -12,9 +12,7 @@ namespace Bit.SharedWeb.Utilities;
 
 public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
 {
-    public ExceptionHandlerFilterAttribute()
-    {
-    }
+    public ExceptionHandlerFilterAttribute() { }
 
     public override void OnException(ExceptionContext context)
     {
@@ -33,7 +31,9 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             context.HttpContext.Response.StatusCode = 400;
             if (badRequestException.ModelState != null)
             {
-                internalErrorModel = new InternalApi.ErrorResponseModel(badRequestException.ModelState);
+                internalErrorModel = new InternalApi.ErrorResponseModel(
+                    badRequestException.ModelState
+                );
             }
             else
             {
@@ -45,7 +45,10 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
         }
-        else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
+        else if (
+            exception is NotSupportedException
+            && !string.IsNullOrWhiteSpace(exception.Message)
+        )
         {
             errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
@@ -71,7 +74,9 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else
         {
-            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
+            var logger = context.HttpContext.RequestServices.GetRequiredService<
+                ILogger<ExceptionHandlerFilterAttribute>
+            >();
             logger.LogError(0, exception, exception.Message);
             errorMessage = "An unhandled server error has occurred.";
             context.HttpContext.Response.StatusCode = 500;

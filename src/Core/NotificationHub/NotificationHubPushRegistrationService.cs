@@ -21,7 +21,8 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         GlobalSettings globalSettings,
         INotificationHubPool notificationHubPool,
         IServiceProvider serviceProvider,
-        ILogger<NotificationHubPushRegistrationService> logger)
+        ILogger<NotificationHubPushRegistrationService> logger
+    )
     {
         _installationDeviceRepository = installationDeviceRepository;
         _globalSettings = globalSettings;
@@ -30,8 +31,13 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         _logger = logger;
     }
 
-    public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+    public async Task CreateOrUpdateRegistrationAsync(
+        string pushToken,
+        string deviceId,
+        string userId,
+        string identifier,
+        DeviceType type
+    )
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -42,35 +48,39 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         {
             InstallationId = deviceId,
             PushChannel = pushToken,
-            Templates = new Dictionary<string, InstallationTemplate>()
+            Templates = new Dictionary<string, InstallationTemplate>(),
         };
 
-        installation.Tags = new List<string>
-        {
-            $"userId:{userId}"
-        };
+        installation.Tags = new List<string> { $"userId:{userId}" };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             installation.Tags.Add("deviceIdentifier:" + identifier);
         }
 
-        string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
+        string payloadTemplate = null,
+            messageTemplate = null,
+            badgeMessageTemplate = null;
         switch (type)
         {
             case DeviceType.Android:
-                payloadTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
-                messageTemplate = "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
+                payloadTemplate =
+                    "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}";
+                messageTemplate =
+                    "{\"message\":{\"data\":{\"type\":\"$(type)\"},"
+                    + "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}";
                 installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
-                payloadTemplate = "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
-                    "\"aps\":{\"content-available\":1}}";
-                messageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
-                badgeMessageTemplate = "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}";
+                payloadTemplate =
+                    "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"},"
+                    + "\"aps\":{\"content-available\":1}}";
+                messageTemplate =
+                    "{\"data\":{\"type\":\"#(type)\"},"
+                    + "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}";
+                badgeMessageTemplate =
+                    "{\"data\":{\"type\":\"#(type)\"},"
+                    + "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}";
 
                 installation.Platform = NotificationPlatform.Apns;
                 break;
@@ -86,8 +96,13 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
         BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
         BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
-        BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier);
+        BuildInstallationTemplate(
+            installation,
+            "badgeMessage",
+            badgeMessageTemplate ?? messageTemplate,
+            userId,
+            identifier
+        );
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -96,8 +111,13 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier)
+    private static void BuildInstallationTemplate(
+        Installation installation,
+        string templateId,
+        string templateBody,
+        string userId,
+        string identifier
+    )
     {
         if (templateBody == null)
         {
@@ -109,11 +129,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         var template = new InstallationTemplate
         {
             Body = templateBody,
-            Tags = new List<string>
-            {
-                fullTemplateId,
-                $"{fullTemplateId}_userId:{userId}"
-            }
+            Tags = new List<string> { fullTemplateId, $"{fullTemplateId}_userId:{userId}" },
         };
 
         if (!string.IsNullOrWhiteSpace(identifier))
@@ -131,18 +147,28 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             await ClientFor(GetComb(deviceId)).DeleteInstallationAsync(deviceId);
             if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
             {
-                await _installationDeviceRepository.DeleteAsync(new InstallationDeviceEntity(deviceId));
+                await _installationDeviceRepository.DeleteAsync(
+                    new InstallationDeviceEntity(deviceId)
+                );
             }
         }
-        catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
+        catch (Exception e)
+            when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
         {
             throw;
         }
     }
 
-    public async Task AddUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task AddUserRegistrationOrganizationAsync(
+        IEnumerable<string> deviceIds,
+        string organizationId
+    )
     {
-        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Add, $"organizationId:{organizationId}");
+        await PatchTagsForUserDevicesAsync(
+            deviceIds,
+            UpdateOperationType.Add,
+            $"organizationId:{organizationId}"
+        );
         if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
         {
             var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
@@ -150,10 +176,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    public async Task DeleteUserRegistrationOrganizationAsync(IEnumerable<string> deviceIds, string organizationId)
+    public async Task DeleteUserRegistrationOrganizationAsync(
+        IEnumerable<string> deviceIds,
+        string organizationId
+    )
     {
-        await PatchTagsForUserDevicesAsync(deviceIds, UpdateOperationType.Remove,
-            $"organizationId:{organizationId}");
+        await PatchTagsForUserDevicesAsync(
+            deviceIds,
+            UpdateOperationType.Remove,
+            $"organizationId:{organizationId}"
+        );
         if (deviceIds.Any() && InstallationDeviceEntity.IsInstallationDeviceId(deviceIds.First()))
         {
             var entities = deviceIds.Select(e => new InstallationDeviceEntity(e));
@@ -161,19 +193,18 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private async Task PatchTagsForUserDevicesAsync(IEnumerable<string> deviceIds, UpdateOperationType op,
-        string tag)
+    private async Task PatchTagsForUserDevicesAsync(
+        IEnumerable<string> deviceIds,
+        UpdateOperationType op,
+        string tag
+    )
     {
         if (!deviceIds.Any())
         {
             return;
         }
 
-        var operation = new PartialUpdateOperation
-        {
-            Operation = op,
-            Path = "/tags"
-        };
+        var operation = new PartialUpdateOperation { Operation = op, Path = "/tags" };
 
         if (op == UpdateOperationType.Add)
         {
@@ -188,9 +219,16 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         {
             try
             {
-                await ClientFor(GetComb(deviceId)).PatchInstallationAsync(deviceId, new List<PartialUpdateOperation> { operation });
+                await ClientFor(GetComb(deviceId))
+                    .PatchInstallationAsync(
+                        deviceId,
+                        new List<PartialUpdateOperation> { operation }
+                    );
             }
-            catch (Exception e) when (e.InnerException == null || !e.InnerException.Message.Contains("(404) Not Found"))
+            catch (Exception e)
+                when (e.InnerException == null
+                    || !e.InnerException.Message.Contains("(404) Not Found")
+                )
             {
                 throw;
             }
@@ -202,7 +240,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         return _notificationHubPool.ClientFor(deviceId);
     }
 
-    private Guid GetComb(string deviceId)
+    private static Guid GetComb(string deviceId)
     {
         var deviceIdString = deviceId;
         InstallationDeviceEntity installationDeviceEntity;
@@ -213,9 +251,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             deviceIdString = installationDeviceEntity.RowKey;
         }
 
-        if (Guid.TryParse(deviceIdString, out deviceIdGuid))
-        {
-        }
+        if (Guid.TryParse(deviceIdString, out deviceIdGuid)) { }
         else
         {
             throw new Exception($"Invalid device id {deviceId}.");

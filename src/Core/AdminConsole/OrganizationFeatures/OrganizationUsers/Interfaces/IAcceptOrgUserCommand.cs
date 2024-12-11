@@ -11,8 +11,25 @@ public interface IAcceptOrgUserCommand
     /// </summary>
     /// <param name="emailToken">The token embedded in the email invitation link</param>
     /// <returns>The accepted OrganizationUser.</returns>
-    Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken, IUserService userService);
-    Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(string orgIdentifier, User user, IUserService userService);
-    Task<OrganizationUser> AcceptOrgUserByOrgIdAsync(Guid organizationId, User user, IUserService userService);
-    Task<OrganizationUser> AcceptOrgUserAsync(OrganizationUser orgUser, User user, IUserService userService);
+    Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(
+        Guid organizationUserId,
+        User user,
+        string emailToken,
+        IUserService userService
+    );
+    Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(
+        string orgIdentifier,
+        User user,
+        IUserService userService
+    );
+    Task<OrganizationUser> AcceptOrgUserByOrgIdAsync(
+        Guid organizationId,
+        User user,
+        IUserService userService
+    );
+    Task<OrganizationUser> AcceptOrgUserAsync(
+        OrganizationUser orgUser,
+        User user,
+        IUserService userService
+    );
 }

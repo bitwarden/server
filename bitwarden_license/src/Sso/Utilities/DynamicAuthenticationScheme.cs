@@ -7,14 +7,24 @@ namespace Bit.Sso.Utilities;
 
 public class DynamicAuthenticationScheme : AuthenticationScheme, IDynamicAuthenticationScheme
 {
-    public DynamicAuthenticationScheme(string name, string displayName, Type handlerType,
-        AuthenticationSchemeOptions options)
+    public DynamicAuthenticationScheme(
+        string name,
+        string displayName,
+        Type handlerType,
+        AuthenticationSchemeOptions options
+    )
         : base(name, displayName, handlerType)
     {
         Options = options;
     }
-    public DynamicAuthenticationScheme(string name, string displayName, Type handlerType,
-        AuthenticationSchemeOptions options, SsoType ssoType)
+
+    public DynamicAuthenticationScheme(
+        string name,
+        string displayName,
+        Type handlerType,
+        AuthenticationSchemeOptions options,
+        SsoType ssoType
+    )
         : this(name, displayName, handlerType, options)
     {
         SsoType = ssoType;
@@ -72,8 +82,10 @@ public class DynamicAuthenticationScheme : AuthenticationScheme, IDynamicAuthent
             {
                 try
                 {
-                    oidcOptions.Configuration = await oidcOptions.ConfigurationManager
-                        .GetConfigurationAsync(CancellationToken.None);
+                    oidcOptions.Configuration =
+                        await oidcOptions.ConfigurationManager.GetConfigurationAsync(
+                            CancellationToken.None
+                        );
                 }
                 catch (Exception ex)
                 {

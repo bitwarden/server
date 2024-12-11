@@ -8,7 +8,8 @@ namespace Bit.Core.Test.Models.Business.Tokenables;
 
 public class OrganizationSponsorshipOfferTokenableTests
 {
-    public static IEnumerable<object[]> PlanSponsorshipTypes() => Enum.GetValues<PlanSponsorshipType>().Select(x => new object[] { x });
+    public static IEnumerable<object[]> PlanSponsorshipTypes() =>
+        Enum.GetValues<PlanSponsorshipType>().Select(x => new object[] { x });
 
     [Fact]
     public void IsInvalidIfIdentifierIsWrong()
@@ -36,7 +37,6 @@ public class OrganizationSponsorshipOfferTokenableTests
 
         Assert.False(token.Valid);
     }
-
 
     [Fact]
     public void IsInvalidIfEmailIsEmpty()
@@ -68,7 +68,10 @@ public class OrganizationSponsorshipOfferTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void IsValid_RequiresCurrentEmailToBeSameAsOfferedToEmail(OrganizationSponsorship sponsorship, string currentEmail)
+    public void IsValid_RequiresCurrentEmailToBeSameAsOfferedToEmail(
+        OrganizationSponsorship sponsorship,
+        string currentEmail
+    )
     {
         var token = new OrganizationSponsorshipOfferTokenable(sponsorship);
 
@@ -76,7 +79,10 @@ public class OrganizationSponsorshipOfferTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void IsValid_RequiresSameSponsorshipId(OrganizationSponsorship sponsorship1, OrganizationSponsorship sponsorship2)
+    public void IsValid_RequiresSameSponsorshipId(
+        OrganizationSponsorship sponsorship1,
+        OrganizationSponsorship sponsorship2
+    )
     {
         sponsorship1.Id = sponsorship2.Id;
 
@@ -86,7 +92,10 @@ public class OrganizationSponsorshipOfferTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void IsValid_RequiresSameEmail(OrganizationSponsorship sponsorship1, OrganizationSponsorship sponsorship2)
+    public void IsValid_RequiresSameEmail(
+        OrganizationSponsorship sponsorship1,
+        OrganizationSponsorship sponsorship2
+    )
     {
         sponsorship1.OfferedToEmail = sponsorship2.OfferedToEmail;
 
@@ -104,7 +113,9 @@ public class OrganizationSponsorshipOfferTokenableTests
     }
 
     [Theory, BitAutoData]
-    public void Constructor_GrabsEmailFromSponsorshipOfferedToEmail(OrganizationSponsorship sponsorship)
+    public void Constructor_GrabsEmailFromSponsorshipOfferedToEmail(
+        OrganizationSponsorship sponsorship
+    )
     {
         var token = new OrganizationSponsorshipOfferTokenable(sponsorship);
 
@@ -112,8 +123,10 @@ public class OrganizationSponsorshipOfferTokenableTests
     }
 
     [Theory, BitMemberAutoData(nameof(PlanSponsorshipTypes))]
-    public void Constructor_GrabsSponsorshipType(PlanSponsorshipType planSponsorshipType,
-        OrganizationSponsorship sponsorship)
+    public void Constructor_GrabsSponsorshipType(
+        PlanSponsorshipType planSponsorshipType,
+        OrganizationSponsorship sponsorship
+    )
     {
         sponsorship.PlanSponsorshipType = planSponsorshipType;
         var token = new OrganizationSponsorshipOfferTokenable(sponsorship);
@@ -126,7 +139,9 @@ public class OrganizationSponsorshipOfferTokenableTests
     {
         sponsorship.Id = default;
 
-        Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        Assert.Throws<ArgumentException>(
+            () => new OrganizationSponsorshipOfferTokenable(sponsorship)
+        );
     }
 
     [Theory, BitAutoData]
@@ -134,7 +149,9 @@ public class OrganizationSponsorshipOfferTokenableTests
     {
         sponsorship.OfferedToEmail = null;
 
-        Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        Assert.Throws<ArgumentException>(
+            () => new OrganizationSponsorshipOfferTokenable(sponsorship)
+        );
     }
 
     [Theory, BitAutoData]
@@ -142,7 +159,9 @@ public class OrganizationSponsorshipOfferTokenableTests
     {
         sponsorship.OfferedToEmail = "";
 
-        Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        Assert.Throws<ArgumentException>(
+            () => new OrganizationSponsorshipOfferTokenable(sponsorship)
+        );
     }
 
     [Theory, BitAutoData]
@@ -150,6 +169,8 @@ public class OrganizationSponsorshipOfferTokenableTests
     {
         sponsorship.PlanSponsorshipType = null;
 
-        Assert.Throws<ArgumentException>(() => new OrganizationSponsorshipOfferTokenable(sponsorship));
+        Assert.Throws<ArgumentException>(
+            () => new OrganizationSponsorshipOfferTokenable(sponsorship)
+        );
     }
 }

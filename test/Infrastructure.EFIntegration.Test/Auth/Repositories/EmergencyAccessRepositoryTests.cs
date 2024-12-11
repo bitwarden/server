@@ -22,7 +22,7 @@ public class EmergencyAccessRepositoryTests
         List<EfRepo.UserRepository> efUserRepos,
         SqlAuthRepo.EmergencyAccessRepository sqlEmergencyAccessRepo,
         SqlRepo.UserRepository sqlUserRepo
-        )
+    )
     {
         var savedEmergencyAccesses = new List<EmergencyAccess>();
         foreach (var sut in suts)
@@ -52,7 +52,9 @@ public class EmergencyAccessRepositoryTests
         emergencyAccess.GrantorId = users[0].Id;
         emergencyAccess.GranteeId = users[0].Id;
         var sqlEmergencyAccess = await sqlEmergencyAccessRepo.CreateAsync(emergencyAccess);
-        var savedSqlEmergencyAccess = await sqlEmergencyAccessRepo.GetByIdAsync(sqlEmergencyAccess.Id);
+        var savedSqlEmergencyAccess = await sqlEmergencyAccessRepo.GetByIdAsync(
+            sqlEmergencyAccess.Id
+        );
         savedEmergencyAccesses.Add(savedSqlEmergencyAccess);
 
         var distinctItems = savedEmergencyAccesses.Distinct(equalityComparer);

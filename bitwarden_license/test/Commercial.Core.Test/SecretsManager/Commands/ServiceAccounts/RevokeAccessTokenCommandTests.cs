@@ -13,7 +13,10 @@ public class RevokeAccessTokenCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task RevokeAsyncAsync_Success(ServiceAccount serviceAccount, SutProvider<RevokeAccessTokensCommand> sutProvider)
+    public async Task RevokeAsyncAsync_Success(
+        ServiceAccount serviceAccount,
+        SutProvider<RevokeAccessTokensCommand> sutProvider
+    )
     {
         var apiKey1 = new ApiKey
         {
@@ -35,13 +38,18 @@ public class RevokeAccessTokenCommandTests
             Key = "Test Key",
         };
 
-        sutProvider.GetDependency<IApiKeyRepository>()
+        sutProvider
+            .GetDependency<IApiKeyRepository>()
             .GetManyByServiceAccountIdAsync(serviceAccount.Id)
             .Returns(new List<ApiKey> { apiKey1, apiKey2 });
 
         await sutProvider.Sut.RevokeAsync(serviceAccount, new List<Guid> { apiKey1.Id });
 
-        await sutProvider.GetDependency<IApiKeyRepository>().Received(1)
-            .DeleteManyAsync(Arg.Is<IEnumerable<ApiKey>>(arg => arg.SequenceEqual(new List<ApiKey> { apiKey1 })));
+        await sutProvider
+            .GetDependency<IApiKeyRepository>()
+            .Received(1)
+            .DeleteManyAsync(
+                Arg.Is<IEnumerable<ApiKey>>(arg => arg.SequenceEqual(new List<ApiKey> { apiKey1 }))
+            );
     }
 }

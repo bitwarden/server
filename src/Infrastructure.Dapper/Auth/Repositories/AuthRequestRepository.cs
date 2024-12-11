@@ -15,15 +15,19 @@ namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequestRepository
 {
     public AuthRequestRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public AuthRequestRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<int> DeleteExpiredAsync(
-        TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration)
+        TimeSpan userRequestExpiration,
+        TimeSpan adminRequestExpiration,
+        TimeSpan afterAdminApprovalExpiration
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -35,7 +39,8 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
                     AdminExpirationSeconds = (int)adminRequestExpiration.TotalSeconds,
                     AdminApprovalExpirationSeconds = (int)afterAdminApprovalExpiration.TotalSeconds,
                 },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -46,33 +51,40 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
             var results = await connection.QueryAsync<AuthRequest>(
                 $"[{Schema}].[AuthRequest_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId)
+    public async Task<
+        ICollection<OrganizationAdminAuthRequest>
+    > GetManyPendingByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationAdminAuthRequest>(
                 $"[{Schema}].[AuthRequest_ReadPendingByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
 
-    public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
+    public async Task<
+        ICollection<OrganizationAdminAuthRequest>
+    > GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationAdminAuthRequest>(
                 $"[{Schema}].[AuthRequest_ReadAdminApprovalsByIds]",
                 new { OrganizationId = organizationId, Ids = ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -90,7 +102,8 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
             var results = await connection.ExecuteAsync(
                 $"[dbo].[AuthRequest_UpdateMany]",
                 new { jsonData = JsonSerializer.Serialize(authRequests) },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

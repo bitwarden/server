@@ -13,6 +13,7 @@ public class OrganizationUserInviteRequestModel
     [Required]
     [StrictEmailAddressList]
     public IEnumerable<string> Emails { get; set; }
+
     [Required]
     [EnumDataType(typeof(OrganizationUserType))]
     public OrganizationUserType? Type { get; set; }
@@ -39,10 +40,13 @@ public class OrganizationUserAcceptInitRequestModel
 {
     [Required]
     public string Token { get; set; }
+
     [Required]
     public string Key { get; set; }
+
     [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string CollectionName { get; set; }
@@ -52,6 +56,7 @@ public class OrganizationUserAcceptRequestModel
 {
     [Required]
     public string Token { get; set; }
+
     // Used to auto-enroll in master password reset
     public string ResetPasswordKey { get; set; }
 }
@@ -66,6 +71,7 @@ public class OrganizationUserBulkConfirmRequestModelEntry
 {
     [Required]
     public Guid Id { get; set; }
+
     [Required]
     public string Key { get; set; }
 }
@@ -112,7 +118,8 @@ public class OrganizationUserBulkRequestModel
     public IEnumerable<Guid> Ids { get; set; }
 }
 
-public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
+public class ResetPasswordWithOrgIdRequestModel
+    : OrganizationUserResetPasswordEnrollmentRequestModel
 {
     [Required]
     public Guid OrganizationId { get; set; }

@@ -5,5 +5,7 @@ namespace Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 
 public interface IMemberAccessCipherDetailsQuery
 {
-    Task<IEnumerable<MemberAccessCipherDetails>> GetMemberAccessCipherDetails(MemberAccessCipherDetailsRequest request);
+    Task<IEnumerable<MemberAccessCipherDetails>> GetMemberAccessCipherDetails(
+        MemberAccessCipherDetailsRequest request
+    );
 }

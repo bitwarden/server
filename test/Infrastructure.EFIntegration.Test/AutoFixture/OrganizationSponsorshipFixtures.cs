@@ -36,20 +36,33 @@ internal class EfOrganizationSponsorship : ICustomization
         fixture.Customizations.Add(new GlobalSettingsBuilder());
         fixture.Customizations.Add(new OrganizationSponsorshipBuilder());
         fixture.Customizations.Add(new OrganizationUserBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationSponsorshipRepository>());
+        fixture.Customizations.Add(
+            new EfRepositoryListBuilder<OrganizationSponsorshipRepository>()
+        );
         fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
     }
 }
 
 internal class EfOrganizationSponsorshipAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfOrganizationSponsorshipAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganizationSponsorship(), new EfOrganization())
-    { }
+    public EfOrganizationSponsorshipAutoDataAttribute()
+        : base(
+            new SutProviderCustomization(),
+            new EfOrganizationSponsorship(),
+            new EfOrganization()
+        ) { }
 }
 
 internal class InlineEfOrganizationSponsorshipAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfOrganizationSponsorshipAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfOrganizationSponsorship), typeof(EfOrganization) }, values)
-    { }
+    public InlineEfOrganizationSponsorshipAutoDataAttribute(params object[] values)
+        : base(
+            new[]
+            {
+                typeof(SutProviderCustomization),
+                typeof(EfOrganizationSponsorship),
+                typeof(EfOrganization),
+            },
+            values
+        ) { }
 }

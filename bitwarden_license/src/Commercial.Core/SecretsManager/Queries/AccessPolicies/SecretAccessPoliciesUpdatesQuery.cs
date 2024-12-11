@@ -15,10 +15,18 @@ public class SecretAccessPoliciesUpdatesQuery : ISecretAccessPoliciesUpdatesQuer
         _accessPolicyRepository = accessPolicyRepository;
     }
 
-    public async Task<SecretAccessPoliciesUpdates> GetAsync(SecretAccessPolicies accessPolicies, Guid userId)
+    public async Task<SecretAccessPoliciesUpdates> GetAsync(
+        SecretAccessPolicies accessPolicies,
+        Guid userId
+    )
     {
-        var currentPolicies = await _accessPolicyRepository.GetSecretAccessPoliciesAsync(accessPolicies.SecretId, userId);
+        var currentPolicies = await _accessPolicyRepository.GetSecretAccessPoliciesAsync(
+            accessPolicies.SecretId,
+            userId
+        );
 
-        return currentPolicies == null ? new SecretAccessPoliciesUpdates(accessPolicies) : currentPolicies.GetPolicyUpdates(accessPolicies);
+        return currentPolicies == null
+            ? new SecretAccessPoliciesUpdates(accessPolicies)
+            : currentPolicies.GetPolicyUpdates(accessPolicies);
     }
 }

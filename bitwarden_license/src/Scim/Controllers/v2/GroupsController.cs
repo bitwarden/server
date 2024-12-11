@@ -34,7 +34,8 @@ public class GroupsController : Controller
         IPatchGroupCommand patchGroupCommand,
         IPostGroupCommand postGroupCommand,
         IPutGroupCommand putGroupCommand,
-        ILogger<GroupsController> logger)
+        ILogger<GroupsController> logger
+    )
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
@@ -62,12 +63,20 @@ public class GroupsController : Controller
         Guid organizationId,
         [FromQuery] string filter,
         [FromQuery] int? count,
-        [FromQuery] int? startIndex)
+        [FromQuery] int? startIndex
+    )
     {
-        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(organizationId, filter, count, startIndex);
+        var groupsListQueryResult = await _getGroupsListQuery.GetGroupsListAsync(
+            organizationId,
+            filter,
+            count,
+            startIndex
+        );
         var scimListResponseModel = new ScimListResponseModel<ScimGroupResponseModel>
         {
-            Resources = groupsListQueryResult.groupList.Select(g => new ScimGroupResponseModel(g)).ToList(),
+            Resources = groupsListQueryResult
+                .groupList.Select(g => new ScimGroupResponseModel(g))
+                .ToList(),
             ItemsPerPage = count.GetValueOrDefault(groupsListQueryResult.groupList.Count()),
             TotalResults = groupsListQueryResult.totalResults,
             StartIndex = startIndex.GetValueOrDefault(1),
@@ -76,16 +85,26 @@ public class GroupsController : Controller
     }
 
     [HttpPost("")]
-    public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimGroupRequestModel model)
+    public async Task<IActionResult> Post(
+        Guid organizationId,
+        [FromBody] ScimGroupRequestModel model
+    )
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var group = await _postGroupCommand.PostGroupAsync(organization, model);
         var scimGroupResponseModel = new ScimGroupResponseModel(group);
-        return new CreatedResult(Url.Action(nameof(Get), new { group.OrganizationId, group.Id }), scimGroupResponseModel);
+        return new CreatedResult(
+            Url.Action(nameof(Get), new { group.OrganizationId, group.Id }),
+            scimGroupResponseModel
+        );
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimGroupRequestModel model)
+    public async Task<IActionResult> Put(
+        Guid organizationId,
+        Guid id,
+        [FromBody] ScimGroupRequestModel model
+    )
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var group = await _putGroupCommand.PutGroupAsync(organization, id, model);
@@ -95,7 +114,11 @@ public class GroupsController : Controller
     }
 
     [HttpPatch("{id}")]
-    public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
+    public async Task<IActionResult> Patch(
+        Guid organizationId,
+        Guid id,
+        [FromBody] ScimPatchModel model
+    )
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         await _patchGroupCommand.PatchGroupAsync(organization, id, model);

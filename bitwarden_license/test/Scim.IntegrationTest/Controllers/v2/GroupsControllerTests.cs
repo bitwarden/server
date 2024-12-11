@@ -38,14 +38,17 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             Id = groupId,
             DisplayName = "Test Group 1",
             ExternalId = "A",
-            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsGetAsync(organizationId, groupId);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         Assert.Contains("application/scim+json", context.Response.Headers.ContentType.ToString());
@@ -60,14 +63,17 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         {
             Status = StatusCodes.Status404NotFound,
             Detail = "Group not found.",
-            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError },
         };
 
         var context = await _factory.GroupsGetAsync(organizationId, groupId);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -90,24 +96,34 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                     Id = ScimApplicationFactory.TestGroupId1,
                     DisplayName = "Test Group 1",
                     ExternalId = "A",
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup },
                 },
                 new ScimGroupResponseModel
                 {
                     Id = ScimApplicationFactory.TestGroupId2,
                     DisplayName = "Test Group 2",
                     ExternalId = "B",
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
-                }
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup },
+                },
             },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse },
         };
 
-        var context = await _factory.GroupsGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.GroupsGetListAsync(
+            organizationId,
+            filter,
+            itemsPerPage,
+            startIndex
+        );
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<
+            ScimListResponseModel<ScimGroupResponseModel>
+        >(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -130,17 +146,27 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                     Id = ScimApplicationFactory.TestGroupId2,
                     DisplayName = "Test Group 2",
                     ExternalId = "B",
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
-                }
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup },
+                },
             },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse },
         };
 
-        var context = await _factory.GroupsGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.GroupsGetListAsync(
+            organizationId,
+            filter,
+            itemsPerPage,
+            startIndex
+        );
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<
+            ScimListResponseModel<ScimGroupResponseModel>
+        >(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -163,18 +189,27 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                     Id = ScimApplicationFactory.TestGroupId3,
                     DisplayName = "Test Group 3",
                     ExternalId = "C",
-                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
-                }
+                    Schemas = new List<string> { ScimConstants.Scim2SchemaGroup },
+                },
             },
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse },
         };
 
-
-        var context = await _factory.GroupsGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.GroupsGetListAsync(
+            organizationId,
+            filter,
+            itemsPerPage,
+            startIndex
+        );
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<
+            ScimListResponseModel<ScimGroupResponseModel>
+        >(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -191,15 +226,24 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             TotalResults = 0,
             StartIndex = startIndex.Value,
             Resources = new List<ScimGroupResponseModel>(),
-            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaListResponse },
         };
 
-
-        var context = await _factory.GroupsGetListAsync(organizationId, filter, itemsPerPage, startIndex);
+        var context = await _factory.GroupsGetListAsync(
+            organizationId,
+            filter,
+            itemsPerPage,
+            startIndex
+        );
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimListResponseModel<ScimGroupResponseModel>>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<
+            ScimListResponseModel<ScimGroupResponseModel>
+        >(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -215,15 +259,19 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             ExternalId = externalId.ToString(),
             Members = new List<ScimGroupRequestModel.GroupMembersModel>
             {
-                new ScimGroupRequestModel.GroupMembersModel { Display = "user1@example.com", Value = ScimApplicationFactory.TestOrganizationUserId1.ToString() }
+                new ScimGroupRequestModel.GroupMembersModel
+                {
+                    Display = "user1@example.com",
+                    Value = ScimApplicationFactory.TestOrganizationUserId1.ToString(),
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
         var expectedResponse = new ScimGroupResponseModel
         {
             DisplayName = displayName,
             ExternalId = externalId,
-            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPostAsync(organizationId, inputModel);
@@ -233,15 +281,25 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         // Verifying that the response includes a header with the URL of the created Group
         Assert.Contains(context.Response.Headers, h => h.Key == "Location");
 
-        var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupCount + 1, databaseContext.Groups.Count());
-        Assert.True(databaseContext.Groups.Any(g => g.Name == displayName && g.ExternalId == externalId));
+        Assert.True(
+            databaseContext.Groups.Any(g => g.Name == displayName && g.ExternalId == externalId)
+        );
 
         Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == responseModel.Id && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1));
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.GroupId == responseModel.Id
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1
+            )
+        );
     }
 
     [Theory]
@@ -256,7 +314,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             DisplayName = displayName,
             ExternalId = null,
             Members = null,
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPostAsync(organizationId, model);
@@ -273,7 +331,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             DisplayName = "New Group",
             ExternalId = "A",
             Members = null,
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPostAsync(organizationId, model);
@@ -297,24 +355,35 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             ExternalId = "A",
             Members = new List<ScimGroupRequestModel.GroupMembersModel>
             {
-                new ScimGroupRequestModel.GroupMembersModel { Display = "user2@example.com", Value = ScimApplicationFactory.TestOrganizationUserId2.ToString() },
-                new ScimGroupRequestModel.GroupMembersModel { Display = "user3@example.com", Value = ScimApplicationFactory.TestOrganizationUserId3.ToString() }
+                new ScimGroupRequestModel.GroupMembersModel
+                {
+                    Display = "user2@example.com",
+                    Value = ScimApplicationFactory.TestOrganizationUserId2.ToString(),
+                },
+                new ScimGroupRequestModel.GroupMembersModel
+                {
+                    Display = "user3@example.com",
+                    Value = ScimApplicationFactory.TestOrganizationUserId3.ToString(),
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
         var expectedResponse = new ScimGroupResponseModel
         {
             Id = groupId,
             DisplayName = newGroupName,
             ExternalId = "A",
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPutAsync(organizationId, groupId, inputModel);
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
@@ -322,8 +391,18 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(newGroupName, firstGroup.Name);
 
         Assert.Equal(2, databaseContext.GroupUsers.Count(gu => gu.GroupId == groupId));
-        Assert.NotNull(databaseContext.GroupUsers.FirstOrDefault(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2));
-        Assert.NotNull(databaseContext.GroupUsers.FirstOrDefault(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId3));
+        Assert.NotNull(
+            databaseContext.GroupUsers.FirstOrDefault(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2
+            )
+        );
+        Assert.NotNull(
+            databaseContext.GroupUsers.FirstOrDefault(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId3
+            )
+        );
     }
 
     [Fact]
@@ -337,20 +416,23 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             DisplayName = newGroupName,
             ExternalId = "A",
             Members = new List<ScimGroupRequestModel.GroupMembersModel>(),
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
         var expectedResponse = new ScimErrorResponseModel
         {
             Status = StatusCodes.Status404NotFound,
             Detail = "Group not found.",
-            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError },
         };
 
         var context = await _factory.GroupsPutAsync(organizationId, groupId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -367,10 +449,12 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                 new ScimPatchModel.OperationModel
                 {
                     Op = "replace",
-                    Value = JsonDocument.Parse($"{{\"displayName\":\"{newDisplayName}\"}}").RootElement
-                }
+                    Value = JsonDocument
+                        .Parse($"{{\"displayName\":\"{newDisplayName}\"}}")
+                        .RootElement,
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
@@ -382,8 +466,16 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(newDisplayName, group.Name);
 
         Assert.Equal(_initialGroupUsersCount, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId4));
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1
+            )
+        );
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId4
+            )
+        );
     }
 
     [Fact]
@@ -399,10 +491,14 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                 {
                     Op = "replace",
                     Path = "members",
-                    Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}}]").RootElement
-                }
+                    Value = JsonDocument
+                        .Parse(
+                            $"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}}]"
+                        )
+                        .RootElement,
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
@@ -429,11 +525,12 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                 new ScimPatchModel.OperationModel
                 {
                     Op = "add",
-                    Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId2}\"]",
-                    Value = JsonDocument.Parse("{}").RootElement
-                }
+                    Path =
+                        $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId2}\"]",
+                    Value = JsonDocument.Parse("{}").RootElement,
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
@@ -442,9 +539,24 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId4));
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1
+            )
+        );
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2
+            )
+        );
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId4
+            )
+        );
     }
 
     [Fact]
@@ -460,10 +572,14 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                 {
                     Op = "add",
                     Path = "members",
-                    Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}},{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId3}\"}}]").RootElement
-                }
+                    Value = JsonDocument
+                        .Parse(
+                            $"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId2}\"}},{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId3}\"}}]"
+                        )
+                        .RootElement,
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
@@ -471,8 +587,18 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId3));
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2
+            )
+        );
+        Assert.True(
+            databaseContext.GroupUsers.Any(gu =>
+                gu.GroupId == groupId
+                && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId3
+            )
+        );
     }
 
     [Fact]
@@ -488,16 +614,19 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                 new ScimPatchModel.OperationModel
                 {
                     Op = "remove",
-                    Path = $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId1}\"]",
-                    Value = JsonDocument.Parse("{}").RootElement
+                    Path =
+                        $"members[value eq \"{ScimApplicationFactory.TestOrganizationUserId1}\"]",
+                    Value = JsonDocument.Parse("{}").RootElement,
                 },
                 new ScimPatchModel.OperationModel
                 {
                     Op = "replace",
-                    Value = JsonDocument.Parse($"{{\"displayName\":\"{newDisplayName}\"}}").RootElement
-                }
+                    Value = JsonDocument
+                        .Parse($"{{\"displayName\":\"{newDisplayName}\"}}")
+                        .RootElement,
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
@@ -525,10 +654,14 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
                 {
                     Op = "remove",
                     Path = "members",
-                    Value = JsonDocument.Parse($"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId1}\"}}, {{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId4}\"}}]").RootElement
-                }
+                    Value = JsonDocument
+                        .Parse(
+                            $"[{{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId1}\"}}, {{\"value\":\"{ScimApplicationFactory.TestOrganizationUserId4}\"}}]"
+                        )
+                        .RootElement,
+                },
             },
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
@@ -547,20 +680,23 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         var inputModel = new Models.ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
-            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
+            Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup },
         };
         var expectedResponse = new ScimErrorResponseModel
         {
             Status = StatusCodes.Status404NotFound,
             Detail = "Group not found.",
-            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError },
         };
 
         var context = await _factory.GroupsPatchAsync(organizationId, groupId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
@@ -576,7 +712,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupCount - 1, databaseContext.Groups.Count());
-        Assert.True(databaseContext.Groups.FirstOrDefault(g => g.Id == groupId) == null);
+        Assert.Null(databaseContext.Groups.FirstOrDefault(g => g.Id == groupId));
     }
 
     [Fact]
@@ -588,14 +724,17 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         {
             Status = StatusCodes.Status404NotFound,
             Detail = "Group not found.",
-            Schemas = new List<string> { ScimConstants.Scim2SchemaError }
+            Schemas = new List<string> { ScimConstants.Scim2SchemaError },
         };
 
         var context = await _factory.GroupsDeleteAsync(organizationId, groupId);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
-        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+        var responseModel = JsonSerializer.Deserialize<ScimErrorResponseModel>(
+            context.Response.Body,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 }

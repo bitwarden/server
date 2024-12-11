@@ -9,7 +9,8 @@ public class SystemUser : IActingUser
         SystemUserType = systemUser;
     }
 
-    public Guid? UserId => throw new Exception($"{nameof(SystemUserType)} does not have a {nameof(UserId)}.");
+    public Guid? UserId =>
+        throw new Exception($"{nameof(SystemUserType)} does not have a {nameof(UserId)}.");
 
     public bool IsOrganizationOwnerOrProvider => false;
     public EventSystemUser? SystemUserType { get; }

@@ -35,9 +35,7 @@
         "generated_from": null,
         "last4": "4242",
         "networks": {
-          "available": [
-            "visa"
-          ],
+          "available": ["visa"],
           "preferred": null
         },
         "three_d_secure_usage": {
@@ -48,8 +46,7 @@
       "created": 1695910503,
       "customer": "cus_OimYrxnMTMMK1E",
       "livemode": false,
-      "metadata": {
-      },
+      "metadata": {},
       "type": "card"
     }
   },

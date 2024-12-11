@@ -20,14 +20,13 @@ public class LaunchDarklyFeatureService : IFeatureService
     private const string _contextKindServiceAccount = "service-account";
 
     private const string _contextAttributeClientVersion = "client-version";
-    private const string _contextAttributeClientVersionIsPrerelease = "client-version-is-prerelease";
+    private const string _contextAttributeClientVersionIsPrerelease =
+        "client-version-is-prerelease";
     private const string _contextAttributeDeviceType = "device-type";
     private const string _contextAttributeClientType = "client-type";
     private const string _contextAttributeOrganizations = "organizations";
 
-    public LaunchDarklyFeatureService(
-        ILdClient client,
-        ICurrentContext currentContext)
+    public LaunchDarklyFeatureService(ILdClient client, ICurrentContext currentContext)
     {
         _client = client;
         _currentContext = currentContext;
@@ -40,11 +39,15 @@ public class LaunchDarklyFeatureService : IFeatureService
 
         if (!string.IsNullOrEmpty(globalSettings.ProjectName))
         {
-            ldConfig.ApplicationInfo(Components.ApplicationInfo()
-                .ApplicationId(globalSettings.ProjectName)
-                .ApplicationName(globalSettings.ProjectName)
-                .ApplicationVersion(AssemblyHelpers.GetGitHash() ?? $"v{AssemblyHelpers.GetVersion()}")
-                .ApplicationVersionName(AssemblyHelpers.GetVersion())
+            ldConfig.ApplicationInfo(
+                Components
+                    .ApplicationInfo()
+                    .ApplicationId(globalSettings.ProjectName)
+                    .ApplicationName(globalSettings.ProjectName)
+                    .ApplicationVersion(
+                        AssemblyHelpers.GetGitHash() ?? $"v{AssemblyHelpers.GetVersion()}"
+                    )
+                    .ApplicationVersionName(AssemblyHelpers.GetVersion())
             );
         }
 
@@ -54,7 +57,8 @@ public class LaunchDarklyFeatureService : IFeatureService
             if (File.Exists(globalSettings.LaunchDarkly?.FlagDataFilePath))
             {
                 ldConfig.DataSource(
-                    FileData.DataSource()
+                    FileData
+                        .DataSource()
                         .FilePaths(globalSettings.LaunchDarkly?.FlagDataFilePath)
                         .AutoUpdate(true)
                 );
@@ -145,14 +149,23 @@ public class LaunchDarklyFeatureService : IFeatureService
         {
             if (_currentContext.ClientVersion != null)
             {
-                builder.Set(_contextAttributeClientVersion, _currentContext.ClientVersion.ToString());
-                builder.Set(_contextAttributeClientVersionIsPrerelease, _currentContext.ClientVersionIsPrerelease);
+                builder.Set(
+                    _contextAttributeClientVersion,
+                    _currentContext.ClientVersion.ToString()
+                );
+                builder.Set(
+                    _contextAttributeClientVersionIsPrerelease,
+                    _currentContext.ClientVersionIsPrerelease
+                );
             }
 
             if (_currentContext.DeviceType.HasValue)
             {
                 builder.Set(_contextAttributeDeviceType, (int)_currentContext.DeviceType.Value);
-                builder.Set(_contextAttributeClientType, (int)DeviceTypes.ToClientType(_currentContext.DeviceType.Value));
+                builder.Set(
+                    _contextAttributeClientType,
+                    (int)DeviceTypes.ToClientType(_currentContext.DeviceType.Value)
+                );
             }
         }
 
@@ -165,7 +178,9 @@ public class LaunchDarklyFeatureService : IFeatureService
                     ContextBuilder ldUser;
                     if (_currentContext.UserId.HasValue)
                     {
-                        ldUser = LaunchDarkly.Sdk.Context.Builder(_currentContext.UserId.Value.ToString());
+                        ldUser = LaunchDarkly.Sdk.Context.Builder(
+                            _currentContext.UserId.Value.ToString()
+                        );
                     }
                     else
                     {
@@ -179,7 +194,9 @@ public class LaunchDarklyFeatureService : IFeatureService
 
                     if (_currentContext.Organizations?.Any() ?? false)
                     {
-                        var ldOrgs = _currentContext.Organizations.Select(o => LdValue.Of(o.Id.ToString()));
+                        var ldOrgs = _currentContext.Organizations.Select(o =>
+                            LdValue.Of(o.Id.ToString())
+                        );
                         ldUser.Set(_contextAttributeOrganizations, LdValue.ArrayFrom(ldOrgs));
                     }
 
@@ -191,7 +208,9 @@ public class LaunchDarklyFeatureService : IFeatureService
                 {
                     if (_currentContext.OrganizationId.HasValue)
                     {
-                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(_currentContext.OrganizationId.Value.ToString());
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(
+                            _currentContext.OrganizationId.Value.ToString()
+                        );
 
                         ldOrg.Kind(_contextKindOrganization);
                         SetCommonContextAttributes(ldOrg);
@@ -205,7 +224,9 @@ public class LaunchDarklyFeatureService : IFeatureService
                 {
                     if (_currentContext.UserId.HasValue)
                     {
-                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(_currentContext.UserId.Value.ToString());
+                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(
+                            _currentContext.UserId.Value.ToString()
+                        );
 
                         ldServiceAccount.Kind(_contextKindServiceAccount);
                         SetCommonContextAttributes(ldServiceAccount);
@@ -214,7 +235,9 @@ public class LaunchDarklyFeatureService : IFeatureService
                     }
                     else if (_currentContext.OrganizationId.HasValue)
                     {
-                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(_currentContext.OrganizationId.Value.ToString());
+                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(
+                            _currentContext.OrganizationId.Value.ToString()
+                        );
 
                         ldServiceAccount.Kind(_contextKindServiceAccount);
                         SetCommonContextAttributes(ldServiceAccount);

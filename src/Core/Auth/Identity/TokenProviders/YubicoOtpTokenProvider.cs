@@ -13,9 +13,7 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
     private readonly IServiceProvider _serviceProvider;
     private readonly GlobalSettings _globalSettings;
 
-    public YubicoOtpTokenProvider(
-        IServiceProvider serviceProvider,
-        GlobalSettings globalSettings)
+    public YubicoOtpTokenProvider(IServiceProvider serviceProvider, GlobalSettings globalSettings)
     {
         _serviceProvider = serviceProvider;
         _globalSettings = globalSettings;
@@ -35,7 +33,10 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
             return false;
         }
 
-        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
+        return await userService.TwoFactorProviderIsEnabledAsync(
+            TwoFactorProviderType.YubiKey,
+            user
+        );
     }
 
     public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
@@ -43,7 +44,12 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
         return Task.FromResult<string>(null);
     }
 
-    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    public async Task<bool> ValidateAsync(
+        string purpose,
+        string token,
+        UserManager<User> manager,
+        User user
+    )
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
         if (!await userService.CanAccessPremium(user))
@@ -65,7 +71,10 @@ public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
         }
 
         var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
-        if (_globalSettings.Yubico.ValidationUrls != null && _globalSettings.Yubico.ValidationUrls.Length > 0)
+        if (
+            _globalSettings.Yubico.ValidationUrls != null
+            && _globalSettings.Yubico.ValidationUrls.Length > 0
+        )
         {
             client.SetUrls(_globalSettings.Yubico.ValidationUrls);
         }

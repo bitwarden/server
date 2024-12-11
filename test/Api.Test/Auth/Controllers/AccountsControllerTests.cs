@@ -35,7 +35,6 @@ namespace Bit.Api.Test.Auth.Controllers;
 
 public class AccountsControllerTests : IDisposable
 {
-
     private readonly AccountsController _sut;
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
@@ -52,17 +51,30 @@ public class AccountsControllerTests : IDisposable
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
-    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
-    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
-    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
-    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-        _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-            IReadOnlyList<OrganizationUser>>
-        _resetPasswordValidator;
-    private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
-        _webauthnKeyRotationValidator;
-
+    private readonly IRotationValidator<
+        IEnumerable<CipherWithIdRequestModel>,
+        IEnumerable<Cipher>
+    > _cipherValidator;
+    private readonly IRotationValidator<
+        IEnumerable<FolderWithIdRequestModel>,
+        IEnumerable<Folder>
+    > _folderValidator;
+    private readonly IRotationValidator<
+        IEnumerable<SendWithIdRequestModel>,
+        IReadOnlyList<Send>
+    > _sendValidator;
+    private readonly IRotationValidator<
+        IEnumerable<EmergencyAccessWithIdRequestModel>,
+        IEnumerable<EmergencyAccess>
+    > _emergencyAccessValidator;
+    private readonly IRotationValidator<
+        IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+        IReadOnlyList<OrganizationUser>
+    > _resetPasswordValidator;
+    private readonly IRotationValidator<
+        IEnumerable<WebAuthnLoginRotateKeyRequestModel>,
+        IEnumerable<WebAuthnLoginRotateKeyData>
+    > _webauthnKeyRotationValidator;
 
     public AccountsControllerTests()
     {
@@ -80,17 +92,33 @@ public class AccountsControllerTests : IDisposable
         _subscriberService = Substitute.For<ISubscriberService>();
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _currentContext = Substitute.For<ICurrentContext>();
-        _cipherValidator =
-            Substitute.For<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
-        _folderValidator =
-            Substitute.For<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>();
-        _sendValidator = Substitute.For<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>();
-        _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
-            IEnumerable<EmergencyAccess>>>();
-        _webauthnKeyRotationValidator = Substitute.For<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>();
-        _resetPasswordValidator = Substitute
-            .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-                IReadOnlyList<OrganizationUser>>>();
+        _cipherValidator = Substitute.For<
+            IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>
+        >();
+        _folderValidator = Substitute.For<
+            IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>
+        >();
+        _sendValidator = Substitute.For<
+            IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>
+        >();
+        _emergencyAccessValidator = Substitute.For<
+            IRotationValidator<
+                IEnumerable<EmergencyAccessWithIdRequestModel>,
+                IEnumerable<EmergencyAccess>
+            >
+        >();
+        _webauthnKeyRotationValidator = Substitute.For<
+            IRotationValidator<
+                IEnumerable<WebAuthnLoginRotateKeyRequestModel>,
+                IEnumerable<WebAuthnLoginRotateKeyData>
+            >
+        >();
+        _resetPasswordValidator = Substitute.For<
+            IRotationValidator<
+                IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+                IReadOnlyList<OrganizationUser>
+            >
+        >();
 
         _sut = new AccountsController(
             _globalSettings,
@@ -194,7 +222,10 @@ public class AccountsControllerTests : IDisposable
             () => _sut.PostEmailToken(new EmailTokenRequestModel())
         );
 
-        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
+        Assert.Equal(
+            "Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.",
+            result.Message
+        );
     }
 
     [Fact]
@@ -202,12 +233,15 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Success));
+        _userService
+            .ChangeEmailAsync(user, default, default, default, default, default)
+            .Returns(Task.FromResult(IdentityResult.Success));
 
         await _sut.PostEmail(new EmailRequestModel());
 
-        await _userService.Received(1).ChangeEmailAsync(user, default, default, default, default, default);
+        await _userService
+            .Received(1)
+            .ChangeEmailAsync(user, default, default, default, default, default);
     }
 
     [Fact]
@@ -215,14 +249,17 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Success));
+        _userService
+            .ChangeEmailAsync(user, default, default, default, default, default)
+            .Returns(Task.FromResult(IdentityResult.Success));
         _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
 
         await _sut.PostEmail(new EmailRequestModel());
 
-        await _userService.Received(1).ChangeEmailAsync(user, default, default, default, default, default);
+        await _userService
+            .Received(1)
+            .ChangeEmailAsync(user, default, default, default, default, default);
     }
 
     [Fact]
@@ -240,8 +277,9 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangeEmailAsync(user, default, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
+        _userService
+            .ChangeEmailAsync(user, default, default, default, default, default)
+            .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostEmail(new EmailRequestModel())
@@ -260,7 +298,10 @@ public class AccountsControllerTests : IDisposable
             () => _sut.PostEmail(new EmailRequestModel())
         );
 
-        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
+        Assert.Equal(
+            "Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.",
+            result.Message
+        );
     }
 
     [Fact]
@@ -279,9 +320,7 @@ public class AccountsControllerTests : IDisposable
     {
         ConfigureUserServiceToReturnNullPrincipal();
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _sut.PostVerifyEmail()
-        );
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostVerifyEmail());
     }
 
     [Fact]
@@ -289,10 +328,13 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidIdFor(user);
-        _userService.ConfirmEmailAsync(user, Arg.Any<string>())
-                    .Returns(Task.FromResult(IdentityResult.Success));
+        _userService
+            .ConfirmEmailAsync(user, Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Success));
 
-        await _sut.PostVerifyEmailToken(new VerifyEmailRequestModel { UserId = "12345678-1234-1234-1234-123456789012" });
+        await _sut.PostVerifyEmailToken(
+            new VerifyEmailRequestModel { UserId = "12345678-1234-1234-1234-123456789012" }
+        );
 
         await _userService.Received(1).ConfirmEmailAsync(user, Arg.Any<string>());
     }
@@ -304,7 +346,10 @@ public class AccountsControllerTests : IDisposable
         ConfigureUserServiceToReturnNullUserId();
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(
-            () => _sut.PostVerifyEmailToken(new VerifyEmailRequestModel { UserId = "12345678-1234-1234-1234-123456789012" })
+            () =>
+                _sut.PostVerifyEmailToken(
+                    new VerifyEmailRequestModel { UserId = "12345678-1234-1234-1234-123456789012" }
+                )
         );
     }
 
@@ -313,11 +358,15 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidIdFor(user);
-        _userService.ConfirmEmailAsync(user, Arg.Any<string>())
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
+        _userService
+            .ConfirmEmailAsync(user, Arg.Any<string>())
+            .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostVerifyEmailToken(new VerifyEmailRequestModel { UserId = "12345678-1234-1234-1234-123456789012" })
+            () =>
+                _sut.PostVerifyEmailToken(
+                    new VerifyEmailRequestModel { UserId = "12345678-1234-1234-1234-123456789012" }
+                )
         );
     }
 
@@ -326,12 +375,15 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangePasswordAsync(user, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Success));
+        _userService
+            .ChangePasswordAsync(user, default, default, default, default)
+            .Returns(Task.FromResult(IdentityResult.Success));
 
         await _sut.PostPassword(new PasswordRequestModel());
 
-        await _userService.Received(1).ChangePasswordAsync(user, default, default, default, default);
+        await _userService
+            .Received(1)
+            .ChangePasswordAsync(user, default, default, default, default);
     }
 
     [Fact]
@@ -349,8 +401,9 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangePasswordAsync(user, default, default, default, default)
-                    .Returns(Task.FromResult(IdentityResult.Failed()));
+        _userService
+            .ChangePasswordAsync(user, default, default, default, default)
+            .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostPassword(new PasswordRequestModel())
@@ -417,17 +470,17 @@ public class AccountsControllerTests : IDisposable
         );
     }
 
-
     [Theory]
-    [BitAutoData(true, false)]  // User has PublicKey and PrivateKey, and Keys in request are NOT null
-    [BitAutoData(true, true)]   // User has PublicKey and PrivateKey, and Keys in request are null
+    [BitAutoData(true, false)] // User has PublicKey and PrivateKey, and Keys in request are NOT null
+    [BitAutoData(true, true)] // User has PublicKey and PrivateKey, and Keys in request are null
     [BitAutoData(false, false)] // User has neither PublicKey nor PrivateKey, and Keys in request are NOT null
-    [BitAutoData(false, true)]  // User has neither PublicKey nor PrivateKey, and Keys in request are null
+    [BitAutoData(false, true)] // User has neither PublicKey nor PrivateKey, and Keys in request are null
     public async Task PostSetPasswordAsync_WhenUserExistsAndSettingPasswordSucceeds_ShouldHandleKeysCorrectlyAndReturn(
-    bool hasExistingKeys,
-    bool shouldSetKeysToNull,
-    User user,
-    SetPasswordRequestModel setPasswordRequestModel)
+        bool hasExistingKeys,
+        bool shouldSetKeysToNull,
+        User user,
+        SetPasswordRequestModel setPasswordRequestModel
+    )
     {
         // Arrange
         const string existingPublicKey = "existingPublicKey";
@@ -456,28 +509,34 @@ public class AccountsControllerTests : IDisposable
             setPasswordRequestModel.Keys = new KeysRequestModel()
             {
                 PublicKey = newPublicKey,
-                EncryptedPrivateKey = newEncryptedPrivateKey
+                EncryptedPrivateKey = newEncryptedPrivateKey,
             };
         }
 
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+        _userService
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand
+            .SetInitialMasterPasswordAsync(
                 user,
                 setPasswordRequestModel.MasterPasswordHash,
                 setPasswordRequestModel.Key,
-                setPasswordRequestModel.OrgIdentifier)
+                setPasswordRequestModel.OrgIdentifier
+            )
             .Returns(Task.FromResult(IdentityResult.Success));
 
         // Act
         await _sut.PostSetPasswordAsync(setPasswordRequestModel);
 
         // Assert
-        await _setInitialMasterPasswordCommand.Received(1)
+        await _setInitialMasterPasswordCommand
+            .Received(1)
             .SetInitialMasterPasswordAsync(
                 Arg.Is<User>(u => u == user),
                 Arg.Is<string>(s => s == setPasswordRequestModel.MasterPasswordHash),
                 Arg.Is<string>(s => s == setPasswordRequestModel.Key),
-                Arg.Is<string>(s => s == setPasswordRequestModel.OrgIdentifier));
+                Arg.Is<string>(s => s == setPasswordRequestModel.OrgIdentifier)
+            );
 
         // Additional Assertions for User object modifications
         Assert.Equal(setPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
@@ -510,25 +569,43 @@ public class AccountsControllerTests : IDisposable
     [Theory]
     [BitAutoData]
     public async Task PostSetPasswordAsync_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
-        SetPasswordRequestModel setPasswordRequestModel)
+        SetPasswordRequestModel setPasswordRequestModel
+    )
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+        _userService
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult((User)null));
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => _sut.PostSetPasswordAsync(setPasswordRequestModel)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task PostSetPasswordAsync_WhenSettingPasswordFails_ShouldThrowBadRequestException(
         User user,
-        SetPasswordRequestModel model)
+        SetPasswordRequestModel model
+    )
     {
         // Arrange
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
-        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
-            .Returns(Task.FromResult(IdentityResult.Failed(new IdentityError { Description = "Some Error" })));
+        _userService
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand
+            .SetInitialMasterPasswordAsync(
+                Arg.Any<User>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>()
+            )
+            .Returns(
+                Task.FromResult(
+                    IdentityResult.Failed(new IdentityError { Description = "Some Error" })
+                )
+            );
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(model));
@@ -543,9 +620,14 @@ public class AccountsControllerTests : IDisposable
         _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
         _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
 
-        var result = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Delete(new SecretVerificationRequestModel()));
+        var result = await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.Delete(new SecretVerificationRequestModel())
+        );
 
-        Assert.Equal("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
+        Assert.Equal(
+            "Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.",
+            result.Message
+        );
     }
 
     [Fact]
@@ -570,48 +652,41 @@ public class AccountsControllerTests : IDisposable
     // until that day comes.
     private User GenerateExampleUser()
     {
-        return new User
-        {
-            Email = "user@example.com"
-        };
+        return new User { Email = "user@example.com" };
     }
 
     private void ConfigureUserServiceToReturnNullPrincipal()
     {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
-                    .Returns(Task.FromResult((User)null));
+        _userService
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult((User)null));
     }
 
     private void ConfigureUserServiceToReturnValidPrincipalFor(User user)
     {
-        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
-                    .Returns(Task.FromResult(user));
+        _userService
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(Task.FromResult(user));
     }
 
     private void ConfigureUserServiceToRejectPasswordFor(User user)
     {
-        _userService.CheckPasswordAsync(user, Arg.Any<string>())
-                    .Returns(Task.FromResult(false));
+        _userService.CheckPasswordAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
     }
 
     private void ConfigureUserServiceToAcceptPasswordFor(User user)
     {
-        _userService.CheckPasswordAsync(user, Arg.Any<string>())
-                    .Returns(Task.FromResult(true));
-        _userService.VerifySecretAsync(user, Arg.Any<string>())
-                    .Returns(Task.FromResult(true));
+        _userService.CheckPasswordAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
     }
 
     private void ConfigureUserServiceToReturnValidIdFor(User user)
     {
-        _userService.GetUserByIdAsync(Arg.Any<Guid>())
-                    .Returns(Task.FromResult(user));
+        _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(Task.FromResult(user));
     }
 
     private void ConfigureUserServiceToReturnNullUserId()
     {
-        _userService.GetUserByIdAsync(Arg.Any<Guid>())
-                    .Returns(Task.FromResult((User)null));
+        _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(Task.FromResult((User)null));
     }
 }
-

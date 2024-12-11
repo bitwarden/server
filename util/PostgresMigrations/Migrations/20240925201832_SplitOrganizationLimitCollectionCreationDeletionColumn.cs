@@ -17,33 +17,32 @@ public partial class SplitOrganizationLimitCollectionCreationDeletionColumn : Mi
             nullable: false,
             oldClrType: typeof(bool),
             oldType: "boolean",
-            oldDefaultValue: true);
+            oldDefaultValue: true
+        );
 
         migrationBuilder.AddColumn<bool>(
             name: "LimitCollectionCreation",
             table: "Organization",
             type: "boolean",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
 
         migrationBuilder.AddColumn<bool>(
             name: "LimitCollectionDeletion",
             table: "Organization",
             type: "boolean",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "LimitCollectionCreation",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "LimitCollectionCreation", table: "Organization");
 
-        migrationBuilder.DropColumn(
-            name: "LimitCollectionDeletion",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "LimitCollectionDeletion", table: "Organization");
 
         migrationBuilder.AlterColumn<bool>(
             name: "LimitCollectionCreationDeletion",
@@ -52,6 +51,7 @@ public partial class SplitOrganizationLimitCollectionCreationDeletionColumn : Mi
             nullable: false,
             defaultValue: true,
             oldClrType: typeof(bool),
-            oldType: "boolean");
+            oldType: "boolean"
+        );
     }
 }

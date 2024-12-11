@@ -8,11 +8,12 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Billing.Repositories;
 
-public class ProviderPlanRepository(
-    GlobalSettings globalSettings)
+public class ProviderPlanRepository(GlobalSettings globalSettings)
     : Repository<ProviderPlan, Guid>(
         globalSettings.SqlServer.ConnectionString,
-        globalSettings.SqlServer.ReadOnlyConnectionString), IProviderPlanRepository
+        globalSettings.SqlServer.ReadOnlyConnectionString
+    ),
+        IProviderPlanRepository
 {
     public async Task<ICollection<ProviderPlan>> GetByProviderId(Guid providerId)
     {
@@ -21,7 +22,8 @@ public class ProviderPlanRepository(
         var results = await sqlConnection.QueryAsync<ProviderPlan>(
             "[dbo].[ProviderPlan_ReadByProviderId]",
             new { ProviderId = providerId },
-            commandType: CommandType.StoredProcedure);
+            commandType: CommandType.StoredProcedure
+        );
 
         return results.ToArray();
     }

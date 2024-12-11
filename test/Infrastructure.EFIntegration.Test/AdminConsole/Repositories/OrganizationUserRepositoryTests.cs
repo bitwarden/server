@@ -23,11 +23,18 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class OrganizationUserRepositoryTests
 {
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async Task CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
-        OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
-        SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+    public async Task CreateAsync_Works_DataMatches(
+        OrganizationUser orgUser,
+        User user,
+        Organization org,
+        OrganizationUserCompare equalityComparer,
+        List<EfRepo.OrganizationUserRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<EfRepo.UserRepository> efUserRepos,
+        SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
+        SqlRepo.UserRepository sqlUserRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo
+    )
     {
         var savedOrgUsers = new List<OrganizationUser>();
         foreach (var sut in suts)
@@ -73,7 +80,7 @@ public class OrganizationUserRepositoryTests
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
         SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo
-        )
+    )
     {
         var savedOrgUsers = new List<OrganizationUser>();
         foreach (var sut in suts)
@@ -113,10 +120,17 @@ public class OrganizationUserRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async Task DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+    public async Task DeleteAsync_Works_DataMatches(
+        OrganizationUser orgUser,
+        User user,
+        Organization org,
+        List<EfRepo.OrganizationUserRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
+        SqlRepo.UserRepository sqlUserRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo
+    )
     {
         foreach (var sut in suts)
         {
@@ -157,15 +171,69 @@ public class OrganizationUserRepositoryTests
     }
 
     [CiSkippedTheory]
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false)]      // Ordinary user
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, false)]        // Invited user
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Owner, false, OrganizationUserStatusType.Confirmed, true, false)]     // Owner
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.Admin, false, OrganizationUserStatusType.Confirmed, true, false)]     // Admin
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, true, OrganizationUserStatusType.Confirmed, true, false)]       // canManagePolicies
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, true)]       // Provider
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, false, false)]     // Policy disabled
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Confirmed, true, false)]      // No policy of Type
-    [EfPolicyApplicableToUserInlineAutoData(OrganizationUserType.User, false, OrganizationUserStatusType.Invited, true, false)]        // User not minStatus
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        false,
+        OrganizationUserStatusType.Confirmed,
+        true,
+        false
+    )] // Ordinary user
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        false,
+        OrganizationUserStatusType.Invited,
+        true,
+        false
+    )] // Invited user
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.Owner,
+        false,
+        OrganizationUserStatusType.Confirmed,
+        true,
+        false
+    )] // Owner
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.Admin,
+        false,
+        OrganizationUserStatusType.Confirmed,
+        true,
+        false
+    )] // Admin
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        true,
+        OrganizationUserStatusType.Confirmed,
+        true,
+        false
+    )] // canManagePolicies
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        false,
+        OrganizationUserStatusType.Confirmed,
+        true,
+        true
+    )] // Provider
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        false,
+        OrganizationUserStatusType.Confirmed,
+        false,
+        false
+    )] // Policy disabled
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        false,
+        OrganizationUserStatusType.Confirmed,
+        true,
+        false
+    )] // No policy of Type
+    [EfPolicyApplicableToUserInlineAutoData(
+        OrganizationUserType.User,
+        false,
+        OrganizationUserStatusType.Invited,
+        true,
+        false
+    )] // User not minStatus
     public async Task GetByUserIdWithPolicyDetailsAsync_Works_DataMatches(
         // Inline data
         OrganizationUserType userType,
@@ -173,7 +241,6 @@ public class OrganizationUserRepositoryTests
         OrganizationUserStatusType orgUserStatus,
         bool policyEnabled,
         bool isProvider,
-
         // Auto data - models
         Policy policy,
         User user,
@@ -183,7 +250,6 @@ public class OrganizationUserRepositoryTests
         ProviderOrganization providerOrganization,
         ProviderUser providerUser,
         OrganizationUserPolicyDetailsCompare equalityComparer,
-
         // Auto data - EF repos
         List<EfAdminConsoleRepo.PolicyRepository> efPolicyRepository,
         List<EfRepo.UserRepository> efUserRepository,
@@ -192,7 +258,6 @@ public class OrganizationUserRepositoryTests
         List<EfAdminConsoleRepo.ProviderRepository> efProviderRepository,
         List<EfAdminConsoleRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
         List<EfAdminConsoleRepo.ProviderUserRepository> efProviderUserRepository,
-
         // Auto data - SQL repos
         SqlAdminConsoleRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
@@ -201,7 +266,7 @@ public class OrganizationUserRepositoryTests
         SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
         EfAdminConsoleRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,
         EfAdminConsoleRepo.ProviderUserRepository sqlProviderUserRepo
-        )
+    )
     {
         // Combine EF and SQL repos into one list per type
         var policyRepos = efPolicyRepository.ToList<IPolicyRepository>();
@@ -214,7 +279,8 @@ public class OrganizationUserRepositoryTests
         orgUserRepos.Add(sqlOrganizationUserRepo);
         var providerRepos = efProviderRepository.ToList<IProviderRepository>();
         providerRepos.Add(sqlProviderRepo);
-        var providerOrgRepos = efProviderOrganizationRepository.ToList<IProviderOrganizationRepository>();
+        var providerOrgRepos =
+            efProviderOrganizationRepository.ToList<IProviderOrganizationRepository>();
         providerOrgRepos.Add(sqlProviderOrganizationRepo);
         var providerUserRepos = efProviderUserRepository.ToList<IProviderUserRepository>();
         providerUserRepos.Add(sqlProviderUserRepo);
@@ -225,10 +291,10 @@ public class OrganizationUserRepositoryTests
         orgUser.Type = userType;
         orgUser.Status = orgUserStatus;
         var permissionsData = new Permissions { ManagePolicies = canManagePolicies };
-        orgUser.Permissions = JsonSerializer.Serialize(permissionsData, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+        orgUser.Permissions = JsonSerializer.Serialize(
+            permissionsData,
+            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+        );
 
         policy.Enabled = policyEnabled;
         policy.Type = savedPolicyType;
@@ -279,7 +345,8 @@ public class OrganizationUserRepositoryTests
             }
 
             // Act
-            var result = await orgUserRepos[i].GetByUserIdWithPolicyDetailsAsync(savedUser.Id, policy.Type);
+            var result = await orgUserRepos[i]
+                .GetByUserIdWithPolicyDetailsAsync(savedUser.Id, policy.Type);
             results.Add(result.FirstOrDefault());
         }
 

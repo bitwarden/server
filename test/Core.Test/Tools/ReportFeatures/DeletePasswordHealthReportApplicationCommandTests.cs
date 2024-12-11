@@ -16,18 +16,25 @@ public class DeletePasswordHealthReportApplicationCommandTests
 {
     [Theory, BitAutoData]
     public async Task DropPasswordHealthReportApplicationAsync_withValidRequest_Success(
-        SutProvider<DropPasswordHealthReportApplicationCommand> sutProvider)
+        SutProvider<DropPasswordHealthReportApplicationCommand> sutProvider
+    )
     {
         // Arrange
         var fixture = new Fixture();
-        var passwordHealthReportApplications = fixture.CreateMany<PasswordHealthReportApplication>(2).ToList();
+        var passwordHealthReportApplications = fixture
+            .CreateMany<PasswordHealthReportApplication>(2)
+            .ToList();
         // only take one id from the list - we only want to drop one record
-        var request = fixture.Build<DropPasswordHealthReportApplicationRequest>()
-                        .With(x => x.PasswordHealthReportApplicationIds,
-                            passwordHealthReportApplications.Select(x => x.Id).Take(1).ToList())
-                        .Create();
+        var request = fixture
+            .Build<DropPasswordHealthReportApplicationRequest>()
+            .With(
+                x => x.PasswordHealthReportApplicationIds,
+                passwordHealthReportApplications.Select(x => x.Id).Take(1).ToList()
+            )
+            .Create();
 
-        sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .GetByOrganizationIdAsync(Arg.Any<Guid>())
             .Returns(passwordHealthReportApplications);
 
@@ -35,29 +42,39 @@ public class DeletePasswordHealthReportApplicationCommandTests
         await sutProvider.Sut.DropPasswordHealthReportApplicationAsync(request);
 
         // Assert
-        await sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        await sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .Received(1)
             .GetByOrganizationIdAsync(request.OrganizationId);
 
-        await sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        await sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .Received(1)
-            .DeleteAsync(Arg.Is<PasswordHealthReportApplication>(_ =>
-                request.PasswordHealthReportApplicationIds.Contains(_.Id)));
+            .DeleteAsync(
+                Arg.Is<PasswordHealthReportApplication>(_ =>
+                    request.PasswordHealthReportApplicationIds.Contains(_.Id)
+                )
+            );
     }
 
     [Theory, BitAutoData]
     public async Task DropPasswordHealthReportApplicationAsync_withValidRequest_nothingToDrop(
-        SutProvider<DropPasswordHealthReportApplicationCommand> sutProvider)
+        SutProvider<DropPasswordHealthReportApplicationCommand> sutProvider
+    )
     {
         // Arrange
         var fixture = new Fixture();
-        var passwordHealthReportApplications = fixture.CreateMany<PasswordHealthReportApplication>(2).ToList();
+        var passwordHealthReportApplications = fixture
+            .CreateMany<PasswordHealthReportApplication>(2)
+            .ToList();
         // we are passing invalid data
-        var request = fixture.Build<DropPasswordHealthReportApplicationRequest>()
-                .With(x => x.PasswordHealthReportApplicationIds, new List<Guid> { Guid.NewGuid() })
-                        .Create();
+        var request = fixture
+            .Build<DropPasswordHealthReportApplicationRequest>()
+            .With(x => x.PasswordHealthReportApplicationIds, new List<Guid> { Guid.NewGuid() })
+            .Create();
 
-        sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .GetByOrganizationIdAsync(Arg.Any<Guid>())
             .Returns(passwordHealthReportApplications);
 
@@ -65,39 +82,45 @@ public class DeletePasswordHealthReportApplicationCommandTests
         await sutProvider.Sut.DropPasswordHealthReportApplicationAsync(request);
 
         // Assert
-        await sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        await sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .Received(1)
             .GetByOrganizationIdAsync(request.OrganizationId);
 
-        await sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        await sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .Received(0)
             .DeleteAsync(Arg.Any<PasswordHealthReportApplication>());
     }
 
     [Theory, BitAutoData]
     public async Task DropPasswordHealthReportApplicationAsync_withNodata_fails(
-        SutProvider<DropPasswordHealthReportApplicationCommand> sutProvider)
+        SutProvider<DropPasswordHealthReportApplicationCommand> sutProvider
+    )
     {
         // Arrange
         var fixture = new Fixture();
         // we are passing invalid data
-        var request = fixture.Build<DropPasswordHealthReportApplicationRequest>()
-                .Create();
+        var request = fixture.Build<DropPasswordHealthReportApplicationRequest>().Create();
 
-        sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .GetByOrganizationIdAsync(Arg.Any<Guid>())
             .Returns(null as List<PasswordHealthReportApplication>);
 
         // Act
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-                sutProvider.Sut.DropPasswordHealthReportApplicationAsync(request));
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.DropPasswordHealthReportApplicationAsync(request)
+        );
 
         // Assert
-        await sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        await sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .Received(1)
             .GetByOrganizationIdAsync(request.OrganizationId);
 
-        await sutProvider.GetDependency<IPasswordHealthReportApplicationRepository>()
+        await sutProvider
+            .GetDependency<IPasswordHealthReportApplicationRepository>()
             .Received(0)
             .DeleteAsync(Arg.Any<PasswordHealthReportApplication>());
     }

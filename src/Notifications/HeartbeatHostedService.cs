@@ -15,7 +15,8 @@ public class HeartbeatHostedService : IHostedService, IDisposable
     public HeartbeatHostedService(
         ILogger<HeartbeatHostedService> logger,
         IHubContext<NotificationsHub> hubContext,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _logger = logger;
         _hubContext = hubContext;
@@ -41,8 +42,7 @@ public class HeartbeatHostedService : IHostedService, IDisposable
         cancellationToken.ThrowIfCancellationRequested();
     }
 
-    public void Dispose()
-    { }
+    public void Dispose() { }
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {

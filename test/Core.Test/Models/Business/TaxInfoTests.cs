@@ -62,10 +62,12 @@ public class TaxInfoTests
     [InlineData("US", "PH", null, "us_ein")]
     [InlineData("ZA", "PH", null, "za_vat")]
     [InlineData("ABCDEF", "PH", null, null)]
-    public void GetTaxIdType_Success(string billingAddressCountry,
+    public void GetTaxIdType_Success(
+        string billingAddressCountry,
         string taxIdNumber,
         string billingAddressState,
-        string expectedTaxIdType)
+        string expectedTaxIdType
+    )
     {
         var taxInfo = new TaxInfo
         {
@@ -101,7 +103,11 @@ public class TaxInfoTests
     [InlineData("123", "US", true)]
     [InlineData("123", "ZQ12", false)]
     [InlineData("    ", "US", false)]
-    public void HasTaxId_ReturnsExpected(string taxIdNumber, string billingAddressCountry, bool expected)
+    public void HasTaxId_ReturnsExpected(
+        string taxIdNumber,
+        string billingAddressCountry,
+        bool expected
+    )
     {
         var taxInfo = new TaxInfo
         {

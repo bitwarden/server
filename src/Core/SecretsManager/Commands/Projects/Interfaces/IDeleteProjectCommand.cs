@@ -6,4 +6,3 @@ public interface IDeleteProjectCommand
 {
     Task DeleteProjects(IEnumerable<Project> projects);
 }
-

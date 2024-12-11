@@ -41,7 +41,9 @@ public class Startup
         if (!globalSettings.SelfHosted)
         {
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
-            services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+            services.Configure<IpRateLimitPolicies>(
+                Configuration.GetSection("IpRateLimitPolicies")
+            );
         }
 
         // Data Protection
@@ -95,46 +97,68 @@ public class Startup
             .AddDistributedIdentityServices()
             .AddAuthentication()
             .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme)
-            .AddOpenIdConnect("sso", "Single Sign On", options =>
-            {
-                options.Authority = globalSettings.BaseServiceUri.InternalSso;
-                options.RequireHttpsMetadata = !Environment.IsDevelopment() &&
-                    globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
-                options.ClientId = "oidc-identity";
-                options.ClientSecret = globalSettings.OidcIdentityClientKey;
-                options.ResponseMode = "form_post";
-
-                options.SignInScheme = AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
-                options.ResponseType = "code";
-                options.SaveTokens = false;
-                options.GetClaimsFromUserInfoEndpoint = true;
-
-                // Some browsers (safari) won't allow Secure cookies to be set on a http connection
-                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-                options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-
-                options.Events = new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
+            .AddOpenIdConnect(
+                "sso",
+                "Single Sign On",
+                options =>
                 {
-                    OnRedirectToIdentityProvider = context =>
-                    {
-                        // Pass domain_hint onto the sso idp
-                        context.ProtocolMessage.DomainHint = context.Properties.Items["domain_hint"];
-                        context.ProtocolMessage.Parameters.Add("organizationId", context.Properties.Items["organizationId"]);
-                        if (context.Properties.Items.ContainsKey("user_identifier"))
-                        {
-                            context.ProtocolMessage.SessionState = context.Properties.Items["user_identifier"];
-                        }
+                    options.Authority = globalSettings.BaseServiceUri.InternalSso;
+                    options.RequireHttpsMetadata =
+                        !Environment.IsDevelopment()
+                        && globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
+                    options.ClientId = "oidc-identity";
+                    options.ClientSecret = globalSettings.OidcIdentityClientKey;
+                    options.ResponseMode = "form_post";
 
-                        if (context.Properties.Parameters.Count > 0 &&
-                            context.Properties.Parameters.TryGetValue(SsoTokenable.TokenIdentifier, out var tokenValue))
+                    options.SignInScheme =
+                        AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme;
+                    options.ResponseType = "code";
+                    options.SaveTokens = false;
+                    options.GetClaimsFromUserInfoEndpoint = true;
+
+                    // Some browsers (safari) won't allow Secure cookies to be set on a http connection
+                    options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    options.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+
+                    options.Events =
+                        new Microsoft.AspNetCore.Authentication.OpenIdConnect.OpenIdConnectEvents
                         {
-                            var token = tokenValue?.ToString() ?? "";
-                            context.ProtocolMessage.Parameters.Add(SsoTokenable.TokenIdentifier, token);
-                        }
-                        return Task.FromResult(0);
-                    }
-                };
-            });
+                            OnRedirectToIdentityProvider = context =>
+                            {
+                                // Pass domain_hint onto the sso idp
+                                context.ProtocolMessage.DomainHint = context.Properties.Items[
+                                    "domain_hint"
+                                ];
+                                context.ProtocolMessage.Parameters.Add(
+                                    "organizationId",
+                                    context.Properties.Items["organizationId"]
+                                );
+                                if (context.Properties.Items.ContainsKey("user_identifier"))
+                                {
+                                    context.ProtocolMessage.SessionState = context.Properties.Items[
+                                        "user_identifier"
+                                    ];
+                                }
+
+                                if (
+                                    context.Properties.Parameters.Count > 0
+                                    && context.Properties.Parameters.TryGetValue(
+                                        SsoTokenable.TokenIdentifier,
+                                        out var tokenValue
+                                    )
+                                )
+                                {
+                                    var token = tokenValue?.ToString() ?? "";
+                                    context.ProtocolMessage.Parameters.Add(
+                                        SsoTokenable.TokenIdentifier,
+                                        token
+                                    );
+                                }
+                                return Task.FromResult(0);
+                            },
+                        };
+                }
+            );
 
         // IdentityServer
         services.AddCustomIdentityServerServices(Environment, globalSettings);
@@ -152,17 +176,22 @@ public class Startup
         // TODO: no longer be required - see PM-1880
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
+        if (
+            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString)
+            && CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName)
+        )
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
 
         // HttpClients
-        services.AddHttpClient("InternalSso", client =>
-        {
-            client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
-        });
+        services.AddHttpClient(
+            "InternalSso",
+            client =>
+            {
+                client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
+            }
+        );
     }
 
     public void Configure(
@@ -170,7 +199,8 @@ public class Startup
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
-        ILogger<Startup> logger)
+        ILogger<Startup> logger
+    )
     {
         IdentityModelEventSource.ShowPII = true;
 
@@ -182,11 +212,14 @@ public class Startup
         if (!env.IsDevelopment())
         {
             var uri = new Uri(globalSettings.BaseServiceUri.Identity);
-            app.Use(async (ctx, next) =>
-            {
-                ctx.RequestServices.GetRequiredService<IServerUrls>().Origin = $"{uri.Scheme}://{uri.Host}";
-                await next();
-            });
+            app.Use(
+                async (ctx, next) =>
+                {
+                    ctx.RequestServices.GetRequiredService<IServerUrls>().Origin =
+                        $"{uri.Scheme}://{uri.Host}";
+                    await next();
+                }
+            );
         }
 
         if (globalSettings.SelfHosted)
@@ -221,12 +254,18 @@ public class Startup
         app.UseRouting();
 
         // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o =>
-                CoreHelpers.IsCorsOriginAllowed(o, globalSettings) ||
-
-                // If development - allow requests from the Swagger UI so it can authorize
-                (Environment.IsDevelopment() && o == globalSettings.BaseServiceUri.Api))
-            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+        app.UseCors(policy =>
+            policy
+                .SetIsOriginAllowed(o =>
+                    CoreHelpers.IsCorsOriginAllowed(o, globalSettings)
+                    ||
+                    // If development - allow requests from the Swagger UI so it can authorize
+                    (Environment.IsDevelopment() && o == globalSettings.BaseServiceUri.Api)
+                )
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+        );
 
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
@@ -238,6 +277,9 @@ public class Startup
         app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            globalSettings.ProjectName + " started."
+        );
     }
 }

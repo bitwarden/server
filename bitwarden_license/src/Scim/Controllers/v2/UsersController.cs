@@ -32,7 +32,8 @@ public class UsersController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
-        ILogger<UsersController> logger)
+        ILogger<UsersController> logger
+    )
     {
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
@@ -57,12 +58,18 @@ public class UsersController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Get(
         Guid organizationId,
-        [FromQuery] GetUsersQueryParamModel model)
+        [FromQuery] GetUsersQueryParamModel model
+    )
     {
-        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
+        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(
+            organizationId,
+            model
+        );
         var scimListResponseModel = new ScimListResponseModel<ScimUserResponseModel>
         {
-            Resources = usersListQueryResult.userList.Select(u => new ScimUserResponseModel(u)).ToList(),
+            Resources = usersListQueryResult
+                .userList.Select(u => new ScimUserResponseModel(u))
+                .ToList(),
             ItemsPerPage = model.Count,
             TotalResults = usersListQueryResult.totalResults,
             StartIndex = model.StartIndex,
@@ -71,24 +78,32 @@ public class UsersController : Controller
     }
 
     [HttpPost("")]
-    public async Task<IActionResult> Post(Guid organizationId, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Post(
+        Guid organizationId,
+        [FromBody] ScimUserRequestModel model
+    )
     {
         var orgUser = await _postUserCommand.PostUserAsync(organizationId, model);
         var scimUserResponseModel = new ScimUserResponseModel(orgUser);
-        return new CreatedResult(Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }), scimUserResponseModel);
+        return new CreatedResult(
+            Url.Action(nameof(Get), new { orgUser.OrganizationId, orgUser.Id }),
+            scimUserResponseModel
+        );
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Put(Guid organizationId, Guid id, [FromBody] ScimUserRequestModel model)
+    public async Task<IActionResult> Put(
+        Guid organizationId,
+        Guid id,
+        [FromBody] ScimUserRequestModel model
+    )
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(id);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
         {
-            return new NotFoundObjectResult(new ScimErrorResponseModel
-            {
-                Status = 404,
-                Detail = "User not found."
-            });
+            return new NotFoundObjectResult(
+                new ScimErrorResponseModel { Status = 404, Detail = "User not found." }
+            );
         }
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
@@ -106,7 +121,11 @@ public class UsersController : Controller
     }
 
     [HttpPatch("{id}")]
-    public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
+    public async Task<IActionResult> Patch(
+        Guid organizationId,
+        Guid id,
+        [FromBody] ScimPatchModel model
+    )
     {
         await _patchUserCommand.PatchUserAsync(organizationId, id, model);
         return new NoContentResult();
@@ -115,7 +134,11 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, id, EventSystemUser.SCIM);
+        await _removeOrganizationUserCommand.RemoveUserAsync(
+            organizationId,
+            id,
+            EventSystemUser.SCIM
+        );
         return new NoContentResult();
     }
 }

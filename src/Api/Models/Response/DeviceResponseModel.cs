@@ -10,10 +10,7 @@ public class DeviceResponseModel : ResponseModel
     public DeviceResponseModel(Device device)
         : base("device")
     {
-        if (device == null)
-        {
-            throw new ArgumentNullException(nameof(device));
-        }
+        ArgumentNullException.ThrowIfNull(device);
 
         Id = device.Id;
         Name = device.Name;

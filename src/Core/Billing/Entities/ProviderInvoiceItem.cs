@@ -10,13 +10,17 @@ public class ProviderInvoiceItem : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid ProviderId { get; set; }
+
     [MaxLength(50)]
     public string InvoiceId { get; set; } = null!;
+
     [MaxLength(50)]
     public string? InvoiceNumber { get; set; }
     public Guid? ClientId { get; set; }
+
     [MaxLength(50)]
     public string ClientName { get; set; } = null!;
+
     [MaxLength(50)]
     public string PlanName { get; set; } = null!;
     public int AssignedSeats { get; set; }

@@ -10,6 +10,7 @@ public class OrganizationUserOrganizationDetails
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
     public Guid OrganizationUserId { get; set; }
+
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
@@ -42,6 +43,7 @@ public class OrganizationUserOrganizationDetails
     public string PublicKey { get; set; }
     public string PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
+
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }

@@ -7,6 +7,7 @@ public class PaymentRequestModel : ExpandedTaxInfoUpdateRequestModel
 {
     [Required]
     public PaymentMethodType? PaymentMethodType { get; set; }
+
     [Required]
     public string PaymentToken { get; set; }
 }

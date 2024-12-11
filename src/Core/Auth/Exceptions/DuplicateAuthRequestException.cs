@@ -5,8 +5,5 @@ namespace Bit.Core.Auth.Exceptions;
 public class DuplicateAuthRequestException : BadRequestException
 {
     public DuplicateAuthRequestException()
-        : base("An authentication request with the same device already exists.")
-    {
-
-    }
+        : base("An authentication request with the same device already exists.") { }
 }

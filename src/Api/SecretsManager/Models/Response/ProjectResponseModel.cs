@@ -11,10 +11,7 @@ public class ProjectResponseModel : ResponseModel
     public ProjectResponseModel(Project project, bool read, bool write, string obj = _objectName)
         : base(obj)
     {
-        if (project == null)
-        {
-            throw new ArgumentNullException(nameof(project));
-        }
+        ArgumentNullException.ThrowIfNull(project);
 
         Id = project.Id;
         OrganizationId = project.OrganizationId;
@@ -28,10 +25,7 @@ public class ProjectResponseModel : ResponseModel
     public ProjectResponseModel(ProjectPermissionDetails projectDetails, string obj = _objectName)
         : base(obj)
     {
-        if (projectDetails == null)
-        {
-            throw new ArgumentNullException(nameof(projectDetails));
-        }
+        ArgumentNullException.ThrowIfNull(projectDetails);
 
         Id = projectDetails.Project.Id;
         OrganizationId = projectDetails.Project.OrganizationId;
@@ -42,9 +36,8 @@ public class ProjectResponseModel : ResponseModel
         Write = projectDetails.Write;
     }
 
-    public ProjectResponseModel() : base(_objectName)
-    {
-    }
+    public ProjectResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
 

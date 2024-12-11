@@ -20,28 +20,38 @@ public class CreateMultiOrganizationEnterpriseProviderModel : IValidatableObject
 
     public virtual Provider ToProvider()
     {
-        return new Provider
-        {
-            Type = ProviderType.MultiOrganizationEnterprise
-        };
+        return new Provider { Type = ProviderType.MultiOrganizationEnterprise };
     }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(OwnerEmail))
         {
-            var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()?.GetName() ?? nameof(OwnerEmail);
+            var ownerEmailDisplayName =
+                nameof(OwnerEmail)
+                    .GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()
+                    ?.GetName() ?? nameof(OwnerEmail);
             yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
         }
         if (EnterpriseSeatMinimum < 0)
         {
-            var enterpriseSeatMinimumDisplayName = nameof(EnterpriseSeatMinimum).GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()?.GetName() ?? nameof(EnterpriseSeatMinimum);
-            yield return new ValidationResult($"The {enterpriseSeatMinimumDisplayName} field can not be negative.");
+            var enterpriseSeatMinimumDisplayName =
+                nameof(EnterpriseSeatMinimum)
+                    .GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()
+                    ?.GetName() ?? nameof(EnterpriseSeatMinimum);
+            yield return new ValidationResult(
+                $"The {enterpriseSeatMinimumDisplayName} field can not be negative."
+            );
         }
         if (Plan != PlanType.EnterpriseAnnually && Plan != PlanType.EnterpriseMonthly)
         {
-            var planDisplayName = nameof(Plan).GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()?.GetName() ?? nameof(Plan);
-            yield return new ValidationResult($"The {planDisplayName} field must be set to Enterprise Annually or Enterprise Monthly.");
+            var planDisplayName =
+                nameof(Plan)
+                    .GetDisplayAttribute<CreateMultiOrganizationEnterpriseProviderModel>()
+                    ?.GetName() ?? nameof(Plan);
+            yield return new ValidationResult(
+                $"The {planDisplayName} field must be set to Enterprise Annually or Enterprise Monthly."
+            );
         }
     }
 }

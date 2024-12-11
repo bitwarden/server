@@ -19,7 +19,14 @@ public class AuthRequestMapperProfile : Profile
         CreateMap<Core.Auth.Entities.AuthRequest, AuthRequest>().ReverseMap();
         CreateProjection<AuthRequest, OrganizationAdminAuthRequest>()
             .ForMember(m => m.Email, opt => opt.MapFrom(t => t.User.Email))
-            .ForMember(m => m.OrganizationUserId, opt => opt.MapFrom(
-                t => t.User.OrganizationUsers.FirstOrDefault(ou => ou.OrganizationId == t.OrganizationId && ou.UserId == t.UserId).Id));
+            .ForMember(
+                m => m.OrganizationUserId,
+                opt =>
+                    opt.MapFrom(t =>
+                        t.User.OrganizationUsers.FirstOrDefault(ou =>
+                            ou.OrganizationId == t.OrganizationId && ou.UserId == t.UserId
+                        ).Id
+                    )
+            );
     }
 }

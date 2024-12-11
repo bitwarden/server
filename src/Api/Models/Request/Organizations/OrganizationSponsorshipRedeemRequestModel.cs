@@ -7,6 +7,7 @@ public class OrganizationSponsorshipRedeemRequestModel
 {
     [Required]
     public PlanSponsorshipType PlanSponsorshipType { get; set; }
+
     [Required]
     public Guid SponsoredOrganizationId { get; set; }
 }

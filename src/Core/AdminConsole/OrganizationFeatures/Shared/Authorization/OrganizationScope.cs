@@ -16,8 +16,11 @@ public record OrganizationScope
     {
         Id = id;
     }
+
     private Guid Id { get; }
+
     public static implicit operator Guid(OrganizationScope organizationScope) =>
         organizationScope.Id;
+
     public override string ToString() => Id.ToString();
 }

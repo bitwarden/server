@@ -6,11 +6,9 @@ namespace Bit.Api.Billing.Models.Responses;
 public record PaymentSourceResponse(
     PaymentMethodType Type,
     string Description,
-    bool NeedsVerification)
+    bool NeedsVerification
+)
 {
-    public static PaymentSourceResponse From(PaymentSource paymentMethod)
-        => new(
-            paymentMethod.Type,
-            paymentMethod.Description,
-            paymentMethod.NeedsVerification);
+    public static PaymentSourceResponse From(PaymentSource paymentMethod) =>
+        new(paymentMethod.Type, paymentMethod.Description, paymentMethod.NeedsVerification);
 }

@@ -14,9 +14,10 @@ public class HtmlEncodingStringConverterTests
         var obj = new HtmlEncodedString
         {
             EncodedValue = "This is &lt;b&gt;bold&lt;/b&gt;",
-            NonEncodedValue = "This is <b>bold</b>"
+            NonEncodedValue = "This is <b>bold</b>",
         };
-        const string expectedJsonString = "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
+        const string expectedJsonString =
+            "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
 
         // This is necessary to prevent the serializer from double encoding the string
         var serializerOptions = new JsonSerializerOptions
@@ -35,11 +36,7 @@ public class HtmlEncodingStringConverterTests
     public void Serialize_WhenEncodedValueIsNull_SerializesNull()
     {
         // Arrange
-        var obj = new HtmlEncodedString
-        {
-            EncodedValue = null,
-            NonEncodedValue = null
-        };
+        var obj = new HtmlEncodedString { EncodedValue = null, NonEncodedValue = null };
         const string expectedJsonString = "{\"EncodedValue\":null,\"NonEncodedValue\":null}";
 
         // Act
@@ -53,7 +50,8 @@ public class HtmlEncodingStringConverterTests
     public void Deserialize_WhenJsonContainsHtmlEncodedString_ReturnsDecodedString()
     {
         // Arrange
-        const string json = "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
+        const string json =
+            "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
         const string expectedEncodedValue = "This is &lt;b&gt;bold&lt;/b&gt;";
         const string expectedNonEncodedValue = "This is <b>bold</b>";
 

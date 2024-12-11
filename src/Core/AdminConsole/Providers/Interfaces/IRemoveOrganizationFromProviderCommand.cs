@@ -8,5 +8,6 @@ public interface IRemoveOrganizationFromProviderCommand
     Task RemoveOrganizationFromProvider(
         Provider provider,
         ProviderOrganization providerOrganization,
-        Organization organization);
+        Organization organization
+    );
 }

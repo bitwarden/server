@@ -8,23 +8,29 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 
-public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperationRequirement, Project>
+public class ProjectAuthorizationHandler
+    : AuthorizationHandler<ProjectOperationRequirement, Project>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
 
-    public ProjectAuthorizationHandler(ICurrentContext currentContext, IAccessClientQuery accessClientQuery,
-        IProjectRepository projectRepository)
+    public ProjectAuthorizationHandler(
+        ICurrentContext currentContext,
+        IAccessClientQuery accessClientQuery,
+        IProjectRepository projectRepository
+    )
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
         ProjectOperationRequirement requirement,
-        Project resource)
+        Project resource
+    )
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -43,14 +49,23 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
                 await CanDeleteProjectAsync(context, requirement, resource);
                 break;
             default:
-                throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
+                throw new ArgumentException(
+                    "Unsupported operation requirement type provided.",
+                    nameof(requirement)
+                );
         }
     }
 
-    private async Task CanCreateProjectAsync(AuthorizationHandlerContext context,
-        ProjectOperationRequirement requirement, Project resource)
+    private async Task CanCreateProjectAsync(
+        AuthorizationHandlerContext context,
+        ProjectOperationRequirement requirement,
+        Project resource
+    )
     {
-        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
@@ -65,13 +80,22 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
         }
     }
 
-    private async Task CanUpdateProjectAsync(AuthorizationHandlerContext context,
-        ProjectOperationRequirement requirement, Project resource)
+    private async Task CanUpdateProjectAsync(
+        AuthorizationHandlerContext context,
+        ProjectOperationRequirement requirement,
+        Project resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
 
-        var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
+        var access = await _projectRepository.AccessToProjectAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Write)
         {
@@ -79,13 +103,22 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
         }
     }
 
-    private async Task CanDeleteProjectAsync(AuthorizationHandlerContext context,
-        ProjectOperationRequirement requirement, Project resource)
+    private async Task CanDeleteProjectAsync(
+        AuthorizationHandlerContext context,
+        ProjectOperationRequirement requirement,
+        Project resource
+    )
     {
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
 
-        var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
+        var access = await _projectRepository.AccessToProjectAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
 
         if (access.Write)
         {

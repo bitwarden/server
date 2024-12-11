@@ -11,17 +11,15 @@ public partial class SyncOrganizationLimitCollectionCreationDeletionColumn : Mig
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.Sql(
-        @"
+            @"
                     UPDATE Organization
                     SET
                       LimitCollectionCreation = LimitCollectionCreationDeletion,
                       LimitCollectionDeletion = LimitCollectionCreationDeletion;
-                ");
+                "
+        );
     }
 
     /// <inheritdoc />
-    protected override void Down(MigrationBuilder migrationBuilder)
-    {
-
-    }
+    protected override void Down(MigrationBuilder migrationBuilder) { }
 }

@@ -9,17 +9,25 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public class OrganizationSponsorshipRepository : Repository<OrganizationSponsorship, Guid>, IOrganizationSponsorshipRepository
+public class OrganizationSponsorshipRepository
+    : Repository<OrganizationSponsorship, Guid>,
+        IOrganizationSponsorshipRepository
 {
     public OrganizationSponsorshipRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
-    public OrganizationSponsorshipRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+    public OrganizationSponsorshipRepository(
+        string connectionString,
+        string readOnlyConnectionString
+    )
+        : base(connectionString, readOnlyConnectionString) { }
 
-    public async Task<ICollection<Guid>?> CreateManyAsync(IEnumerable<OrganizationSponsorship> organizationSponsorships)
+    public async Task<ICollection<Guid>?> CreateManyAsync(
+        IEnumerable<OrganizationSponsorship> organizationSponsorships
+    )
     {
         if (!organizationSponsorships.Any())
         {
@@ -37,13 +45,16 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
             var results = await connection.ExecuteAsync(
                 $"[dbo].[OrganizationSponsorship_CreateMany]",
                 new { OrganizationSponsorshipsInput = orgSponsorshipsTVP },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
 
         return organizationSponsorships.Select(u => u.Id).ToList();
     }
 
-    public async Task ReplaceManyAsync(IEnumerable<OrganizationSponsorship> organizationSponsorships)
+    public async Task ReplaceManyAsync(
+        IEnumerable<OrganizationSponsorship> organizationSponsorships
+    )
     {
         if (!organizationSponsorships.Any())
         {
@@ -56,7 +67,8 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
             var results = await connection.ExecuteAsync(
                 $"[dbo].[OrganizationSponsorship_UpdateMany]",
                 new { OrganizationSponsorshipsInput = orgSponsorshipsTVP },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -84,65 +96,73 @@ public class OrganizationSponsorshipRepository : Repository<OrganizationSponsors
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync("[dbo].[OrganizationSponsorship_DeleteByIds]",
-                new { Ids = organizationSponsorshipIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
+            await connection.ExecuteAsync(
+                "[dbo].[OrganizationSponsorship_DeleteByIds]",
+                new { Ids = organizationSponsorshipIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task<OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(Guid sponsoringOrganizationUserId)
+    public async Task<OrganizationSponsorship?> GetBySponsoringOrganizationUserIdAsync(
+        Guid sponsoringOrganizationUserId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationSponsorship>(
                 "[dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationUserId]",
-                new
-                {
-                    SponsoringOrganizationUserId = sponsoringOrganizationUserId
-                },
-                commandType: CommandType.StoredProcedure);
+                new { SponsoringOrganizationUserId = sponsoringOrganizationUserId },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<OrganizationSponsorship?> GetBySponsoredOrganizationIdAsync(Guid sponsoredOrganizationId)
+    public async Task<OrganizationSponsorship?> GetBySponsoredOrganizationIdAsync(
+        Guid sponsoredOrganizationId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationSponsorship>(
                 "[dbo].[OrganizationSponsorship_ReadBySponsoredOrganizationId]",
                 new { SponsoredOrganizationId = sponsoredOrganizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
     }
 
-    public async Task<DateTime?> GetLatestSyncDateBySponsoringOrganizationIdAsync(Guid sponsoringOrganizationId)
+    public async Task<DateTime?> GetLatestSyncDateBySponsoringOrganizationIdAsync(
+        Guid sponsoringOrganizationId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             return await connection.QuerySingleOrDefaultAsync<DateTime?>(
                 "[dbo].[OrganizationSponsorship_ReadLatestBySponsoringOrganizationId]",
                 new { SponsoringOrganizationId = sponsoringOrganizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
-    public async Task<ICollection<OrganizationSponsorship>> GetManyBySponsoringOrganizationAsync(Guid sponsoringOrganizationId)
+    public async Task<ICollection<OrganizationSponsorship>> GetManyBySponsoringOrganizationAsync(
+        Guid sponsoringOrganizationId
+    )
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationSponsorship>(
                 "[dbo].[OrganizationSponsorship_ReadBySponsoringOrganizationId]",
-                new
-                {
-                    SponsoringOrganizationId = sponsoringOrganizationId
-                },
-                commandType: CommandType.StoredProcedure);
+                new { SponsoringOrganizationId = sponsoringOrganizationId },
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
     }
-
 }

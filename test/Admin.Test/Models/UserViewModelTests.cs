@@ -9,12 +9,11 @@ public class UserViewModelTests
 {
     [Theory]
     [BitAutoData]
-    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserHasTwoFactorEnabled_ThenReturnsTrue(User user)
+    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserHasTwoFactorEnabled_ThenReturnsTrue(
+        User user
+    )
     {
-        var lookup = new List<(Guid, bool)>
-        {
-            (user.Id, true)
-        };
+        var lookup = new List<(Guid, bool)> { (user.Id, true) };
 
         var actual = UserViewModel.IsTwoFactorEnabled(user, lookup);
 
@@ -23,12 +22,11 @@ public class UserViewModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse(User user)
+    public void IsTwoFactorEnabled_GivenUserAndIsInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse(
+        User user
+    )
     {
-        var lookup = new List<(Guid, bool)>
-        {
-            (Guid.NewGuid(), true)
-        };
+        var lookup = new List<(Guid, bool)> { (Guid.NewGuid(), true) };
 
         var actual = UserViewModel.IsTwoFactorEnabled(user, lookup);
 
@@ -37,7 +35,9 @@ public class UserViewModelTests
 
     [Theory]
     [BitAutoData]
-    public void IsTwoFactorEnabled_GivenUserAndIsNotInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse(User user)
+    public void IsTwoFactorEnabled_GivenUserAndIsNotInLookup_WhenUserDoesNotHaveTwoFactorEnabled_ThenReturnsFalse(
+        User user
+    )
     {
         var lookup = new List<(Guid, bool)>();
 
@@ -74,7 +74,9 @@ public class UserViewModelTests
 
     [Theory]
     [BitAutoData]
-    public void MapUserViewModel_GivenUserWithTwoFactorEnabled_WhenPopulated_ThenMapsToUserViewModel(User user)
+    public void MapUserViewModel_GivenUserWithTwoFactorEnabled_WhenPopulated_ThenMapsToUserViewModel(
+        User user
+    )
     {
         var lookup = new List<(Guid, bool)> { (user.Id, true) };
 
@@ -85,7 +87,9 @@ public class UserViewModelTests
 
     [Theory]
     [BitAutoData]
-    public void MapUserViewModel_GivenUserWithoutTwoFactorEnabled_WhenPopulated_ThenTwoFactorIsEnabled(User user)
+    public void MapUserViewModel_GivenUserWithoutTwoFactorEnabled_WhenPopulated_ThenTwoFactorIsEnabled(
+        User user
+    )
     {
         var lookup = new List<(Guid, bool)> { (user.Id, false) };
 
@@ -109,7 +113,6 @@ public class UserViewModelTests
     [BitAutoData]
     public void MapUserViewModel_WithVerifiedDomain_ReturnsUserViewModel(User user)
     {
-
         var verifiedDomain = true;
 
         var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);

@@ -21,7 +21,8 @@ public class HCaptchaTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
     }
 
-    public HCaptchaTokenable(User user) : this()
+    public HCaptchaTokenable(User user)
+        : this()
     {
         Id = user?.Id ?? default;
         Email = user?.Email;
@@ -34,10 +35,11 @@ public class HCaptchaTokenable : ExpiringTokenable
             return false;
         }
 
-        return Id == user.Id &&
-        Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
+        return Id == user.Id
+            && Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
-    // Validates deserialized 
-    protected override bool TokenIsValid() => Identifier == TokenIdentifier && Id != default && !string.IsNullOrWhiteSpace(Email);
+    // Validates deserialized
+    protected override bool TokenIsValid() =>
+        Identifier == TokenIdentifier && Id != default && !string.IsNullOrWhiteSpace(Email);
 }

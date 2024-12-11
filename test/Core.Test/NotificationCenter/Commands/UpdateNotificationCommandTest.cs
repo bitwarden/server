@@ -21,16 +21,26 @@ namespace Bit.Core.Test.NotificationCenter.Commands;
 [NotificationCustomize]
 public class UpdateNotificationCommandTest
 {
-    private static void Setup(SutProvider<UpdateNotificationCommand> sutProvider,
-        Guid notificationId, Notification? notification, bool authorized = false)
+    private static void Setup(
+        SutProvider<UpdateNotificationCommand> sutProvider,
+        Guid notificationId,
+        Notification? notification,
+        bool authorized = false
+    )
     {
-        sutProvider.GetDependency<INotificationRepository>()
+        sutProvider
+            .GetDependency<INotificationRepository>()
             .GetByIdAsync(notificationId)
             .Returns(notification);
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), notification ?? Arg.Any<Notification>(),
+        sutProvider
+            .GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                notification ?? Arg.Any<Notification>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
-                    reqs.Contains(NotificationOperations.Update)))
+                    reqs.Contains(NotificationOperations.Update)
+                )
+            )
             .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
 
         sutProvider.GetDependency<INotificationRepository>().ClearReceivedCalls();
@@ -40,29 +50,36 @@ public class UpdateNotificationCommandTest
     [BitAutoData]
     public async Task UpdateAsync_NotificationNotFound_NotFoundException(
         SutProvider<UpdateNotificationCommand> sutProvider,
-        Notification notification)
+        Notification notification
+    )
     {
         Setup(sutProvider, notification.Id, notification: null, true);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(notification));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateAsync(notification)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task UpdateAsync_AuthorizationFailed_NotFoundException(
         SutProvider<UpdateNotificationCommand> sutProvider,
-        Notification notification)
+        Notification notification
+    )
     {
         Setup(sutProvider, notification.Id, notification, authorized: false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(notification));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.UpdateAsync(notification)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task UpdateAsync_Authorized_NotificationCreated(
         SutProvider<UpdateNotificationCommand> sutProvider,
-        Notification notification)
+        Notification notification
+    )
     {
         notification.Priority = Priority.Medium;
         notification.ClientType = ClientType.Web;
@@ -81,15 +98,25 @@ public class UpdateNotificationCommandTest
 
         await sutProvider.Sut.UpdateAsync(notificationToUpdate);
 
-        await sutProvider.GetDependency<INotificationRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<Notification>(n =>
-                // Not updated fields
-                n.Id == notificationToUpdate.Id && n.Global == notificationToUpdate.Global &&
-                n.UserId == notificationToUpdate.UserId && n.OrganizationId == notificationToUpdate.OrganizationId &&
-                n.CreationDate == notificationToUpdate.CreationDate &&
-                // Updated fields
-                n.Priority == notificationToUpdate.Priority && n.ClientType == notificationToUpdate.ClientType &&
-                n.Title == notificationToUpdate.Title && n.Body == notificationToUpdate.Body &&
-                DateTime.UtcNow - n.RevisionDate < TimeSpan.FromMinutes(1)));
+        await sutProvider
+            .GetDependency<INotificationRepository>()
+            .Received(1)
+            .ReplaceAsync(
+                Arg.Is<Notification>(n =>
+                    // Not updated fields
+                    n.Id == notificationToUpdate.Id
+                    && n.Global == notificationToUpdate.Global
+                    && n.UserId == notificationToUpdate.UserId
+                    && n.OrganizationId == notificationToUpdate.OrganizationId
+                    && n.CreationDate == notificationToUpdate.CreationDate
+                    &&
+                    // Updated fields
+                    n.Priority == notificationToUpdate.Priority
+                    && n.ClientType == notificationToUpdate.ClientType
+                    && n.Title == notificationToUpdate.Title
+                    && n.Body == notificationToUpdate.Body
+                    && DateTime.UtcNow - n.RevisionDate < TimeSpan.FromMinutes(1)
+                )
+            );
     }
 }

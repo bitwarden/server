@@ -15,11 +15,13 @@ public class CurrentContextOrganizationCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<CurrentContextOrganization>(composer => composer
-            .With(o => o.Id, Id)
-            .With(o => o.Type, Type)
-            .With(o => o.Permissions, Permissions)
-            .With(o => o.AccessSecretsManager, AccessSecretsManager));
+        fixture.Customize<CurrentContextOrganization>(composer =>
+            composer
+                .With(o => o.Id, Id)
+                .With(o => o.Type, Type)
+                .With(o => o.Permissions, Permissions)
+                .With(o => o.AccessSecretsManager, AccessSecretsManager)
+        );
     }
 }
 
@@ -30,11 +32,12 @@ public class CurrentContextOrganizationCustomizeAttribute : BitCustomizeAttribut
     public Permissions Permissions { get; set; } = new();
     public bool AccessSecretsManager { get; set; } = false;
 
-    public override ICustomization GetCustomization() => new CurrentContextOrganizationCustomization()
-    {
-        Id = Id,
-        Type = Type,
-        Permissions = Permissions,
-        AccessSecretsManager = AccessSecretsManager
-    };
+    public override ICustomization GetCustomization() =>
+        new CurrentContextOrganizationCustomization()
+        {
+            Id = Id,
+            Type = Type,
+            Permissions = Permissions,
+            AccessSecretsManager = AccessSecretsManager,
+        };
 }

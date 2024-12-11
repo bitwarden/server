@@ -46,13 +46,14 @@ public class CurrentContext : ICurrentContext
 
     public CurrentContext(
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository
+    )
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
     }
 
-    public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
+    public virtual async Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
     {
         if (_builtHttpContext)
         {
@@ -63,19 +64,30 @@ public class CurrentContext : ICurrentContext
         HttpContext = httpContext;
         await BuildAsync(httpContext.User, globalSettings);
 
-        if (DeviceIdentifier == null && httpContext.Request.Headers.ContainsKey("Device-Identifier"))
+        if (
+            DeviceIdentifier == null
+            && httpContext.Request.Headers.ContainsKey("Device-Identifier")
+        )
         {
             DeviceIdentifier = httpContext.Request.Headers["Device-Identifier"];
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Device-Type") &&
-            Enum.TryParse(httpContext.Request.Headers["Device-Type"].ToString(), out DeviceType dType))
+        if (
+            httpContext.Request.Headers.ContainsKey("Device-Type")
+            && Enum.TryParse(
+                httpContext.Request.Headers["Device-Type"].ToString(),
+                out DeviceType dType
+            )
+        )
         {
             DeviceType = dType;
         }
 
-        if (!BotScore.HasValue && httpContext.Request.Headers.ContainsKey("X-Cf-Bot-Score") &&
-            int.TryParse(httpContext.Request.Headers["X-Cf-Bot-Score"], out var parsedBotScore))
+        if (
+            !BotScore.HasValue
+            && httpContext.Request.Headers.ContainsKey("X-Cf-Bot-Score")
+            && int.TryParse(httpContext.Request.Headers["X-Cf-Bot-Score"], out var parsedBotScore)
+        )
         {
             BotScore = parsedBotScore;
         }
@@ -95,18 +107,29 @@ public class CurrentContext : ICurrentContext
             MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
+        if (
+            httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version")
+            && Version.TryParse(
+                httpContext.Request.Headers["Bitwarden-Client-Version"],
+                out var cVersion
+            )
+        )
         {
             ClientVersion = cVersion;
         }
 
-        if (httpContext.Request.Headers.TryGetValue("Is-Prerelease", out var clientVersionIsPrerelease))
+        if (
+            httpContext.Request.Headers.TryGetValue(
+                "Is-Prerelease",
+                out var clientVersionIsPrerelease
+            )
+        )
         {
             ClientVersionIsPrerelease = clientVersionIsPrerelease == "1";
         }
     }
 
-    public async virtual Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings)
+    public virtual async Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings)
     {
         if (_builtClaimsPrincipal)
         {
@@ -125,7 +148,9 @@ public class CurrentContext : ICurrentContext
             return Task.FromResult(0);
         }
 
-        var claimsDict = user.Claims.GroupBy(c => c.Type).ToDictionary(c => c.Key, c => c.Select(v => v));
+        var claimsDict = user
+            .Claims.GroupBy(c => c.Type)
+            .ToDictionary(c => c.Key, c => c.Select(v => v));
 
         var subject = GetClaimValue(claimsDict, "sub");
         if (Guid.TryParse(subject, out var subIdGuid))
@@ -176,7 +201,10 @@ public class CurrentContext : ICurrentContext
         return Task.FromResult(0);
     }
 
-    private List<CurrentContextOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
+    private List<CurrentContextOrganization> GetOrganizations(
+        Dictionary<string, IEnumerable<Claim>> claimsDict,
+        bool orgApi
+    )
     {
         var accessSecretsManager = claimsDict.ContainsKey(Claims.SecretsManagerAccess)
             ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
@@ -185,81 +213,97 @@ public class CurrentContext : ICurrentContext
         var organizations = new List<CurrentContextOrganization>();
         if (claimsDict.ContainsKey(Claims.OrganizationOwner))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationOwner].Select(c =>
-                new CurrentContextOrganization
-                {
-                    Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Owner,
-                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
-                }));
+            organizations.AddRange(
+                claimsDict[Claims.OrganizationOwner]
+                    .Select(c => new CurrentContextOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Owner,
+                        AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    })
+            );
         }
         else if (orgApi && OrganizationId.HasValue)
         {
-            organizations.Add(new CurrentContextOrganization
-            {
-                Id = OrganizationId.Value,
-                Type = OrganizationUserType.Owner,
-            });
+            organizations.Add(
+                new CurrentContextOrganization
+                {
+                    Id = OrganizationId.Value,
+                    Type = OrganizationUserType.Owner,
+                }
+            );
         }
 
         if (claimsDict.ContainsKey(Claims.OrganizationAdmin))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationAdmin].Select(c =>
-                new CurrentContextOrganization
-                {
-                    Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Admin,
-                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
-                }));
+            organizations.AddRange(
+                claimsDict[Claims.OrganizationAdmin]
+                    .Select(c => new CurrentContextOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Admin,
+                        AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    })
+            );
         }
 
         if (claimsDict.ContainsKey(Claims.OrganizationUser))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationUser].Select(c =>
-                new CurrentContextOrganization
-                {
-                    Id = new Guid(c.Value),
-                    Type = OrganizationUserType.User,
-                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
-                }));
+            organizations.AddRange(
+                claimsDict[Claims.OrganizationUser]
+                    .Select(c => new CurrentContextOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.User,
+                        AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    })
+            );
         }
 
         if (claimsDict.ContainsKey(Claims.OrganizationCustom))
         {
-            organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
-                new CurrentContextOrganization
-                {
-                    Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Custom,
-                    Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
-                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
-                }));
+            organizations.AddRange(
+                claimsDict[Claims.OrganizationCustom]
+                    .Select(c => new CurrentContextOrganization
+                    {
+                        Id = new Guid(c.Value),
+                        Type = OrganizationUserType.Custom,
+                        Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
+                        AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    })
+            );
         }
 
         return organizations;
     }
 
-    private List<CurrentContextProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
+    private static List<CurrentContextProvider> GetProviders(
+        Dictionary<string, IEnumerable<Claim>> claimsDict
+    )
     {
         var providers = new List<CurrentContextProvider>();
         if (claimsDict.ContainsKey(Claims.ProviderAdmin))
         {
-            providers.AddRange(claimsDict[Claims.ProviderAdmin].Select(c =>
-                new CurrentContextProvider
-                {
-                    Id = new Guid(c.Value),
-                    Type = ProviderUserType.ProviderAdmin
-                }));
+            providers.AddRange(
+                claimsDict[Claims.ProviderAdmin]
+                    .Select(c => new CurrentContextProvider
+                    {
+                        Id = new Guid(c.Value),
+                        Type = ProviderUserType.ProviderAdmin,
+                    })
+            );
         }
 
         if (claimsDict.ContainsKey(Claims.ProviderServiceUser))
         {
-            providers.AddRange(claimsDict[Claims.ProviderServiceUser].Select(c =>
-                new CurrentContextProvider
-                {
-                    Id = new Guid(c.Value),
-                    Type = ProviderUserType.ServiceUser
-                }));
+            providers.AddRange(
+                claimsDict[Claims.ProviderServiceUser]
+                    .Select(c => new CurrentContextProvider
+                    {
+                        Id = new Guid(c.Value),
+                        Type = ProviderUserType.ServiceUser,
+                    })
+            );
         }
 
         return providers;
@@ -272,8 +316,11 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> OrganizationAdmin(Guid orgId)
     {
-        return await OrganizationOwner(orgId) ||
-               (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Admin) ?? false);
+        return await OrganizationOwner(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Admin)
+                ?? false
+            );
     }
 
     public async Task<bool> OrganizationOwner(Guid orgId)
@@ -293,78 +340,116 @@ public class CurrentContext : ICurrentContext
 
     public Task<bool> OrganizationCustom(Guid orgId)
     {
-        return Task.FromResult(Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false);
+        return Task.FromResult(
+            Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Custom) ?? false
+        );
     }
 
     public async Task<bool> AccessEventLogs(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.AccessEventLogs ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.AccessEventLogs ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> AccessImportExport(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.AccessImportExport ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o =>
+                    o.Id == orgId && (o.Permissions?.AccessImportExport ?? false)
+                ) ?? false
+            );
     }
 
     public async Task<bool> AccessReports(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.AccessReports ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.AccessReports ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> EditAnyCollection(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o =>
+                    o.Id == orgId && (o.Permissions?.EditAnyCollection ?? false)
+                ) ?? false
+            );
     }
 
     public async Task<bool> ViewAllCollections(Guid orgId)
     {
         var org = GetOrganization(orgId);
-        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
+        return await EditAnyCollection(orgId)
+            || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.ManageGroups ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.ManageGroups ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> ManagePolicies(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.ManagePolicies ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.ManagePolicies ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> ManageSso(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.ManageSso ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.ManageSso ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> ManageScim(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.ManageScim ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.ManageScim ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> ManageUsers(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.ManageUsers ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o => o.Id == orgId && (o.Permissions?.ManageUsers ?? false))
+                ?? false
+            );
     }
 
     public async Task<bool> ManageResetPassword(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
+        return await OrganizationAdmin(orgId)
+            || (
+                Organizations?.Any(o =>
+                    o.Id == orgId && (o.Permissions?.ManageResetPassword ?? false)
+                ) ?? false
+            );
     }
 
     public async Task<bool> ViewSubscription(Guid orgId)
     {
-        var isManagedByBillableProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType.SupportsConsolidatedBilling());
+        var isManagedByBillableProvider = (await GetOrganizationProviderDetails()).Any(po =>
+            po.OrganizationId == orgId && po.ProviderType.SupportsConsolidatedBilling()
+        );
 
         return isManagedByBillableProvider
             ? await ProviderUserForOrgAsync(orgId)
@@ -373,7 +458,9 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> EditSubscription(Guid orgId)
     {
-        var orgManagedByProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId);
+        var orgManagedByProvider = (await GetOrganizationProviderDetails()).Any(po =>
+            po.OrganizationId == orgId
+        );
 
         return orgManagedByProvider
             ? await ProviderUserForOrgAsync(orgId)
@@ -392,12 +479,15 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> AccessMembersTab(Guid orgId)
     {
-        return await OrganizationAdmin(orgId) || await ManageUsers(orgId) || await ManageResetPassword(orgId);
+        return await OrganizationAdmin(orgId)
+            || await ManageUsers(orgId)
+            || await ManageResetPassword(orgId);
     }
 
     public bool ProviderProviderAdmin(Guid providerId)
     {
-        return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin) ?? false;
+        return Providers?.Any(o => o.Id == providerId && o.Type == ProviderUserType.ProviderAdmin)
+            ?? false;
     }
 
     public bool ProviderManageUsers(Guid providerId)
@@ -437,8 +527,9 @@ public class CurrentContext : ICurrentContext
             return null;
         }
 
-        var po = (await GetProviderUserOrganizations())
-            ?.FirstOrDefault(po => po.OrganizationId == orgId);
+        var po = (await GetProviderUserOrganizations())?.FirstOrDefault(po =>
+            po.OrganizationId == orgId
+        );
 
         return po?.ProviderId;
     }
@@ -454,7 +545,9 @@ public class CurrentContext : ICurrentContext
     }
 
     public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
-        IOrganizationUserRepository organizationUserRepository, Guid userId)
+        IOrganizationUserRepository organizationUserRepository,
+        Guid userId
+    )
     {
         if (Organizations == null)
         {
@@ -463,14 +556,18 @@ public class CurrentContext : ICurrentContext
             UserId ??= userId;
 
             var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
-            Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
-                .Select(ou => new CurrentContextOrganization(ou)).ToList();
+            Organizations = userOrgs
+                .Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
+                .Select(ou => new CurrentContextOrganization(ou))
+                .ToList();
         }
         return Organizations;
     }
 
     public async Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
-        IProviderUserRepository providerUserRepository, Guid userId)
+        IProviderUserRepository providerUserRepository,
+        Guid userId
+    )
     {
         if (Providers == null)
         {
@@ -479,8 +576,10 @@ public class CurrentContext : ICurrentContext
             UserId ??= userId;
 
             var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
-            Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
-                .Select(ou => new CurrentContextProvider(ou)).ToList();
+            Providers = userProviders
+                .Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
+                .Select(ou => new CurrentContextProvider(ou))
+                .ToList();
         }
         return Providers;
     }
@@ -490,7 +589,7 @@ public class CurrentContext : ICurrentContext
         return Organizations?.Find(o => o.Id == orgId);
     }
 
-    private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
+    private static string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
     {
         if (!claims.ContainsKey(type))
         {
@@ -500,12 +599,16 @@ public class CurrentContext : ICurrentContext
         return claims[type].FirstOrDefault()?.Value;
     }
 
-    private Permissions SetOrganizationPermissionsFromClaims(string organizationId, Dictionary<string, IEnumerable<Claim>> claimsDict)
+    private static Permissions SetOrganizationPermissionsFromClaims(
+        string organizationId,
+        Dictionary<string, IEnumerable<Claim>> claimsDict
+    )
     {
         bool hasClaim(string claimKey)
         {
-            return claimsDict.ContainsKey(claimKey) ?
-                claimsDict[claimKey].Any(x => x.Value == organizationId) : false;
+            return claimsDict.ContainsKey(claimKey)
+                ? claimsDict[claimKey].Any(x => x.Value == organizationId)
+                : false;
         }
 
         return new Permissions
@@ -525,21 +628,30 @@ public class CurrentContext : ICurrentContext
         };
     }
 
-    protected async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderUserOrganizations()
+    protected async Task<
+        IEnumerable<ProviderUserOrganizationDetails>
+    > GetProviderUserOrganizations()
     {
         if (_providerUserOrganizations == null && UserId.HasValue)
         {
-            _providerUserOrganizations = await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(UserId.Value, ProviderUserStatusType.Confirmed);
+            _providerUserOrganizations =
+                await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(
+                    UserId.Value,
+                    ProviderUserStatusType.Confirmed
+                );
         }
 
         return _providerUserOrganizations;
     }
 
-    protected async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetOrganizationProviderDetails()
+    protected async Task<
+        IEnumerable<ProviderOrganizationProviderDetails>
+    > GetOrganizationProviderDetails()
     {
         if (_providerOrganizationProviderDetails == null && UserId.HasValue)
         {
-            _providerOrganizationProviderDetails = await _providerOrganizationRepository.GetManyByUserAsync(UserId.Value);
+            _providerOrganizationProviderDetails =
+                await _providerOrganizationRepository.GetManyByUserAsync(UserId.Value);
         }
 
         return _providerOrganizationProviderDetails;

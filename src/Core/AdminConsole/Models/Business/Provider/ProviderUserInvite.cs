@@ -12,24 +12,33 @@ public class ProviderUserInvite<T>
 
 public static class ProviderUserInviteFactory
 {
-    public static ProviderUserInvite<string> CreateInitialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
+    public static ProviderUserInvite<string> CreateInitialInvite(
+        IEnumerable<string> inviteeEmails,
+        ProviderUserType type,
+        Guid invitingUserId,
+        Guid providerId
+    )
     {
         return new ProviderUserInvite<string>
         {
             UserIdentifiers = inviteeEmails,
             Type = type,
             InvitingUserId = invitingUserId,
-            ProviderId = providerId
+            ProviderId = providerId,
         };
     }
 
-    public static ProviderUserInvite<Guid> CreateReinvite(IEnumerable<Guid> inviteeUserIds, Guid invitingUserId, Guid providerId)
+    public static ProviderUserInvite<Guid> CreateReinvite(
+        IEnumerable<Guid> inviteeUserIds,
+        Guid invitingUserId,
+        Guid providerId
+    )
     {
         return new ProviderUserInvite<Guid>
         {
             UserIdentifiers = inviteeUserIds,
             InvitingUserId = invitingUserId,
-            ProviderId = providerId
+            ProviderId = providerId,
         };
     }
 }

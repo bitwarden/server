@@ -11,13 +11,14 @@ using Xunit;
 
 namespace Bit.Api.Test.Tools.Controllers;
 
-
 [ControllerCustomize(typeof(ReportsController))]
 [SutProviderCustomize]
 public class ReportsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task GetPasswordHealthReportApplicationAsync_Success(SutProvider<ReportsController> sutProvider)
+    public async Task GetPasswordHealthReportApplicationAsync_Success(
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
@@ -27,28 +28,34 @@ public class ReportsControllerTests
         var result = await sutProvider.Sut.GetPasswordHealthReportApplications(orgId);
 
         // Assert
-        _ = sutProvider.GetDependency<IGetPasswordHealthReportApplicationQuery>()
+        _ = sutProvider
+            .GetDependency<IGetPasswordHealthReportApplicationQuery>()
             .Received(1)
             .GetPasswordHealthReportApplicationAsync(Arg.Is<Guid>(_ => _ == orgId));
     }
 
     [Theory, BitAutoData]
-    public async Task GetPasswordHealthReportApplicationAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    public async Task GetPasswordHealthReportApplicationAsync_withoutAccess(
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
 
         // Act & Assert
         var orgId = Guid.NewGuid();
-        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetPasswordHealthReportApplications(orgId));
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.GetPasswordHealthReportApplications(orgId)
+        );
 
         // Assert
-        _ = sutProvider.GetDependency<IGetPasswordHealthReportApplicationQuery>()
-            .Received(0);
+        _ = sutProvider.GetDependency<IGetPasswordHealthReportApplicationQuery>().Received(0);
     }
 
     [Theory, BitAutoData]
-    public async Task AddPasswordHealthReportApplicationAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
+    public async Task AddPasswordHealthReportApplicationAsync_withAccess_success(
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
@@ -62,15 +69,20 @@ public class ReportsControllerTests
         await sutProvider.Sut.AddPasswordHealthReportApplication(request);
 
         // Assert
-        _ = sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
+        _ = sutProvider
+            .GetDependency<IAddPasswordHealthReportApplicationCommand>()
             .Received(1)
-            .AddPasswordHealthReportApplicationAsync(Arg.Is<AddPasswordHealthReportApplicationRequest>(_ =>
-                _.OrganizationId == request.OrganizationId && _.Url == request.Url));
+            .AddPasswordHealthReportApplicationAsync(
+                Arg.Is<AddPasswordHealthReportApplicationRequest>(_ =>
+                    _.OrganizationId == request.OrganizationId && _.Url == request.Url
+                )
+            );
     }
 
     [Theory, BitAutoData]
     public async Task AddPasswordHealthReportApplicationAsync_multiple_withAccess_success(
-        SutProvider<ReportsController> sutProvider)
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
@@ -81,13 +93,18 @@ public class ReportsControllerTests
         await sutProvider.Sut.AddPasswordHealthReportApplications(request);
 
         // Assert
-        _ = sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
+        _ = sutProvider
+            .GetDependency<IAddPasswordHealthReportApplicationCommand>()
             .Received(1)
-            .AddPasswordHealthReportApplicationAsync(Arg.Any<IEnumerable<AddPasswordHealthReportApplicationRequest>>());
+            .AddPasswordHealthReportApplicationAsync(
+                Arg.Any<IEnumerable<AddPasswordHealthReportApplicationRequest>>()
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task AddPasswordHealthReportApplicationAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    public async Task AddPasswordHealthReportApplicationAsync_withoutAccess(
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
@@ -98,16 +115,18 @@ public class ReportsControllerTests
             OrganizationId = Guid.NewGuid(),
             Url = "https://example.com",
         };
-        await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await sutProvider.Sut.AddPasswordHealthReportApplication(request));
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.AddPasswordHealthReportApplication(request)
+        );
 
         // Assert
-        _ = sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>()
-            .Received(0);
+        _ = sutProvider.GetDependency<IAddPasswordHealthReportApplicationCommand>().Received(0);
     }
 
     [Theory, BitAutoData]
-    public async Task DropPasswordHealthReportApplicationAsync_withoutAccess(SutProvider<ReportsController> sutProvider)
+    public async Task DropPasswordHealthReportApplicationAsync_withoutAccess(
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(false);
@@ -115,16 +134,18 @@ public class ReportsControllerTests
         // Act
         var fixture = new Fixture();
         var request = fixture.Create<Api.Tools.Models.PasswordHealthReportApplicationModel>();
-        await Assert.ThrowsAsync<NotFoundException>(async () =>
-                await sutProvider.Sut.AddPasswordHealthReportApplication(request));
+        await Assert.ThrowsAsync<NotFoundException>(
+            async () => await sutProvider.Sut.AddPasswordHealthReportApplication(request)
+        );
 
         // Assert
-        _ = sutProvider.GetDependency<IDropPasswordHealthReportApplicationCommand>()
-            .Received(0);
+        _ = sutProvider.GetDependency<IDropPasswordHealthReportApplicationCommand>().Received(0);
     }
 
     [Theory, BitAutoData]
-    public async Task DropPasswordHealthReportApplicationAsync_withAccess_success(SutProvider<ReportsController> sutProvider)
+    public async Task DropPasswordHealthReportApplicationAsync_withAccess_success(
+        SutProvider<ReportsController> sutProvider
+    )
     {
         // Arrange
         sutProvider.GetDependency<ICurrentContext>().AccessReports(Arg.Any<Guid>()).Returns(true);
@@ -135,10 +156,15 @@ public class ReportsControllerTests
         await sutProvider.Sut.DropPasswordHealthReportApplication(request);
 
         // Assert
-        _ = sutProvider.GetDependency<IDropPasswordHealthReportApplicationCommand>()
+        _ = sutProvider
+            .GetDependency<IDropPasswordHealthReportApplicationCommand>()
             .Received(1)
-            .DropPasswordHealthReportApplicationAsync(Arg.Is<DropPasswordHealthReportApplicationRequest>(_ =>
-                _.OrganizationId == request.OrganizationId &&
-                _.PasswordHealthReportApplicationIds == request.PasswordHealthReportApplicationIds));
+            .DropPasswordHealthReportApplicationAsync(
+                Arg.Is<DropPasswordHealthReportApplicationRequest>(_ =>
+                    _.OrganizationId == request.OrganizationId
+                    && _.PasswordHealthReportApplicationIds
+                        == request.PasswordHealthReportApplicationIds
+                )
+            );
     }
 }

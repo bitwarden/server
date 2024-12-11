@@ -2,46 +2,47 @@
 
 ##############################
 # Builds a specified service
-# Arguments: 
+# Arguments:
 #   1: Project to build
 #   2: Project path
 ##############################
 build() {
-  local project=$1
-  local project_dir=$2
+        local project=$1
+        local project_dir=$2
 
-  echo "Building $project"
-  echo "Build Path: $project_dir"
-  echo "=================="
+        echo "Building $project"
+        echo "Build Path: $project_dir"
+        echo "=================="
 
-  chmod u+x "$project_dir/build.sh"
-  "$project_dir/build.sh"
+        chmod u+x "$project_dir/build.sh"
+        "$project_dir/build.sh"
 }
 
 # Get Project
-PROJECT=$1; shift
+PROJECT=$1
+shift
 
 case "$PROJECT" in
-  "admin" | "Admin") build Admin $PWD/src/Admin ;;
-  "api" | "Api") build Api $PWD/src/Api ;;
-  "billing" | "Billing") build Billing $PWD/src/Billing ;;
-  "events" | "Events") build Events $PWD/src/Events ;;
-  "eventsprocessor" | "EventsProcessor") build EventsProcessor $PWD/src/EventsProcessor ;;
-  "icons" | "Icons") build Icons $PWD/src/Icons ;;
-  "identity" | "Identity") build Identity $PWD/src/Identity ;;
-  "notifications" | "Notifications") build Notifications $PWD/src/Notifications ;;
-  "server" | "Server") build Server $PWD/util/Server ;;
-  "sso" | "Sso") build Sso $PWD/bitwarden_license/src/Sso ;;
-  "")
-    build Admin $PWD/src/Admin
-    build Api $PWD/src/Api
-    build Billing $PWD/src/Billing
-    build Events $PWD/src/Events
-    build EventsProcessor $PWD/src/EventsProcessor
-    build Icons $PWD/src/Icons
-    build Identity $PWD/src/Identity
-    build Notifications $PWD/src/Notifications
-    build Server $PWD/util/Server
-    build Sso $PWD/bitwarden_license/src/Sso
-  ;;
+"admin" | "Admin") build Admin $PWD/src/Admin ;;
+"api" | "Api") build Api $PWD/src/Api ;;
+"billing" | "Billing") build Billing $PWD/src/Billing ;;
+"events" | "Events") build Events $PWD/src/Events ;;
+"eventsprocessor" | "EventsProcessor") build EventsProcessor $PWD/src/EventsProcessor ;;
+"icons" | "Icons") build Icons $PWD/src/Icons ;;
+"identity" | "Identity") build Identity $PWD/src/Identity ;;
+"notifications" | "Notifications") build Notifications $PWD/src/Notifications ;;
+"server" | "Server") build Server $PWD/util/Server ;;
+"sso" | "Sso") build Sso $PWD/bitwarden_license/src/Sso ;;
+"")
+        build Admin $PWD/src/Admin
+        build Api $PWD/src/Api
+        build Billing $PWD/src/Billing
+        build Events $PWD/src/Events
+        build EventsProcessor $PWD/src/EventsProcessor
+        build Icons $PWD/src/Icons
+        build Identity $PWD/src/Identity
+        build Notifications $PWD/src/Notifications
+        build Server $PWD/util/Server
+        build Sso $PWD/bitwarden_license/src/Sso
+        ;;
 esac

@@ -44,7 +44,6 @@ jobs:
 
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
 
-
   cut_branch:
     name: Cut branch
     if: ${{ needs.setup.outputs.branch != 'none' }}
@@ -79,7 +78,6 @@ jobs:
         run: |
           git switch --quiet --create $BRANCH_NAME
           git push --quiet --set-upstream origin $BRANCH_NAME
-
 
   bump_version:
     name: Bump Version
@@ -187,7 +185,6 @@ jobs:
       - name: Push changes
         run: git push
 
-
   cherry_pick:
     name: Cherry-Pick Commit(s)
     if: ${{ needs.setup.outputs.branch != 'none' }}
@@ -269,7 +266,6 @@ jobs:
             cherry_pick main rc
 
           fi
-
 
   move_future_db_scripts:
     name: Move finalization database scripts

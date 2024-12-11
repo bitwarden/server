@@ -18,10 +18,7 @@ public class ConfigControllerTests : IDisposable
         _globalSettings = new GlobalSettings();
         _featureService = Substitute.For<IFeatureService>();
 
-        _sut = new ConfigController(
-            _globalSettings,
-            _featureService
-        );
+        _sut = new ConfigController(_globalSettings, _featureService);
     }
 
     public void Dispose()

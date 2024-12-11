@@ -19,25 +19,28 @@ public class SsoEmail2faSessionTokenable : ExpiringTokenable
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid Id { get; set; }
     public string Email { get; set; }
+
     [JsonConstructor]
     public SsoEmail2faSessionTokenable()
     {
         ExpirationDate = DateTime.UtcNow.Add(GetTokenLifetime());
     }
 
-    public SsoEmail2faSessionTokenable(User user) : this()
+    public SsoEmail2faSessionTokenable(User user)
+        : this()
     {
         Id = user?.Id ?? default;
         Email = user?.Email;
     }
+
     public bool TokenIsValid(User user)
     {
         if (Id == default || Email == default || user == null)
         {
             return false;
         }
-        return Id == user.Id &&
-               Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
+        return Id == user.Id
+            && Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     // Validates deserialized

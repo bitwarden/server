@@ -26,7 +26,10 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         _email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
 
         var tokens = await _factory.LoginWithNewAccount(_email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            tokens.Token
+        );
     }
 
     public Task DisposeAsync()
@@ -38,7 +41,10 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     private async Task LoginAsync()
     {
         var tokens = await _factory.LoginAsync(_email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            tokens.Token
+        );
     }
 
     [Fact]
@@ -78,9 +84,20 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
             await _factory.LoginWithNewAccount(ownerEmail);
 
             Organization org;
-            (org, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.Free, ownerEmail: ownerEmail,
-                name: i.ToString(), billingEmail: ownerEmail, ownerKey: i.ToString());
-            await OrganizationTestHelpers.CreateUserAsync(_factory, org.Id, _email, Core.Enums.OrganizationUserType.User);
+            (org, _) = await OrganizationTestHelpers.SignUpAsync(
+                _factory,
+                plan: PlanType.Free,
+                ownerEmail: ownerEmail,
+                name: i.ToString(),
+                billingEmail: ownerEmail,
+                ownerKey: i.ToString()
+            );
+            await OrganizationTestHelpers.CreateUserAsync(
+                _factory,
+                org.Id,
+                _email,
+                Core.Enums.OrganizationUserType.User
+            );
         }
 
         await LoginAsync();

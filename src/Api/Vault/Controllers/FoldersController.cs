@@ -21,7 +21,8 @@ public class FoldersController : Controller
     public FoldersController(
         IFolderRepository folderRepository,
         ICipherService cipherService,
-        IUserService userService)
+        IUserService userService
+    )
     {
         _folderRepository = folderRepository;
         _cipherService = cipherService;

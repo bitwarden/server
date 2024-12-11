@@ -8,6 +8,9 @@ public static class OrganizationSubscriptionServiceCollectionExtensions
     public static void AddOrganizationSubscriptionServices(this IServiceCollection services)
     {
         services.AddScoped<IUpgradeOrganizationPlanCommand, UpgradeOrganizationPlanCommand>();
-        services.AddScoped<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
+        services.AddScoped<
+            IAddSecretsManagerSubscriptionCommand,
+            AddSecretsManagerSubscriptionCommand
+        >();
     }
 }

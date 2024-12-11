@@ -4,7 +4,7 @@ namespace Bit.Api.Tools.Models.Response;
 
 /// <summary>
 /// Contains the collections and group collections a user has access to including
-/// the permission level for the collection and group collection. 
+/// the permission level for the collection and group collection.
 /// </summary>
 public class MemberAccessReportResponseModel
 {

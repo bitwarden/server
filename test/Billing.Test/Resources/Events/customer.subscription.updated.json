@@ -31,8 +31,7 @@
       "days_until_due": null,
       "default_payment_method": null,
       "default_source": null,
-      "default_tax_rates": [
-      ],
+      "default_tax_rates": [],
       "description": null,
       "discount": null,
       "ended_at": null,
@@ -44,8 +43,7 @@
             "object": "subscription_item",
             "billing_thresholds": null,
             "created": 1695909805,
-            "metadata": {
-            },
+            "metadata": {},
             "plan": {
               "id": "enterprise-org-seat-annually",
               "object": "plan",
@@ -59,8 +57,7 @@
               "interval": "year",
               "interval_count": 1,
               "livemode": false,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "2019 Enterprise Seat (Annually)",
               "product": "prod_BUtogGemxnTi9z",
               "tiers_mode": null,
@@ -78,8 +75,7 @@
               "custom_unit_amount": null,
               "livemode": false,
               "lookup_key": null,
-              "metadata": {
-              },
+              "metadata": {},
               "nickname": "2019 Enterprise Seat (Annually)",
               "product": "prod_BUtogGemxnTi9z",
               "recurring": {
@@ -98,8 +94,7 @@
             },
             "quantity": 1,
             "subscription": "sub_1NvKoKIGBnsLynRrcLIAUWGf",
-            "tax_rates": [
-            ]
+            "tax_rates": []
           }
         ],
         "has_more": false,
@@ -135,8 +130,7 @@
         "interval": "year",
         "interval_count": 1,
         "livemode": false,
-        "metadata": {
-        },
+        "metadata": {},
         "nickname": "2019 Enterprise Seat (Annually)",
         "product": "prod_BUtogGemxnTi9z",
         "tiers_mode": null,

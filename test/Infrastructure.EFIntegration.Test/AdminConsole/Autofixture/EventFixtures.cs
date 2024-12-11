@@ -43,14 +43,12 @@ internal class EfEvent : ICustomization
 
 internal class EfEventAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfEventAutoDataAttribute() : base(new SutProviderCustomization(), new EfEvent())
-    { }
+    public EfEventAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfEvent()) { }
 }
 
 internal class InlineEfEventAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfEventAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfEvent) }, values)
-    { }
+    public InlineEfEventAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfEvent) }, values) { }
 }
-

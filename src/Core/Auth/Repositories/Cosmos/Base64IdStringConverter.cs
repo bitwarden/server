@@ -8,11 +8,17 @@ namespace Bit.Core.Auth.Repositories.Cosmos;
 
 public class Base64IdStringConverter : JsonConverter<string?>
 {
-    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        ToKey(reader.GetString());
+    public override string? Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    ) => ToKey(reader.GetString());
 
-    public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options) =>
-        writer.WriteStringValue(ToId(value));
+    public override void Write(
+        Utf8JsonWriter writer,
+        string? value,
+        JsonSerializerOptions options
+    ) => writer.WriteStringValue(ToId(value));
 
     public static string? ToId(string? key)
     {

@@ -13,10 +13,15 @@ namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 public class SsoConfigRepositoryTests
 {
     [CiSkippedTheory, EfSsoConfigAutoData]
-    public async Task CreateAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-        SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    public async Task CreateAsync_Works_DataMatches(
+        SsoConfig ssoConfig,
+        Organization org,
+        SsoConfigCompare equalityComparer,
+        List<EfRepo.SsoConfigRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo
+    )
     {
         var savedSsoConfigs = new List<SsoConfig>();
 
@@ -49,10 +54,16 @@ public class SsoConfigRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoConfigAutoData]
-    public async Task ReplaceAsync_Works_DataMatches(SsoConfig postSsoConfig, SsoConfig replaceSsoConfig,
-        Organization org, SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    public async Task ReplaceAsync_Works_DataMatches(
+        SsoConfig postSsoConfig,
+        SsoConfig replaceSsoConfig,
+        Organization org,
+        SsoConfigCompare equalityComparer,
+        List<EfRepo.SsoConfigRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo
+    )
     {
         var savedSsoConfigs = new List<SsoConfig>();
 
@@ -94,9 +105,14 @@ public class SsoConfigRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoConfigAutoData]
-    public async Task DeleteAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org, List<EfRepo.SsoConfigRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo)
+    public async Task DeleteAsync_Works_DataMatches(
+        SsoConfig ssoConfig,
+        Organization org,
+        List<EfRepo.SsoConfigRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo
+    )
     {
         foreach (var sut in suts)
         {
@@ -131,10 +147,15 @@ public class SsoConfigRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoConfigAutoData]
-    public async Task GetByOrganizationIdAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-        SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+    public async Task GetByOrganizationIdAsync_Works_DataMatches(
+        SsoConfig ssoConfig,
+        Organization org,
+        SsoConfigCompare equalityComparer,
+        List<EfRepo.SsoConfigRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo
+    )
     {
         var returnedList = new List<SsoConfig>();
 
@@ -159,7 +180,9 @@ public class SsoConfigRepositoryTests
 
         var postSqlSsoConfig = await sqlSsoConfigRepo.CreateAsync(ssoConfig);
 
-        var savedSqlSsoConfig = await sqlSsoConfigRepo.GetByOrganizationIdAsync(ssoConfig.OrganizationId);
+        var savedSqlSsoConfig = await sqlSsoConfigRepo.GetByOrganizationIdAsync(
+            ssoConfig.OrganizationId
+        );
         Assert.True(savedSqlSsoConfig != null);
         returnedList.Add(savedSqlSsoConfig);
 
@@ -168,10 +191,15 @@ public class SsoConfigRepositoryTests
     }
 
     [CiSkippedTheory, EfSsoConfigAutoData]
-    public async Task GetByIdentifierAsync_Works_DataMatches(SsoConfig ssoConfig, Organization org,
-        SsoConfigCompare equalityComparer, List<EfRepo.SsoConfigRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+    public async Task GetByIdentifierAsync_Works_DataMatches(
+        SsoConfig ssoConfig,
+        Organization org,
+        SsoConfigCompare equalityComparer,
+        List<EfRepo.SsoConfigRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos,
+        SqlAuthRepo.SsoConfigRepository sqlSsoConfigRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo
+    )
     {
         var returnedList = new List<SsoConfig>();
 
@@ -206,9 +234,13 @@ public class SsoConfigRepositoryTests
 
     // Testing that data matches here would involve manipulating all SsoConfig records in the db
     [CiSkippedTheory, EfSsoConfigAutoData]
-    public async Task GetManyByRevisionNotBeforeDate_Works(SsoConfig ssoConfig, DateTime notBeforeDate,
-        Organization org, List<EfRepo.SsoConfigRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos)
+    public async Task GetManyByRevisionNotBeforeDate_Works(
+        SsoConfig ssoConfig,
+        DateTime notBeforeDate,
+        Organization org,
+        List<EfRepo.SsoConfigRepository> suts,
+        List<EfRepo.OrganizationRepository> efOrgRepos
+    )
     {
         foreach (var sut in suts)
         {

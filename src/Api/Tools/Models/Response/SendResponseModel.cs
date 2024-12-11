@@ -13,10 +13,7 @@ public class SendResponseModel : ResponseModel
     public SendResponseModel(Send send, GlobalSettings globalSettings)
         : base("send")
     {
-        if (send == null)
-        {
-            throw new ArgumentNullException(nameof(send));
-        }
+        ArgumentNullException.ThrowIfNull(send);
 
         Id = send.Id;
         AccessId = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());

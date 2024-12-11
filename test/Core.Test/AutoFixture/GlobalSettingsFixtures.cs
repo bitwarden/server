@@ -34,13 +34,18 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
         if (pi.ParameterType == typeof(IDataProtectionProvider))
         {
             var dataProtector = Substitute.For<IDataProtector>();
-            dataProtector.Unprotect(Arg.Any<byte[]>())
+            dataProtector
+                .Unprotect(Arg.Any<byte[]>())
                 .Returns(data =>
-                    Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
-                                           Encoding.UTF8.GetString((byte[])data[0])));
+                    Encoding.UTF8.GetBytes(
+                        Constants.DatabaseFieldProtectedPrefix
+                            + Encoding.UTF8.GetString((byte[])data[0])
+                    )
+                );
 
             var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
-            dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
+            dataProtectionProvider
+                .CreateProtector(Constants.DatabaseFieldProtectorPurpose)
                 .Returns(dataProtector);
 
             return dataProtectionProvider;
@@ -52,5 +57,6 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
 
 public class GlobalSettingsCustomizeAttribute : CustomizeAttribute
 {
-    public override ICustomization GetCustomization(ParameterInfo parameter) => new GlobalSettings();
+    public override ICustomization GetCustomization(ParameterInfo parameter) =>
+        new GlobalSettings();
 }

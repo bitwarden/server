@@ -9,26 +9,26 @@ public class NotificationEntityTypeConfiguration : IEntityTypeConfiguration<Noti
 {
     public void Configure(EntityTypeBuilder<Notification> builder)
     {
-        builder
-            .Property(n => n.Id)
-            .ValueGeneratedNever();
+        builder.Property(n => n.Id).ValueGeneratedNever();
+
+        builder.HasKey(n => n.Id).IsClustered();
 
         builder
-            .HasKey(n => n.Id)
-            .IsClustered();
-
-        builder
-            .HasIndex(n => new { n.ClientType, n.Global, n.UserId, n.OrganizationId, n.Priority, n.CreationDate })
+            .HasIndex(n => new
+            {
+                n.ClientType,
+                n.Global,
+                n.UserId,
+                n.OrganizationId,
+                n.Priority,
+                n.CreationDate,
+            })
             .IsDescending(false, false, false, false, true, true)
             .IsClustered(false);
 
-        builder
-            .HasIndex(n => n.OrganizationId)
-            .IsClustered(false);
+        builder.HasIndex(n => n.OrganizationId).IsClustered(false);
 
-        builder
-            .HasIndex(n => n.UserId)
-            .IsClustered(false);
+        builder.HasIndex(n => n.UserId).IsClustered(false);
 
         builder.ToTable(nameof(Notification));
     }

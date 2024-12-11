@@ -42,8 +42,8 @@ public class OrganizationsController(
     IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
     IReferenceEventService referenceEventService,
-    ISubscriberService subscriberService)
-    : Controller
+    ISubscriberService subscriberService
+) : Controller
 {
     [HttpGet("{id:guid}/subscription")]
     public async Task<OrganizationSubscriptionResponseModel> GetSubscription(Guid id)
@@ -69,7 +69,11 @@ public class OrganizationsController(
 
             var hideSensitiveData = !await currentContext.EditSubscription(id);
 
-            return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
+            return new OrganizationSubscriptionResponseModel(
+                organization,
+                subscriptionInfo,
+                hideSensitiveData
+            );
         }
 
         if (globalSettings.SelfHosted)
@@ -109,8 +113,11 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await organizationService.ReplacePaymentMethodAsync(id, model.PaymentToken,
-            model.PaymentMethodType.Value, new TaxInfo
+        await organizationService.ReplacePaymentMethodAsync(
+            id,
+            model.PaymentToken,
+            model.PaymentMethodType.Value,
+            new TaxInfo
             {
                 BillingAddressLine1 = model.Line1,
                 BillingAddressLine2 = model.Line2,
@@ -119,19 +126,27 @@ public class OrganizationsController(
                 BillingAddressPostalCode = model.PostalCode,
                 BillingAddressCountry = model.Country,
                 TaxIdNumber = model.TaxId,
-            });
+            }
+        );
     }
 
     [HttpPost("{id:guid}/upgrade")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostUpgrade(Guid id, [FromBody] OrganizationUpgradeRequestModel model)
+    public async Task<PaymentResponseModel> PostUpgrade(
+        Guid id,
+        [FromBody] OrganizationUpgradeRequestModel model
+    )
     {
         if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
 
-        var (success, paymentIntentClientSecret) = await upgradeOrganizationPlanCommand.UpgradePlanAsync(id, model.ToOrganizationUpgrade());
+        var (success, paymentIntentClientSecret) =
+            await upgradeOrganizationPlanCommand.UpgradePlanAsync(
+                id,
+                model.ToOrganizationUpgrade()
+            );
 
         if (model.UseSecretsManager && success)
         {
@@ -140,12 +155,19 @@ public class OrganizationsController(
             await TryGrantOwnerAccessToSecretsManagerAsync(id, userId);
         }
 
-        return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
+        return new PaymentResponseModel
+        {
+            Success = success,
+            PaymentIntentClientSecret = paymentIntentClientSecret,
+        };
     }
 
     [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    public async Task PostSmSubscription(
+        Guid id,
+        [FromBody] SecretsManagerSubscriptionUpdateRequestModel model
+    )
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -167,18 +189,28 @@ public class OrganizationsController(
 
     [HttpPost("{id:guid}/subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task PostSubscription(
+        Guid id,
+        [FromBody] OrganizationSubscriptionUpdateRequestModel model
+    )
     {
         if (!await currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        await organizationService.UpdateSubscription(id, model.SeatAdjustment, model.MaxAutoscaleSeats);
+        await organizationService.UpdateSubscription(
+            id,
+            model.SeatAdjustment,
+            model.MaxAutoscaleSeats
+        );
     }
 
     [HttpPost("{id:guid}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(
+        Guid id,
+        [FromBody] SecretsManagerSubscribeRequestModel model
+    )
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -191,25 +223,39 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
-            model.AdditionalServiceAccounts);
+        await addSecretsManagerSubscriptionCommand.SignUpAsync(
+            organization,
+            model.AdditionalSmSeats,
+            model.AdditionalServiceAccounts
+        );
 
         var userId = userService.GetProperUserId(User).Value;
 
         await TryGrantOwnerAccessToSecretsManagerAsync(organization.Id, userId);
 
-        var organizationDetails = await organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
-            OrganizationUserStatusType.Confirmed);
+        var organizationDetails = await organizationUserRepository.GetDetailsByUserAsync(
+            userId,
+            organization.Id,
+            OrganizationUserStatusType.Confirmed
+        );
 
-        var organizationManagingActiveUser = await userService.GetOrganizationsManagingUserAsync(userId);
+        var organizationManagingActiveUser = await userService.GetOrganizationsManagingUserAsync(
+            userId
+        );
         var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
-        return new ProfileOrganizationResponseModel(organizationDetails, organizationIdsManagingActiveUser);
+        return new ProfileOrganizationResponseModel(
+            organizationDetails,
+            organizationIdsManagingActiveUser
+        );
     }
 
     [HttpPost("{id:guid}/seat")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostSeat(Guid id, [FromBody] OrganizationSeatRequestModel model)
+    public async Task<PaymentResponseModel> PostSeat(
+        Guid id,
+        [FromBody] OrganizationSeatRequestModel model
+    )
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -247,22 +293,23 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        await subscriberService.CancelSubscription(organization,
+        await subscriberService.CancelSubscription(
+            organization,
             new OffboardingSurveyResponse
             {
                 UserId = currentContext.UserId!.Value,
                 Reason = request.Reason,
-                Feedback = request.Feedback
+                Feedback = request.Feedback,
             },
-            organization.IsExpired());
+            organization.IsExpired()
+        );
 
-        await referenceEventService.RaiseEventAsync(new ReferenceEvent(
-            ReferenceEventType.CancelSubscription,
-            organization,
-            currentContext)
-        {
-            EndOfPeriod = organization.IsExpired()
-        });
+        await referenceEventService.RaiseEventAsync(
+            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization, currentContext)
+            {
+                EndOfPeriod = organization.IsExpired(),
+            }
+        );
     }
 
     [HttpPost("{id:guid}/reinstate")]
@@ -331,7 +378,10 @@ public class OrganizationsController(
     /// <param name="userId"></param>
     private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
     {
-        var organizationUser = await organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        var organizationUser = await organizationUserRepository.GetByOrganizationAsync(
+            organizationId,
+            userId
+        );
 
         if (organizationUser != null)
         {
@@ -346,18 +396,26 @@ public class OrganizationsController(
     /// <param name="id"></param>
     /// <param name="organization"></param>
     /// <param name="model"></param>
-    private async Task<Organization> AdjustOrganizationSeatsForSmTrialAsync(Guid id, Organization organization,
-        SecretsManagerSubscriptionUpdateRequestModel model)
+    private async Task<Organization> AdjustOrganizationSeatsForSmTrialAsync(
+        Guid id,
+        Organization organization,
+        SecretsManagerSubscriptionUpdateRequestModel model
+    )
     {
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) ||
-            string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) ||
-            model.SeatAdjustment == 0)
+        if (
+            string.IsNullOrWhiteSpace(organization.GatewayCustomerId)
+            || string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId)
+            || model.SeatAdjustment == 0
+        )
         {
             return organization;
         }
 
         var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
-        if (subscriptionInfo?.CustomerDiscount?.Id != StripeConstants.CouponIDs.SecretsManagerStandalone)
+        if (
+            subscriptionInfo?.CustomerDiscount?.Id
+            != StripeConstants.CouponIDs.SecretsManagerStandalone
+        )
         {
             return organization;
         }

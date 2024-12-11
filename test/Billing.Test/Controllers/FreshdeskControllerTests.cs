@@ -27,10 +27,16 @@ public class FreshdeskControllerTests
     [BitAutoData((string)null, null)]
     [BitAutoData((string)null)]
     [BitAutoData(WebhookKey, null)]
-    public async Task PostWebhook_NullRequiredParameters_BadRequest(string freshdeskWebhookKey, FreshdeskWebhookModel model,
-        BillingSettings billingSettings, SutProvider<FreshdeskController> sutProvider)
+    public async Task PostWebhook_NullRequiredParameters_BadRequest(
+        string freshdeskWebhookKey,
+        FreshdeskWebhookModel model,
+        BillingSettings billingSettings,
+        SutProvider<FreshdeskController> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(billingSettings.FreshDesk.WebhookKey);
+        sutProvider
+            .GetDependency<IOptions<BillingSettings>>()
+            .Value.FreshDesk.WebhookKey.Returns(billingSettings.FreshDesk.WebhookKey);
 
         var response = await sutProvider.Sut.PostWebhook(freshdeskWebhookKey, model);
 
@@ -40,44 +46,84 @@ public class FreshdeskControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task PostWebhook_Success(User user, FreshdeskWebhookModel model,
-        List<Organization> organizations, SutProvider<FreshdeskController> sutProvider)
+    public async Task PostWebhook_Success(
+        User user,
+        FreshdeskWebhookModel model,
+        List<Organization> organizations,
+        SutProvider<FreshdeskController> sutProvider
+    )
     {
         model.TicketContactEmail = user.Email;
 
         sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(user.Email).Returns(user);
-        sutProvider.GetDependency<IOrganizationRepository>().GetManyByUserIdAsync(user.Id).Returns(organizations);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(organizations);
 
         var mockHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
         var mockResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK);
-        mockHttpMessageHandler.Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
-           .Returns(mockResponse);
+        mockHttpMessageHandler
+            .Send(Arg.Any<HttpRequestMessage>(), Arg.Any<CancellationToken>())
+            .Returns(mockResponse);
         var httpClient = new HttpClient(mockHttpMessageHandler);
 
-        sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
+        sutProvider
+            .GetDependency<IHttpClientFactory>()
+            .CreateClient("FreshdeskApi")
+            .Returns(httpClient);
 
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(WebhookKey);
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.ApiKey.Returns(ApiKey);
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.UserFieldName.Returns(UserFieldName);
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.OrgFieldName.Returns(OrgFieldName);
+        sutProvider
+            .GetDependency<IOptions<BillingSettings>>()
+            .Value.FreshDesk.WebhookKey.Returns(WebhookKey);
+        sutProvider
+            .GetDependency<IOptions<BillingSettings>>()
+            .Value.FreshDesk.ApiKey.Returns(ApiKey);
+        sutProvider
+            .GetDependency<IOptions<BillingSettings>>()
+            .Value.FreshDesk.UserFieldName.Returns(UserFieldName);
+        sutProvider
+            .GetDependency<IOptions<BillingSettings>>()
+            .Value.FreshDesk.OrgFieldName.Returns(OrgFieldName);
 
         var response = await sutProvider.Sut.PostWebhook(WebhookKey, model);
 
         var statusCodeResult = Assert.IsAssignableFrom<StatusCodeResult>(response);
         Assert.Equal(StatusCodes.Status200OK, statusCodeResult.StatusCode);
 
-        _ = mockHttpMessageHandler.Received(1).Send(Arg.Is<HttpRequestMessage>(m => m.Method == HttpMethod.Put && m.RequestUri.ToString().EndsWith(model.TicketId)), Arg.Any<CancellationToken>());
-        _ = mockHttpMessageHandler.Received(1).Send(Arg.Is<HttpRequestMessage>(m => m.Method == HttpMethod.Post && m.RequestUri.ToString().EndsWith($"{model.TicketId}/notes")), Arg.Any<CancellationToken>());
+        _ = mockHttpMessageHandler
+            .Received(1)
+            .Send(
+                Arg.Is<HttpRequestMessage>(m =>
+                    m.Method == HttpMethod.Put && m.RequestUri.ToString().EndsWith(model.TicketId)
+                ),
+                Arg.Any<CancellationToken>()
+            );
+        _ = mockHttpMessageHandler
+            .Received(1)
+            .Send(
+                Arg.Is<HttpRequestMessage>(m =>
+                    m.Method == HttpMethod.Post
+                    && m.RequestUri.ToString().EndsWith($"{model.TicketId}/notes")
+                ),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     public class MockHttpMessageHandler : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
         {
             return Send(request, cancellationToken);
         }
 
-        public new virtual Task<HttpResponseMessage> Send(HttpRequestMessage request, CancellationToken cancellationToken)
+        public new virtual Task<HttpResponseMessage> Send(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken
+        )
         {
             throw new NotImplementedException();
         }

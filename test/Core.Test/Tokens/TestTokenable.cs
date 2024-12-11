@@ -15,11 +15,13 @@ public class TestExpiringTokenable : ExpiringTokenable
 {
     private bool _forceInvalid;
 
-    public TestExpiringTokenable() : this(false) { }
+    public TestExpiringTokenable()
+        : this(false) { }
 
     public TestExpiringTokenable(bool forceInvalid)
     {
         _forceInvalid = forceInvalid;
     }
+
     protected override bool TokenIsValid() => !_forceInvalid;
 }

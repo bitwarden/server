@@ -8,5 +8,9 @@ public interface IHasConfirmedOwnersExceptQuery
     /// <param name="organizationId">The organization ID.</param>
     /// <param name="organizationUsersId">The organization user IDs to exclude.</param>
     /// <param name="includeProvider">Whether to include the provider users in the count.</param>
-    Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
+    Task<bool> HasConfirmedOwnersExceptAsync(
+        Guid organizationId,
+        IEnumerable<Guid> organizationUsersId,
+        bool includeProvider = true
+    );
 }

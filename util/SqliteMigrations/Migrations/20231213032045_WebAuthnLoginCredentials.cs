@@ -22,12 +22,24 @@ public partial class WebAuthnLoginCredentials : Migration
                 Counter = table.Column<int>(type: "INTEGER", nullable: false),
                 Type = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
                 AaGuid = table.Column<Guid>(type: "TEXT", nullable: false),
-                EncryptedUserKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                EncryptedPrivateKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
-                EncryptedPublicKey = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: true),
+                EncryptedUserKey = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 2000,
+                    nullable: true
+                ),
+                EncryptedPrivateKey = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 2000,
+                    nullable: true
+                ),
+                EncryptedPublicKey = table.Column<string>(
+                    type: "TEXT",
+                    maxLength: 2000,
+                    nullable: true
+                ),
                 SupportsPrf = table.Column<bool>(type: "INTEGER", nullable: false),
                 CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                RevisionDate = table.Column<DateTime>(type: "TEXT", nullable: false),
             },
             constraints: table =>
             {
@@ -37,19 +49,21 @@ public partial class WebAuthnLoginCredentials : Migration
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_WebAuthnCredential_UserId",
             table: "WebAuthnCredential",
-            column: "UserId");
+            column: "UserId"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "WebAuthnCredential");
+        migrationBuilder.DropTable(name: "WebAuthnCredential");
     }
 }

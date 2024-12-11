@@ -9,8 +9,11 @@ namespace Bit.SharedWeb.Health;
 
 public static class HealthCheckServiceExtensions
 {
-    public static void AddHealthCheckServices(this IServiceCollection services, GlobalSettings globalSettings,
-        Action<IHealthChecksBuilder> addBuilder = null)
+    public static void AddHealthCheckServices(
+        this IServiceCollection services,
+        GlobalSettings globalSettings,
+        Action<IHealthChecksBuilder> addBuilder = null
+    )
     {
         var builder = services.AddHealthChecks();
         addBuilder?.Invoke(builder);
@@ -32,18 +35,23 @@ public static class HealthCheckServiceExtensions
             foreach (var healthReportEntry in healthReport.Entries)
             {
                 jsonWriter.WriteStartObject(healthReportEntry.Key);
-                jsonWriter.WriteString("status",
-                    healthReportEntry.Value.Status.ToString());
-                jsonWriter.WriteString("description",
-                    healthReportEntry.Value.Description ?? healthReportEntry.Value.Exception?.Message);
+                jsonWriter.WriteString("status", healthReportEntry.Value.Status.ToString());
+                jsonWriter.WriteString(
+                    "description",
+                    healthReportEntry.Value.Description
+                        ?? healthReportEntry.Value.Exception?.Message
+                );
                 jsonWriter.WriteStartObject("data");
 
                 foreach (var item in healthReportEntry.Value.Data)
                 {
                     jsonWriter.WritePropertyName(item.Key);
 
-                    JsonSerializer.Serialize(jsonWriter, item.Value,
-                        item.Value?.GetType() ?? typeof(object));
+                    JsonSerializer.Serialize(
+                        jsonWriter,
+                        item.Value,
+                        item.Value?.GetType() ?? typeof(object)
+                    );
                 }
 
                 jsonWriter.WriteEndObject();
@@ -54,7 +62,6 @@ public static class HealthCheckServiceExtensions
             jsonWriter.WriteEndObject();
         }
 
-        return context.Response.WriteAsync(
-            Encoding.UTF8.GetString(memoryStream.ToArray()));
+        return context.Response.WriteAsync(Encoding.UTF8.GetString(memoryStream.ToArray()));
     }
 }

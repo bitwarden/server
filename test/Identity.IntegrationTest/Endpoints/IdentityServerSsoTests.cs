@@ -41,7 +41,11 @@ public class IdentityServerSsoTests
         // If the organization has a member decryption type of MasterPassword that should be the only option in the reply
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -49,7 +53,11 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": true
         // }
 
-        AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
+        AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "HasMasterPassword",
+            JsonValueKind.True
+        );
 
         // One property for the Object and one for master password
         Assert.Equal(2, userDecryptionOptions.EnumerateObject().Count());
@@ -59,14 +67,20 @@ public class IdentityServerSsoTests
     public async Task SsoLogin_TrustedDeviceEncryption_ReturnsOptions()
     {
         // Arrange
-        using var responseBody = await RunSuccessTestAsync(MemberDecryptionType.TrustedDeviceEncryption);
+        using var responseBody = await RunSuccessTestAsync(
+            MemberDecryptionType.TrustedDeviceEncryption
+        );
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -78,31 +92,47 @@ public class IdentityServerSsoTests
         // }
 
         // Should have master password & one for trusted device with admin approval
-        AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
+        AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "HasMasterPassword",
+            JsonValueKind.True
+        );
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasAdminApproval",
+            JsonValueKind.False
+        );
     }
 
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryption_WithAdminResetPolicy_ReturnsOptions()
     {
         // Arrange
-        using var responseBody = await RunSuccessTestAsync(async factory =>
-        {
-            var database = factory.GetDatabaseContext();
+        using var responseBody = await RunSuccessTestAsync(
+            async factory =>
+            {
+                var database = factory.GetDatabaseContext();
 
-            var organization = await database.Organizations.SingleAsync();
+                var organization = await database.Organizations.SingleAsync();
 
-            var user = await database.Users.SingleAsync(u => u.Email == TestEmail);
+                var user = await database.Users.SingleAsync(u => u.Email == TestEmail);
 
-            var organizationUser = await database.OrganizationUsers.SingleAsync(
-                ou => ou.OrganizationId == organization.Id && ou.UserId == user.Id);
+                var organizationUser = await database.OrganizationUsers.SingleAsync(ou =>
+                    ou.OrganizationId == organization.Id && ou.UserId == user.Id
+                );
 
-            organizationUser.ResetPasswordKey = "something";
+                organizationUser.ResetPasswordKey = "something";
 
-            await database.SaveChangesAsync();
-        }, MemberDecryptionType.TrustedDeviceEncryption);
+                await database.SaveChangesAsync();
+            },
+            MemberDecryptionType.TrustedDeviceEncryption
+        );
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -110,7 +140,11 @@ public class IdentityServerSsoTests
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -123,27 +157,45 @@ public class IdentityServerSsoTests
         // }
 
         // Should have one item for master password & one for trusted device with admin approval
-        AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
+        AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "HasMasterPassword",
+            JsonValueKind.True
+        );
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.True);
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasAdminApproval",
+            JsonValueKind.True
+        );
     }
 
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_ReturnsOneOption()
     {
-        using var responseBody = await RunSuccessTestAsync(async factory =>
-        {
-            await UpdateUserAsync(factory, user => user.MasterPassword = null);
-
-        }, MemberDecryptionType.TrustedDeviceEncryption);
+        using var responseBody = await RunSuccessTestAsync(
+            async factory =>
+            {
+                await UpdateUserAsync(factory, user => user.MasterPassword = null);
+            },
+            MemberDecryptionType.TrustedDeviceEncryption
+        );
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -156,14 +208,27 @@ public class IdentityServerSsoTests
         //   }
         // }
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.False);
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasAdminApproval",
+            JsonValueKind.False
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasManageResetPasswordPermission",
+            JsonValueKind.False
+        );
 
         // This asserts that device keys are not coming back in the response because this should be a new device.
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
-        Assert.Collection(trustedDeviceOption.EnumerateObject(),
+        Assert.Collection(
+            trustedDeviceOption.EnumerateObject(),
             p =>
             {
                 Assert.Equal("HasAdminApproval", p.Name);
@@ -183,7 +248,8 @@ public class IdentityServerSsoTests
             {
                 Assert.Equal("IsTdeOffboarding", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
-            });
+            }
+        );
     }
 
     /// <summary>
@@ -193,30 +259,39 @@ public class IdentityServerSsoTests
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoginApprovingDevice_ReturnsTrue()
     {
-        using var responseBody = await RunSuccessTestAsync(async factory =>
-        {
-            await UpdateUserAsync(factory, user => user.MasterPassword = null);
-            var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-            var user = await userRepository.GetByEmailAsync(TestEmail);
-
-            Assert.NotNull(user);
-
-            var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
-            await deviceRepository.CreateAsync(new Device
+        using var responseBody = await RunSuccessTestAsync(
+            async factory =>
             {
-                Identifier = "my_other_device",
-                Type = DeviceType.Android,
-                Name = "Android",
-                UserId = user.Id,
-            });
-        }, MemberDecryptionType.TrustedDeviceEncryption);
+                await UpdateUserAsync(factory, user => user.MasterPassword = null);
+                var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+                var user = await userRepository.GetByEmailAsync(TestEmail);
+
+                Assert.NotNull(user);
+
+                var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
+                await deviceRepository.CreateAsync(
+                    new Device
+                    {
+                        Identifier = "my_other_device",
+                        Type = DeviceType.Android,
+                        Name = "Android",
+                        UserId = user.Id,
+                    }
+                );
+            },
+            MemberDecryptionType.TrustedDeviceEncryption
+        );
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -230,12 +305,17 @@ public class IdentityServerSsoTests
         //   }
         // }
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
 
         // This asserts that device keys are not coming back in the response because this should be a new device.
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
-        Assert.Collection(trustedDeviceOption.EnumerateObject(),
+        Assert.Collection(
+            trustedDeviceOption.EnumerateObject(),
             p =>
             {
                 Assert.Equal("HasAdminApproval", p.Name);
@@ -255,7 +335,8 @@ public class IdentityServerSsoTests
             {
                 Assert.Equal("IsTdeOffboarding", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
-            });
+            }
+        );
     }
 
     /// <summary>
@@ -267,10 +348,13 @@ public class IdentityServerSsoTests
     {
         // Arrange
         var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
-        {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge);
+        var factory = await CreateFactoryAsync(
+            new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            },
+            challenge
+        );
 
         await UpdateUserAsync(factory, user => user.MasterPassword = null);
 
@@ -278,39 +362,48 @@ public class IdentityServerSsoTests
 
         var deviceIdentifier = $"test_id_{Guid.NewGuid()}";
 
-        var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+        var user = await factory
+            .Services.GetRequiredService<IUserRepository>()
+            .GetByEmailAsync(TestEmail);
         Assert.NotNull(user);
 
         const string expectedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
         const string expectedUserKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
 
-        var device = await deviceRepository.CreateAsync(new Device
-        {
-            Type = DeviceType.FirefoxBrowser,
-            Identifier = deviceIdentifier,
-            Name = "Thing",
-            UserId = user.Id,
-            EncryptedPrivateKey = expectedPrivateKey,
-            EncryptedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
-            EncryptedUserKey = expectedUserKey,
-        });
+        var device = await deviceRepository.CreateAsync(
+            new Device
+            {
+                Type = DeviceType.FirefoxBrowser,
+                Identifier = deviceIdentifier,
+                Name = "Thing",
+                UserId = user.Id,
+                EncryptedPrivateKey = expectedPrivateKey,
+                EncryptedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+                EncryptedUserKey = expectedUserKey,
+            }
+        );
 
         // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", deviceIdentifier },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        var context = await factory.Server.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", "10" },
+                    { "deviceIdentifier", deviceIdentifier },
+                    { "deviceName", "firefox" },
+                    { "twoFactorToken", "TEST" },
+                    { "twoFactorProvider", "5" }, // RememberMe Provider
+                    { "twoFactorRemember", "0" },
+                    { "grant_type", "authorization_code" },
+                    { "code", "test_code" },
+                    { "code_verifier", challenge },
+                    { "redirect_uri", "https://localhost:8080/sso-connector.html" },
+                }
+            )
+        );
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -319,7 +412,11 @@ public class IdentityServerSsoTests
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -333,13 +430,29 @@ public class IdentityServerSsoTests
         //   }
         // }
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.False);
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasAdminApproval",
+            JsonValueKind.False
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasManageResetPasswordPermission",
+            JsonValueKind.False
+        );
 
-        var actualPrivateKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedPrivateKey", JsonValueKind.String).GetString();
+        var actualPrivateKey = AssertHelper
+            .AssertJsonProperty(trustedDeviceOption, "EncryptedPrivateKey", JsonValueKind.String)
+            .GetString();
         Assert.Equal(expectedPrivateKey, actualPrivateKey);
-        var actualUserKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedUserKey", JsonValueKind.String).GetString();
+        var actualUserKey = AssertHelper
+            .AssertJsonProperty(trustedDeviceOption, "EncryptedUserKey", JsonValueKind.String)
+            .GetString();
         Assert.Equal(expectedUserKey, actualUserKey);
     }
 
@@ -359,27 +472,36 @@ public class IdentityServerSsoTests
         // create user permissions with the ManageResetPassword permission
         var permissionsWithManageResetPassword = new Permissions() { ManageResetPassword = true };
 
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
-        {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge, permissions: permissionsWithManageResetPassword);
+        var factory = await CreateFactoryAsync(
+            new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            },
+            challenge,
+            permissions: permissionsWithManageResetPassword
+        );
 
         // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        var context = await factory.Server.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", "10" },
+                    { "deviceIdentifier", "test_id" },
+                    { "deviceName", "firefox" },
+                    { "twoFactorToken", "TEST" },
+                    { "twoFactorProvider", "5" }, // RememberMe Provider
+                    { "twoFactorRemember", "0" },
+                    { "grant_type", "authorization_code" },
+                    { "code", "test_code" },
+                    { "code_verifier", challenge },
+                    { "redirect_uri", "https://localhost:8080/sso-connector.html" },
+                }
+            )
+        );
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
@@ -389,12 +511,27 @@ public class IdentityServerSsoTests
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
-
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasAdminApproval",
+            JsonValueKind.False
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasManageResetPasswordPermission",
+            JsonValueKind.True
+        );
     }
 
     [Fact]
@@ -402,82 +539,122 @@ public class IdentityServerSsoTests
     {
         var challenge = new string('c', 50);
 
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
-        {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge);
+        var factory = await CreateFactoryAsync(
+            new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            },
+            challenge
+        );
 
-        var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+        var user = await factory
+            .Services.GetRequiredService<IUserRepository>()
+            .GetByEmailAsync(TestEmail);
         Assert.NotNull(user);
         var providerRepository = factory.Services.GetRequiredService<IProviderRepository>();
-        var provider = await providerRepository.CreateAsync(new Provider
-        {
-            Name = "Test Provider",
-        });
+        var provider = await providerRepository.CreateAsync(
+            new Provider { Name = "Test Provider" }
+        );
 
         var providerUserRepository = factory.Services.GetRequiredService<IProviderUserRepository>();
-        await providerUserRepository.CreateAsync(new ProviderUser
-        {
-            ProviderId = provider.Id,
-            UserId = user.Id,
-            Status = ProviderUserStatusType.Confirmed,
-            Permissions = CoreHelpers.ClassToJsonData(new Permissions
+        await providerUserRepository.CreateAsync(
+            new ProviderUser
             {
-                ManageResetPassword = true,
-            }),
-        });
+                ProviderId = provider.Id,
+                UserId = user.Id,
+                Status = ProviderUserStatusType.Confirmed,
+                Permissions = CoreHelpers.ClassToJsonData(
+                    new Permissions { ManageResetPassword = true }
+                ),
+            }
+        );
 
-        var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
-        var organizationUser = (await organizationUserRepository.GetManyByUserAsync(user.Id)).Single();
+        var organizationUserRepository =
+            factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var organizationUser = (
+            await organizationUserRepository.GetManyByUserAsync(user.Id)
+        ).Single();
 
-        var providerOrganizationRepository = factory.Services.GetRequiredService<IProviderOrganizationRepository>();
-        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
-        {
-            ProviderId = provider.Id,
-            OrganizationId = organizationUser.OrganizationId,
-        });
+        var providerOrganizationRepository =
+            factory.Services.GetRequiredService<IProviderOrganizationRepository>();
+        await providerOrganizationRepository.CreateAsync(
+            new ProviderOrganization
+            {
+                ProviderId = provider.Id,
+                OrganizationId = organizationUser.OrganizationId,
+            }
+        );
 
         // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        var context = await factory.Server.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", "10" },
+                    { "deviceIdentifier", "test_id" },
+                    { "deviceName", "firefox" },
+                    { "twoFactorToken", "TEST" },
+                    { "twoFactorProvider", "5" }, // RememberMe Provider
+                    { "twoFactorRemember", "0" },
+                    { "grant_type", "authorization_code" },
+                    { "code", "test_code" },
+                    { "code_verifier", challenge },
+                    { "redirect_uri", "https://localhost:8080/sso-connector.html" },
+                }
+            )
+        );
 
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
-        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
-        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "TrustedDeviceOption",
+            JsonValueKind.Object
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasAdminApproval",
+            JsonValueKind.False
+        );
+        AssertHelper.AssertJsonProperty(
+            trustedDeviceOption,
+            "HasManageResetPasswordPermission",
+            JsonValueKind.True
+        );
     }
 
     [Fact]
     public async Task SsoLogin_KeyConnector_ReturnsOptions()
     {
-        using var responseBody = await RunSuccessTestAsync(async factory =>
-        {
-            await UpdateUserAsync(factory, user => user.MasterPassword = null);
-        }, MemberDecryptionType.KeyConnector, "https://key_connector.com");
+        using var responseBody = await RunSuccessTestAsync(
+            async factory =>
+            {
+                await UpdateUserAsync(factory, user => user.MasterPassword = null);
+            },
+            MemberDecryptionType.KeyConnector,
+            "https://key_connector.com"
+        );
 
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
-        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(
+            root,
+            "UserDecryptionOptions",
+            JsonValueKind.Object
+        );
 
         // Expected to look like:
         // "UserDecryptionOptions": {
@@ -487,49 +664,70 @@ public class IdentityServerSsoTests
         //   }
         // }
 
-        var keyConnectorOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "KeyConnectorOption", JsonValueKind.Object);
+        var keyConnectorOption = AssertHelper.AssertJsonProperty(
+            userDecryptionOptions,
+            "KeyConnectorOption",
+            JsonValueKind.Object
+        );
 
-        var keyConnectorUrl = AssertHelper.AssertJsonProperty(keyConnectorOption, "KeyConnectorUrl", JsonValueKind.String).GetString();
+        var keyConnectorUrl = AssertHelper
+            .AssertJsonProperty(keyConnectorOption, "KeyConnectorUrl", JsonValueKind.String)
+            .GetString();
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
 
         // For backwards compatibility reasons the url should also be on the root
-        keyConnectorUrl = AssertHelper.AssertJsonProperty(root, "KeyConnectorUrl", JsonValueKind.String).GetString();
+        keyConnectorUrl = AssertHelper
+            .AssertJsonProperty(root, "KeyConnectorUrl", JsonValueKind.String)
+            .GetString();
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
     }
 
-    private static async Task<JsonDocument> RunSuccessTestAsync(MemberDecryptionType memberDecryptionType)
+    private static async Task<JsonDocument> RunSuccessTestAsync(
+        MemberDecryptionType memberDecryptionType
+    )
     {
         return await RunSuccessTestAsync(factory => Task.CompletedTask, memberDecryptionType);
     }
 
-    private static async Task<JsonDocument> RunSuccessTestAsync(Func<IdentityApplicationFactory, Task> configureFactory,
+    private static async Task<JsonDocument> RunSuccessTestAsync(
+        Func<IdentityApplicationFactory, Task> configureFactory,
         MemberDecryptionType memberDecryptionType,
         string? keyConnectorUrl = null,
-        bool trustedDeviceEnabled = true)
+        bool trustedDeviceEnabled = true
+    )
     {
         var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
-        {
-            MemberDecryptionType = memberDecryptionType,
-            KeyConnectorUrl = keyConnectorUrl,
-        }, challenge, trustedDeviceEnabled);
+        var factory = await CreateFactoryAsync(
+            new SsoConfigurationData
+            {
+                MemberDecryptionType = memberDecryptionType,
+                KeyConnectorUrl = keyConnectorUrl,
+            },
+            challenge,
+            trustedDeviceEnabled
+        );
 
         await configureFactory(factory);
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        var context = await factory.Server.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", "10" },
+                    { "deviceIdentifier", "test_id" },
+                    { "deviceName", "firefox" },
+                    { "twoFactorToken", "TEST" },
+                    { "twoFactorProvider", "5" }, // RememberMe Provider
+                    { "twoFactorRemember", "0" },
+                    { "grant_type", "authorization_code" },
+                    { "code", "test_code" },
+                    { "code_verifier", challenge },
+                    { "redirect_uri", "https://localhost:8080/sso-connector.html" },
+                }
+            )
+        );
 
         // Only calls that result in a 200 OK should call this helper
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
@@ -541,10 +739,10 @@ public class IdentityServerSsoTests
         SsoConfigurationData ssoConfigurationData,
         string challenge,
         bool trustedDeviceEnabled = true,
-        Permissions? permissions = null)
+        Permissions? permissions = null
+    )
     {
         var factory = new IdentityApplicationFactory();
-
 
         var authorizationCode = new AuthorizationCode
         {
@@ -560,69 +758,92 @@ public class IdentityServerSsoTests
 
         factory.SubstituteService<IAuthorizationCodeStore>(service =>
         {
-            service.GetAuthorizationCodeAsync("test_code")
-                .Returns(authorizationCode);
+            service.GetAuthorizationCodeAsync("test_code").Returns(authorizationCode);
         });
 
         // This starts the server and finalizes services
-        var registerResponse = await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = TestEmail,
-            MasterPasswordHash = "master_password_hash",
-        });
+        var registerResponse = await factory.RegisterAsync(
+            new RegisterRequestModel
+            {
+                Email = TestEmail,
+                MasterPasswordHash = "master_password_hash",
+            }
+        );
 
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
         var user = await userRepository.GetByEmailAsync(TestEmail);
         Assert.NotNull(user);
 
         var organizationRepository = factory.Services.GetRequiredService<IOrganizationRepository>();
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            BillingEmail = "billing-email@example.com",
-            Plan = "Enterprise",
-            UsePolicies = true,
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = "Test Org",
+                BillingEmail = "billing-email@example.com",
+                Plan = "Enterprise",
+                UsePolicies = true,
+            }
+        );
 
-        var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
+        var organizationUserRepository =
+            factory.Services.GetRequiredService<IOrganizationUserRepository>();
 
         var orgUserPermissions =
-            (permissions == null) ? null : JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
+            (permissions == null)
+                ? null
+                : JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
 
-        var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
-        {
-            UserId = user.Id,
-            OrganizationId = organization.Id,
-            Status = OrganizationUserStatusType.Confirmed,
-            Type = OrganizationUserType.User,
-            Permissions = orgUserPermissions
-        });
+        var organizationUser = await organizationUserRepository.CreateAsync(
+            new OrganizationUser
+            {
+                UserId = user.Id,
+                OrganizationId = organization.Id,
+                Status = OrganizationUserStatusType.Confirmed,
+                Type = OrganizationUserType.User,
+                Permissions = orgUserPermissions,
+            }
+        );
 
         var ssoConfigRepository = factory.Services.GetRequiredService<ISsoConfigRepository>();
-        await ssoConfigRepository.CreateAsync(new SsoConfig
-        {
-            OrganizationId = organization.Id,
-            Enabled = true,
-            Data = JsonSerializer.Serialize(ssoConfigurationData, JsonHelpers.CamelCase),
-        });
+        await ssoConfigRepository.CreateAsync(
+            new SsoConfig
+            {
+                OrganizationId = organization.Id,
+                Enabled = true,
+                Data = JsonSerializer.Serialize(ssoConfigurationData, JsonHelpers.CamelCase),
+            }
+        );
 
-        var subject = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim(JwtClaimTypes.Subject, user.Id.ToString()), // Get real user id
-            new Claim(JwtClaimTypes.Name, TestEmail),
-            new Claim(JwtClaimTypes.IdentityProvider, "sso"),
-            new Claim("organizationId", organization.Id.ToString()),
-            new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
-            new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
-            new Claim(JwtClaimTypes.AuthenticationTime, DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString())
-        }, "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
+        var subject = new ClaimsPrincipal(
+            new ClaimsIdentity(
+                new[]
+                {
+                    new Claim(JwtClaimTypes.Subject, user.Id.ToString()), // Get real user id
+                    new Claim(JwtClaimTypes.Name, TestEmail),
+                    new Claim(JwtClaimTypes.IdentityProvider, "sso"),
+                    new Claim("organizationId", organization.Id.ToString()),
+                    new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
+                    new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
+                    new Claim(
+                        JwtClaimTypes.AuthenticationTime,
+                        DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString()
+                    ),
+                },
+                "Duende.IdentityServer",
+                JwtClaimTypes.Name,
+                JwtClaimTypes.Role
+            )
+        );
 
         authorizationCode.Subject = subject;
 
         return factory;
     }
 
-    private static async Task UpdateUserAsync(IdentityApplicationFactory factory, Action<User> changeUser)
+    private static async Task UpdateUserAsync(
+        IdentityApplicationFactory factory,
+        Action<User> changeUser
+    )
     {
         var userRepository = factory.Services.GetRequiredService<IUserRepository>();
         var user = await userRepository.GetByEmailAsync(TestEmail);

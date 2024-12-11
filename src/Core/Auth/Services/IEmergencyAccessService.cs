@@ -10,9 +10,19 @@ namespace Bit.Core.Auth.Services;
 
 public interface IEmergencyAccessService
 {
-    Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime);
+    Task<EmergencyAccess> InviteAsync(
+        User invitingUser,
+        string email,
+        EmergencyAccessType type,
+        int waitTime
+    );
     Task ResendInviteAsync(User invitingUser, Guid emergencyAccessId);
-    Task<EmergencyAccess> AcceptUserAsync(Guid emergencyAccessId, User user, string token, IUserService userService);
+    Task<EmergencyAccess> AcceptUserAsync(
+        Guid emergencyAccessId,
+        User user,
+        string token,
+        IUserService userService
+    );
     Task DeleteAsync(Guid emergencyAccessId, Guid grantorId);
     Task<EmergencyAccess> ConfirmUserAsync(Guid emergencyAccessId, string key, Guid grantorId);
     Task<EmergencyAccessDetails> GetAsync(Guid emergencyAccessId, Guid userId);
@@ -26,5 +36,10 @@ public interface IEmergencyAccessService
     Task SendNotificationsAsync();
     Task HandleTimedOutRequestsAsync();
     Task<EmergencyAccessViewData> ViewAsync(Guid id, User user);
-    Task<AttachmentResponseData> GetAttachmentDownloadAsync(Guid id, Guid cipherId, string attachmentId, User user);
+    Task<AttachmentResponseData> GetAttachmentDownloadAsync(
+        Guid id,
+        Guid cipherId,
+        string attachmentId,
+        User user
+    );
 }

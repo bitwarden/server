@@ -10,10 +10,12 @@ public interface IPaymentHistoryService
         ISubscriber subscriber,
         int pageSize = 5,
         string? status = null,
-        string? startAfter = null);
+        string? startAfter = null
+    );
 
     Task<IEnumerable<BillingHistoryInfo.BillingTransaction>> GetTransactionHistoryAsync(
         ISubscriber subscriber,
         int pageSize = 5,
-        DateTime? startAfter = null);
+        DateTime? startAfter = null
+    );
 }

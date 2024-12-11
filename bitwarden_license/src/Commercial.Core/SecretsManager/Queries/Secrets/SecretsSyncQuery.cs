@@ -14,20 +14,25 @@ public class SecretsSyncQuery : ISecretsSyncQuery
 
     public SecretsSyncQuery(
         ISecretRepository secretRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository
+    )
     {
         _secretRepository = secretRepository;
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    public async Task<(bool HasChanges, IEnumerable<Secret>? Secrets)> GetAsync(SecretsSyncRequest syncRequest)
+    public async Task<(bool HasChanges, IEnumerable<Secret>? Secrets)> GetAsync(
+        SecretsSyncRequest syncRequest
+    )
     {
         if (syncRequest.LastSyncedDate == null)
         {
             return await GetSecretsAsync(syncRequest);
         }
 
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(syncRequest.ServiceAccountId);
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(
+            syncRequest.ServiceAccountId
+        );
         if (serviceAccount == null)
         {
             throw new NotFoundException();
@@ -41,10 +46,15 @@ public class SecretsSyncQuery : ISecretsSyncQuery
         return (HasChanges: false, null);
     }
 
-    private async Task<(bool HasChanges, IEnumerable<Secret>? Secrets)> GetSecretsAsync(SecretsSyncRequest syncRequest)
+    private async Task<(bool HasChanges, IEnumerable<Secret>? Secrets)> GetSecretsAsync(
+        SecretsSyncRequest syncRequest
+    )
     {
-        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(syncRequest.OrganizationId,
-            syncRequest.ServiceAccountId, syncRequest.AccessClientType);
+        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(
+            syncRequest.OrganizationId,
+            syncRequest.ServiceAccountId,
+            syncRequest.AccessClientType
+        );
         return (HasChanges: true, Secrets: secrets);
     }
 }

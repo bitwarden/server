@@ -12,7 +12,10 @@ public class PasswordHealthReportApplicationProfile : Profile
 {
     public PasswordHealthReportApplicationProfile()
     {
-        CreateMap<Core.Tools.Entities.PasswordHealthReportApplication, PasswordHealthReportApplication>()
+        CreateMap<
+            Core.Tools.Entities.PasswordHealthReportApplication,
+            PasswordHealthReportApplication
+        >()
             .ReverseMap();
     }
 }

@@ -28,7 +28,8 @@ public class EmergencyAccessController : Controller
         IUserService userService,
         IEmergencyAccessRepository emergencyAccessRepository,
         IEmergencyAccessService emergencyAccessService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings
+    )
     {
         _userService = userService;
         _emergencyAccessRepository = emergencyAccessRepository;
@@ -40,10 +41,13 @@ public class EmergencyAccessController : Controller
     public async Task<ListResponseModel<EmergencyAccessGranteeDetailsResponseModel>> GetContacts()
     {
         var userId = _userService.GetProperUserId(User);
-        var granteeDetails = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(userId.Value);
+        var granteeDetails = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(
+            userId.Value
+        );
 
-        var responses = granteeDetails.Select(d =>
-            new EmergencyAccessGranteeDetailsResponseModel(d));
+        var responses = granteeDetails.Select(d => new EmergencyAccessGranteeDetailsResponseModel(
+            d
+        ));
 
         return new ListResponseModel<EmergencyAccessGranteeDetailsResponseModel>(responses);
     }
@@ -52,9 +56,13 @@ public class EmergencyAccessController : Controller
     public async Task<ListResponseModel<EmergencyAccessGrantorDetailsResponseModel>> GetGrantees()
     {
         var userId = _userService.GetProperUserId(User);
-        var granteeDetails = await _emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(userId.Value);
+        var granteeDetails = await _emergencyAccessRepository.GetManyDetailsByGranteeIdAsync(
+            userId.Value
+        );
 
-        var responses = granteeDetails.Select(d => new EmergencyAccessGrantorDetailsResponseModel(d));
+        var responses = granteeDetails.Select(d => new EmergencyAccessGrantorDetailsResponseModel(
+            d
+        ));
 
         return new ListResponseModel<EmergencyAccessGrantorDetailsResponseModel>(responses);
     }
@@ -72,7 +80,9 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var policies = await _emergencyAccessService.GetPoliciesAsync(id, user);
-        var responses = policies.Select<Policy, PolicyResponseModel>(policy => new PolicyResponseModel(policy));
+        var responses = policies.Select<Policy, PolicyResponseModel>(
+            policy => new PolicyResponseModel(policy)
+        );
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
@@ -102,7 +112,12 @@ public class EmergencyAccessController : Controller
     public async Task Invite([FromBody] EmergencyAccessInviteRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        await _emergencyAccessService.InviteAsync(user, model.Email, model.Type.Value, model.WaitTimeDays);
+        await _emergencyAccessService.InviteAsync(
+            user,
+            model.Email,
+            model.Type.Value,
+            model.WaitTimeDays
+        );
     }
 
     [HttpPost("{id}/reinvite")]
@@ -159,7 +174,12 @@ public class EmergencyAccessController : Controller
     public async Task Password(Guid id, [FromBody] EmergencyAccessPasswordRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        await _emergencyAccessService.PasswordAsync(id, user, model.NewMasterPasswordHash, model.Key);
+        await _emergencyAccessService.PasswordAsync(
+            id,
+            user,
+            model.NewMasterPasswordHash,
+            model.Key
+        );
     }
 
     [HttpPost("{id}/view")]
@@ -167,15 +187,27 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers);
+        return new EmergencyAccessViewResponseModel(
+            _globalSettings,
+            viewResult.EmergencyAccess,
+            viewResult.Ciphers
+        );
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
-    public async Task<AttachmentResponseModel> GetAttachmentData(Guid id, Guid cipherId, string attachmentId)
+    public async Task<AttachmentResponseModel> GetAttachmentData(
+        Guid id,
+        Guid cipherId,
+        string attachmentId
+    )
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var result =
-            await _emergencyAccessService.GetAttachmentDownloadAsync(id, cipherId, attachmentId, user);
+        var result = await _emergencyAccessService.GetAttachmentDownloadAsync(
+            id,
+            cipherId,
+            attachmentId,
+            user
+        );
         return new AttachmentResponseModel(result);
     }
 }

@@ -14,7 +14,8 @@ public class DatabaseExpiredSponsorshipsJob : BaseJob
     public DatabaseExpiredSponsorshipsJob(
         IMaintenanceRepository maintenanceRepository,
         ILogger<DatabaseExpiredSponsorshipsJob> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
         : base(logger)
     {
         _maintenanceRepository = maintenanceRepository;
@@ -27,12 +28,18 @@ public class DatabaseExpiredSponsorshipsJob : BaseJob
         {
             return;
         }
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteExpiredSponsorshipsAsync");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Execute job task: DeleteExpiredSponsorshipsAsync"
+        );
 
         // allow a 90 day grace period before deleting
         var deleteDate = DateTime.UtcNow.AddDays(-90);
 
         await _maintenanceRepository.DeleteExpiredSponsorshipsAsync(deleteDate);
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteExpiredSponsorshipsAsync");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Finished job task: DeleteExpiredSponsorshipsAsync"
+        );
     }
 }

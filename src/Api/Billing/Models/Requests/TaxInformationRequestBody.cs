@@ -7,6 +7,7 @@ public class TaxInformationRequestBody
 {
     [Required]
     public string Country { get; set; }
+
     [Required]
     public string PostalCode { get; set; }
     public string TaxId { get; set; }
@@ -15,12 +16,5 @@ public class TaxInformationRequestBody
     public string City { get; set; }
     public string State { get; set; }
 
-    public TaxInformation ToDomain() => new(
-        Country,
-        PostalCode,
-        TaxId,
-        Line1,
-        Line2,
-        City,
-        State);
+    public TaxInformation ToDomain() => new(Country, PostalCode, TaxId, Line1, Line2, City, State);
 }

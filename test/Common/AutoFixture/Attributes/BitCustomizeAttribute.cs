@@ -9,7 +9,10 @@ namespace Bit.Test.Common.AutoFixture.Attributes;
 /// </para>
 /// ⚠ Warning ⚠ Will not insert customizations into AutoFixture's AutoDataAttribute build chain
 /// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Parameter, AllowMultiple = true)]
+[AttributeUsage(
+    AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Parameter,
+    AllowMultiple = true
+)]
 public abstract class BitCustomizeAttribute : Attribute
 {
     /// <summary>

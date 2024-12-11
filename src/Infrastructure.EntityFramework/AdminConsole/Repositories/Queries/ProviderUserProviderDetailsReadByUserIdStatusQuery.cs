@@ -5,11 +5,16 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 
-public class ProviderUserProviderDetailsReadByUserIdStatusQuery : IQuery<ProviderUserProviderDetails>
+public class ProviderUserProviderDetailsReadByUserIdStatusQuery
+    : IQuery<ProviderUserProviderDetails>
 {
     private readonly Guid _userId;
     private readonly ProviderUserStatusType? _status;
-    public ProviderUserProviderDetailsReadByUserIdStatusQuery(Guid userId, ProviderUserStatusType? status)
+
+    public ProviderUserProviderDetailsReadByUserIdStatusQuery(
+        Guid userId,
+        ProviderUserStatusType? status
+    )
     {
         _userId = userId;
         _status = status;
@@ -17,12 +22,15 @@ public class ProviderUserProviderDetailsReadByUserIdStatusQuery : IQuery<Provide
 
     public IQueryable<ProviderUserProviderDetails> Run(DatabaseContext dbContext)
     {
-        var query = from pu in dbContext.ProviderUsers
-                    join p in dbContext.Providers
-                        on pu.ProviderId equals p.Id into p_g
-                    from p in p_g.DefaultIfEmpty()
-                    where pu.UserId == _userId && p.Status != ProviderStatusType.Pending && (_status == null || pu.Status == _status)
-                    select new { pu, p };
+        var query =
+            from pu in dbContext.ProviderUsers
+            join p in dbContext.Providers on pu.ProviderId equals p.Id into p_g
+            from p in p_g.DefaultIfEmpty()
+            where
+                pu.UserId == _userId
+                && p.Status != ProviderStatusType.Pending
+                && (_status == null || pu.Status == _status)
+            select new { pu, p };
         return query.Select(x => new ProviderUserProviderDetails()
         {
             UserId = x.pu.UserId,

@@ -7,13 +7,22 @@ namespace Bit.Api.AdminConsole.Models.Response.Helpers;
 
 public static class PolicyDetailResponses
 {
-    public static async Task<PolicyDetailResponseModel> GetSingleOrgPolicyDetailResponseAsync(this Policy policy, IOrganizationHasVerifiedDomainsQuery hasVerifiedDomainsQuery)
+    public static async Task<PolicyDetailResponseModel> GetSingleOrgPolicyDetailResponseAsync(
+        this Policy policy,
+        IOrganizationHasVerifiedDomainsQuery hasVerifiedDomainsQuery
+    )
     {
         if (policy.Type is not PolicyType.SingleOrg)
         {
-            throw new ArgumentException($"'{nameof(policy)}' must be of type '{nameof(PolicyType.SingleOrg)}'.", nameof(policy));
+            throw new ArgumentException(
+                $"'{nameof(policy)}' must be of type '{nameof(PolicyType.SingleOrg)}'.",
+                nameof(policy)
+            );
         }
 
-        return new PolicyDetailResponseModel(policy, !await hasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policy.OrganizationId));
+        return new PolicyDetailResponseModel(
+            policy,
+            !await hasVerifiedDomainsQuery.HasVerifiedDomainsAsync(policy.OrganizationId)
+        );
     }
 }

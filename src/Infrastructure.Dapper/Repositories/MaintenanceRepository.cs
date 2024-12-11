@@ -11,12 +11,13 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
 {
     public MaintenanceRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public MaintenanceRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task UpdateStatisticsAsync()
     {
@@ -24,9 +25,15 @@ public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
         {
             await connection.ExecuteAsync(
                 "[dbo].[AzureSQLMaintenance]",
-                new { operation = "statistics", mode = "smart", LogToTable = true },
+                new
+                {
+                    operation = "statistics",
+                    mode = "smart",
+                    LogToTable = true,
+                },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 172800);
+                commandTimeout: 172800
+            );
         }
     }
 
@@ -37,7 +44,8 @@ public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
             await connection.ExecuteAsync(
                 "sp_autostats",
                 new { tblname = "[dbo].[Cipher]", flagc = "OFF" },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -47,9 +55,15 @@ public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
         {
             await connection.ExecuteAsync(
                 "[dbo].[AzureSQLMaintenance]",
-                new { operation = "index", mode = "smart", LogToTable = true },
+                new
+                {
+                    operation = "index",
+                    mode = "smart",
+                    LogToTable = true,
+                },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 172800);
+                commandTimeout: 172800
+            );
         }
     }
 
@@ -60,7 +74,8 @@ public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
             await connection.ExecuteAsync(
                 "[dbo].[Grant_DeleteExpired]",
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 172800);
+                commandTimeout: 172800
+            );
         }
     }
 
@@ -72,7 +87,8 @@ public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
                 "[dbo].[OrganizationSponsorship_DeleteExpired]",
                 new { ValidUntilBeforeDate = validUntilBeforeDate },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 172800);
+                commandTimeout: 172800
+            );
         }
     }
 }

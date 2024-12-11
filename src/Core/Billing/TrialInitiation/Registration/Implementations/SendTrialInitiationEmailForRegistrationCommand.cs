@@ -14,15 +14,16 @@ public class SendTrialInitiationEmailForRegistrationCommand(
     IUserRepository userRepository,
     GlobalSettings globalSettings,
     IMailService mailService,
-    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory)
-    : ISendTrialInitiationEmailForRegistrationCommand
+    IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> tokenDataFactory
+) : ISendTrialInitiationEmailForRegistrationCommand
 {
     public async Task<string?> Handle(
         string email,
         string? name,
         bool receiveMarketingEmails,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products
+    )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(email, nameof(email));
 
@@ -45,7 +46,12 @@ public class SendTrialInitiationEmailForRegistrationCommand(
 
         if (!userExists)
         {
-            await mailService.SendTrialInitiationSignupEmailAsync(email, token, productTier, products);
+            await mailService.SendTrialInitiationSignupEmailAsync(
+                email,
+                token,
+                productTier,
+                products
+            );
         }
 
         return null;
@@ -61,7 +67,11 @@ public class SendTrialInitiationEmailForRegistrationCommand(
 
     private string GenerateToken(string email, string? name, bool receiveMarketingEmails)
     {
-        var tokenable = new RegistrationEmailVerificationTokenable(email, name, receiveMarketingEmails);
+        var tokenable = new RegistrationEmailVerificationTokenable(
+            email,
+            name,
+            receiveMarketingEmails
+        );
         return tokenDataFactory.Protect(tokenable);
     }
 
@@ -69,6 +79,9 @@ public class SendTrialInitiationEmailForRegistrationCommand(
     {
         var user = await userRepository.GetByEmailAsync(email);
 
-        return CoreHelpers.FixedTimeEquals(user?.Email.ToLowerInvariant() ?? string.Empty, email.ToLowerInvariant());
+        return CoreHelpers.FixedTimeEquals(
+            user?.Email.ToLowerInvariant() ?? string.Empty,
+            email.ToLowerInvariant()
+        );
     }
 }

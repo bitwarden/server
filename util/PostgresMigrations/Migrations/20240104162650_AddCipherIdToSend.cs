@@ -14,14 +14,13 @@ public partial class AddCipherIdToSend : Migration
             name: "CipherId",
             table: "Send",
             type: "uuid",
-            nullable: true);
+            nullable: true
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "CipherId",
-            table: "Send");
+        migrationBuilder.DropColumn(name: "CipherId", table: "Send");
     }
 }

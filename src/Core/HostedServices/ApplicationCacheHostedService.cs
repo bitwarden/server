@@ -23,41 +23,44 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
     private CancellationTokenSource _cts;
     private Task _executingTask;
 
-
     public ApplicationCacheHostedService(
         IApplicationCacheService applicationCacheService,
         IOrganizationRepository organizationRepository,
         ILogger<ApplicationCacheHostedService> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _topicName = globalSettings.ServiceBus.ApplicationCacheTopicName;
         _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
-        _applicationCacheService = applicationCacheService as InMemoryServiceBusApplicationCacheService;
+        _applicationCacheService =
+            applicationCacheService as InMemoryServiceBusApplicationCacheService;
         _organizationRepository = organizationRepository;
         _logger = logger;
         _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
         _subscriptionReceiver = _serviceBusClient.CreateReceiver(_topicName, _subName);
-        _serviceBusAdministrationClient = new ServiceBusAdministrationClient(globalSettings.ServiceBus.ConnectionString);
+        _serviceBusAdministrationClient = new ServiceBusAdministrationClient(
+            globalSettings.ServiceBus.ConnectionString
+        );
     }
 
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await _serviceBusAdministrationClient.CreateSubscriptionAsync(new CreateSubscriptionOptions(_topicName, _subName)
-            {
-                DefaultMessageTimeToLive = TimeSpan.FromDays(14),
-                LockDuration = TimeSpan.FromSeconds(30),
-                EnableDeadLetteringOnFilterEvaluationExceptions = true,
-                DeadLetteringOnMessageExpiration = true,
-            }, new CreateRuleOptions
-            {
-                Filter = new SqlRuleFilter($"sys.label != '{_subName}'")
-            }, cancellationToken);
+            await _serviceBusAdministrationClient.CreateSubscriptionAsync(
+                new CreateSubscriptionOptions(_topicName, _subName)
+                {
+                    DefaultMessageTimeToLive = TimeSpan.FromDays(14),
+                    LockDuration = TimeSpan.FromSeconds(30),
+                    EnableDeadLetteringOnFilterEvaluationExceptions = true,
+                    DeadLetteringOnMessageExpiration = true,
+                },
+                new CreateRuleOptions { Filter = new SqlRuleFilter($"sys.label != '{_subName}'") },
+                cancellationToken
+            );
         }
         catch (ServiceBusException e)
-        when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
-        { }
+            when (e.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists) { }
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _executingTask = ExecuteAsync(_cts.Token);
@@ -70,14 +73,17 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
         _cts.Cancel();
         try
         {
-            await _serviceBusAdministrationClient.DeleteSubscriptionAsync(_topicName, _subName, cancellationToken);
+            await _serviceBusAdministrationClient.DeleteSubscriptionAsync(
+                _topicName,
+                _subName,
+                cancellationToken
+            );
         }
         catch { }
         await _executingTask;
     }
 
-    public virtual void Dispose()
-    { }
+    public virtual void Dispose() { }
 
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
@@ -94,7 +100,10 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
         }
     }
 
-    private async Task ProcessMessageAsync(ServiceBusReceivedMessage message, CancellationToken cancellationToken)
+    private async Task ProcessMessageAsync(
+        ServiceBusReceivedMessage message,
+        CancellationToken cancellationToken
+    )
     {
         if (message.Subject != _subName && _applicationCacheService != null)
         {
@@ -105,12 +114,15 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
                     var upsertedOrg = await _organizationRepository.GetByIdAsync(upsertedOrgId);
                     if (upsertedOrg != null)
                     {
-                        await _applicationCacheService.BaseUpsertOrganizationAbilityAsync(upsertedOrg);
+                        await _applicationCacheService.BaseUpsertOrganizationAbilityAsync(
+                            upsertedOrg
+                        );
                     }
                     break;
                 case ApplicationCacheMessageType.DeleteOrganizationAbility:
                     await _applicationCacheService.BaseDeleteOrganizationAbilityAsync(
-                        (Guid)message.ApplicationProperties["id"]);
+                        (Guid)message.ApplicationProperties["id"]
+                    );
                     break;
                 default:
                     break;

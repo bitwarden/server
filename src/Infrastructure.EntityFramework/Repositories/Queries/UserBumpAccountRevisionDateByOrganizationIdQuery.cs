@@ -14,12 +14,13 @@ public class UserBumpAccountRevisionDateByOrganizationIdQuery : IQuery<User>
 
     public IQueryable<User> Run(DatabaseContext dbContext)
     {
-        var query = from u in dbContext.Users
-                    join ou in dbContext.OrganizationUsers
-                        on u.Id equals ou.UserId
-                    where ou.OrganizationId == _organizationId &&
-                        ou.Status == OrganizationUserStatusType.Confirmed
-                    select u;
+        var query =
+            from u in dbContext.Users
+            join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
+            where
+                ou.OrganizationId == _organizationId
+                && ou.Status == OrganizationUserStatusType.Confirmed
+            select u;
 
         return query;
     }

@@ -14,12 +14,14 @@ public partial class AddSecretAccessPolicies : Migration
             name: "GrantedSecretId",
             table: "AccessPolicy",
             type: "uuid",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_AccessPolicy_GrantedSecretId",
             table: "AccessPolicy",
-            column: "GrantedSecretId");
+            column: "GrantedSecretId"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_AccessPolicy_Secret_GrantedSecretId",
@@ -27,7 +29,8 @@ public partial class AddSecretAccessPolicies : Migration
             column: "GrantedSecretId",
             principalTable: "Secret",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Cascade);
+            onDelete: ReferentialAction.Cascade
+        );
     }
 
     /// <inheritdoc />
@@ -35,14 +38,11 @@ public partial class AddSecretAccessPolicies : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_AccessPolicy_Secret_GrantedSecretId",
-            table: "AccessPolicy");
+            table: "AccessPolicy"
+        );
 
-        migrationBuilder.DropIndex(
-            name: "IX_AccessPolicy_GrantedSecretId",
-            table: "AccessPolicy");
+        migrationBuilder.DropIndex(name: "IX_AccessPolicy_GrantedSecretId", table: "AccessPolicy");
 
-        migrationBuilder.DropColumn(
-            name: "GrantedSecretId",
-            table: "AccessPolicy");
+        migrationBuilder.DropColumn(name: "GrantedSecretId", table: "AccessPolicy");
     }
 }

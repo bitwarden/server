@@ -2,5 +2,8 @@
 
 public interface ICountNewServiceAccountSlotsRequiredQuery
 {
-    Task<int> CountNewServiceAccountSlotsRequiredAsync(Guid organizationId, int serviceAccountsToAdd);
+    Task<int> CountNewServiceAccountSlotsRequiredAsync(
+        Guid organizationId,
+        int serviceAccountsToAdd
+    );
 }

@@ -59,7 +59,10 @@ public class SendsControllerTests : IDisposable
 
     [Theory, AutoData]
     public async Task SendsController_WhenSendHidesEmail_CreatorIdentifierShouldBeNull(
-        Guid id, Send send, User user)
+        Guid id,
+        Send send,
+        User user
+    )
     {
         var accessId = CoreHelpers.Base64UrlEncode(id.ToByteArray());
 
@@ -83,9 +86,10 @@ public class SendsControllerTests : IDisposable
     public async Task Post_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
     {
         var now = DateTime.UtcNow;
-        var expected = "You cannot have a Send with a deletion date that far " +
-                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
-                    "and try again.";
+        var expected =
+            "You cannot have a Send with a deletion date that far "
+            + "into the future. Adjust the Deletion Date to a value less than 31 days from now "
+            + "and try again.";
         var request = new SendRequestModel() { DeletionDate = now.AddDays(32) };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
@@ -96,10 +100,16 @@ public class SendsControllerTests : IDisposable
     public async Task PostFile_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
     {
         var now = DateTime.UtcNow;
-        var expected = "You cannot have a Send with a deletion date that far " +
-                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
-                    "and try again.";
-        var request = new SendRequestModel() { Type = SendType.File, FileLength = 1024L, DeletionDate = now.AddDays(32) };
+        var expected =
+            "You cannot have a Send with a deletion date that far "
+            + "into the future. Adjust the Deletion Date to a value less than 31 days from now "
+            + "and try again.";
+        var request = new SendRequestModel()
+        {
+            Type = SendType.File,
+            FileLength = 1024L,
+            DeletionDate = now.AddDays(32),
+        };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostFile(request));
         Assert.Equal(expected, exception.Message);

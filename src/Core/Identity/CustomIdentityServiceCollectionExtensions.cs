@@ -8,7 +8,8 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class CustomIdentityServiceCollectionExtensions
 {
     public static IdentityBuilder AddIdentityWithoutCookieAuth<TUser, TRole>(
-        this IServiceCollection services)
+        this IServiceCollection services
+    )
         where TUser : class
         where TRole : class
     {
@@ -17,7 +18,8 @@ public static class CustomIdentityServiceCollectionExtensions
 
     public static IdentityBuilder AddIdentityWithoutCookieAuth<TUser, TRole>(
         this IServiceCollection services,
-        Action<IdentityOptions> setupAction)
+        Action<IdentityOptions> setupAction
+    )
         where TUser : class
         where TRole : class
     {
@@ -32,8 +34,14 @@ public static class CustomIdentityServiceCollectionExtensions
         // No interface for the error describer so we can add errors without rev'ing the interface
         services.TryAddScoped<IdentityErrorDescriber>();
         services.TryAddScoped<ISecurityStampValidator, SecurityStampValidator<TUser>>();
-        services.TryAddScoped<ITwoFactorSecurityStampValidator, TwoFactorSecurityStampValidator<TUser>>();
-        services.TryAddScoped<IUserClaimsPrincipalFactory<TUser>, UserClaimsPrincipalFactory<TUser, TRole>>();
+        services.TryAddScoped<
+            ITwoFactorSecurityStampValidator,
+            TwoFactorSecurityStampValidator<TUser>
+        >();
+        services.TryAddScoped<
+            IUserClaimsPrincipalFactory<TUser>,
+            UserClaimsPrincipalFactory<TUser, TRole>
+        >();
         services.TryAddScoped<IUserConfirmation<TUser>, DefaultUserConfirmation<TUser>>();
         services.TryAddScoped<UserManager<TUser>>();
         services.TryAddScoped<SignInManager<TUser>>();

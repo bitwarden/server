@@ -29,7 +29,10 @@ public class SMImport
             Key = secret.Key;
             Value = secret.Value;
             Note = secret.Note;
-            ProjectIds = secret.Projects != null && secret.Projects.Any() ? secret.Projects.Select(p => p.Id) : null;
+            ProjectIds =
+                secret.Projects != null && secret.Projects.Any()
+                    ? secret.Projects.Select(p => p.Id)
+                    : null;
         }
 
         public Guid Id { get; set; }

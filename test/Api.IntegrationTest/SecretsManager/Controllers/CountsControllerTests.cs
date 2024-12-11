@@ -33,7 +33,6 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
-
     public CountsControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
@@ -47,7 +46,6 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         _loginHelper = new LoginHelper(_factory, _client);
     }
-
 
     public async Task InitializeAsync()
     {
@@ -70,10 +68,17 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task GetByOrganizationAsync_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets,
-        bool organizationEnabled)
+    public async Task GetByOrganizationAsync_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/sm-counts");
@@ -83,7 +88,9 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [Fact]
     public async Task GetByOrganizationAsync_RunAsServiceAccount_NotFound()
     {
-        var (_, org, _) = await SetupProjectsWithAccessAsync(PermissionType.RunAsServiceAccountWithPermission);
+        var (_, org, _) = await SetupProjectsWithAccessAsync(
+            PermissionType.RunAsServiceAccountWithPermission
+        );
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/sm-counts");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -92,7 +99,10 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [Fact]
     public async Task GetByOrganizationAsync_UserWithoutPermission_ZeroCounts()
     {
-        var (_, org, _) = await SetupProjectsWithAccessAsync(PermissionType.RunAsUserWithPermission, 0);
+        var (_, org, _) = await SetupProjectsWithAccessAsync(
+            PermissionType.RunAsUserWithPermission,
+            0
+        );
 
         var projects = await CreateProjectsAsync(org.Id);
         await CreateSecretsAsync(org.Id, projects[0]);
@@ -131,8 +141,10 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         if (permissionType == PermissionType.RunAsAdmin)
         {
             Assert.Equal(projects.Count + projectsWithoutAccess.Count, result.Projects);
-            Assert.Equal(secrets.Count + secretsWithoutAccess.Count + secretsWithoutProject.Count,
-                result.Secrets);
+            Assert.Equal(
+                secrets.Count + secretsWithoutAccess.Count + secretsWithoutProject.Count,
+                result.Secrets
+            );
             Assert.Equal(serviceAccounts.Count, result.ServiceAccounts);
         }
         else
@@ -151,10 +163,17 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task GetByProjectAsync_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets,
-        bool organizationEnabled)
+    public async Task GetByProjectAsync_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var projects = await CreateProjectsAsync(org.Id);
@@ -166,7 +185,9 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [Fact]
     public async Task GetByProjectAsync_RunAsServiceAccount_NotFound()
     {
-        var (projects, _, _) = await SetupProjectsWithAccessAsync(PermissionType.RunAsServiceAccountWithPermission);
+        var (projects, _, _) = await SetupProjectsWithAccessAsync(
+            PermissionType.RunAsServiceAccountWithPermission
+        );
 
         var response = await _client.GetAsync($"/projects/{projects[0].Id}/sm-counts");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -186,7 +207,10 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [Fact]
     public async Task GetByProjectAsync_UserWithoutPermission_ZeroCounts()
     {
-        var (_, org, user) = await SetupProjectsWithAccessAsync(PermissionType.RunAsUserWithPermission, 0);
+        var (_, org, user) = await SetupProjectsWithAccessAsync(
+            PermissionType.RunAsUserWithPermission,
+            0
+        );
 
         var projects = await CreateProjectsAsync(org.Id);
 
@@ -212,9 +236,16 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(PermissionType.RunAsAdmin, true)]
     [InlineData(PermissionType.RunAsUserWithPermission, false)]
     [InlineData(PermissionType.RunAsUserWithPermission, true)]
-    public async Task GetByProjectAsync_Success(PermissionType permissionType, bool userProjectWriteAccess)
+    public async Task GetByProjectAsync_Success(
+        PermissionType permissionType,
+        bool userProjectWriteAccess
+    )
     {
-        var (projects, org, user) = await SetupProjectsWithAccessAsync(permissionType, 3, userProjectWriteAccess);
+        var (projects, org, user) = await SetupProjectsWithAccessAsync(
+            permissionType,
+            3,
+            userProjectWriteAccess
+        );
 
         var secrets = await CreateSecretsAsync(org.Id, projects[0]);
         await CreateSecretsAsync(org.Id, projects[1]);
@@ -255,44 +286,64 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task GetByServiceAccountAsync_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets,
-        bool organizationEnabled)
+    public async Task GetByServiceAccountAsync_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var serviceAccounts = await CreateServiceAccountsAsync(org.Id);
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
+        var response = await _client.GetAsync(
+            $"/service-accounts/{serviceAccounts[0].Id}/sm-counts"
+        );
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task GetByServiceAccountAsync_RunAsServiceAccount_NotFound()
     {
-        var (_, org, _) = await SetupProjectsWithAccessAsync(PermissionType.RunAsServiceAccountWithPermission);
+        var (_, org, _) = await SetupProjectsWithAccessAsync(
+            PermissionType.RunAsServiceAccountWithPermission
+        );
 
         var serviceAccounts = await CreateServiceAccountsAsync(org.Id);
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
+        var response = await _client.GetAsync(
+            $"/service-accounts/{serviceAccounts[0].Id}/sm-counts"
+        );
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]
-    public async Task GetByServiceAccountAsync_NonExistingServiceAccount_NotFound(PermissionType permissionType)
+    public async Task GetByServiceAccountAsync_NonExistingServiceAccount_NotFound(
+        PermissionType permissionType
+    )
     {
         await SetupProjectsWithAccessAsync(permissionType);
 
-        var response = await _client.GetAsync($"/service-accounts/{Guid.NewGuid().ToString()}/sm-counts");
+        var response = await _client.GetAsync(
+            $"/service-accounts/{Guid.NewGuid().ToString()}/sm-counts"
+        );
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task GetByServiceAccountAsync_UserWithoutPermission_ZeroCounts()
     {
-        var (_, org, user) = await SetupProjectsWithAccessAsync(PermissionType.RunAsUserWithPermission, 0);
+        var (_, org, user) = await SetupProjectsWithAccessAsync(
+            PermissionType.RunAsUserWithPermission,
+            0
+        );
 
         var projects = await CreateProjectsAsync(org.Id);
 
@@ -304,7 +355,9 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
         await CreateApiKeysAsync(serviceAccounts[0]);
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
+        var response = await _client.GetAsync(
+            $"/service-accounts/{serviceAccounts[0].Id}/sm-counts"
+        );
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountCountsResponseModel>();
@@ -336,7 +389,9 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         var apiKeys = await CreateApiKeysAsync(serviceAccounts[0]);
         await CreateApiKeysAsync(serviceAccounts[1]);
 
-        var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
+        var response = await _client.GetAsync(
+            $"/service-accounts/{serviceAccounts[0].Id}/sm-counts"
+        );
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountCountsResponseModel>();
@@ -351,64 +406,70 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         var projects = new List<Project>();
         for (var i = 0; i < numberToCreate; i++)
         {
-            var project = await _projectRepository.CreateAsync(new Project
-            {
-                OrganizationId = orgId,
-                Name = _mockEncryptedString,
-            });
+            var project = await _projectRepository.CreateAsync(
+                new Project { OrganizationId = orgId, Name = _mockEncryptedString }
+            );
             projects.Add(project);
         }
 
         return projects;
     }
 
-    private async Task<List<Secret>> CreateSecretsAsync(Guid organizationId, Project? project, int numberToCreate = 3)
+    private async Task<List<Secret>> CreateSecretsAsync(
+        Guid organizationId,
+        Project? project,
+        int numberToCreate = 3
+    )
     {
         var secrets = new List<Secret>();
         for (var i = 0; i < numberToCreate; i++)
         {
-            var secret = await _secretRepository.CreateAsync(new Secret
-            {
-                OrganizationId = organizationId,
-                Key = _mockEncryptedString,
-                Value = _mockEncryptedString,
-                Note = _mockEncryptedString,
-                Projects = project != null ? new List<Project> { project } : null
-            });
+            var secret = await _secretRepository.CreateAsync(
+                new Secret
+                {
+                    OrganizationId = organizationId,
+                    Key = _mockEncryptedString,
+                    Value = _mockEncryptedString,
+                    Note = _mockEncryptedString,
+                    Projects = project != null ? new List<Project> { project } : null,
+                }
+            );
             secrets.Add(secret);
         }
 
         return secrets;
     }
 
-    private async Task<List<ServiceAccount>> CreateServiceAccountsAsync(Guid organizationId, int numberToCreate = 3)
+    private async Task<List<ServiceAccount>> CreateServiceAccountsAsync(
+        Guid organizationId,
+        int numberToCreate = 3
+    )
     {
         var serviceAccounts = new List<ServiceAccount>();
         for (var i = 0; i < numberToCreate; i++)
         {
-            var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
-            {
-                OrganizationId = organizationId,
-                Name = _mockEncryptedString
-            });
+            var serviceAccount = await _serviceAccountRepository.CreateAsync(
+                new ServiceAccount { OrganizationId = organizationId, Name = _mockEncryptedString }
+            );
             serviceAccounts.Add(serviceAccount);
         }
 
         return serviceAccounts;
     }
 
-    private async Task<List<Group>> CreateGroupsAsync(Guid organizationId, OrganizationUser? user,
-        int numberToCreate = 3)
+    private async Task<List<Group>> CreateGroupsAsync(
+        Guid organizationId,
+        OrganizationUser? user,
+        int numberToCreate = 3
+    )
     {
         var groups = new List<Group>();
 
         for (var i = 0; i < numberToCreate; i++)
         {
-            var group = await _groupRepository.CreateAsync(new Group
-            {
-                OrganizationId = organizationId,
-                Name = _mockEncryptedString,
-            });
+            var group = await _groupRepository.CreateAsync(
+                new Group { OrganizationId = organizationId, Name = _mockEncryptedString }
+            );
             groups.Add(group);
 
             if (user != null)
@@ -420,31 +481,42 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         return groups;
     }
 
-    private async Task<List<ApiKey>> CreateApiKeysAsync(ServiceAccount serviceAccount, int numberToCreate = 3)
+    private async Task<List<ApiKey>> CreateApiKeysAsync(
+        ServiceAccount serviceAccount,
+        int numberToCreate = 3
+    )
     {
         var apiKeys = new List<ApiKey>();
 
         for (var i = 0; i < numberToCreate; i++)
         {
-            var apiKey = await _apiKeyRepository.CreateAsync(new ApiKey
-            {
-                Name = _mockEncryptedString,
-                ServiceAccountId = serviceAccount.Id,
-                Scope = "api.secrets",
-                Key = serviceAccount.OrganizationId.ToString(),
-                EncryptedPayload = _mockEncryptedString,
-                ClientSecretHash = "807613bbf6692e6809a571bc694a4719a5aa6863f7a62bd714003ab73de588e6"
-            });
+            var apiKey = await _apiKeyRepository.CreateAsync(
+                new ApiKey
+                {
+                    Name = _mockEncryptedString,
+                    ServiceAccountId = serviceAccount.Id,
+                    Scope = "api.secrets",
+                    Key = serviceAccount.OrganizationId.ToString(),
+                    EncryptedPayload = _mockEncryptedString,
+                    ClientSecretHash =
+                        "807613bbf6692e6809a571bc694a4719a5aa6863f7a62bd714003ab73de588e6",
+                }
+            );
             apiKeys.Add(apiKey);
         }
 
         return apiKeys;
     }
 
-    private async Task<(List<Project>, Organization, OrganizationUser)> SetupProjectsWithAccessAsync(
+    private async Task<(
+        List<Project>,
+        Organization,
+        OrganizationUser
+    )> SetupProjectsWithAccessAsync(
         PermissionType permissionType,
         int projectsToCreate = 3,
-        bool writeAccess = false)
+        bool writeAccess = false
+    )
     {
         var (org, owner) = await _organizationHelper.Initialize(true, true, true);
         var projects = await CreateProjectsAsync(org.Id, projectsToCreate);
@@ -456,30 +528,36 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
                 await _loginHelper.LoginAsync(_email);
                 break;
             case PermissionType.RunAsUserWithPermission:
+            {
+                var (email, orgUser) = await _organizationHelper.CreateNewUser(
+                    OrganizationUserType.User,
+                    true
+                );
+                user = orgUser;
+                await _loginHelper.LoginAsync(email);
+
+                foreach (var project in projects)
                 {
-                    var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-                    user = orgUser;
-                    await _loginHelper.LoginAsync(email);
-
-                    foreach (var project in projects)
-                    {
-                        await CreateUserProjectAccessPolicyAsync(user.Id, project.Id, writeAccess);
-                    }
-
-                    break;
+                    await CreateUserProjectAccessPolicyAsync(user.Id, project.Id, writeAccess);
                 }
+
+                break;
+            }
             case PermissionType.RunAsServiceAccountWithPermission:
+            {
+                var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+                await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+                foreach (var project in projects)
                 {
-                    var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
-                    await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
-
-                    foreach (var project in projects)
-                    {
-                        await CreateServiceAccountProjectAccessPolicyAsync(project.Id, apiKeyDetails.ApiKey.ServiceAccountId!.Value);
-                    }
-
-                    break;
+                    await CreateServiceAccountProjectAccessPolicyAsync(
+                        project.Id,
+                        apiKeyDetails.ApiKey.ServiceAccountId!.Value
+                    );
                 }
+
+                break;
+            }
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
@@ -487,7 +565,11 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         return (projects, org, user);
     }
 
-    private async Task CreateUserProjectAccessPolicyAsync(Guid userId, Guid projectId, bool write = false)
+    private async Task CreateUserProjectAccessPolicyAsync(
+        Guid userId,
+        Guid projectId,
+        bool write = false
+    )
     {
         var policy = new UserProjectAccessPolicy
         {
@@ -511,7 +593,6 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await _accessPolicyRepository.CreateManyAsync([policy]);
     }
 
-
     private async Task CreateUserServiceAccountAccessPolicyAsync(Guid userId, Guid serviceAccountId)
     {
         var policy = new UserServiceAccountAccessPolicy
@@ -524,19 +605,25 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await _accessPolicyRepository.CreateManyAsync([policy]);
     }
 
-    private async Task CreateGroupServiceAccountAccessPolicyAsync(Guid groupId, Guid serviceAccountId)
+    private async Task CreateGroupServiceAccountAccessPolicyAsync(
+        Guid groupId,
+        Guid serviceAccountId
+    )
     {
         var policy = new GroupServiceAccountAccessPolicy
         {
             GroupId = groupId,
             GrantedServiceAccountId = serviceAccountId,
             Read = true,
-            Write = false
+            Write = false,
         };
         await _accessPolicyRepository.CreateManyAsync([policy]);
     }
 
-    private async Task CreateServiceAccountProjectAccessPolicyAsync(Guid projectId, Guid serviceAccountId)
+    private async Task CreateServiceAccountProjectAccessPolicyAsync(
+        Guid projectId,
+        Guid serviceAccountId
+    )
     {
         var policy = new ServiceAccountProjectAccessPolicy
         {

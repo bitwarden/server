@@ -15,10 +15,12 @@ public class SelfHostedRevokeSponsorshipCommandTests : CancelSponsorshipCommandT
     [Theory]
     [BitAutoData]
     public async Task RevokeSponsorship_NoExistingSponsorship_ThrowsBadRequest(
-        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider
+    )
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.RevokeSponsorshipAsync(null));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RevokeSponsorshipAsync(null)
+        );
 
         Assert.Contains("You are not currently sponsoring an organization.", exception.Message);
         await AssertDidNotDeleteSponsorshipAsync(sutProvider);
@@ -27,8 +29,10 @@ public class SelfHostedRevokeSponsorshipCommandTests : CancelSponsorshipCommandT
 
     [Theory]
     [BitAutoData]
-    public async Task RevokeSponsorship_SponsorshipNotSynced_DeletesSponsorship(OrganizationSponsorship sponsorship,
-        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+    public async Task RevokeSponsorship_SponsorshipNotSynced_DeletesSponsorship(
+        OrganizationSponsorship sponsorship,
+        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider
+    )
     {
         sponsorship.LastSyncDate = null;
 
@@ -38,8 +42,10 @@ public class SelfHostedRevokeSponsorshipCommandTests : CancelSponsorshipCommandT
 
     [Theory]
     [BitAutoData]
-    public async Task RevokeSponsorship_SponsorshipSynced_MarksForDeletion(OrganizationSponsorship sponsorship,
-        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider)
+    public async Task RevokeSponsorship_SponsorshipSynced_MarksForDeletion(
+        OrganizationSponsorship sponsorship,
+        SutProvider<SelfHostedRevokeSponsorshipCommand> sutProvider
+    )
     {
         sponsorship.LastSyncDate = DateTime.UtcNow;
 

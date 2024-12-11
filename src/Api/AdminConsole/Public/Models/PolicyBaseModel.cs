@@ -9,6 +9,7 @@ public abstract class PolicyBaseModel
     /// </summary>
     [Required]
     public bool? Enabled { get; set; }
+
     /// <summary>
     /// Data for the policy.
     /// </summary>

@@ -17,7 +17,8 @@ public partial class GroupAccessAllDefaultValue : Migration
             nullable: false,
             defaultValue: false,
             oldClrType: typeof(bool),
-            oldType: "boolean");
+            oldType: "boolean"
+        );
     }
 
     /// <inheritdoc />
@@ -30,6 +31,7 @@ public partial class GroupAccessAllDefaultValue : Migration
             nullable: false,
             oldClrType: typeof(bool),
             oldType: "boolean",
-            oldDefaultValue: false);
+            oldDefaultValue: false
+        );
     }
 }

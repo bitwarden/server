@@ -44,13 +44,12 @@ internal class EfGrant : ICustomization
 
 internal class EfGrantAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfGrantAutoDataAttribute() : base(new SutProviderCustomization(), new EfGrant())
-    { }
+    public EfGrantAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfGrant()) { }
 }
 
 internal class InlineEfGrantAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfGrantAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfGrant) }, values)
-    { }
+    public InlineEfGrantAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfGrant) }, values) { }
 }

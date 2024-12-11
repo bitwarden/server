@@ -35,7 +35,8 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         IGlobalSettings globalSettings,
         IPushNotificationService pushNotificationService,
         IOrganizationUserRepository organizationUserRepository,
-        IEventService eventService)
+        IEventService eventService
+    )
     {
         _authRequestService = authRequestService;
         _mailService = mailService;
@@ -52,68 +53,109 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
     // post-release cleanup we should be able to construct a single
     // AuthRequestProcessor and run its Process() Save() methods, and the
     // various calls to send notifications.
-    public async Task UpdateAsync(Guid requestId, Guid userId, bool requestApproved, string encryptedUserKey)
+    public async Task UpdateAsync(
+        Guid requestId,
+        Guid userId,
+        bool requestApproved,
+        string encryptedUserKey
+    )
     {
-        var updatedAuthRequest = await _authRequestService.UpdateAuthRequestAsync(requestId, userId,
-            new AuthRequestUpdateRequestModel { RequestApproved = requestApproved, Key = encryptedUserKey });
+        var updatedAuthRequest = await _authRequestService.UpdateAuthRequestAsync(
+            requestId,
+            userId,
+            new AuthRequestUpdateRequestModel
+            {
+                RequestApproved = requestApproved,
+                Key = encryptedUserKey,
+            }
+        );
 
         if (updatedAuthRequest.Approved is true)
         {
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                _logger.LogError("User ({id}) not found. Trusted device admin approval email not sent.", userId);
+                _logger.LogError(
+                    "User ({id}) not found. Trusted device admin approval email not sent.",
+                    userId
+                );
                 return;
             }
             var approvalDateTime = updatedAuthRequest.ResponseDate ?? DateTime.UtcNow;
-            var deviceTypeDisplayName = updatedAuthRequest.RequestDeviceType.GetType()
-                .GetMember(updatedAuthRequest.RequestDeviceType.ToString())
-                .FirstOrDefault()?
-                .GetCustomAttribute<DisplayAttribute>()?.Name ?? "Unknown";
-            var deviceTypeAndIdentifier = $"{deviceTypeDisplayName} - {updatedAuthRequest.RequestDeviceIdentifier}";
-            await _mailService.SendTrustedDeviceAdminApprovalEmailAsync(user.Email, approvalDateTime,
-                updatedAuthRequest.RequestIpAddress, deviceTypeAndIdentifier);
+            var deviceTypeDisplayName =
+                updatedAuthRequest
+                    .RequestDeviceType.GetType()
+                    .GetMember(updatedAuthRequest.RequestDeviceType.ToString())
+                    .FirstOrDefault()
+                    ?.GetCustomAttribute<DisplayAttribute>()
+                    ?.Name ?? "Unknown";
+            var deviceTypeAndIdentifier =
+                $"{deviceTypeDisplayName} - {updatedAuthRequest.RequestDeviceIdentifier}";
+            await _mailService.SendTrustedDeviceAdminApprovalEmailAsync(
+                user.Email,
+                approvalDateTime,
+                updatedAuthRequest.RequestIpAddress,
+                deviceTypeAndIdentifier
+            );
         }
     }
 
-    public async Task UpdateAsync(Guid organizationId, IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates)
+    public async Task UpdateAsync(
+        Guid organizationId,
+        IEnumerable<OrganizationAuthRequestUpdate> authRequestUpdates
+    )
     {
-        var authRequestEntities = await FetchManyOrganizationAuthRequestsFromTheDatabase(organizationId, authRequestUpdates.Select(aru => aru.Id));
+        var authRequestEntities = await FetchManyOrganizationAuthRequestsFromTheDatabase(
+            organizationId,
+            authRequestUpdates.Select(aru => aru.Id)
+        );
         var processor = new BatchAuthRequestUpdateProcessor(
             authRequestEntities,
             authRequestUpdates,
             new AuthRequestUpdateProcessorConfiguration()
             {
                 OrganizationId = organizationId,
-                AuthRequestExpiresAfter = _globalSettings.PasswordlessAuth.AdminRequestExpiration
+                AuthRequestExpiresAfter = _globalSettings.PasswordlessAuth.AdminRequestExpiration,
             }
         );
         processor.Process((Exception e) => _logger.LogError(e.Message));
-        await processor.Save((IEnumerable<OrganizationAdminAuthRequest> authRequests) => _authRequestRepository.UpdateManyAsync(authRequests));
-        await processor.SendPushNotifications((ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar));
+        await processor.Save(
+            (IEnumerable<OrganizationAdminAuthRequest> authRequests) =>
+                _authRequestRepository.UpdateManyAsync(authRequests)
+        );
+        await processor.SendPushNotifications(
+            (ar) => _pushNotificationService.PushAuthRequestResponseAsync(ar)
+        );
         await processor.SendApprovalEmailsForProcessedRequests(SendApprovalEmail);
         await processor.LogOrganizationEventsForProcessedRequests(LogOrganizationEvents);
     }
 
-    async Task<ICollection<OrganizationAdminAuthRequest>> FetchManyOrganizationAuthRequestsFromTheDatabase(Guid organizationId, IEnumerable<Guid> authRequestIds)
+    async Task<
+        ICollection<OrganizationAdminAuthRequest>
+    > FetchManyOrganizationAuthRequestsFromTheDatabase(
+        Guid organizationId,
+        IEnumerable<Guid> authRequestIds
+    )
     {
         return authRequestIds != null && authRequestIds.Any()
-            ? await _authRequestRepository
-            .GetManyAdminApprovalRequestsByManyIdsAsync(
+            ? await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(
                 organizationId,
                 authRequestIds
             )
             : new List<OrganizationAdminAuthRequest>();
     }
 
-    async Task SendApprovalEmail<T>(T authRequest, string identifier) where T : AuthRequest
+    async Task SendApprovalEmail<T>(T authRequest, string identifier)
+        where T : AuthRequest
     {
         var user = await _userRepository.GetByIdAsync(authRequest.UserId);
 
         // This should be impossible
         if (user == null)
         {
-            _logger.LogError($"User {authRequest.UserId} not found. Trusted device admin approval email not sent.");
+            _logger.LogError(
+                $"User {authRequest.UserId} not found. Trusted device admin approval email not sent."
+            );
             return;
         }
 
@@ -125,9 +167,13 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         );
     }
 
-    async Task LogOrganizationEvents(IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events)
+    async Task LogOrganizationEvents(
+        IEnumerable<(OrganizationAdminAuthRequest AuthRequest, EventType EventType)> events
+    )
     {
-        var organizationUsers = await _organizationUserRepository.GetManyAsync(events.Select(e => e.AuthRequest.OrganizationUserId));
+        var organizationUsers = await _organizationUserRepository.GetManyAsync(
+            events.Select(e => e.AuthRequest.OrganizationUserId)
+        );
         await _eventService.LogOrganizationUserEventsAsync(
             organizationUsers.Select(ou =>
             {

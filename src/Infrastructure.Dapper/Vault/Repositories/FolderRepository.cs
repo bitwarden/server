@@ -13,12 +13,13 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
 {
     public FolderRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public FolderRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<Folder> GetByIdAsync(Guid id, Guid userId)
     {
@@ -38,7 +39,8 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
             var results = await connection.QueryAsync<Folder>(
                 $"[{Schema}].[Folder_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -46,12 +48,15 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
 
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
-        Guid userId, IEnumerable<Folder> folders)
+        Guid userId,
+        IEnumerable<Folder> folders
+    )
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
             // Create temp table
-            var sqlCreateTemp = @"
+            var sqlCreateTemp =
+                @"
                             SELECT TOP 0 *
                             INTO #TempFolder
                             FROM [dbo].[Folder]";
@@ -62,7 +67,13 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
             }
 
             // Bulk copy data into temp table
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+            using (
+                var bulkCopy = new SqlBulkCopy(
+                    connection,
+                    SqlBulkCopyOptions.KeepIdentity,
+                    transaction
+                )
+            )
             {
                 bulkCopy.DestinationTableName = "#TempFolder";
                 var foldersTable = folders.ToDataTable();
@@ -76,7 +87,8 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
             }
 
             // Update folder table from temp table
-            var sql = @"
+            var sql =
+                @"
                     UPDATE
                         [dbo].[Folder]
                     SET
@@ -98,5 +110,4 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
             }
         };
     }
-
 }

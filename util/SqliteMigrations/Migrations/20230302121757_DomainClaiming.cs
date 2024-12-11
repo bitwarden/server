@@ -12,7 +12,8 @@ public partial class DomainClaiming : Migration
             name: "DomainName",
             table: "Event",
             type: "TEXT",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.CreateTable(
             name: "OrganizationDomain",
@@ -26,7 +27,7 @@ public partial class DomainClaiming : Migration
                 VerifiedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
                 NextRunDate = table.Column<DateTime>(type: "TEXT", nullable: false),
                 LastCheckedDate = table.Column<DateTime>(type: "TEXT", nullable: true),
-                JobRunCount = table.Column<int>(type: "INTEGER", nullable: false)
+                JobRunCount = table.Column<int>(type: "INTEGER", nullable: false),
             },
             constraints: table =>
             {
@@ -36,22 +37,22 @@ public partial class DomainClaiming : Migration
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationDomain_OrganizationId",
             table: "OrganizationDomain",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "OrganizationDomain");
+        migrationBuilder.DropTable(name: "OrganizationDomain");
 
-        migrationBuilder.DropColumn(
-            name: "DomainName",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "DomainName", table: "Event");
     }
 }

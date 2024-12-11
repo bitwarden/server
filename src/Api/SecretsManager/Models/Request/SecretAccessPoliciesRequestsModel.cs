@@ -16,11 +16,14 @@ public class SecretAccessPoliciesRequestsModel
     public SecretAccessPolicies ToSecretAccessPolicies(Guid secretId, Guid organizationId)
     {
         var userAccessPolicies = UserAccessPolicyRequests
-            .Select(x => x.ToUserSecretAccessPolicy(secretId, organizationId)).ToList();
+            .Select(x => x.ToUserSecretAccessPolicy(secretId, organizationId))
+            .ToList();
         var groupAccessPolicies = GroupAccessPolicyRequests
-            .Select(x => x.ToGroupSecretAccessPolicy(secretId, organizationId)).ToList();
+            .Select(x => x.ToGroupSecretAccessPolicy(secretId, organizationId))
+            .ToList();
         var serviceAccountAccessPolicies = ServiceAccountAccessPolicyRequests
-            .Select(x => x.ToServiceAccountSecretAccessPolicy(secretId, organizationId)).ToList();
+            .Select(x => x.ToServiceAccountSecretAccessPolicy(secretId, organizationId))
+            .ToList();
 
         var policies = new List<BaseAccessPolicy>();
         policies.AddRange(userAccessPolicies);
@@ -36,7 +39,7 @@ public class SecretAccessPoliciesRequestsModel
             OrganizationId = organizationId,
             UserAccessPolicies = userAccessPolicies,
             GroupAccessPolicies = groupAccessPolicies,
-            ServiceAccountAccessPolicies = serviceAccountAccessPolicies
+            ServiceAccountAccessPolicies = serviceAccountAccessPolicies,
         };
     }
 }

@@ -24,7 +24,9 @@ public class RequireFeatureAttributeTests
         var rfa = new RequireFeatureAttribute(_testFeature);
 
         // Act & Assert
-        Assert.Throws<FeatureUnavailableException>(() => rfa.OnActionExecuting(GetContext(enabled: false)));
+        Assert.Throws<FeatureUnavailableException>(
+            () => rfa.OnActionExecuting(GetContext(enabled: false))
+        );
     }
 
     [Fact]
@@ -34,7 +36,9 @@ public class RequireFeatureAttributeTests
         var rfa = new RequireFeatureAttribute("missing-feature");
 
         // Act & Assert
-        Assert.Throws<FeatureUnavailableException>(() => rfa.OnActionExecuting(GetContext(enabled: false)));
+        Assert.Throws<FeatureUnavailableException>(
+            () => rfa.OnActionExecuting(GetContext(enabled: false))
+        );
     }
 
     [Fact]
@@ -49,7 +53,6 @@ public class RequireFeatureAttributeTests
         // Assert
         // The Assert here is NOT throwing an exception
     }
-
 
     /// <summary>
     /// Generates a ActionExecutingContext with the necessary services registered to test
@@ -73,12 +76,15 @@ public class RequireFeatureAttributeTests
         httpContext.RequestServices = services.BuildServiceProvider();
 
         var context = Substitute.For<ActionExecutingContext>(
-            Substitute.For<ActionContext>(httpContext,
+            Substitute.For<ActionContext>(
+                httpContext,
                 new RouteData(),
-                Substitute.For<ActionDescriptor>()),
+                Substitute.For<ActionDescriptor>()
+            ),
             new List<IFilterMetadata>(),
             new Dictionary<string, object>(),
-            Substitute.For<Controller>());
+            Substitute.For<Controller>()
+        );
 
         return context;
     }

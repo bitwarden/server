@@ -16,7 +16,9 @@ public class MockedHttpResponse : IMockedHttpResponse
         _responder = (_, builder) => builder.WithStatusCode(statusCode);
     }
 
-    private MockedHttpResponse(Func<HttpRequestMessage, HttpResponseBuilder, HttpResponseBuilder> responder)
+    private MockedHttpResponse(
+        Func<HttpRequestMessage, HttpResponseBuilder, HttpResponseBuilder> responder
+    )
     {
         _responder = responder;
     }
@@ -30,19 +32,30 @@ public class MockedHttpResponse : IMockedHttpResponse
     {
         return AddChild((_, builder) => builder.WithHeader(name, value));
     }
+
     public MockedHttpResponse WithHeaders(params KeyValuePair<string, string>[] headers)
     {
-        return AddChild((_, builder) => headers.Aggregate(builder, (b, header) => b.WithHeader(header.Key, header.Value)));
+        return AddChild(
+            (_, builder) =>
+                headers.Aggregate(builder, (b, header) => b.WithHeader(header.Key, header.Value))
+        );
     }
 
     public MockedHttpResponse WithContent(string mediaType, string content)
     {
         return WithContent(new StringContent(content, Encoding.UTF8, mediaType));
     }
+
     public MockedHttpResponse WithContent(string mediaType, byte[] content)
     {
-        return WithContent(new ByteArrayContent(content) { Headers = { ContentType = new MediaTypeHeaderValue(mediaType) } });
+        return WithContent(
+            new ByteArrayContent(content)
+            {
+                Headers = { ContentType = new MediaTypeHeaderValue(mediaType) },
+            }
+        );
     }
+
     public MockedHttpResponse WithContent(HttpContent content)
     {
         return AddChild((_, builder) => builder.WithContent(content));
@@ -53,14 +66,23 @@ public class MockedHttpResponse : IMockedHttpResponse
         return await RespondToAsync(request, new HttpResponseBuilder());
     }
 
-    private async Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request, HttpResponseBuilder currentBuilder)
+    private async Task<HttpResponseMessage> RespondToAsync(
+        HttpRequestMessage request,
+        HttpResponseBuilder currentBuilder
+    )
     {
         NumberOfResponses++;
         var nextBuilder = _responder(request, currentBuilder);
-        return await (_childResponse == null ? nextBuilder.ToHttpResponseAsync() : _childResponse.RespondToAsync(request, nextBuilder));
+        return await (
+            _childResponse == null
+                ? nextBuilder.ToHttpResponseAsync()
+                : _childResponse.RespondToAsync(request, nextBuilder)
+        );
     }
 
-    private MockedHttpResponse AddChild(Func<HttpRequestMessage, HttpResponseBuilder, HttpResponseBuilder> responder)
+    private MockedHttpResponse AddChild(
+        Func<HttpRequestMessage, HttpResponseBuilder, HttpResponseBuilder> responder
+    )
     {
         _childResponse = new MockedHttpResponse(responder);
         return _childResponse;

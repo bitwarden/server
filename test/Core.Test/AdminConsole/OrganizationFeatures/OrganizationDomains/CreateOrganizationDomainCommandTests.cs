@@ -16,19 +16,24 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationDomains;
 public class CreateOrganizationDomainCommandTests
 {
     [Theory, BitAutoData]
-    public async Task CreateAsync_ShouldCreateOrganizationDomainAndLogEvent_WhenDetailsAreValid(OrganizationDomain orgDomain, SutProvider<CreateOrganizationDomainCommand> sutProvider)
+    public async Task CreateAsync_ShouldCreateOrganizationDomainAndLogEvent_WhenDetailsAreValid(
+        OrganizationDomain orgDomain,
+        SutProvider<CreateOrganizationDomainCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(orgDomain.DomainName)
             .Returns(new List<OrganizationDomain>());
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetDomainByOrgIdAndDomainNameAsync(orgDomain.OrganizationId, orgDomain.DomainName)
             .ReturnsNull();
         orgDomain.SetNextRunDate(12);
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .CreateAsync(orgDomain)
             .Returns(orgDomain);
-
 
         var result = await sutProvider.Sut.CreateAsync(orgDomain);
 
@@ -38,20 +43,25 @@ public class CreateOrganizationDomainCommandTests
         Assert.Equal(orgDomain.Txt, result.Txt);
         Assert.Equal(orgDomain.Txt.Length == 47, result.Txt.Length == 47);
         Assert.Equal(orgDomain.NextRunDate, result.NextRunDate);
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationDomainEventAsync(Arg.Any<OrganizationDomain>(), EventType.OrganizationDomain_Added);
+        await sutProvider
+            .GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationDomainEventAsync(
+                Arg.Any<OrganizationDomain>(),
+                EventType.OrganizationDomain_Added
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_ShouldThrowConflictException_WhenDomainIsClaimed(OrganizationDomain orgDomain,
-        SutProvider<CreateOrganizationDomainCommand> sutProvider)
+    public async Task CreateAsync_ShouldThrowConflictException_WhenDomainIsClaimed(
+        OrganizationDomain orgDomain,
+        SutProvider<CreateOrganizationDomainCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(orgDomain.DomainName)
-            .Returns(new List<OrganizationDomain>()
-            {
-                orgDomain
-            });
+            .Returns(new List<OrganizationDomain>() { orgDomain });
 
         var requestAction = async () => await sutProvider.Sut.CreateAsync(orgDomain);
 
@@ -60,13 +70,17 @@ public class CreateOrganizationDomainCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAsync_ShouldThrowConflictException_WhenEntryIsDuplicatedForOrganization(OrganizationDomain orgDomain,
-        SutProvider<CreateOrganizationDomainCommand> sutProvider)
+    public async Task CreateAsync_ShouldThrowConflictException_WhenEntryIsDuplicatedForOrganization(
+        OrganizationDomain orgDomain,
+        SutProvider<CreateOrganizationDomainCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetClaimedDomainsByDomainNameAsync(orgDomain.DomainName)
             .Returns(new List<OrganizationDomain>());
-        sutProvider.GetDependency<IOrganizationDomainRepository>()
+        sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
             .GetDomainByOrgIdAndDomainNameAsync(orgDomain.OrganizationId, orgDomain.DomainName)
             .Returns(orgDomain);
 

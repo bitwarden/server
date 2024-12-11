@@ -4,5 +4,5 @@ public enum MemberDecryptionType
 {
     MasterPassword = 0,
     KeyConnector = 1,
-    TrustedDeviceEncryption = 2
+    TrustedDeviceEncryption = 2,
 }

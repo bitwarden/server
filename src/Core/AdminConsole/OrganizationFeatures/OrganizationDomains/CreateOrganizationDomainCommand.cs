@@ -18,7 +18,8 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
     public CreateOrganizationDomainCommand(
         IOrganizationDomainRepository organizationDomainRepository,
         IEventService eventService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings
+    )
     {
         _organizationDomainRepository = organizationDomainRepository;
         _eventService = eventService;
@@ -28,8 +29,9 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
     public async Task<OrganizationDomain> CreateAsync(OrganizationDomain organizationDomain)
     {
         //Domains claimed and verified by an organization cannot be claimed
-        var claimedDomain =
-            await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(organizationDomain.DomainName);
+        var claimedDomain = await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(
+            organizationDomain.DomainName
+        );
         if (claimedDomain.Any())
         {
             throw new ConflictException("The domain is not available to be claimed.");
@@ -37,8 +39,10 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
         //check for duplicate domain entry for an organization
         var duplicateOrgDomain =
-            await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(organizationDomain.OrganizationId,
-                organizationDomain.DomainName);
+            await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(
+                organizationDomain.OrganizationId,
+                organizationDomain.DomainName
+            );
         if (duplicateOrgDomain is not null)
         {
             throw new ConflictException("A domain already exists for this organization.");
@@ -53,7 +57,10 @@ public class CreateOrganizationDomainCommand : ICreateOrganizationDomainCommand
 
         var orgDomain = await _organizationDomainRepository.CreateAsync(organizationDomain);
 
-        await _eventService.LogOrganizationDomainEventAsync(orgDomain, EventType.OrganizationDomain_Added);
+        await _eventService.LogOrganizationDomainEventAsync(
+            orgDomain,
+            EventType.OrganizationDomain_Added
+        );
 
         return orgDomain;
     }

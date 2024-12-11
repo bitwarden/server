@@ -18,4 +18,3 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         await _secretRepository.SoftDeleteManyByIdAsync(secrets.Select(s => s.Id));
     }
 }
-

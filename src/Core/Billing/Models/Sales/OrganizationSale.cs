@@ -13,7 +13,8 @@ public class OrganizationSale
     public void Deconstruct(
         out Organization organization,
         out CustomerSetup? customerSetup,
-        out SubscriptionSetup subscriptionSetup)
+        out SubscriptionSetup subscriptionSetup
+    )
     {
         organization = Organization;
         customerSetup = CustomerSetup;
@@ -24,32 +25,28 @@ public class OrganizationSale
     public CustomerSetup? CustomerSetup { get; init; }
     public required SubscriptionSetup SubscriptionSetup { get; init; }
 
-    public static OrganizationSale From(
-        Organization organization,
-        OrganizationSignup signup) => new()
+    public static OrganizationSale From(Organization organization, OrganizationSignup signup) =>
+        new()
         {
             Organization = organization,
-            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId) ? GetCustomerSetup(signup) : null,
-            SubscriptionSetup = GetSubscriptionSetup(signup)
+            CustomerSetup = string.IsNullOrEmpty(organization.GatewayCustomerId)
+                ? GetCustomerSetup(signup)
+                : null,
+            SubscriptionSetup = GetSubscriptionSetup(signup),
         };
 
-    public static OrganizationSale From(
-        Organization organization,
-        OrganizationUpgrade upgrade) => new()
-        {
-            Organization = organization,
-            SubscriptionSetup = GetSubscriptionSetup(upgrade)
-        };
+    public static OrganizationSale From(Organization organization, OrganizationUpgrade upgrade) =>
+        new() { Organization = organization, SubscriptionSetup = GetSubscriptionSetup(upgrade) };
 
     private static CustomerSetup GetCustomerSetup(OrganizationSignup signup)
     {
         var customerSetup = new CustomerSetup
         {
-            Coupon = signup.IsFromProvider
-            ? StripeConstants.CouponIDs.MSPDiscount35
-            : signup.IsFromSecretsManagerTrial
-                ? StripeConstants.CouponIDs.SecretsManagerStandalone
-                : null
+            Coupon =
+                signup.IsFromProvider ? StripeConstants.CouponIDs.MSPDiscount35
+                : signup.IsFromSecretsManagerTrial
+                    ? StripeConstants.CouponIDs.SecretsManagerStandalone
+                : null,
         };
 
         if (!signup.PaymentMethodType.HasValue)
@@ -59,7 +56,8 @@ public class OrganizationSale
 
         customerSetup.TokenizedPaymentSource = new TokenizedPaymentSource(
             signup.PaymentMethodType!.Value,
-            signup.PaymentToken);
+            signup.PaymentToken
+        );
 
         customerSetup.TaxInformation = new TaxInformation(
             signup.TaxInfo.BillingAddressCountry,
@@ -68,7 +66,8 @@ public class OrganizationSale
             signup.TaxInfo.BillingAddressLine1,
             signup.TaxInfo.BillingAddressLine2,
             signup.TaxInfo.BillingAddressCity,
-            signup.TaxInfo.BillingAddressState);
+            signup.TaxInfo.BillingAddressState
+        );
 
         return customerSetup;
     }
@@ -81,14 +80,14 @@ public class OrganizationSale
         {
             Seats = upgrade.AdditionalSeats,
             Storage = upgrade.AdditionalStorageGb,
-            PremiumAccess = upgrade.PremiumAccessAddon
+            PremiumAccess = upgrade.PremiumAccessAddon,
         };
 
         var secretsManagerOptions = upgrade.UseSecretsManager
             ? new SubscriptionSetup.SecretsManager
             {
                 Seats = upgrade.AdditionalSmSeats ?? 0,
-                ServiceAccounts = upgrade.AdditionalServiceAccounts
+                ServiceAccounts = upgrade.AdditionalServiceAccounts,
             }
             : null;
 
@@ -96,7 +95,7 @@ public class OrganizationSale
         {
             Plan = plan,
             PasswordManagerOptions = passwordManagerOptions,
-            SecretsManagerOptions = secretsManagerOptions
+            SecretsManagerOptions = secretsManagerOptions,
         };
     }
 }

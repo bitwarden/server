@@ -13,15 +13,27 @@ public class AuthorizationCodeStore : DefaultGrantStore<AuthorizationCode>, IAut
         IPersistedGrantStore store,
         IPersistentGrantSerializer serializer,
         IHandleGenerationService handleGenerationService,
-        ILogger<DefaultAuthorizationCodeStore> logger)
-        : base(IdentityServerConstants.PersistedGrantTypes.AuthorizationCode, store, serializer,
-              handleGenerationService, logger)
-    { }
+        ILogger<DefaultAuthorizationCodeStore> logger
+    )
+        : base(
+            IdentityServerConstants.PersistedGrantTypes.AuthorizationCode,
+            store,
+            serializer,
+            handleGenerationService,
+            logger
+        ) { }
 
     public Task<string> StoreAuthorizationCodeAsync(AuthorizationCode code)
     {
-        return CreateItemAsync(code, code.ClientId, code.Subject.GetSubjectId(), code.SessionId,
-            code.Description, code.CreationTime, code.Lifetime);
+        return CreateItemAsync(
+            code,
+            code.ClientId,
+            code.Subject.GetSubjectId(),
+            code.SessionId,
+            code.Description,
+            code.CreationTime,
+            code.Lifetime
+        );
     }
 
     public Task<AuthorizationCode> GetAuthorizationCodeAsync(string code)

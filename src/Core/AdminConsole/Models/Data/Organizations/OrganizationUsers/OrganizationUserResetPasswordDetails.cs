@@ -8,7 +8,11 @@ public class OrganizationUserResetPasswordDetails
 {
     public OrganizationUserResetPasswordDetails() { }
 
-    public OrganizationUserResetPasswordDetails(OrganizationUser orgUser, User user, Organization org)
+    public OrganizationUserResetPasswordDetails(
+        OrganizationUser orgUser,
+        User user,
+        Organization org
+    )
     {
         if (orgUser == null)
         {
@@ -33,6 +37,7 @@ public class OrganizationUserResetPasswordDetails
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = org.PrivateKey;
     }
+
     public Guid OrganizationUserId { get; set; }
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }

@@ -17,18 +17,19 @@ public class GrantRepository : IGrantRepository
     private readonly Container _container;
 
     public GrantRepository(GlobalSettings globalSettings)
-        : this(globalSettings.IdentityServer.CosmosConnectionString)
-    { }
+        : this(globalSettings.IdentityServer.CosmosConnectionString) { }
 
     public GrantRepository(string cosmosConnectionString)
     {
         var options = new CosmosClientOptions
         {
-            Serializer = new SystemTextJsonCosmosSerializer(new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false
-            })
+            Serializer = new SystemTextJsonCosmosSerializer(
+                new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    WriteIndented = false,
+                }
+            ),
         };
         // TODO: Perhaps we want to evaluate moving this to DI as a keyed service singleton in .NET 8
         _client = new CosmosClient(cosmosConnectionString, options);
@@ -54,8 +55,12 @@ public class GrantRepository : IGrantRepository
         }
     }
 
-    public Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
-        => throw new NotImplementedException();
+    public Task<ICollection<IGrant>> GetManyAsync(
+        string subjectId,
+        string sessionId,
+        string clientId,
+        string type
+    ) => throw new NotImplementedException();
 
     public async Task SaveAsync(IGrant obj)
     {
@@ -65,11 +70,15 @@ public class GrantRepository : IGrantRepository
         }
         item.SetTtl();
         var id = Base64IdStringConverter.ToId(item.Key);
-        await _container.UpsertItemAsync(item, new PartitionKey(id), new ItemRequestOptions
-        {
-            // ref: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/best-practice-dotnet#best-practices-for-write-heavy-workloads
-            EnableContentResponseOnWrite = false
-        });
+        await _container.UpsertItemAsync(
+            item,
+            new PartitionKey(id),
+            new ItemRequestOptions
+            {
+                // ref: https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/best-practice-dotnet#best-practices-for-write-heavy-workloads
+                EnableContentResponseOnWrite = false,
+            }
+        );
     }
 
     public async Task DeleteByKeyAsync(string key)
@@ -78,6 +87,6 @@ public class GrantRepository : IGrantRepository
         await _container.DeleteItemAsync<IGrant>(id, new PartitionKey(id));
     }
 
-    public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
-        => throw new NotImplementedException();
+    public Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type) =>
+        throw new NotImplementedException();
 }

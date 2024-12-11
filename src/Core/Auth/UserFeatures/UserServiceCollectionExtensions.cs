@@ -1,6 +1,4 @@
-﻿
-
-using Bit.Core.Auth.UserFeatures.Registration;
+﻿using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.Registration.Implementations;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
@@ -19,7 +17,10 @@ namespace Bit.Core.Auth.UserFeatures;
 
 public static class UserServiceCollectionExtensions
 {
-    public static void AddUserServices(this IServiceCollection services, IGlobalSettings globalSettings)
+    public static void AddUserServices(
+        this IServiceCollection services,
+        IGlobalSettings globalSettings
+    )
     {
         services.AddScoped<IUserService, UserService>();
         services.AddUserPasswordCommands();
@@ -29,7 +30,10 @@ public static class UserServiceCollectionExtensions
         services.AddTwoFactorQueries();
     }
 
-    public static void AddUserKeyCommands(this IServiceCollection services, IGlobalSettings globalSettings)
+    public static void AddUserKeyCommands(
+        this IServiceCollection services,
+        IGlobalSettings globalSettings
+    )
     {
         services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
     }
@@ -46,16 +50,31 @@ public static class UserServiceCollectionExtensions
 
     private static void AddUserRegistrationCommands(this IServiceCollection services)
     {
-        services.AddScoped<ISendVerificationEmailForRegistrationCommand, SendVerificationEmailForRegistrationCommand>();
+        services.AddScoped<
+            ISendVerificationEmailForRegistrationCommand,
+            SendVerificationEmailForRegistrationCommand
+        >();
         services.AddScoped<IRegisterUserCommand, RegisterUserCommand>();
     }
 
     private static void AddWebAuthnLoginCommands(this IServiceCollection services)
     {
-        services.AddScoped<IGetWebAuthnLoginCredentialCreateOptionsCommand, GetWebAuthnLoginCredentialCreateOptionsCommand>();
-        services.AddScoped<ICreateWebAuthnLoginCredentialCommand, CreateWebAuthnLoginCredentialCommand>();
-        services.AddScoped<IGetWebAuthnLoginCredentialAssertionOptionsCommand, GetWebAuthnLoginCredentialAssertionOptionsCommand>();
-        services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
+        services.AddScoped<
+            IGetWebAuthnLoginCredentialCreateOptionsCommand,
+            GetWebAuthnLoginCredentialCreateOptionsCommand
+        >();
+        services.AddScoped<
+            ICreateWebAuthnLoginCredentialCommand,
+            CreateWebAuthnLoginCredentialCommand
+        >();
+        services.AddScoped<
+            IGetWebAuthnLoginCredentialAssertionOptionsCommand,
+            GetWebAuthnLoginCredentialAssertionOptionsCommand
+        >();
+        services.AddScoped<
+            IAssertWebAuthnLoginCredentialCommand,
+            AssertWebAuthnLoginCredentialCommand
+        >();
     }
 
     private static void AddTwoFactorQueries(this IServiceCollection services)

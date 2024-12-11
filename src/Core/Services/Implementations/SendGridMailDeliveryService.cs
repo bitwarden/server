@@ -20,11 +20,14 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
     public SendGridMailDeliveryService(
         GlobalSettings globalSettings,
         IWebHostEnvironment hostingEnvironment,
-        ILogger<SendGridMailDeliveryService> logger)
-        : this(new SendGridClient(globalSettings.Mail.SendGridApiKey),
-             globalSettings, hostingEnvironment, logger)
-    {
-    }
+        ILogger<SendGridMailDeliveryService> logger
+    )
+        : this(
+            new SendGridClient(globalSettings.Mail.SendGridApiKey),
+            globalSettings,
+            hostingEnvironment,
+            logger
+        ) { }
 
     public void Dispose()
     {
@@ -35,7 +38,8 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         ISendGridClient client,
         GlobalSettings globalSettings,
         IWebHostEnvironment hostingEnvironment,
-        ILogger<SendGridMailDeliveryService> logger)
+        ILogger<SendGridMailDeliveryService> logger
+    )
     {
         if (string.IsNullOrWhiteSpace(globalSettings.Mail?.SendGridApiKey))
         {
@@ -54,10 +58,14 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
     {
         var msg = new SendGridMessage();
         msg.SetFrom(new EmailAddress(_replyToEmail, _globalSettings.SiteName));
-        msg.AddTos(message.ToEmails.Select(e => new EmailAddress(CoreHelpers.PunyEncode(e))).ToList());
+        msg.AddTos(
+            message.ToEmails.Select(e => new EmailAddress(CoreHelpers.PunyEncode(e))).ToList()
+        );
         if (message.BccEmails?.Any() ?? false)
         {
-            msg.AddBccs(message.BccEmails.Select(e => new EmailAddress(CoreHelpers.PunyEncode(e))).ToList());
+            msg.AddBccs(
+                message.BccEmails.Select(e => new EmailAddress(CoreHelpers.PunyEncode(e))).ToList()
+            );
         }
 
         msg.SetSubject(message.Subject);
@@ -71,9 +79,11 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         msg.SetClickTracking(false, false);
         msg.SetOpenTracking(false);
 
-        if (message.MetaData != null &&
-            message.MetaData.ContainsKey("SendGridBypassListManagement") &&
-            Convert.ToBoolean(message.MetaData["SendGridBypassListManagement"]))
+        if (
+            message.MetaData != null
+            && message.MetaData.ContainsKey("SendGridBypassListManagement")
+            && Convert.ToBoolean(message.MetaData["SendGridBypassListManagement"])
+        )
         {
             msg.SetBypassListManagement(true);
         }
@@ -107,7 +117,11 @@ public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         if (!response.IsSuccessStatusCode)
         {
             var responseBody = await response.Body.ReadAsStringAsync();
-            _logger.LogError("SendGrid email sending failed with {0}: {1}", response.StatusCode, responseBody);
+            _logger.LogError(
+                "SendGrid email sending failed with {0}: {1}",
+                response.StatusCode,
+                responseBody
+            );
         }
         return response.IsSuccessStatusCode;
     }

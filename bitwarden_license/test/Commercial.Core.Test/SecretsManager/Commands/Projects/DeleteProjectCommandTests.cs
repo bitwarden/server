@@ -16,11 +16,14 @@ public class DeleteProjectCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task DeleteProjects_Success(List<Project> data,
-      SutProvider<DeleteProjectCommand> sutProvider)
+    public async Task DeleteProjects_Success(
+        List<Project> data,
+        SutProvider<DeleteProjectCommand> sutProvider
+    )
     {
         await sutProvider.Sut.DeleteProjects(data);
-        await sutProvider.GetDependency<IProjectRepository>()
+        await sutProvider
+            .GetDependency<IProjectRepository>()
             .Received(1)
             .DeleteManyByIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.Select(d => d.Id))));
     }

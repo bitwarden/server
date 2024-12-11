@@ -26,7 +26,8 @@ public class GroupsController : Controller
         IOrganizationRepository organizationRepository,
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
-        IUpdateGroupCommand updateGroupCommand)
+        IUpdateGroupCommand updateGroupCommand
+    )
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
@@ -91,7 +92,9 @@ public class GroupsController : Controller
     [ProducesResponseType(typeof(ListResponseModel<GroupResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(_currentContext.OrganizationId.Value);
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(
+            _currentContext.OrganizationId.Value
+        );
         var groupResponses = groups.Select(g => new GroupResponseModel(g.Item1, g.Item2));
         var response = new ListResponseModel<GroupResponseModel>(groupResponses);
         return new JsonResult(response);
@@ -110,7 +113,9 @@ public class GroupsController : Controller
     public async Task<IActionResult> Post([FromBody] GroupCreateUpdateRequestModel model)
     {
         var group = model.ToGroup(_currentContext.OrganizationId.Value);
-        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var organization = await _organizationRepository.GetByIdAsync(
+            _currentContext.OrganizationId.Value
+        );
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
         await _createGroupCommand.CreateGroupAsync(group, organization, associations);
         var response = new GroupResponseModel(group, associations);
@@ -139,7 +144,9 @@ public class GroupsController : Controller
         }
 
         var updatedGroup = model.ToGroup(existingGroup);
-        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        var organization = await _organizationRepository.GetByIdAsync(
+            _currentContext.OrganizationId.Value
+        );
         var associations = model.Collections?.Select(c => c.ToCollectionAccessSelection()).ToList();
         await _updateGroupCommand.UpdateGroupAsync(updatedGroup, organization, associations);
         var response = new GroupResponseModel(updatedGroup, associations);
@@ -158,7 +165,10 @@ public class GroupsController : Controller
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PutMemberIds(Guid id, [FromBody] UpdateMemberIdsRequestModel model)
+    public async Task<IActionResult> PutMemberIds(
+        Guid id,
+        [FromBody] UpdateMemberIdsRequestModel model
+    )
     {
         var existingGroup = await _groupRepository.GetByIdAsync(id);
         if (existingGroup == null || existingGroup.OrganizationId != _currentContext.OrganizationId)

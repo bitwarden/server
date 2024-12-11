@@ -13,8 +13,7 @@ namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
 {
     public GrantRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper)
-    { }
+        : base(serviceScopeFactory, mapper) { }
 
     public async Task DeleteByKeyAsync(string key)
     {
@@ -25,16 +24,24 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
-    public async Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type)
+    public async Task DeleteManyAsync(
+        string subjectId,
+        string sessionId,
+        string clientId,
+        string type
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            await dbContext.Grants.Where(g =>
-                g.SubjectId == subjectId &&
-                g.ClientId == clientId &&
-                g.SessionId == sessionId &&
-                g.Type == type).ExecuteDeleteAsync();
+            await dbContext
+                .Grants.Where(g =>
+                    g.SubjectId == subjectId
+                    && g.ClientId == clientId
+                    && g.SessionId == sessionId
+                    && g.Type == type
+                )
+                .ExecuteDeleteAsync();
         }
     }
 
@@ -43,25 +50,30 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from g in dbContext.Grants
-                        where g.Key == key
-                        select g;
+            var query = from g in dbContext.Grants where g.Key == key select g;
             var grant = await query.FirstOrDefaultAsync();
             return grant;
         }
     }
 
-    public async Task<ICollection<IGrant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
+    public async Task<ICollection<IGrant>> GetManyAsync(
+        string subjectId,
+        string sessionId,
+        string clientId,
+        string type
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from g in dbContext.Grants
-                        where g.SubjectId == subjectId &&
-                            g.ClientId == clientId &&
-                            g.SessionId == sessionId &&
-                            g.Type == type
-                        select g;
+            var query =
+                from g in dbContext.Grants
+                where
+                    g.SubjectId == subjectId
+                    && g.ClientId == clientId
+                    && g.SessionId == sessionId
+                    && g.Type == type
+                select g;
             var grants = await query.ToListAsync();
             return (ICollection<IGrant>)grants;
         }
@@ -77,9 +89,11 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var existingGrant = await (from g in dbContext.Grants
-                                       where g.Key == gObj.Key
-                                       select g).FirstOrDefaultAsync();
+            var existingGrant = await (
+                from g in dbContext.Grants
+                where g.Key == gObj.Key
+                select g
+            ).FirstOrDefaultAsync();
             if (existingGrant != null)
             {
                 gObj.Id = existingGrant.Id;

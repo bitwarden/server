@@ -21,7 +21,6 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
 
-
     public SetInitialMasterPasswordCommand(
         ILogger<SetInitialMasterPasswordCommand> logger,
         IdentityErrorDescriber identityErrorDescriber,
@@ -30,7 +29,8 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         IEventService eventService,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository
+    )
     {
         _logger = logger;
         _identityErrorDescriber = identityErrorDescriber;
@@ -42,8 +42,12 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         _organizationRepository = organizationRepository;
     }
 
-    public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
-        string orgSsoIdentifier)
+    public async Task<IdentityResult> SetInitialMasterPasswordAsync(
+        User user,
+        string masterPassword,
+        string key,
+        string orgSsoIdentifier
+    )
     {
         if (user == null)
         {
@@ -52,11 +56,19 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
 
         if (!string.IsNullOrWhiteSpace(user.MasterPassword))
         {
-            _logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
+            _logger.LogWarning(
+                "Change password failed for user {userId} - already has password.",
+                user.Id
+            );
             return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
         }
 
-        var result = await _userService.UpdatePasswordHash(user, masterPassword, validatePassword: true, refreshStamp: false);
+        var result = await _userService.UpdatePasswordHash(
+            user,
+            masterPassword,
+            validatePassword: true,
+            refreshStamp: false
+        );
         if (!result.Succeeded)
         {
             return result;
@@ -67,7 +79,6 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
 
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
 
         if (string.IsNullOrWhiteSpace(orgSsoIdentifier))
         {
@@ -99,5 +110,4 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
 
         return IdentityResult.Success;
     }
-
 }

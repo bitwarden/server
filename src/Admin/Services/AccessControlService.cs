@@ -14,7 +14,8 @@ public class AccessControlService : IAccessControlService
     public AccessControlService(
         IHttpContextAccessor httpContextAccessor,
         IConfiguration configuration,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings
+    )
     {
         _httpContextAccessor = httpContextAccessor;
         _configuration = configuration;
@@ -29,12 +30,14 @@ public class AccessControlService : IAccessControlService
         }
 
         var userRole = GetUserRoleFromClaim();
-        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
+        if (
+            string.IsNullOrEmpty(userRole)
+            || !RolePermissionMapping.RolePermissions.TryGetValue(userRole, out var value))
         {
             return false;
         }
 
-        return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
+        return value.Contains(permission);
     }
 
     public string GetUserRole(string userEmail)
@@ -48,7 +51,9 @@ public class AccessControlService : IAccessControlService
 
         userEmail = userEmail.ToLowerInvariant();
 
-        var userRole = roles.FirstOrDefault(s => (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
+        var userRole = roles.FirstOrDefault(s =>
+            (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false)
+        );
 
         if (userRole == null)
         {
@@ -60,7 +65,8 @@ public class AccessControlService : IAccessControlService
 
     private string GetUserRoleFromClaim()
     {
-        return _httpContextAccessor.HttpContext?.User?.Claims?
-                 .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+        return _httpContextAccessor
+            .HttpContext?.User?.Claims?.FirstOrDefault(c => c.Type == ClaimTypes.Role)
+            ?.Value;
     }
 }

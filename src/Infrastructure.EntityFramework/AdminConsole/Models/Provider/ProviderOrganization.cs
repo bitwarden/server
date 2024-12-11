@@ -12,6 +12,7 @@ public class ProviderOrganizationMapperProfile : Profile
 {
     public ProviderOrganizationMapperProfile()
     {
-        CreateMap<Core.AdminConsole.Entities.Provider.ProviderOrganization, ProviderOrganization>().ReverseMap();
+        CreateMap<Core.AdminConsole.Entities.Provider.ProviderOrganization, ProviderOrganization>()
+            .ReverseMap();
     }
 }

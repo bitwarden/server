@@ -23,8 +23,9 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
         ISystemClock clock,
         IOrganizationRepository organizationRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IScimContext scimContext) :
-        base(options, logger, encoder, clock)
+        IScimContext scimContext
+    )
+        : base(options, logger, encoder, clock)
     {
         _organizationRepository = organizationRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
@@ -45,7 +46,10 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             return AuthenticateResult.Fail("Invalid parameters");
         }
 
-        if (!Request.Headers.TryGetValue("Authorization", out var authHeader) || authHeader.Count != 1)
+        if (
+            !Request.Headers.TryGetValue("Authorization", out var authHeader)
+            || authHeader.Count != 1
+        )
         {
             Logger.LogWarning("An API request was received without the Authorization header");
             return AuthenticateResult.Fail("Invalid parameters");
@@ -56,19 +60,32 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             apiKey = apiKey.Substring(7);
         }
 
-        if (!_scimContext.Organization.Enabled || !_scimContext.Organization.UseScim ||
-            _scimContext.ScimConfiguration == null || !_scimContext.ScimConfiguration.Enabled)
+        if (
+            !_scimContext.Organization.Enabled
+            || !_scimContext.Organization.UseScim
+            || _scimContext.ScimConfiguration == null
+            || !_scimContext.ScimConfiguration.Enabled
+        )
         {
-            Logger.LogInformation("Org {organizationId} not able to use Scim.", _scimContext.OrganizationId);
+            Logger.LogInformation(
+                "Org {organizationId} not able to use Scim.",
+                _scimContext.OrganizationId
+            );
             return AuthenticateResult.Fail("Invalid parameters");
         }
 
-        var orgApiKey = (await _organizationApiKeyRepository
-            .GetManyByOrganizationIdTypeAsync(_scimContext.Organization.Id, OrganizationApiKeyType.Scim))
-            .FirstOrDefault();
+        var orgApiKey = (
+            await _organizationApiKeyRepository.GetManyByOrganizationIdTypeAsync(
+                _scimContext.Organization.Id,
+                OrganizationApiKeyType.Scim
+            )
+        ).FirstOrDefault();
         if (orgApiKey?.ApiKey != apiKey)
         {
-            Logger.LogWarning("An API request was received with an invalid API key: {apiKey}", apiKey);
+            Logger.LogWarning(
+                "An API request was received with an invalid API key: {apiKey}",
+                apiKey
+            );
             return AuthenticateResult.Fail("Invalid parameters");
         }
 
@@ -81,8 +98,10 @@ public class ApiKeyAuthenticationHandler : AuthenticationHandler<ApiKeyAuthentic
             new Claim(JwtClaimTypes.Scope, "api.scim"),
         };
         var identity = new ClaimsIdentity(claims, nameof(ApiKeyAuthenticationHandler));
-        var ticket = new AuthenticationTicket(new ClaimsPrincipal(identity),
-            ApiKeyAuthenticationOptions.DefaultScheme);
+        var ticket = new AuthenticationTicket(
+            new ClaimsPrincipal(identity),
+            ApiKeyAuthenticationOptions.DefaultScheme
+        );
 
         return AuthenticateResult.Success(ticket);
     }

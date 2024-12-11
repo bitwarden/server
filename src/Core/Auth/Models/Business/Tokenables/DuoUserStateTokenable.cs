@@ -12,13 +12,10 @@ public class DuoUserStateTokenable : Tokenable
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid UserId { get; set; }
 
-    public override bool Valid => Identifier == TokenIdentifier &&
-                                  UserId != default;
+    public override bool Valid => Identifier == TokenIdentifier && UserId != default;
 
     [JsonConstructor]
-    public DuoUserStateTokenable()
-    {
-    }
+    public DuoUserStateTokenable() { }
 
     public DuoUserStateTokenable(User user)
     {

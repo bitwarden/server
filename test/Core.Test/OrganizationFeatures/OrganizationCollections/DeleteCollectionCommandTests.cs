@@ -1,5 +1,4 @@
-﻿
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.Repositories;
@@ -15,27 +14,37 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
 [SutProviderCustomize]
 public class DeleteCollectionCommandTests
 {
-
     [Theory, BitAutoData]
     [OrganizationCustomize]
-    public async Task DeleteAsync_DeletesCollection(Collection collection, SutProvider<DeleteCollectionCommand> sutProvider)
+    public async Task DeleteAsync_DeletesCollection(
+        Collection collection,
+        SutProvider<DeleteCollectionCommand> sutProvider
+    )
     {
         // Act
         await sutProvider.Sut.DeleteAsync(collection);
 
         // Assert
         await sutProvider.GetDependency<ICollectionRepository>().Received().DeleteAsync(collection);
-        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventAsync(collection, EventType.Collection_Deleted, Arg.Any<DateTime>());
+        await sutProvider
+            .GetDependency<IEventService>()
+            .Received()
+            .LogCollectionEventAsync(collection, EventType.Collection_Deleted, Arg.Any<DateTime>());
     }
 
     [Theory, BitAutoData]
     [OrganizationCustomize]
-    public async Task DeleteManyAsync_DeletesManyCollections(Collection collection, Collection collection2, SutProvider<DeleteCollectionCommand> sutProvider)
+    public async Task DeleteManyAsync_DeletesManyCollections(
+        Collection collection,
+        Collection collection2,
+        SutProvider<DeleteCollectionCommand> sutProvider
+    )
     {
         // Arrange
         var collectionIds = new[] { collection.Id, collection2.Id };
 
-        sutProvider.GetDependency<ICollectionRepository>()
+        sutProvider
+            .GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(collectionIds)
             .Returns(new List<Collection> { collection, collection2 });
 
@@ -43,13 +52,21 @@ public class DeleteCollectionCommandTests
         await sutProvider.Sut.DeleteManyAsync(collectionIds);
 
         // Assert
-        await sutProvider.GetDependency<ICollectionRepository>().Received()
+        await sutProvider
+            .GetDependency<ICollectionRepository>()
+            .Received()
             .DeleteManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionIds)));
 
-        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
-            Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(a =>
-            a.All(c => collectionIds.Contains(c.Item1.Id) && c.Item2 == EventType.Collection_Deleted)));
+        await sutProvider
+            .GetDependency<IEventService>()
+            .Received()
+            .LogCollectionEventsAsync(
+                Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(a =>
+                    a.All(c =>
+                        collectionIds.Contains(c.Item1.Id)
+                        && c.Item2 == EventType.Collection_Deleted
+                    )
+                )
+            );
     }
-
-
 }

@@ -13,10 +13,20 @@ public class ScimContextMiddleware
         _next = next;
     }
 
-    public async Task Invoke(HttpContext httpContext, IScimContext scimContext, GlobalSettings globalSettings,
-        IOrganizationRepository organizationRepository, IOrganizationConnectionRepository organizationConnectionRepository)
+    public async Task Invoke(
+        HttpContext httpContext,
+        IScimContext scimContext,
+        GlobalSettings globalSettings,
+        IOrganizationRepository organizationRepository,
+        IOrganizationConnectionRepository organizationConnectionRepository
+    )
     {
-        await scimContext.BuildAsync(httpContext, globalSettings, organizationRepository, organizationConnectionRepository);
+        await scimContext.BuildAsync(
+            httpContext,
+            globalSettings,
+            organizationRepository,
+            organizationConnectionRepository
+        );
         await _next.Invoke(httpContext);
     }
 }

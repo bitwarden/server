@@ -28,7 +28,8 @@ public class SsoController : Controller
         ILogger<SsoController> logger,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        IHttpClientFactory clientFactory)
+        IHttpClientFactory clientFactory
+    )
     {
         _interaction = interaction;
         _logger = logger;
@@ -63,12 +64,14 @@ public class SsoController : Controller
         {
             _logger.LogError(ex, "Error pre-validating against SSO service");
             Response.StatusCode = 500;
-            return Json(new ErrorResponseModel("Error pre-validating SSO authentication")
-            {
-                ExceptionMessage = ex.Message,
-                ExceptionStackTrace = ex.StackTrace,
-                InnerExceptionMessage = ex.InnerException?.Message,
-            });
+            return Json(
+                new ErrorResponseModel("Error pre-validating SSO authentication")
+                {
+                    ExceptionMessage = ex.Message,
+                    ExceptionStackTrace = ex.StackTrace,
+                    InnerExceptionMessage = ex.InnerException?.Message,
+                }
+            );
         }
     }
 
@@ -77,8 +80,9 @@ public class SsoController : Controller
     {
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
 
-        var domainHint = context.Parameters.AllKeys.Contains("domain_hint") ?
-            context.Parameters["domain_hint"] : null;
+        var domainHint = context.Parameters.AllKeys.Contains("domain_hint")
+            ? context.Parameters["domain_hint"]
+            : null;
         var ssoToken = context.Parameters[SsoTokenable.TokenIdentifier];
 
         if (string.IsNullOrWhiteSpace(domainHint))
@@ -86,21 +90,29 @@ public class SsoController : Controller
             throw new Exception("No domain_hint provided");
         }
 
-        var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier") ?
-            context.Parameters["user_identifier"] : null;
+        var userIdentifier = context.Parameters.AllKeys.Contains("user_identifier")
+            ? context.Parameters["user_identifier"]
+            : null;
 
-        return RedirectToAction(nameof(ExternalChallenge), new
-        {
-            domainHint = domainHint,
-            returnUrl,
-            userIdentifier,
-            ssoToken,
-        });
+        return RedirectToAction(
+            nameof(ExternalChallenge),
+            new
+            {
+                domainHint = domainHint,
+                returnUrl,
+                userIdentifier,
+                ssoToken,
+            }
+        );
     }
 
     [HttpGet]
-    public async Task<IActionResult> ExternalChallenge(string domainHint, string returnUrl,
-        string userIdentifier, string ssoToken)
+    public async Task<IActionResult> ExternalChallenge(
+        string domainHint,
+        string returnUrl,
+        string userIdentifier,
+        string ssoToken
+    )
     {
         if (string.IsNullOrWhiteSpace(domainHint))
         {
@@ -125,10 +137,7 @@ public class SsoController : Controller
                 { "organizationId", organizationId },
                 { "scheme", scheme },
             },
-            Parameters =
-            {
-                { "ssoToken", ssoToken },
-            }
+            Parameters = { { "ssoToken", ssoToken } },
         };
 
         if (!string.IsNullOrWhiteSpace(userIdentifier))
@@ -144,7 +153,8 @@ public class SsoController : Controller
     {
         // Read external identity from the temporary cookie
         var result = await HttpContext.AuthenticateAsync(
-            Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme
+        );
         if (result?.Succeeded != true)
         {
             throw new Exception("External authentication error");
@@ -154,7 +164,9 @@ public class SsoController : Controller
         var externalClaims = result.Principal.Claims.Select(c => $"{c.Type}: {c.Value}");
         _logger.LogDebug("External claims: {@claims}", externalClaims);
 
-        var (user, provider, providerUserId, claims) = await FindUserFromExternalProviderAsync(result);
+        var (user, provider, providerUserId, claims) = await FindUserFromExternalProviderAsync(
+            result
+        );
         if (user == null)
         {
             // Should never happen
@@ -168,24 +180,32 @@ public class SsoController : Controller
         var localSignInProps = new AuthenticationProperties
         {
             IsPersistent = true,
-            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1)
+            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1),
         };
-        if (result.Properties != null && result.Properties.Items.TryGetValue("organizationId", out var organization))
+        if (
+            result.Properties != null
+            && result.Properties.Items.TryGetValue("organizationId", out var organization)
+        )
         {
             additionalLocalClaims.Add(new Claim("organizationId", organization));
         }
         ProcessLoginCallback(result, additionalLocalClaims, localSignInProps);
 
         // Issue authentication cookie for user
-        await HttpContext.SignInAsync(new IdentityServerUser(user.Id.ToString())
-        {
-            DisplayName = user.Email,
-            IdentityProvider = provider,
-            AdditionalClaims = additionalLocalClaims.ToArray()
-        }, localSignInProps);
+        await HttpContext.SignInAsync(
+            new IdentityServerUser(user.Id.ToString())
+            {
+                DisplayName = user.Email,
+                IdentityProvider = provider,
+                AdditionalClaims = additionalLocalClaims.ToArray(),
+            },
+            localSignInProps
+        );
 
         // Delete temporary cookie used during external authentication
-        await HttpContext.SignOutAsync(Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+        await HttpContext.SignOutAsync(
+            Core.AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme
+        );
 
         // Retrieve return URL
         var returnUrl = result.Properties.Items["return_url"] ?? "~/";
@@ -222,17 +242,22 @@ public class SsoController : Controller
         }
     }
 
-    private async Task<(User user, string provider, string providerUserId, IEnumerable<Claim> claims)>
-        FindUserFromExternalProviderAsync(AuthenticateResult result)
+    private async Task<(
+        User user,
+        string provider,
+        string providerUserId,
+        IEnumerable<Claim> claims
+    )> FindUserFromExternalProviderAsync(AuthenticateResult result)
     {
         var externalUser = result.Principal;
 
         // Try to determine the unique id of the external user (issued by the provider)
         // the most common claim type for that are the sub claim and the NameIdentifier
         // depending on the external provider, some other claim type might be used
-        var userIdClaim = externalUser.FindFirst(JwtClaimTypes.Subject) ??
-                          externalUser.FindFirst(ClaimTypes.NameIdentifier) ??
-                          throw new Exception("Unknown userid");
+        var userIdClaim =
+            externalUser.FindFirst(JwtClaimTypes.Subject)
+            ?? externalUser.FindFirst(ClaimTypes.NameIdentifier)
+            ?? throw new Exception("Unknown userid");
 
         // remove the user id claim so we don't include it as an extra claim if/when we provision the user
         var claims = externalUser.Claims.ToList();
@@ -245,12 +270,17 @@ public class SsoController : Controller
         return (user, provider, providerUserId, claims);
     }
 
-    private void ProcessLoginCallback(AuthenticateResult externalResult, List<Claim> localClaims,
-        AuthenticationProperties localSignInProps)
+    private void ProcessLoginCallback(
+        AuthenticateResult externalResult,
+        List<Claim> localClaims,
+        AuthenticationProperties localSignInProps
+    )
     {
         // If the external system sent a session id claim, copy it over
         // so we can use it for single sign-out
-        var sid = externalResult.Principal.Claims.FirstOrDefault(x => x.Type == JwtClaimTypes.SessionId);
+        var sid = externalResult.Principal.Claims.FirstOrDefault(x =>
+            x.Type == JwtClaimTypes.SessionId
+        );
         if (sid != null)
         {
             localClaims.Add(new Claim(JwtClaimTypes.SessionId, sid.Value));
@@ -261,13 +291,17 @@ public class SsoController : Controller
         if (idToken != null)
         {
             localSignInProps.StoreTokens(
-                new[] { new AuthenticationToken { Name = "id_token", Value = idToken } });
+                new[]
+                {
+                    new AuthenticationToken { Name = "id_token", Value = idToken },
+                }
+            );
         }
     }
 
     private bool IsNativeClient(Duende.IdentityServer.Models.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
-           && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
+            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
     }
 }

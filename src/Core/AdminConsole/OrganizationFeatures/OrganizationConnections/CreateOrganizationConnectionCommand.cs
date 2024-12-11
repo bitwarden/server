@@ -10,12 +10,17 @@ public class CreateOrganizationConnectionCommand : ICreateOrganizationConnection
 {
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
 
-    public CreateOrganizationConnectionCommand(IOrganizationConnectionRepository organizationConnectionRepository)
+    public CreateOrganizationConnectionCommand(
+        IOrganizationConnectionRepository organizationConnectionRepository
+    )
     {
         _organizationConnectionRepository = organizationConnectionRepository;
     }
 
-    public async Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData) where T : IConnectionConfig
+    public async Task<OrganizationConnection> CreateAsync<T>(
+        OrganizationConnectionData<T> connectionData
+    )
+        where T : IConnectionConfig
     {
         return await _organizationConnectionRepository.CreateAsync(connectionData.ToEntity());
     }

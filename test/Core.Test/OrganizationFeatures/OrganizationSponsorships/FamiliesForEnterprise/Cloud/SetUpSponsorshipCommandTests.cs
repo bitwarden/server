@@ -19,11 +19,14 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 {
     [Theory]
     [BitAutoData]
-    public async Task SetUpSponsorship_SponsorshipNotFound_ThrowsBadRequest(Organization org,
-        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    public async Task SetUpSponsorship_SponsorshipNotFound_ThrowsBadRequest(
+        Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider
+    )
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SetUpSponsorshipAsync(null, org));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetUpSponsorshipAsync(null, org)
+        );
 
         Assert.Contains("No unredeemed sponsorship offer exists for you.", exception.Message);
         await AssertDidNotSetUpAsync(sutProvider);
@@ -31,34 +34,51 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitAutoData]
-    public async Task SetUpSponsorship_OrgAlreadySponsored_ThrowsBadRequest(Organization org,
-        OrganizationSponsorship sponsorship, OrganizationSponsorship existingSponsorship,
-        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    public async Task SetUpSponsorship_OrgAlreadySponsored_ThrowsBadRequest(
+        Organization org,
+        OrganizationSponsorship sponsorship,
+        OrganizationSponsorship existingSponsorship,
+        SutProvider<SetUpSponsorshipCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
-            .GetBySponsoredOrganizationIdAsync(org.Id).Returns(existingSponsorship);
+        sutProvider
+            .GetDependency<IOrganizationSponsorshipRepository>()
+            .GetBySponsoredOrganizationIdAsync(org.Id)
+            .Returns(existingSponsorship);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org)
+        );
 
-        Assert.Contains("Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.", exception.Message);
+        Assert.Contains(
+            "Cannot redeem a sponsorship offer for an organization that is already sponsored. Revoke existing sponsorship first.",
+            exception.Message
+        );
         await AssertDidNotSetUpAsync(sutProvider);
     }
 
     [Theory]
     [BitMemberAutoData(nameof(FamiliesPlanTypes))]
-    public async Task SetUpSponsorship_TooLongSinceLastSync_ThrowsBadRequest(PlanType planType, Organization org,
+    public async Task SetUpSponsorship_TooLongSinceLastSync_ThrowsBadRequest(
+        PlanType planType,
+        Organization org,
         OrganizationSponsorship sponsorship,
-        SutProvider<SetUpSponsorshipCommand> sutProvider)
+        SutProvider<SetUpSponsorshipCommand> sutProvider
+    )
     {
         org.PlanType = planType;
         sponsorship.LastSyncDate = DateTime.UtcNow.AddDays(-365);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org)
+        );
 
-        Assert.Contains("This sponsorship offer is more than 6 months old and has expired.", exception.Message);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+        Assert.Contains(
+            "This sponsorship offer is more than 6 months old and has expired.",
+            exception.Message
+        );
+        await sutProvider
+            .GetDependency<IOrganizationSponsorshipRepository>()
             .Received(1)
             .DeleteAsync(sponsorship);
         await AssertDidNotSetUpAsync(sutProvider);
@@ -66,29 +86,41 @@ public class SetUpSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
     [Theory]
     [BitMemberAutoData(nameof(NonFamiliesPlanTypes))]
-    public async Task SetUpSponsorship_OrgNotFamilies_ThrowsBadRequest(PlanType planType,
-        OrganizationSponsorship sponsorship, Organization org,
-        SutProvider<SetUpSponsorshipCommand> sutProvider)
+    public async Task SetUpSponsorship_OrgNotFamilies_ThrowsBadRequest(
+        PlanType planType,
+        OrganizationSponsorship sponsorship,
+        Organization org,
+        SutProvider<SetUpSponsorshipCommand> sutProvider
+    )
     {
         org.PlanType = planType;
         sponsorship.LastSyncDate = DateTime.UtcNow;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SetUpSponsorshipAsync(sponsorship, org)
+        );
 
-        Assert.Contains("Can only redeem sponsorship offer on families organizations.", exception.Message);
+        Assert.Contains(
+            "Can only redeem sponsorship offer on families organizations.",
+            exception.Message
+        );
         await AssertDidNotSetUpAsync(sutProvider);
     }
 
-    private static async Task AssertDidNotSetUpAsync(SutProvider<SetUpSponsorshipCommand> sutProvider)
+    private static async Task AssertDidNotSetUpAsync(
+        SutProvider<SetUpSponsorshipCommand> sutProvider
+    )
     {
-        await sutProvider.GetDependency<IPaymentService>()
+        await sutProvider
+            .GetDependency<IPaymentService>()
             .DidNotReceiveWithAnyArgs()
             .SponsorOrganizationAsync(default, default);
-        await sutProvider.GetDependency<IOrganizationRepository>()
+        await sutProvider
+            .GetDependency<IOrganizationRepository>()
             .DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
-        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
+        await sutProvider
+            .GetDependency<IOrganizationSponsorshipRepository>()
             .DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
     }

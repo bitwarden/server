@@ -37,7 +37,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         IUserRepository userRepository,
         IStripeEventUtilityService stripeEventUtilityService,
         IUserService userService,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService
+    )
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -75,7 +76,9 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
             await Task.Delay(5000);
         }
 
-        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
+        var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(
+            subscription.Metadata
+        );
 
         if (providerId.HasValue)
         {
@@ -86,7 +89,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 _logger.LogError(
                     "Received invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) that does not exist",
                     parsedEvent.Id,
-                    providerId.Value);
+                    providerId.Value
+                );
 
                 return;
             }
@@ -95,50 +99,62 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
 
             var enterpriseMonthly = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
 
-            var teamsMonthlyLineItem =
-                subscription.Items.Data.FirstOrDefault(item =>
-                    item.Plan.Id == teamsMonthly.PasswordManager.StripeSeatPlanId);
+            var teamsMonthlyLineItem = subscription.Items.Data.FirstOrDefault(item =>
+                item.Plan.Id == teamsMonthly.PasswordManager.StripeSeatPlanId
+            );
 
-            var enterpriseMonthlyLineItem =
-                subscription.Items.Data.FirstOrDefault(item =>
-                    item.Plan.Id == enterpriseMonthly.PasswordManager.StripeSeatPlanId);
+            var enterpriseMonthlyLineItem = subscription.Items.Data.FirstOrDefault(item =>
+                item.Plan.Id == enterpriseMonthly.PasswordManager.StripeSeatPlanId
+            );
 
             if (teamsMonthlyLineItem == null || enterpriseMonthlyLineItem == null)
             {
-                _logger.LogError("invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) indicates missing subscription line items",
+                _logger.LogError(
+                    "invoice.payment_succeeded webhook ({EventID}) for Provider ({ProviderID}) indicates missing subscription line items",
                     parsedEvent.Id,
-                    provider.Id);
+                    provider.Id
+                );
 
                 return;
             }
 
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
-            {
-                Type = ReferenceEventType.Rebilled,
-                Source = ReferenceEventSource.Provider,
-                Id = provider.Id,
-                PlanType = PlanType.TeamsMonthly,
-                Seats = (int)teamsMonthlyLineItem.Quantity
-            });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent
+                {
+                    Type = ReferenceEventType.Rebilled,
+                    Source = ReferenceEventSource.Provider,
+                    Id = provider.Id,
+                    PlanType = PlanType.TeamsMonthly,
+                    Seats = (int)teamsMonthlyLineItem.Quantity,
+                }
+            );
 
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent
-            {
-                Type = ReferenceEventType.Rebilled,
-                Source = ReferenceEventSource.Provider,
-                Id = provider.Id,
-                PlanType = PlanType.EnterpriseMonthly,
-                Seats = (int)enterpriseMonthlyLineItem.Quantity
-            });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent
+                {
+                    Type = ReferenceEventType.Rebilled,
+                    Source = ReferenceEventSource.Provider,
+                    Id = provider.Id,
+                    PlanType = PlanType.EnterpriseMonthly,
+                    Seats = (int)enterpriseMonthlyLineItem.Quantity,
+                }
+            );
         }
         else if (organizationId.HasValue)
         {
-            if (!subscription.Items.Any(i =>
-                    StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
+            if (
+                !subscription.Items.Any(i =>
+                    StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)
+                )
+            )
             {
                 return;
             }
 
-            await _organizationService.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationService.EnableAsync(
+                organizationId.Value,
+                subscription.CurrentPeriodEnd
+            );
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
 
             await _referenceEventService.RaiseEventAsync(
@@ -148,7 +164,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                     PlanType = organization?.PlanType,
                     Seats = organization?.Seats,
                     Storage = organization?.MaxStorageGb,
-                });
+                }
+            );
         }
         else if (userId.HasValue)
         {
@@ -165,7 +182,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 {
                     PlanName = IStripeEventUtilityService.PremiumPlanId,
                     Storage = user?.MaxStorageGb,
-                });
+                }
+            );
         }
     }
 }

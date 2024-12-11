@@ -19,13 +19,12 @@ internal class EfUser : UserFixture
 
 internal class EfUserAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfUserAutoDataAttribute() : base(new SutProviderCustomization(), new EfUser())
-    { }
+    public EfUserAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfUser()) { }
 }
 
 internal class InlineEfUserAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfUserAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfUser) }, values)
-    { }
+    public InlineEfUserAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfUser) }, values) { }
 }

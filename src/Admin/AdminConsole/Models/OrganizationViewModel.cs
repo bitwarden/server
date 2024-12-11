@@ -9,17 +9,22 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationViewModel
 {
-    public OrganizationViewModel()
-    {
-    }
+    public OrganizationViewModel() { }
 
-    public OrganizationViewModel(Organization org, Provider provider, IEnumerable<OrganizationConnection> connections,
-        IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers,
+    public OrganizationViewModel(
+        Organization org,
+        Provider provider,
+        IEnumerable<OrganizationConnection> connections,
+        IEnumerable<OrganizationUserUserDetails> orgUsers,
+        IEnumerable<Cipher> ciphers,
         IEnumerable<Collection> collections,
-        IEnumerable<Group> groups, IEnumerable<Policy> policies, int secretsCount, int projectCount,
+        IEnumerable<Group> groups,
+        IEnumerable<Policy> policies,
+        int secretsCount,
+        int projectCount,
         int serviceAccountsCount,
-        int occupiedSmSeatsCount)
-
+        int occupiedSmSeatsCount
+    )
     {
         Organization = org;
         Provider = provider;
@@ -33,17 +38,26 @@ public class OrganizationViewModel
         CollectionCount = collections.Count();
         GroupCount = groups?.Count() ?? 0;
         PolicyCount = policies?.Count() ?? 0;
-        var organizationUserStatus = org.Status == OrganizationStatusType.Pending
-            ? OrganizationUserStatusType.Invited
-            : OrganizationUserStatusType.Confirmed;
-        Owners = string.Join(", ",
+        var organizationUserStatus =
+            org.Status == OrganizationStatusType.Pending
+                ? OrganizationUserStatusType.Invited
+                : OrganizationUserStatusType.Confirmed;
+        Owners = string.Join(
+            ", ",
             orgUsers
-                .Where(u => u.Type == OrganizationUserType.Owner && u.Status == organizationUserStatus)
-                .Select(u => u.Email));
-        Admins = string.Join(", ",
+                .Where(u =>
+                    u.Type == OrganizationUserType.Owner && u.Status == organizationUserStatus
+                )
+                .Select(u => u.Email)
+        );
+        Admins = string.Join(
+            ", ",
             orgUsers
-                .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
-                .Select(u => u.Email));
+                .Where(u =>
+                    u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus
+                )
+                .Select(u => u.Email)
+        );
         SecretsCount = secretsCount;
         ProjectsCount = projectCount;
         ServiceAccountsCount = serviceAccountsCount;

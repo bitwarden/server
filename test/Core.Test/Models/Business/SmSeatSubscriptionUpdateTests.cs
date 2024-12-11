@@ -24,8 +24,10 @@ public class SmSeatSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
-
-    public void UpgradeItemsOptions_ReturnsCorrectOptions(PlanType planType, Organization organization)
+    public void UpgradeItemsOptions_ReturnsCorrectOptions(
+        PlanType planType,
+        Organization organization
+    )
     {
         var plan = StaticStore.GetPlan(planType);
         organization.PlanType = planType;
@@ -36,14 +38,14 @@ public class SmSeatSubscriptionUpdateTests
             {
                 Data = new List<SubscriptionItem>
                 {
-                    new ()
+                    new()
                     {
                         Id = "subscription_item",
                         Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId },
-                        Quantity = quantity
-                    }
-                }
-            }
+                        Quantity = quantity,
+                    },
+                },
+            },
         };
         var update = new SmSeatSubscriptionUpdate(organization, plan, quantity);
 
@@ -68,7 +70,10 @@ public class SmSeatSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2019)]
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
-    public void RevertItemsOptions_ReturnsCorrectOptions(PlanType planType, Organization organization)
+    public void RevertItemsOptions_ReturnsCorrectOptions(
+        PlanType planType,
+        Organization organization
+    )
     {
         var plan = StaticStore.GetPlan(planType);
         organization.PlanType = planType;
@@ -79,14 +84,14 @@ public class SmSeatSubscriptionUpdateTests
             {
                 Data = new List<SubscriptionItem>
                 {
-                    new ()
+                    new()
                     {
                         Id = "subscription_item",
                         Price = new Price { Id = plan.SecretsManager.StripeSeatPlanId },
-                        Quantity = quantity
-                    }
-                }
-            }
+                        Quantity = quantity,
+                    },
+                },
+            },
         };
         var update = new SmSeatSubscriptionUpdate(organization, plan, quantity);
         update.UpgradeItemsOptions(subscription);

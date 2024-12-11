@@ -8,8 +8,10 @@ public class DataTableBuilderTests
     {
         // Normal value type
         public int Id { get; set; }
+
         // Normal reference type
         public string? Name { get; set; }
+
         // Nullable value type
         public DateTime? DeletedDate { get; set; }
         public object? ObjectProp { get; set; }
@@ -124,7 +126,6 @@ public class DataTableBuilderTests
             }
         );
 
-
         Assert.Collection(
             table.Rows.Cast<DataRow>(),
             row =>
@@ -161,7 +162,9 @@ public class DataTableBuilderTests
     [Fact]
     public void DataTableBuilder_ThrowsOnInvalidExpression()
     {
-        var argException = Assert.Throws<ArgumentException>(() => new DataTableBuilder<TestItem>([i => i.Method()]));
+        var argException = Assert.Throws<ArgumentException>(
+            () => new DataTableBuilder<TestItem>([i => i.Method()])
+        );
         Assert.Equal(
             "Could not determine the property info from the given expression 'i => Convert(i.Method(), Object)'.",
             argException.Message
@@ -171,7 +174,9 @@ public class DataTableBuilderTests
     [Fact]
     public void DataTableBuilder_ThrowsOnRepeatExpression()
     {
-        var argException = Assert.Throws<ArgumentException>(() => new DataTableBuilder<TestItem>([i => i.Id, i => i.Id]));
+        var argException = Assert.Throws<ArgumentException>(
+            () => new DataTableBuilder<TestItem>([i => i.Id, i => i.Id])
+        );
         Assert.Equal(
             "Property with name 'Id' was already added, properties can only be added once.",
             argException.Message

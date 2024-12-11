@@ -23,5 +23,4 @@ public class ServiceAccount : ITableObject<Guid>
             Id = CoreHelpers.GenerateComb();
         }
     }
-
 }

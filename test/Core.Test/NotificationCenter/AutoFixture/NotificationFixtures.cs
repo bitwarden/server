@@ -11,7 +11,8 @@ public class NotificationCustomization(bool global) : ICustomization
     {
         fixture.Customize<Notification>(composer =>
         {
-            var postprocessComposer = composer.With(n => n.Id, Guid.NewGuid())
+            var postprocessComposer = composer
+                .With(n => n.Id, Guid.NewGuid())
                 .With(n => n.Global, global);
 
             postprocessComposer = global

@@ -10,30 +10,37 @@ using AdminConsoleEntities = Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
-public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, Guid>, IPolicyRepository
+public class PolicyRepository
+    : Repository<AdminConsoleEntities.Policy, Policy, Guid>,
+        IPolicyRepository
 {
     public PolicyRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Policies)
-    { }
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Policies) { }
 
-    public async Task<AdminConsoleEntities.Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
+    public async Task<AdminConsoleEntities.Policy> GetByOrganizationIdTypeAsync(
+        Guid organizationId,
+        PolicyType type
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var results = await dbContext.Policies
-                .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Type == type);
+            var results = await dbContext.Policies.FirstOrDefaultAsync(p =>
+                p.OrganizationId == organizationId && p.Type == type
+            );
             return Mapper.Map<AdminConsoleEntities.Policy>(results);
         }
     }
 
-    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<AdminConsoleEntities.Policy>> GetManyByOrganizationIdAsync(
+        Guid organizationId
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var results = await dbContext.Policies
-                .Where(p => p.OrganizationId == organizationId)
+            var results = await dbContext
+                .Policies.Where(p => p.OrganizationId == organizationId)
                 .ToListAsync();
             return Mapper.Map<List<AdminConsoleEntities.Policy>>(results);
         }

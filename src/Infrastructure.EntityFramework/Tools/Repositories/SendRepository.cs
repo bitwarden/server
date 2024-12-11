@@ -19,8 +19,7 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     /// <param name="serviceScopeFactory">An IoC service locator.</param>
     /// <param name="mapper">An automapper service.</param>
     public SendRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Sends)
-    { }
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Sends) { }
 
     /// <summary>
     /// Saves a <see cref="Send"/> in the database.
@@ -50,12 +49,16 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByDeletionDateAsync(DateTime deletionDateBefore)
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyByDeletionDateAsync(
+        DateTime deletionDateBefore
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var results = await dbContext.Sends.Where(s => s.DeletionDate < deletionDateBefore).ToListAsync();
+            var results = await dbContext
+                .Sends.Where(s => s.DeletionDate < deletionDateBefore)
+                .ToListAsync();
             return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
         }
     }
@@ -72,19 +75,18 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
     }
 
     /// <inheritdoc />
-    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
-        IEnumerable<Core.Tools.Entities.Send> sends)
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId,
+        IEnumerable<Core.Tools.Entities.Send> sends
+    )
     {
         return async (_, _) =>
         {
             var newSends = sends.ToDictionary(s => s.Id);
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
-            var userSends = await GetDbSet(dbContext)
-                .Where(s => s.UserId == userId)
-                .ToListAsync();
-            var validSends = userSends
-                .Where(send => newSends.ContainsKey(send.Id));
+            var userSends = await GetDbSet(dbContext).Where(s => s.UserId == userId).ToListAsync();
+            var validSends = userSends.Where(send => newSends.ContainsKey(send.Id));
             foreach (var send in validSends)
             {
                 send.Key = newSends[send.Id].Key;
@@ -93,5 +95,4 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
             await dbContext.SaveChangesAsync();
         };
     }
-
 }

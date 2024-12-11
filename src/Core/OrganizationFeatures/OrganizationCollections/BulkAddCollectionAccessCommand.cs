@@ -20,7 +20,8 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
         ICollectionRepository collectionRepository,
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
-        IEventService eventService)
+        IEventService eventService
+    )
     {
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -28,9 +29,11 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
         _eventService = eventService;
     }
 
-    public async Task AddAccessAsync(ICollection<Collection> collections,
+    public async Task AddAccessAsync(
+        ICollection<Collection> collections,
         ICollection<CollectionAccessSelection> users,
-        ICollection<CollectionAccessSelection> groups)
+        ICollection<CollectionAccessSelection> groups
+    )
     {
         await ValidateRequestAsync(collections, users, groups);
 
@@ -41,11 +44,16 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             groups
         );
 
-        await _eventService.LogCollectionEventsAsync(collections.Select(c =>
-            (c, EventType.Collection_Updated, (DateTime?)DateTime.UtcNow)));
+        await _eventService.LogCollectionEventsAsync(
+            collections.Select(c => (c, EventType.Collection_Updated, (DateTime?)DateTime.UtcNow))
+        );
     }
 
-    private async Task ValidateRequestAsync(ICollection<Collection> collections, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
+    private async Task ValidateRequestAsync(
+        ICollection<Collection> collections,
+        ICollection<CollectionAccessSelection> usersAccess,
+        ICollection<CollectionAccessSelection> groupsAccess
+    )
     {
         if (collections == null || collections.Count == 0)
         {
@@ -72,7 +80,9 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
 
             if (users.Any(u => u.OrganizationId != orgId))
             {
-                throw new BadRequestException("One or more users do not belong to the same organization as the collection being assigned.");
+                throw new BadRequestException(
+                    "One or more users do not belong to the same organization as the collection being assigned."
+                );
             }
         }
 
@@ -89,7 +99,9 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
 
             if (groups.Any(g => g.OrganizationId != orgId))
             {
-                throw new BadRequestException("One or more groups do not belong to the same organization as the collection being assigned.");
+                throw new BadRequestException(
+                    "One or more groups do not belong to the same organization as the collection being assigned."
+                );
             }
         }
     }

@@ -10,9 +10,9 @@ public class SecretCustomization : ICustomization
     {
         var secretId = Guid.NewGuid();
 
-        fixture.Customize<Secret>(composer => composer
-            .With(o => o.Id, secretId)
-            .Without(s => s.Projects));
+        fixture.Customize<Secret>(composer =>
+            composer.With(o => o.Id, secretId).Without(s => s.Projects)
+        );
     }
 }
 

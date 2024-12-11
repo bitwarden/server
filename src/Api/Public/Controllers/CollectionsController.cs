@@ -22,7 +22,8 @@ public class CollectionsController : Controller
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
         ICurrentContext currentContext,
-        IApplicationCacheService applicationCacheService)
+        IApplicationCacheService applicationCacheService
+    )
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
@@ -60,11 +61,15 @@ public class CollectionsController : Controller
     /// Collection objects listed in this call do not include information about their associated groups.
     /// </remarks>
     [HttpGet]
-    [ProducesResponseType(typeof(ListResponseModel<CollectionResponseModel>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(
+        typeof(ListResponseModel<CollectionResponseModel>),
+        (int)HttpStatusCode.OK
+    )]
     public async Task<IActionResult> List()
     {
         var collections = await _collectionRepository.GetManyByOrganizationIdAsync(
-            _currentContext.OrganizationId.Value);
+            _currentContext.OrganizationId.Value
+        );
         // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
         var collectionResponses = collections.Select(c => new CollectionResponseModel(c, null));
         var response = new ListResponseModel<CollectionResponseModel>(collectionResponses);
@@ -87,7 +92,10 @@ public class CollectionsController : Controller
     public async Task<IActionResult> Put(Guid id, [FromBody] CollectionUpdateRequestModel model)
     {
         var existingCollection = await _collectionRepository.GetByIdAsync(id);
-        if (existingCollection == null || existingCollection.OrganizationId != _currentContext.OrganizationId)
+        if (
+            existingCollection == null
+            || existingCollection.OrganizationId != _currentContext.OrganizationId
+        )
         {
             return new NotFoundResult();
         }

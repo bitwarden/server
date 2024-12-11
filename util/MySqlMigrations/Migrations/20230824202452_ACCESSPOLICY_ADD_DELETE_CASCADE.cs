@@ -12,11 +12,13 @@ public partial class ACCESSPOLICY_ADD_DELETE_CASCADE : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_AccessPolicy_Group_GroupId",
-            table: "AccessPolicy");
+            table: "AccessPolicy"
+        );
 
         migrationBuilder.DropForeignKey(
             name: "FK_AccessPolicy_Project_GrantedProjectId",
-            table: "AccessPolicy");
+            table: "AccessPolicy"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_AccessPolicy_Group_GroupId",
@@ -24,7 +26,8 @@ public partial class ACCESSPOLICY_ADD_DELETE_CASCADE : Migration
             column: "GroupId",
             principalTable: "Group",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Cascade);
+            onDelete: ReferentialAction.Cascade
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_AccessPolicy_Project_GrantedProjectId",
@@ -32,7 +35,8 @@ public partial class ACCESSPOLICY_ADD_DELETE_CASCADE : Migration
             column: "GrantedProjectId",
             principalTable: "Project",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Cascade);
+            onDelete: ReferentialAction.Cascade
+        );
     }
 
     /// <inheritdoc />
@@ -40,24 +44,28 @@ public partial class ACCESSPOLICY_ADD_DELETE_CASCADE : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_AccessPolicy_Group_GroupId",
-            table: "AccessPolicy");
+            table: "AccessPolicy"
+        );
 
         migrationBuilder.DropForeignKey(
             name: "FK_AccessPolicy_Project_GrantedProjectId",
-            table: "AccessPolicy");
+            table: "AccessPolicy"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_AccessPolicy_Group_GroupId",
             table: "AccessPolicy",
             column: "GroupId",
             principalTable: "Group",
-            principalColumn: "Id");
+            principalColumn: "Id"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_AccessPolicy_Project_GrantedProjectId",
             table: "AccessPolicy",
             column: "GrantedProjectId",
             principalTable: "Project",
-            principalColumn: "Id");
+            principalColumn: "Id"
+        );
     }
 }

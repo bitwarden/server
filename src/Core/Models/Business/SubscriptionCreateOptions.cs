@@ -15,13 +15,11 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
         bool premiumAccessAddon,
         bool useSecretsManager,
         int additionalSmSeats,
-        int additionalServiceAccounts)
+        int additionalServiceAccounts
+    )
     {
         Items = new List<SubscriptionItemOptions>();
-        Metadata = new Dictionary<string, string>
-        {
-            [org.GatewayIdField()] = org.Id.ToString()
-        };
+        Metadata = new Dictionary<string, string> { [Organization.GatewayIdField()] = org.Id.ToString() };
 
         AddPlanIdToSubscription(plan);
 
@@ -45,11 +43,13 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
     {
         if (additionalSmSeats > 0 && plan.SecretsManager.StripeSeatPlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.SecretsManager.StripeSeatPlanId,
-                Quantity = additionalSmSeats
-            });
+            Items.Add(
+                new SubscriptionItemOptions
+                {
+                    Plan = plan.SecretsManager.StripeSeatPlanId,
+                    Quantity = additionalSmSeats,
+                }
+            );
         }
     }
 
@@ -57,11 +57,13 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
     {
         if (additionalSeats > 0 && plan.PasswordManager.StripeSeatPlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.PasswordManager.StripeSeatPlanId,
-                Quantity = additionalSeats
-            });
+            Items.Add(
+                new SubscriptionItemOptions
+                {
+                    Plan = plan.PasswordManager.StripeSeatPlanId,
+                    Quantity = additionalSeats,
+                }
+            );
         }
     }
 
@@ -69,11 +71,13 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
     {
         if (additionalServiceAccounts > 0 && plan.SecretsManager.StripeServiceAccountPlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.SecretsManager.StripeServiceAccountPlanId,
-                Quantity = additionalServiceAccounts
-            });
+            Items.Add(
+                new SubscriptionItemOptions
+                {
+                    Plan = plan.SecretsManager.StripeServiceAccountPlanId,
+                    Quantity = additionalServiceAccounts,
+                }
+            );
         }
     }
 
@@ -81,11 +85,13 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
     {
         if (additionalStorageGb > 0)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.PasswordManager.StripeStoragePlanId,
-                Quantity = additionalStorageGb
-            });
+            Items.Add(
+                new SubscriptionItemOptions
+                {
+                    Plan = plan.PasswordManager.StripeStoragePlanId,
+                    Quantity = additionalStorageGb,
+                }
+            );
         }
     }
 
@@ -93,11 +99,13 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
     {
         if (premiumAccessAddon && plan.PasswordManager.StripePremiumAccessPlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.PasswordManager.StripePremiumAccessPlanId,
-                Quantity = 1
-            });
+            Items.Add(
+                new SubscriptionItemOptions
+                {
+                    Plan = plan.PasswordManager.StripePremiumAccessPlanId,
+                    Quantity = 1,
+                }
+            );
         }
     }
 
@@ -105,11 +113,13 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
     {
         if (plan.PasswordManager.StripePlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.PasswordManager.StripePlanId,
-                Quantity = 1
-            });
+            Items.Add(
+                new SubscriptionItemOptions
+                {
+                    Plan = plan.PasswordManager.StripePlanId,
+                    Quantity = 1,
+                }
+            );
         }
     }
 }
@@ -124,11 +134,19 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
         int additionalStorageGb,
         bool premiumAccessAddon,
         int additionalSmSeats,
-        int additionalServiceAccounts) :
-        base(org, plan, taxInfo, additionalSeats,
-            additionalStorageGb, premiumAccessAddon,
-            org.UseSecretsManager, additionalSmSeats,
-            additionalServiceAccounts)
+        int additionalServiceAccounts
+    )
+        : base(
+            org,
+            plan,
+            taxInfo,
+            additionalSeats,
+            additionalStorageGb,
+            premiumAccessAddon,
+            org.UseSecretsManager,
+            additionalSmSeats,
+            additionalServiceAccounts
+        )
     {
         OffSession = true;
         TrialPeriodDays = plan.TrialPeriodDays;
@@ -141,11 +159,19 @@ public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOp
         string customerId,
         Organization org,
         Plan plan,
-        OrganizationUpgrade upgrade) :
-        base(org, plan, upgrade.TaxInfo, upgrade.AdditionalSeats,
-            upgrade.AdditionalStorageGb, upgrade.PremiumAccessAddon,
-            upgrade.UseSecretsManager, upgrade.AdditionalSmSeats.GetValueOrDefault(),
-            upgrade.AdditionalServiceAccounts.GetValueOrDefault())
+        OrganizationUpgrade upgrade
+    )
+        : base(
+            org,
+            plan,
+            upgrade.TaxInfo,
+            upgrade.AdditionalSeats,
+            upgrade.AdditionalStorageGb,
+            upgrade.PremiumAccessAddon,
+            upgrade.UseSecretsManager,
+            upgrade.AdditionalSmSeats.GetValueOrDefault(),
+            upgrade.AdditionalServiceAccounts.GetValueOrDefault()
+        )
     {
         Customer = customerId;
     }

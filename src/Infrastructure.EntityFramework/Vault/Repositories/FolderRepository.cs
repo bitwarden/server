@@ -9,11 +9,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
-public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, Guid>, IFolderRepository
+public class FolderRepository
+    : Repository<Core.Vault.Entities.Folder, Folder, Guid>,
+        IFolderRepository
 {
     public FolderRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Folders)
-    { }
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Folders) { }
 
     public async Task<Core.Vault.Entities.Folder> GetByIdAsync(Guid id, Guid userId)
     {
@@ -31,9 +32,7 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from f in dbContext.Folders
-                        where f.UserId == userId
-                        select f;
+            var query = from f in dbContext.Folders where f.UserId == userId select f;
             var folders = await query.ToListAsync();
             return Mapper.Map<List<Core.Vault.Entities.Folder>>(folders);
         }
@@ -41,7 +40,9 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
 
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
-        Guid userId, IEnumerable<Core.Vault.Entities.Folder> folders)
+        Guid userId,
+        IEnumerable<Core.Vault.Entities.Folder> folders
+    )
     {
         return async (SqlConnection _, SqlTransaction _) =>
         {
@@ -51,8 +52,9 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
             var userFolders = await GetDbSet(dbContext)
                 .Where(f => f.UserId == userId)
                 .ToListAsync();
-            var validFolders = userFolders
-                .Where(folder => newFolders.Any(newFolder => newFolder.Id == folder.Id));
+            var validFolders = userFolders.Where(folder =>
+                newFolders.Any(newFolder => newFolder.Id == folder.Id)
+            );
             foreach (var folder in validFolders)
             {
                 var updateFolder = newFolders.First(newFolder => newFolder.Id == folder.Id);

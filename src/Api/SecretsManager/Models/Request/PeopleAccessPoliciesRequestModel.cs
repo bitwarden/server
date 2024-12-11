@@ -11,13 +11,18 @@ public class PeopleAccessPoliciesRequestModel
 
     public IEnumerable<AccessPolicyRequest> GroupAccessPolicyRequests { get; set; }
 
-    public ProjectPeopleAccessPolicies ToProjectPeopleAccessPolicies(Guid grantedProjectId, Guid organizationId)
+    public ProjectPeopleAccessPolicies ToProjectPeopleAccessPolicies(
+        Guid grantedProjectId,
+        Guid organizationId
+    )
     {
-        var userAccessPolicies = UserAccessPolicyRequests?
-            .Select(x => x.ToUserProjectAccessPolicy(grantedProjectId, organizationId)).ToList();
+        var userAccessPolicies = UserAccessPolicyRequests
+            ?.Select(x => x.ToUserProjectAccessPolicy(grantedProjectId, organizationId))
+            .ToList();
 
-        var groupAccessPolicies = GroupAccessPolicyRequests?
-            .Select(x => x.ToGroupProjectAccessPolicy(grantedProjectId, organizationId)).ToList();
+        var groupAccessPolicies = GroupAccessPolicyRequests
+            ?.Select(x => x.ToGroupProjectAccessPolicy(grantedProjectId, organizationId))
+            .ToList();
         var policies = new List<BaseAccessPolicy>();
         if (userAccessPolicies != null)
         {
@@ -37,18 +42,26 @@ public class PeopleAccessPoliciesRequestModel
             Id = grantedProjectId,
             OrganizationId = organizationId,
             UserAccessPolicies = userAccessPolicies,
-            GroupAccessPolicies = groupAccessPolicies
+            GroupAccessPolicies = groupAccessPolicies,
         };
     }
 
-    public ServiceAccountPeopleAccessPolicies ToServiceAccountPeopleAccessPolicies(Guid grantedServiceAccountId,
-        Guid organizationId)
+    public ServiceAccountPeopleAccessPolicies ToServiceAccountPeopleAccessPolicies(
+        Guid grantedServiceAccountId,
+        Guid organizationId
+    )
     {
-        var userAccessPolicies = UserAccessPolicyRequests?
-            .Select(x => x.ToUserServiceAccountAccessPolicy(grantedServiceAccountId, organizationId)).ToList();
+        var userAccessPolicies = UserAccessPolicyRequests
+            ?.Select(x =>
+                x.ToUserServiceAccountAccessPolicy(grantedServiceAccountId, organizationId)
+            )
+            .ToList();
 
-        var groupAccessPolicies = GroupAccessPolicyRequests?
-            .Select(x => x.ToGroupServiceAccountAccessPolicy(grantedServiceAccountId, organizationId)).ToList();
+        var groupAccessPolicies = GroupAccessPolicyRequests
+            ?.Select(x =>
+                x.ToGroupServiceAccountAccessPolicy(grantedServiceAccountId, organizationId)
+            )
+            .ToList();
 
         var policies = new List<BaseAccessPolicy>();
         if (userAccessPolicies != null)
@@ -73,7 +86,7 @@ public class PeopleAccessPoliciesRequestModel
             Id = grantedServiceAccountId,
             OrganizationId = organizationId,
             UserAccessPolicies = userAccessPolicies,
-            GroupAccessPolicies = groupAccessPolicies
+            GroupAccessPolicies = groupAccessPolicies,
         };
     }
 }

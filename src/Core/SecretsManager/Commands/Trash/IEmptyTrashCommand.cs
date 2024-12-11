@@ -4,4 +4,3 @@ public interface IEmptyTrashCommand
 {
     Task EmptyTrash(Guid organizationId, List<Guid> ids);
 }
-

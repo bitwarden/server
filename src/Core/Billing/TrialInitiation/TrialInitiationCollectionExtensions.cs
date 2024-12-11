@@ -8,6 +8,9 @@ public static class TrialInitiationCollectionExtensions
 {
     public static void AddTrialInitiationServices(this IServiceCollection services)
     {
-        services.AddSingleton<ISendTrialInitiationEmailForRegistrationCommand, SendTrialInitiationEmailForRegistrationCommand>();
+        services.AddSingleton<
+            ISendTrialInitiationEmailForRegistrationCommand,
+            SendTrialInitiationEmailForRegistrationCommand
+        >();
     }
 }

@@ -10,6 +10,7 @@ public class ProviderUserInviteRequestModel
     [Required]
     [StrictEmailAddressList]
     public IEnumerable<string> Emails { get; set; }
+
     [Required]
     public ProviderUserType? Type { get; set; }
 }
@@ -30,6 +31,7 @@ public class ProviderUserBulkConfirmRequestModelEntry
 {
     [Required]
     public Guid Id { get; set; }
+
     [Required]
     public string Key { get; set; }
 }

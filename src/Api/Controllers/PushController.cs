@@ -25,7 +25,8 @@ public class PushController : Controller
         IPushNotificationService pushNotificationService,
         IWebHostEnvironment environment,
         ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _currentContext = currentContext;
         _environment = environment;
@@ -38,8 +39,13 @@ public class PushController : Controller
     public async Task PostRegister([FromBody] PushRegistrationRequestModel model)
     {
         CheckUsage();
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type);
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(
+            model.PushToken,
+            Prefix(model.DeviceId),
+            Prefix(model.UserId),
+            Prefix(model.Identifier),
+            model.Type
+        );
     }
 
     [HttpPost("delete")]
@@ -55,7 +61,8 @@ public class PushController : Controller
         CheckUsage();
         await _pushRegistrationService.AddUserRegistrationOrganizationAsync(
             model.Devices.Select(d => Prefix(d.Id)),
-            Prefix(model.OrganizationId));
+            Prefix(model.OrganizationId)
+        );
     }
 
     [HttpPut("delete-organization")]
@@ -64,7 +71,8 @@ public class PushController : Controller
         CheckUsage();
         await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(
             model.Devices.Select(d => Prefix(d.Id)),
-            Prefix(model.OrganizationId));
+            Prefix(model.OrganizationId)
+        );
     }
 
     [HttpPost("send")]
@@ -74,13 +82,23 @@ public class PushController : Controller
 
         if (!string.IsNullOrWhiteSpace(model.UserId))
         {
-            await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
-                   model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
+            await _pushNotificationService.SendPayloadToUserAsync(
+                Prefix(model.UserId),
+                model.Type.Value,
+                model.Payload,
+                Prefix(model.Identifier),
+                Prefix(model.DeviceId)
+            );
         }
         else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
         {
-            await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
-                model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
+            await _pushNotificationService.SendPayloadToOrganizationAsync(
+                Prefix(model.OrganizationId),
+                model.Type.Value,
+                model.Payload,
+                Prefix(model.Identifier),
+                Prefix(model.DeviceId)
+            );
         }
     }
 

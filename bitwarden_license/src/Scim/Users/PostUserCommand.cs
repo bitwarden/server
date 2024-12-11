@@ -22,7 +22,8 @@ public class PostUserCommand : IPostUserCommand
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IPaymentService paymentService,
-        IScimContext scimContext)
+        IScimContext scimContext
+    )
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -31,7 +32,10 @@ public class PostUserCommand : IPostUserCommand
         _scimContext = scimContext;
     }
 
-    public async Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
+    public async Task<OrganizationUserUserDetails> PostUserAsync(
+        Guid organizationId,
+        ScimUserRequestModel model
+    )
     {
         var scimProvider = _scimContext.RequestScimProvider;
         var invite = model.ToOrganizationUserInvite(scimProvider);
@@ -44,7 +48,9 @@ public class PostUserCommand : IPostUserCommand
             throw new BadRequestException();
         }
 
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            organizationId
+        );
         var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email?.ToLowerInvariant() == email);
         if (orgUserByEmail != null)
         {
@@ -58,11 +64,18 @@ public class PostUserCommand : IPostUserCommand
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(
+            organization
+        );
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
-            invite, externalId);
+        var invitedOrgUser = await _organizationService.InviteUserAsync(
+            organizationId,
+            invitingUserId: null,
+            EventSystemUser.SCIM,
+            invite,
+            externalId
+        );
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;

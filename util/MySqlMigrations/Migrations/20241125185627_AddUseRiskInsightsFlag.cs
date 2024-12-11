@@ -15,14 +15,13 @@ public partial class AddUseRiskInsightsFlag : Migration
             table: "Organization",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "UseRiskInsights",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "UseRiskInsights", table: "Organization");
     }
 }

@@ -13,27 +13,31 @@ public class CustomClaimsPrincipalFactory : UserClaimsPrincipalFactory<IdentityU
         UserManager<IdentityUser> userManager,
         IOptions<IdentityOptions> optionsAccessor,
         IAccessControlService accessControlService,
-        IGlobalSettings globalSettings)
-            : base(userManager, optionsAccessor)
+        IGlobalSettings globalSettings
+    )
+        : base(userManager, optionsAccessor)
     {
         _accessControlService = accessControlService;
         _globalSettings = globalSettings;
     }
 
-    public async override Task<ClaimsPrincipal> CreateAsync(IdentityUser user)
+    public override async Task<ClaimsPrincipal> CreateAsync(IdentityUser user)
     {
         var principal = await base.CreateAsync(user);
 
-        if (!_globalSettings.SelfHosted &&
-            !string.IsNullOrEmpty(user.Email) &&
-            principal.Identity != null)
+        if (
+            !_globalSettings.SelfHosted
+            && !string.IsNullOrEmpty(user.Email)
+            && principal.Identity != null
+        )
         {
             var role = _accessControlService.GetUserRole(user.Email);
 
             if (!string.IsNullOrEmpty(role))
             {
                 ((ClaimsIdentity)principal.Identity).AddClaims(
-                new[] { new Claim(ClaimTypes.Role, role) });
+                    new[] { new Claim(ClaimTypes.Role, role) }
+                );
             }
         }
 

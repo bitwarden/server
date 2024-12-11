@@ -2,12 +2,14 @@
 
 public class VerifiedOrganizationDomainSsoDetail
 {
-    public VerifiedOrganizationDomainSsoDetail()
-    {
-    }
+    public VerifiedOrganizationDomainSsoDetail() { }
 
-    public VerifiedOrganizationDomainSsoDetail(Guid organizationId, string organizationName, string domainName,
-        string organizationIdentifier)
+    public VerifiedOrganizationDomainSsoDetail(
+        Guid organizationId,
+        string organizationName,
+        string domainName,
+        string organizationIdentifier
+    )
     {
         OrganizationId = organizationId;
         OrganizationName = organizationName;

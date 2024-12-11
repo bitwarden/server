@@ -25,7 +25,8 @@ public class ProfileService : IProfileService
         IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         ILicensingService licensingService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _userService = userService;
         _organizationUserRepository = organizationUserRepository;
@@ -44,23 +45,32 @@ public class ProfileService : IProfileService
         if (user != null)
         {
             var isPremium = await _licensingService.ValidateUserPremiumAsync(user);
-            var orgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id);
-            var providers = await _currentContext.ProviderMembershipAsync(_providerUserRepository, user.Id);
+            var orgs = await _currentContext.OrganizationMembershipAsync(
+                _organizationUserRepository,
+                user.Id
+            );
+            var providers = await _currentContext.ProviderMembershipAsync(
+                _providerUserRepository,
+                user.Id
+            );
             foreach (var claim in CoreHelpers.BuildIdentityClaims(user, orgs, providers, isPremium))
             {
                 var upperValue = claim.Value.ToUpperInvariant();
                 var isBool = upperValue == "TRUE" || upperValue == "FALSE";
-                newClaims.Add(isBool ?
-                    new Claim(claim.Key, claim.Value, ClaimValueTypes.Boolean) :
-                    new Claim(claim.Key, claim.Value)
+                newClaims.Add(
+                    isBool
+                        ? new Claim(claim.Key, claim.Value, ClaimValueTypes.Boolean)
+                        : new Claim(claim.Key, claim.Value)
                 );
             }
         }
 
         // filter out any of the new claims
         var existingClaimsToKeep = existingClaims
-            .Where(c => !c.Type.StartsWith("org") &&
-                (newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type)))
+            .Where(c =>
+                !c.Type.StartsWith("org")
+                && (newClaims.Count == 0 || !newClaims.Any(nc => nc.Type == c.Type))
+            )
             .ToList();
 
         newClaims.AddRange(existingClaimsToKeep);
@@ -72,13 +82,18 @@ public class ProfileService : IProfileService
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
-        var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c => c.Type == Claims.SecurityStamp);
+        var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c =>
+            c.Type == Claims.SecurityStamp
+        );
         var user = await _userService.GetUserByPrincipalAsync(context.Subject);
 
         if (user != null && securityTokenClaim != null)
         {
-            context.IsActive = string.Equals(user.SecurityStamp, securityTokenClaim.Value,
-                StringComparison.InvariantCultureIgnoreCase);
+            context.IsActive = string.Equals(
+                user.SecurityStamp,
+                securityTokenClaim.Value,
+                StringComparison.InvariantCultureIgnoreCase
+            );
             return;
         }
         else

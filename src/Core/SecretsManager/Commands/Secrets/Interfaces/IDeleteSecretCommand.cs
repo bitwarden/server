@@ -6,4 +6,3 @@ public interface IDeleteSecretCommand
 {
     Task DeleteSecrets(IEnumerable<Secret> secrets);
 }
-

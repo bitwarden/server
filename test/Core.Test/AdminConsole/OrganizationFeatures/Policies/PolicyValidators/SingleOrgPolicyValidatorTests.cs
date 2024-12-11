@@ -30,14 +30,18 @@ public class SingleOrgPolicyValidatorTests
     public async Task ValidateAsync_DisablingPolicy_KeyConnectorEnabled_ValidationError(
         [PolicyUpdate(PolicyType.SingleOrg, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.SingleOrg)] Policy policy,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyValidator> sutProvider
+    )
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
         var ssoConfig = new SsoConfig { Enabled = true };
-        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
+        ssoConfig.SetData(
+            new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector }
+        );
 
-        sutProvider.GetDependency<ISsoConfigRepository>()
+        sutProvider
+            .GetDependency<ISsoConfigRepository>()
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
@@ -49,13 +53,15 @@ public class SingleOrgPolicyValidatorTests
     public async Task ValidateAsync_DisablingPolicy_KeyConnectorNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<SingleOrgPolicyValidator> sutProvider)
+        SutProvider<SingleOrgPolicyValidator> sutProvider
+    )
     {
         policy.OrganizationId = policyUpdate.OrganizationId;
 
         var ssoConfig = new SsoConfig { Enabled = false };
 
-        sutProvider.GetDependency<ISsoConfigRepository>()
+        sutProvider
+            .GetDependency<ISsoConfigRepository>()
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
@@ -69,7 +75,9 @@ public class SingleOrgPolicyValidatorTests
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
         Guid nonCompliantUserId,
-        Organization organization, SutProvider<SingleOrgPolicyValidator> sutProvider)
+        Organization organization,
+        SutProvider<SingleOrgPolicyValidator> sutProvider
+    )
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
 
@@ -79,7 +87,7 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = new Guid(),
-            Email = "user1@example.com"
+            Email = "user1@example.com",
         };
 
         var compliantUser2 = new OrganizationUserUserDetails
@@ -88,7 +96,7 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = new Guid(),
-            Email = "user2@example.com"
+            Email = "user2@example.com",
         };
 
         var nonCompliantUser = new OrganizationUserUserDetails
@@ -97,10 +105,11 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = nonCompliantUserId,
-            Email = "user3@example.com"
+            Email = "user3@example.com",
         };
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([compliantUser1, compliantUser2, nonCompliantUser]);
 
@@ -108,32 +117,45 @@ public class SingleOrgPolicyValidatorTests
         {
             OrganizationId = new Guid(),
             UserId = nonCompliantUserId,
-            Status = OrganizationUserStatusType.Confirmed
+            Status = OrganizationUserStatusType.Confirmed,
         };
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId)))
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId))
+            )
             .Returns([otherOrganizationUser]);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+        sutProvider
+            .GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(true);
 
-        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+        sutProvider
+            .GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+        await sutProvider
+            .GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider
+            .GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(),
-                "user3@example.com");
+            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(
+                organization.DisplayName(),
+                "user3@example.com"
+            );
     }
 
     [Theory, BitAutoData]
@@ -142,7 +164,9 @@ public class SingleOrgPolicyValidatorTests
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
         Guid nonCompliantUserId,
-        Organization organization, SutProvider<SingleOrgPolicyValidator> sutProvider)
+        Organization organization,
+        SutProvider<SingleOrgPolicyValidator> sutProvider
+    )
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
 
@@ -152,7 +176,7 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = new Guid(),
-            Email = "user1@example.com"
+            Email = "user1@example.com",
         };
 
         var compliantUser2 = new OrganizationUserUserDetails
@@ -161,7 +185,7 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = new Guid(),
-            Email = "user2@example.com"
+            Email = "user2@example.com",
         };
 
         var nonCompliantUser = new OrganizationUserUserDetails
@@ -170,10 +194,11 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = nonCompliantUserId,
-            Email = "user3@example.com"
+            Email = "user3@example.com",
         };
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([compliantUser1, compliantUser2, nonCompliantUser]);
 
@@ -181,32 +206,45 @@ public class SingleOrgPolicyValidatorTests
         {
             OrganizationId = new Guid(),
             UserId = nonCompliantUserId,
-            Status = OrganizationUserStatusType.Confirmed
+            Status = OrganizationUserStatusType.Confirmed,
         };
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId)))
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId))
+            )
             .Returns([otherOrganizationUser]);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
+            .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+        sutProvider
+            .GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(false);
 
-        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+        sutProvider
+            .GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
-        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+        await sutProvider
+            .GetDependency<IRemoveOrganizationUserCommand>()
             .Received(1)
             .RemoveUserAsync(policyUpdate.OrganizationId, nonCompliantUser.Id, savingUserId);
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider
+            .GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(organization.DisplayName(),
-                "user3@example.com");
+            .SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+                organization.DisplayName(),
+                "user3@example.com"
+            );
     }
 
     [Theory, BitAutoData]
@@ -215,7 +253,9 @@ public class SingleOrgPolicyValidatorTests
         [Policy(PolicyType.SingleOrg, false)] Policy policy,
         Guid savingUserId,
         Guid nonCompliantUserId,
-        Organization organization, SutProvider<SingleOrgPolicyValidator> sutProvider)
+        Organization organization,
+        SutProvider<SingleOrgPolicyValidator> sutProvider
+    )
     {
         policy.OrganizationId = organization.Id = policyUpdate.OrganizationId;
 
@@ -225,7 +265,7 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = new Guid(),
-            Email = "user1@example.com"
+            Email = "user1@example.com",
         };
 
         var compliantUser2 = new OrganizationUserUserDetails
@@ -234,7 +274,7 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = new Guid(),
-            Email = "user2@example.com"
+            Email = "user2@example.com",
         };
 
         var nonCompliantUser = new OrganizationUserUserDetails
@@ -243,10 +283,11 @@ public class SingleOrgPolicyValidatorTests
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Confirmed,
             UserId = nonCompliantUserId,
-            Email = "user3@example.com"
+            Email = "user3@example.com",
         };
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policyUpdate.OrganizationId)
             .Returns([compliantUser1, compliantUser2, nonCompliantUser]);
 
@@ -254,26 +295,36 @@ public class SingleOrgPolicyValidatorTests
         {
             OrganizationId = new Guid(),
             UserId = nonCompliantUserId,
-            Status = OrganizationUserStatusType.Confirmed
+            Status = OrganizationUserStatusType.Confirmed,
         };
 
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByManyUsersAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId)))
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(nonCompliantUserId))
+            )
             .Returns([otherOrganizationUser]);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(savingUserId);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(policyUpdate.OrganizationId)
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(policyUpdate.OrganizationId)
             .Returns(organization);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
+        sutProvider
+            .GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            .Returns(true);
 
-        sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+        sutProvider
+            .GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>())
             .Returns(new CommandResult());
 
         await sutProvider.Sut.OnSaveSideEffectsAsync(policyUpdate, policy);
 
-        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+        await sutProvider
+            .GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received()
             .RevokeNonCompliantOrganizationUsersAsync(Arg.Any<RevokeOrganizationUsersRequest>());
     }

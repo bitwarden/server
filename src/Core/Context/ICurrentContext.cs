@@ -65,10 +65,14 @@ public interface ICurrentContext
     bool ManageProviderOrganizations(Guid providerId);
 
     Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
-        IOrganizationUserRepository organizationUserRepository, Guid userId);
+        IOrganizationUserRepository organizationUserRepository,
+        Guid userId
+    );
 
     Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
-        IProviderUserRepository providerUserRepository, Guid userId);
+        IProviderUserRepository providerUserRepository,
+        Guid userId
+    );
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);

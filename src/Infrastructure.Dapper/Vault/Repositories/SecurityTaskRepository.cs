@@ -8,11 +8,11 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityTaskRepository
 {
     public SecurityTaskRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public SecurityTaskRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
-
+        : base(connectionString, readOnlyConnectionString) { }
 }

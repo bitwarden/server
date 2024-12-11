@@ -19,25 +19,16 @@ public static class JsonHelpers
     {
         Default = new JsonSerializerOptions();
 
-        Indented = new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        };
+        Indented = new JsonSerializerOptions { WriteIndented = true };
 
-        IgnoreCase = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-        };
+        IgnoreCase = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
         IgnoreWritingNull = new JsonSerializerOptions
         {
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
-        CamelCase = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        };
+        CamelCase = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
         IgnoreWritingNullAndCamelCase = new JsonSerializerOptions
         {
@@ -58,13 +49,12 @@ public static class JsonHelpers
     }
 
     #region Legacy Newtonsoft.Json usage
-    private const string LegacyMessage = "Usage of Newtonsoft.Json should be kept to a minimum and will further be removed when we move to .NET 6";
+    private const string LegacyMessage =
+        "Usage of Newtonsoft.Json should be kept to a minimum and will further be removed when we move to .NET 6";
 
     [Obsolete(LegacyMessage)]
-    public static NS.JsonSerializerSettings LegacyEnumKeyResolver { get; } = new NS.JsonSerializerSettings
-    {
-        ContractResolver = new EnumKeyResolver<byte>(),
-    };
+    public static NS.JsonSerializerSettings LegacyEnumKeyResolver { get; } =
+        new NS.JsonSerializerSettings { ContractResolver = new EnumKeyResolver<byte>() };
 
     [Obsolete(LegacyMessage)]
     public static string LegacySerialize(object value, NS.JsonSerializerSettings settings = null)
@@ -83,14 +73,17 @@ public static class JsonHelpers
 public class EnumKeyResolver<T> : NS.Serialization.DefaultContractResolver
     where T : struct
 {
-    protected override NS.Serialization.JsonDictionaryContract CreateDictionaryContract(Type objectType)
+    protected override NS.Serialization.JsonDictionaryContract CreateDictionaryContract(
+        Type objectType
+    )
     {
         var contract = base.CreateDictionaryContract(objectType);
         var keyType = contract.DictionaryKeyType;
 
         if (keyType.BaseType == typeof(Enum))
         {
-            contract.DictionaryKeyResolver = propName => ((T)Enum.Parse(keyType, propName)).ToString();
+            contract.DictionaryKeyResolver = propName =>
+                ((T)Enum.Parse(keyType, propName)).ToString();
         }
 
         return contract;
@@ -99,7 +92,11 @@ public class EnumKeyResolver<T> : NS.Serialization.DefaultContractResolver
 
 public class MsEpochConverter : JsonConverter<DateTime?>
 {
-    public override DateTime? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override DateTime? Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
     {
         if (reader.TokenType == JsonTokenType.Null)
         {
@@ -114,7 +111,11 @@ public class MsEpochConverter : JsonConverter<DateTime?>
         return CoreHelpers.FromEpocMilliseconds(milliseconds);
     }
 
-    public override void Write(Utf8JsonWriter writer, DateTime? value, JsonSerializerOptions options)
+    public override void Write(
+        Utf8JsonWriter writer,
+        DateTime? value,
+        JsonSerializerOptions options
+    )
     {
         if (!value.HasValue)
         {
@@ -133,7 +134,11 @@ public class PermissiveStringConverter : JsonConverter<string>
     internal static readonly PermissiveStringConverter Instance = new();
     private static readonly CultureInfo _cultureInfo = new("en-US");
 
-    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override string Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
     {
         return reader.TokenType switch
         {
@@ -156,7 +161,11 @@ public class PermissiveStringConverter : JsonConverter<string>
 /// </summary>
 public class PermissiveStringEnumerableConverter : JsonConverter<IEnumerable<string>>
 {
-    public override IEnumerable<string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override IEnumerable<string> Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
     {
         var stringList = new List<string>();
 
@@ -169,19 +178,27 @@ public class PermissiveStringEnumerableConverter : JsonConverter<IEnumerable<str
                 throw new JsonException("Cannot read JSON Object to an IEnumerable<string>.");
             }
 
-            stringList.Add(PermissiveStringConverter.Instance.Read(ref reader, typeof(string), options));
+            stringList.Add(
+                PermissiveStringConverter.Instance.Read(ref reader, typeof(string), options)
+            );
             return stringList;
         }
 
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
         {
-            stringList.Add(PermissiveStringConverter.Instance.Read(ref reader, typeof(string), options));
+            stringList.Add(
+                PermissiveStringConverter.Instance.Read(ref reader, typeof(string), options)
+            );
         }
 
         return stringList;
     }
 
-    public override void Write(Utf8JsonWriter writer, IEnumerable<string> value, JsonSerializerOptions options)
+    public override void Write(
+        Utf8JsonWriter writer,
+        IEnumerable<string> value,
+        JsonSerializerOptions options
+    )
     {
         writer.WriteStartArray();
 
@@ -200,7 +217,11 @@ public class PermissiveStringEnumerableConverter : JsonConverter<IEnumerable<str
 /// </summary>
 public class HtmlEncodingStringConverter : JsonConverter<string>
 {
-    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override string Read(
+        ref Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options
+    )
     {
         if (reader.TokenType == JsonTokenType.String)
         {

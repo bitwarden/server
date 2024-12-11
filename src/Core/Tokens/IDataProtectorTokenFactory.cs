@@ -1,6 +1,7 @@
 ﻿namespace Bit.Core.Tokens;
 
-public interface IDataProtectorTokenFactory<T> where T : Tokenable
+public interface IDataProtectorTokenFactory<T>
+    where T : Tokenable
 {
     string Protect(T data);
     T Unprotect(string token);

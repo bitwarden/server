@@ -11,7 +11,7 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
             Id = Id.Value,
             ReadOnly = ReadOnly.Value,
             HidePasswords = HidePasswords.GetValueOrDefault(),
-            Manage = Manage.GetValueOrDefault()
+            Manage = Manage.GetValueOrDefault(),
         };
 
         return collectionAccessSelection;

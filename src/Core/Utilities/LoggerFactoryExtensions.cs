@@ -17,7 +17,8 @@ public static class LoggerFactoryExtensions
         this IApplicationBuilder appBuilder,
         IWebHostEnvironment env,
         IHostApplicationLifetime applicationLifetime,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         if (env.IsDevelopment() && !globalSettings.EnableDevLogging)
         {
@@ -30,10 +31,14 @@ public static class LoggerFactoryExtensions
     public static ILoggingBuilder AddSerilog(
         this ILoggingBuilder builder,
         WebHostBuilderContext context,
-        Func<LogEvent, IGlobalSettings, bool> filter = null)
+        Func<LogEvent, IGlobalSettings, bool> filter = null
+    )
     {
         var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
+        ConfigurationBinder.Bind(
+            context.Configuration.GetSection("GlobalSettings"),
+            globalSettings
+        );
 
         if (context.HostingEnvironment.IsDevelopment() && !globalSettings.EnableDevLogging)
         {
@@ -46,7 +51,9 @@ public static class LoggerFactoryExtensions
             {
                 return true;
             }
-            var eventId = e.Properties.ContainsKey("EventId") ? e.Properties["EventId"].ToString() : null;
+            var eventId = e.Properties.ContainsKey("EventId")
+                ? e.Properties["EventId"].ToString()
+                : null;
             if (eventId?.Contains(Constants.BypassFiltersEventId.ToString()) ?? false)
             {
                 return true;
@@ -61,7 +68,8 @@ public static class LoggerFactoryExtensions
 
         if (CoreHelpers.SettingHasValue(globalSettings?.Sentry.Dsn))
         {
-            config.WriteTo.Sentry(globalSettings.Sentry.Dsn)
+            config
+                .WriteTo.Sentry(globalSettings.Sentry.Dsn)
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Project", globalSettings.ProjectName);
         }
@@ -69,16 +77,25 @@ public static class LoggerFactoryExtensions
         {
             // appending sitename to project name to allow easier identification in syslog.
             var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
-            if (globalSettings.Syslog.Destination.Equals("local", StringComparison.OrdinalIgnoreCase))
+            if (
+                globalSettings.Syslog.Destination.Equals(
+                    "local",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
             {
                 config.WriteTo.LocalSyslog(appName);
             }
-            else if (Uri.TryCreate(globalSettings.Syslog.Destination, UriKind.Absolute, out var syslogAddress))
+            else if (
+                Uri.TryCreate(
+                    globalSettings.Syslog.Destination,
+                    UriKind.Absolute,
+                    out var syslogAddress
+                )
+            )
             {
                 // Syslog's standard port is 514 (both UDP and TCP). TLS does not have a standard port, so assume 514.
-                int port = syslogAddress.Port >= 0
-                    ? syslogAddress.Port
-                    : 514;
+                int port = syslogAddress.Port >= 0 ? syslogAddress.Port : 514;
 
                 if (syslogAddress.Scheme.Equals("udp"))
                 {
@@ -92,19 +109,31 @@ public static class LoggerFactoryExtensions
                 {
                     if (CoreHelpers.SettingHasValue(globalSettings.Syslog.CertificateThumbprint))
                     {
-                        config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
+                        config.WriteTo.TcpSyslog(
+                            syslogAddress.Host,
+                            port,
+                            appName,
                             useTls: true,
-                            certProvider: new CertificateStoreProvider(StoreName.My, StoreLocation.CurrentUser,
-                                                                       globalSettings.Syslog.CertificateThumbprint));
+                            certProvider: new CertificateStoreProvider(
+                                StoreName.My,
+                                StoreLocation.CurrentUser,
+                                globalSettings.Syslog.CertificateThumbprint
+                            )
+                        );
                     }
                     else
                     {
-                        config.WriteTo.TcpSyslog(syslogAddress.Host, port, appName,
+                        config.WriteTo.TcpSyslog(
+                            syslogAddress.Host,
+                            port,
+                            appName,
                             useTls: true,
-                            certProvider: new CertificateFileProvider(globalSettings.Syslog.CertificatePath,
-                                                                      globalSettings.Syslog?.CertificatePassword ?? string.Empty));
+                            certProvider: new CertificateFileProvider(
+                                globalSettings.Syslog.CertificatePath,
+                                globalSettings.Syslog?.CertificatePassword ?? string.Empty
+                            )
+                        );
                     }
-
                 }
             }
         }
@@ -112,20 +141,37 @@ public static class LoggerFactoryExtensions
         {
             if (globalSettings.LogRollBySizeLimit.HasValue)
             {
-                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}.log");
+                var pathFormat = Path.Combine(
+                    globalSettings.LogDirectory,
+                    $"{globalSettings.ProjectName.ToLowerInvariant()}.log"
+                );
                 if (globalSettings.LogDirectoryByProject)
                 {
-                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "log.txt");
+                    pathFormat = Path.Combine(
+                        globalSettings.LogDirectory,
+                        globalSettings.ProjectName,
+                        "log.txt"
+                    );
                 }
-                config.WriteTo.File(pathFormat, rollOnFileSizeLimit: true,
-                    fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
+                config.WriteTo.File(
+                    pathFormat,
+                    rollOnFileSizeLimit: true,
+                    fileSizeLimitBytes: globalSettings.LogRollBySizeLimit
+                );
             }
             else
             {
-                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log");
+                var pathFormat = Path.Combine(
+                    globalSettings.LogDirectory,
+                    $"{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log"
+                );
                 if (globalSettings.LogDirectoryByProject)
                 {
-                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "{Date}.txt");
+                    pathFormat = Path.Combine(
+                        globalSettings.LogDirectory,
+                        globalSettings.ProjectName,
+                        "{Date}.txt"
+                    );
                 }
                 config.WriteTo.RollingFile(pathFormat);
             }

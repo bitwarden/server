@@ -27,7 +27,8 @@ public class MaxLengthStringRelay : ISpecimenBuilder
             return new NoSpecimen();
         }
 
-        var a = (MaxLengthAttribute)p.GetCustomAttributes(typeof(MaxLengthAttribute), false).SingleOrDefault();
+        var a = (MaxLengthAttribute)
+            p.GetCustomAttributes(typeof(MaxLengthAttribute), false).SingleOrDefault();
 
         if (a == null)
         {
@@ -37,4 +38,3 @@ public class MaxLengthStringRelay : ISpecimenBuilder
         return context.Resolve(new ConstrainedStringRequest(a.Length, a.Length));
     }
 }
-

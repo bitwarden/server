@@ -27,41 +27,50 @@ public class ResetPasswordPolicyValidatorTests
         bool autoEnrollEnabled,
         [PolicyUpdate(PolicyType.ResetPassword)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+        SutProvider<ResetPasswordPolicyValidator> sutProvider
+    )
     {
         policyUpdate.Enabled = policyEnabled;
-        policyUpdate.SetDataModel(new ResetPasswordDataModel
-        {
-            AutoEnrollEnabled = autoEnrollEnabled
-        });
+        policyUpdate.SetDataModel(
+            new ResetPasswordDataModel { AutoEnrollEnabled = autoEnrollEnabled }
+        );
         policy.OrganizationId = policyUpdate.OrganizationId;
 
         var ssoConfig = new SsoConfig { Enabled = true };
-        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+        ssoConfig.SetData(
+            new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            }
+        );
 
-        sutProvider.GetDependency<ISsoConfigRepository>()
+        sutProvider
+            .GetDependency<ISsoConfigRepository>()
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 
         var result = await sutProvider.Sut.ValidateAsync(policyUpdate, policy);
-        Assert.Contains("Trusted device encryption is on and requires this policy.", result, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "Trusted device encryption is on and requires this policy.",
+            result,
+            StringComparison.OrdinalIgnoreCase
+        );
     }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_DisablingPolicy_TdeNotEnabled_Success(
         [PolicyUpdate(PolicyType.ResetPassword, false)] PolicyUpdate policyUpdate,
         [Policy(PolicyType.ResetPassword)] Policy policy,
-        SutProvider<ResetPasswordPolicyValidator> sutProvider)
+        SutProvider<ResetPasswordPolicyValidator> sutProvider
+    )
     {
-        policyUpdate.SetDataModel(new ResetPasswordDataModel
-        {
-            AutoEnrollEnabled = false
-        });
+        policyUpdate.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = false });
         policy.OrganizationId = policyUpdate.OrganizationId;
 
         var ssoConfig = new SsoConfig { Enabled = false };
 
-        sutProvider.GetDependency<ISsoConfigRepository>()
+        sutProvider
+            .GetDependency<ISsoConfigRepository>()
             .GetByOrganizationIdAsync(policyUpdate.OrganizationId)
             .Returns(ssoConfig);
 

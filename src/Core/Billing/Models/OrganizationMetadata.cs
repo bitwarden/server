@@ -5,4 +5,5 @@ public record OrganizationMetadata(
     bool IsManaged,
     bool IsOnSecretsManagerStandalone,
     bool IsSubscriptionUnpaid,
-    bool HasSubscription);
+    bool HasSubscription
+);

@@ -9,19 +9,23 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
-public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHandler<
-    ServiceAccountGrantedPoliciesOperationRequirement,
-    ServiceAccountGrantedPoliciesUpdates>
+public class ServiceAccountGrantedPoliciesAuthorizationHandler
+    : AuthorizationHandler<
+        ServiceAccountGrantedPoliciesOperationRequirement,
+        ServiceAccountGrantedPoliciesUpdates
+    >
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ServiceAccountGrantedPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ServiceAccountGrantedPoliciesAuthorizationHandler(
+        ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository
+    )
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
@@ -29,9 +33,11 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
         _projectRepository = projectRepository;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
         ServiceAccountGrantedPoliciesOperationRequirement requirement,
-        ServiceAccountGrantedPoliciesUpdates resource)
+        ServiceAccountGrantedPoliciesUpdates resource
+    )
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -39,8 +45,10 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
         }
 
         // Only users and admins should be able to manipulate access policies
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
         if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
         {
             return;
@@ -49,37 +57,55 @@ public class ServiceAccountGrantedPoliciesAuthorizationHandler : AuthorizationHa
         switch (requirement)
         {
             case not null when requirement == ServiceAccountGrantedPoliciesOperations.Updates:
-                await CanUpdateAsync(context, requirement, resource, accessClient,
-                    userId);
+                await CanUpdateAsync(context, requirement, resource, accessClient, userId);
                 break;
             default:
-                throw new ArgumentException("Unsupported operation requirement type provided.",
-                    nameof(requirement));
+                throw new ArgumentException(
+                    "Unsupported operation requirement type provided.",
+                    nameof(requirement)
+                );
         }
     }
 
-    private async Task CanUpdateAsync(AuthorizationHandlerContext context,
-        ServiceAccountGrantedPoliciesOperationRequirement requirement, ServiceAccountGrantedPoliciesUpdates resource,
-        AccessClientType accessClient, Guid userId)
+    private async Task CanUpdateAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountGrantedPoliciesOperationRequirement requirement,
+        ServiceAccountGrantedPoliciesUpdates resource,
+        AccessClientType accessClient,
+        Guid userId
+    )
     {
-        var access =
-            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.ServiceAccountId, userId,
-                accessClient);
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.ServiceAccountId,
+            userId,
+            accessClient
+        );
         if (access.Write)
         {
-            var projectIdsToCheck = resource.ProjectGrantedPolicyUpdates.Select(update =>
-                update.AccessPolicy.GrantedProjectId!.Value).ToList();
+            var projectIdsToCheck = resource
+                .ProjectGrantedPolicyUpdates.Select(update =>
+                    update.AccessPolicy.GrantedProjectId!.Value
+                )
+                .ToList();
 
-            var sameOrganization =
-                await _projectRepository.ProjectsAreInOrganization(projectIdsToCheck, resource.OrganizationId);
+            var sameOrganization = await _projectRepository.ProjectsAreInOrganization(
+                projectIdsToCheck,
+                resource.OrganizationId
+            );
             if (!sameOrganization)
             {
                 return;
             }
 
-            var projectsAccess =
-                await _projectRepository.AccessToProjectsAsync(projectIdsToCheck, userId, accessClient);
-            if (projectsAccess.Count == projectIdsToCheck.Count && projectsAccess.All(a => a.Value.Write))
+            var projectsAccess = await _projectRepository.AccessToProjectsAsync(
+                projectIdsToCheck,
+                userId,
+                accessClient
+            );
+            if (
+                projectsAccess.Count == projectIdsToCheck.Count
+                && projectsAccess.All(a => a.Value.Write)
+            )
             {
                 context.Succeed(requirement);
             }

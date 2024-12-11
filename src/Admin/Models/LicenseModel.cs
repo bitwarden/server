@@ -6,10 +6,13 @@ public class LicenseModel : IValidatableObject
 {
     [Display(Name = "User Id")]
     public Guid? UserId { get; set; }
+
     [Display(Name = "Organization Id")]
     public Guid? OrganizationId { get; set; }
+
     [Display(Name = "Installation Id")]
     public Guid? InstallationId { get; set; }
+
     [Required]
     [Display(Name = "Version")]
     public int Version { get; set; }
@@ -28,7 +31,9 @@ public class LicenseModel : IValidatableObject
 
         if (OrganizationId.HasValue && !InstallationId.HasValue)
         {
-            yield return new ValidationResult("Installation Id is required for organization licenses.");
+            yield return new ValidationResult(
+                "Installation Id is required for organization licenses."
+            );
         }
     }
 }

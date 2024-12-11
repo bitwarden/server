@@ -20,12 +20,14 @@ public class ProviderClientsController(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
+    IUserService userService
+) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
     [HttpPost]
     public async Task<IResult> CreateAsync(
         [FromRoute] Guid providerId,
-        [FromBody] CreateClientOrganizationRequestBody requestBody)
+        [FromBody] CreateClientOrganizationRequestBody requestBody
+    )
     {
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
@@ -52,25 +54,26 @@ public class ProviderClientsController(
             PublicKey = requestBody.KeyPair.PublicKey,
             PrivateKey = requestBody.KeyPair.EncryptedPrivateKey,
             CollectionName = requestBody.CollectionName,
-            IsFromProvider = true
+            IsFromProvider = true,
         };
 
         var providerOrganization = await providerService.CreateOrganizationAsync(
             providerId,
             organizationSignup,
             requestBody.OwnerEmail,
-            user);
+            user
+        );
 
-        var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+        var clientOrganization = await organizationRepository.GetByIdAsync(
+            providerOrganization.OrganizationId
+        );
 
-        await providerBillingService.ScaleSeats(
-            provider,
-            requestBody.PlanType,
-            requestBody.Seats);
+        await providerBillingService.ScaleSeats(provider, requestBody.PlanType, requestBody.Seats);
 
         await providerBillingService.CreateCustomerForClientOrganization(
             provider,
-            clientOrganization);
+            clientOrganization
+        );
 
         clientOrganization.Status = OrganizationStatusType.Managed;
 
@@ -83,7 +86,8 @@ public class ProviderClientsController(
     public async Task<IResult> UpdateAsync(
         [FromRoute] Guid providerId,
         [FromRoute] Guid providerOrganizationId,
-        [FromBody] UpdateClientOrganizationRequestBody requestBody)
+        [FromBody] UpdateClientOrganizationRequestBody requestBody
+    )
     {
         var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
 
@@ -92,14 +96,18 @@ public class ProviderClientsController(
             return result;
         }
 
-        var providerOrganization = await providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
+        var providerOrganization = await providerOrganizationRepository.GetByIdAsync(
+            providerOrganizationId
+        );
 
         if (providerOrganization == null)
         {
             return Error.NotFound();
         }
 
-        var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
+        var clientOrganization = await organizationRepository.GetByIdAsync(
+            providerOrganization.OrganizationId
+        );
 
         if (clientOrganization is not { Status: OrganizationStatusType.Managed })
         {
@@ -108,17 +116,23 @@ public class ProviderClientsController(
 
         var seatAdjustment = requestBody.AssignedSeats - (clientOrganization.Seats ?? 0);
 
-        var seatAdjustmentResultsInPurchase = await providerBillingService.SeatAdjustmentResultsInPurchase(
-            provider,
-            clientOrganization.PlanType,
-            seatAdjustment);
+        var seatAdjustmentResultsInPurchase =
+            await providerBillingService.SeatAdjustmentResultsInPurchase(
+                provider,
+                clientOrganization.PlanType,
+                seatAdjustment
+            );
 
         if (seatAdjustmentResultsInPurchase && !currentContext.ProviderProviderAdmin(provider.Id))
         {
             return Error.Unauthorized("Service users cannot purchase additional seats.");
         }
 
-        await providerBillingService.ScaleSeats(provider, clientOrganization.PlanType, seatAdjustment);
+        await providerBillingService.ScaleSeats(
+            provider,
+            clientOrganization.PlanType,
+            seatAdjustment
+        );
 
         clientOrganization.Name = requestBody.Name;
         clientOrganization.Seats = requestBody.AssignedSeats;

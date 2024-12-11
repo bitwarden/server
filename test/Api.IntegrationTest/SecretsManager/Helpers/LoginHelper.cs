@@ -18,13 +18,25 @@ public class LoginHelper
     public async Task LoginAsync(string email)
     {
         var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            tokens.Token
+        );
     }
 
     public async Task LoginWithApiKeyAsync(ApiKeyClientSecretDetails apiKeyDetails)
     {
-        var token = await _factory.LoginWithClientSecretAsync(apiKeyDetails.ApiKey.Id, apiKeyDetails.ClientSecret);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        _client.DefaultRequestHeaders.Add("service_account_id", apiKeyDetails.ApiKey.ServiceAccountId.ToString());
+        var token = await _factory.LoginWithClientSecretAsync(
+            apiKeyDetails.ApiKey.Id,
+            apiKeyDetails.ClientSecret
+        );
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            token
+        );
+        _client.DefaultRequestHeaders.Add(
+            "service_account_id",
+            apiKeyDetails.ApiKey.ServiceAccountId.ToString()
+        );
     }
 }

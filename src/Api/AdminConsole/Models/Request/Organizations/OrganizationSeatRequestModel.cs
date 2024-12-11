@@ -11,7 +11,10 @@ public class OrganizationSeatRequestModel : IValidatableObject
     {
         if (SeatAdjustment == 0)
         {
-            yield return new ValidationResult("Seat adjustment cannot be 0.", new string[] { nameof(SeatAdjustment) });
+            yield return new ValidationResult(
+                "Seat adjustment cannot be 0.",
+                new string[] { nameof(SeatAdjustment) }
+            );
         }
     }
 }

@@ -17,7 +17,9 @@ public class LaunchDarklyFeatureServiceTests
     private const string _fakeFeatureKey = "somekey";
     private const string _fakeSdkKey = "somesdkkey";
 
-    private static SutProvider<LaunchDarklyFeatureService> GetSutProvider(IGlobalSettings globalSettings)
+    private static SutProvider<LaunchDarklyFeatureService> GetSutProvider(
+        IGlobalSettings globalSettings
+    )
     {
         globalSettings.ProjectName = "LaunchDarkly Tests";
 

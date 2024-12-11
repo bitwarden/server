@@ -8,7 +8,7 @@ namespace Bit.EfShared;
 // should have a project reference to Core.csproj and a package reference to Microsoft.EntityFrameworkCore.Design
 // The reason for this is that if it belonged to it's own library you would have to add manual references to the above
 // and manage the version for the EntityFrameworkCore package. This way it also doesn't create another dll
-// To include this you can view examples in the MySqlMigrations and PostgresMigrations .csproj files. 
+// To include this you can view examples in the MySqlMigrations and PostgresMigrations .csproj files.
 // <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
 
 public static class MigrationBuilderExtensions
@@ -19,11 +19,18 @@ public static class MigrationBuilderExtensions
     /// <param name="migrationBuilder">The MigrationBuilder instance the sql should be applied to</param>
     /// <param name="resourceName">The file name portion of the resource name, it is assumed to be in a Scripts folder</param>
     /// <param name="dir">The direction of the migration taking place</param>
-    public static void SqlResource(this MigrationBuilder migrationBuilder, string resourceName, [CallerMemberName] string dir = "")
+    public static void SqlResource(
+        this MigrationBuilder migrationBuilder,
+        string resourceName,
+        [CallerMemberName] string dir = ""
+    )
     {
-        var formattedResourceName = string.IsNullOrEmpty(dir) ? resourceName : string.Format(resourceName, dir);
+        var formattedResourceName = string.IsNullOrEmpty(dir)
+            ? resourceName
+            : string.Format(resourceName, dir);
 
-        migrationBuilder.Sql(CoreHelpers.GetEmbeddedResourceContentsAsync(
-            $"Scripts.{formattedResourceName}"));
+        migrationBuilder.Sql(
+            CoreHelpers.GetEmbeddedResourceContentsAsync($"Scripts.{formattedResourceName}")
+        );
     }
 }

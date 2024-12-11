@@ -13,10 +13,6 @@ public class ServiceAccountUpdateRequestModel
 
     public ServiceAccount ToServiceAccount(Guid id)
     {
-        return new ServiceAccount()
-        {
-            Id = id,
-            Name = Name,
-        };
+        return new ServiceAccount() { Id = id, Name = Name };
     }
 }

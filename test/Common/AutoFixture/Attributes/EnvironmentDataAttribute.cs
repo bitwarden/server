@@ -27,14 +27,19 @@ public class EnvironmentDataAttribute : DataAttribute
 
         if (methodParameters.Length < _environmentVariableNames.Length)
         {
-            throw new ArgumentException($"The target test method only has {methodParameters.Length} arguments but you supplied {_environmentVariableNames.Length}");
+            throw new ArgumentException(
+                $"The target test method only has {methodParameters.Length} arguments but you supplied {_environmentVariableNames.Length}"
+            );
         }
 
         var values = new object[_environmentVariableNames.Length];
 
         for (var i = 0; i < _environmentVariableNames.Length; i++)
         {
-            values[i] = Convert.ChangeType(Environment.GetEnvironmentVariable(_environmentVariableNames[i]), methodParameters[i].ParameterType);
+            values[i] = Convert.ChangeType(
+                Environment.GetEnvironmentVariable(_environmentVariableNames[i]),
+                methodParameters[i].ParameterType
+            );
         }
 
         return new[] { values };

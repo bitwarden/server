@@ -9,39 +9,36 @@ public class TwoFactorYubiKeyResponseModel : ResponseModel
     public TwoFactorYubiKeyResponseModel(User user)
         : base("twoFactorYubiKey")
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
         if (provider?.MetaData != null && provider.MetaData.Count > 0)
         {
             Enabled = provider.Enabled;
 
-            if (provider.MetaData.ContainsKey("Key1"))
+            if (provider.MetaData.TryGetValue("Key1", out var value))
             {
-                Key1 = (string)provider.MetaData["Key1"];
+                Key1 = (string)value;
             }
-            if (provider.MetaData.ContainsKey("Key2"))
+            if (provider.MetaData.TryGetValue("Key2", out var value))
             {
-                Key2 = (string)provider.MetaData["Key2"];
+                Key2 = (string)value;
             }
-            if (provider.MetaData.ContainsKey("Key3"))
+            if (provider.MetaData.TryGetValue("Key3", out var value))
             {
-                Key3 = (string)provider.MetaData["Key3"];
+                Key3 = (string)value;
             }
-            if (provider.MetaData.ContainsKey("Key4"))
+            if (provider.MetaData.TryGetValue("Key4", out var value))
             {
-                Key4 = (string)provider.MetaData["Key4"];
+                Key4 = (string)value;
             }
-            if (provider.MetaData.ContainsKey("Key5"))
+            if (provider.MetaData.TryGetValue("Key5", out var value))
             {
-                Key5 = (string)provider.MetaData["Key5"];
+                Key5 = (string)value;
             }
-            if (provider.MetaData.ContainsKey("Nfc"))
+            if (provider.MetaData.TryGetValue("Nfc", out var value))
             {
-                Nfc = (bool)provider.MetaData["Nfc"];
+                Nfc = (bool)value;
             }
         }
         else

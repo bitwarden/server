@@ -11,17 +11,17 @@ public static class Utilities
 
     public static async Task<SubscriptionSuspension> GetSubscriptionSuspensionAsync(
         IStripeAdapter stripeAdapter,
-        Subscription subscription)
+        Subscription subscription
+    )
     {
         if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
         {
             return null;
         }
 
-        var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
-        {
-            Query = $"subscription:'{subscription.Id}' status:'open'"
-        });
+        var openInvoices = await stripeAdapter.InvoiceSearchAsync(
+            new InvoiceSearchOptions { Query = $"subscription:'{subscription.Id}' status:'open'" }
+        );
 
         if (openInvoices.Count == 0)
         {
@@ -33,42 +33,45 @@ public static class Utilities
         switch (subscription.CollectionMethod)
         {
             case "charge_automatically":
+            {
+                var firstOverdueInvoice = openInvoices
+                    .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
+                    .MinBy(invoice => invoice.Created);
+
+                if (firstOverdueInvoice == null)
                 {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.PeriodEnd < currentDate && invoice.Attempted)
-                        .MinBy(invoice => invoice.Created);
-
-                    if (firstOverdueInvoice == null)
-                    {
-                        return null;
-                    }
-
-                    const int gracePeriod = 14;
-
-                    return new SubscriptionSuspension(
-                        firstOverdueInvoice.Created.AddDays(gracePeriod),
-                        firstOverdueInvoice.PeriodEnd,
-                        gracePeriod);
+                    return null;
                 }
+
+                const int gracePeriod = 14;
+
+                return new SubscriptionSuspension(
+                    firstOverdueInvoice.Created.AddDays(gracePeriod),
+                    firstOverdueInvoice.PeriodEnd,
+                    gracePeriod
+                );
+            }
             case "send_invoice":
+            {
+                var firstOverdueInvoice = openInvoices
+                    .Where(invoice => invoice.DueDate < currentDate)
+                    .MinBy(invoice => invoice.Created);
+
+                if (firstOverdueInvoice?.DueDate == null)
                 {
-                    var firstOverdueInvoice = openInvoices
-                        .Where(invoice => invoice.DueDate < currentDate)
-                        .MinBy(invoice => invoice.Created);
-
-                    if (firstOverdueInvoice?.DueDate == null)
-                    {
-                        return null;
-                    }
-
-                    const int gracePeriod = 30;
-
-                    return new SubscriptionSuspension(
-                        firstOverdueInvoice.DueDate.Value.AddDays(gracePeriod),
-                        firstOverdueInvoice.PeriodEnd,
-                        gracePeriod);
+                    return null;
                 }
-            default: return null;
+
+                const int gracePeriod = 30;
+
+                return new SubscriptionSuspension(
+                    firstOverdueInvoice.DueDate.Value.AddDays(gracePeriod),
+                    firstOverdueInvoice.PeriodEnd,
+                    gracePeriod
+                );
+            }
+            default:
+                return null;
         }
     }
 
@@ -86,6 +89,7 @@ public static class Utilities
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,
-            customer.Address.State);
+            customer.Address.State
+        );
     }
 }

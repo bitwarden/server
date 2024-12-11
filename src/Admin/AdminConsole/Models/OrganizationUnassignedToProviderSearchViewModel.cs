@@ -3,7 +3,8 @@ using Bit.Admin.Models;
 
 namespace Bit.Admin.AdminConsole.Models;
 
-public class OrganizationUnassignedToProviderSearchViewModel : PagedModel<OrganizationSelectableViewModel>
+public class OrganizationUnassignedToProviderSearchViewModel
+    : PagedModel<OrganizationSelectableViewModel>
 {
     [Display(Name = "Organization Name")]
     public string OrganizationName { get; set; }

@@ -10,9 +10,7 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public OrganizationUserUserDetailsQuery(
-        IOrganizationUserRepository organizationUserRepository
-    )
+    public OrganizationUserUserDetailsQuery(IOrganizationUserRepository organizationUserRepository)
     {
         _organizationUserRepository = organizationUserRepository;
     }
@@ -22,19 +20,23 @@ public class OrganizationUserUserDetailsQuery : IOrganizationUserUserDetailsQuer
     /// </summary>
     /// <param name="request">Request details for the query</param>
     /// <returns>List of OrganizationUserUserDetails</returns>
-    public async Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request)
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(
+        OrganizationUserUserDetailsQueryRequest request
+    )
     {
-        var organizationUsers = await _organizationUserRepository
-            .GetManyDetailsByOrganizationAsync(request.OrganizationId, request.IncludeGroups, request.IncludeCollections);
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
+            request.OrganizationId,
+            request.IncludeGroups,
+            request.IncludeCollections
+        );
 
-        return organizationUsers
-            .Select(o =>
-            {
-                var userPermissions = o.GetPermissions();
+        return organizationUsers.Select(o =>
+        {
+            var userPermissions = o.GetPermissions();
 
-                o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
+            o.Permissions = CoreHelpers.ClassToJsonData(userPermissions);
 
-                return o;
-            });
+            return o;
+        });
     }
 }

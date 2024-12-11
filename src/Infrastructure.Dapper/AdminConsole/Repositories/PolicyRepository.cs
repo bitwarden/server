@@ -14,12 +14,13 @@ namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
 {
     public PolicyRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+        : this(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        ) { }
 
     public PolicyRepository(string connectionString, string readOnlyConnectionString)
-        : base(connectionString, readOnlyConnectionString)
-    { }
+        : base(connectionString, readOnlyConnectionString) { }
 
     public async Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
     {
@@ -28,7 +29,8 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             var results = await connection.QueryAsync<Policy>(
                 $"[{Schema}].[{Table}_ReadByOrganizationIdType]",
                 new { OrganizationId = organizationId, Type = (byte)type },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -41,7 +43,8 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             var results = await connection.QueryAsync<Policy>(
                 $"[{Schema}].[{Table}_ReadByOrganizationId]",
                 new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }
@@ -54,7 +57,8 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             var results = await connection.QueryAsync<Policy>(
                 $"[{Schema}].[{Table}_ReadByUserId]",
                 new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.ToList();
         }

@@ -15,7 +15,8 @@ public class RequirePermissionAttribute : ActionFilterAttribute
 
     public override void OnActionExecuting(ActionExecutingContext context)
     {
-        var accessControlService = context.HttpContext.RequestServices.GetRequiredService<IAccessControlService>();
+        var accessControlService =
+            context.HttpContext.RequestServices.GetRequiredService<IAccessControlService>();
 
         var hasPermission = accessControlService.UserHasPermission(Permission);
         if (!hasPermission)

@@ -7,7 +7,10 @@ public class ProjectPeopleAccessPoliciesResponseModel : ResponseModel
 {
     private const string _objectName = "projectPeopleAccessPolicies";
 
-    public ProjectPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies, Guid userId)
+    public ProjectPeopleAccessPoliciesResponseModel(
+        IEnumerable<BaseAccessPolicy> baseAccessPolicies,
+        Guid userId
+    )
         : base(_objectName)
     {
         foreach (var baseAccessPolicy in baseAccessPolicies)
@@ -24,9 +27,8 @@ public class ProjectPeopleAccessPoliciesResponseModel : ResponseModel
         }
     }
 
-    public ProjectPeopleAccessPoliciesResponseModel() : base(_objectName)
-    {
-    }
+    public ProjectPeopleAccessPoliciesResponseModel()
+        : base(_objectName) { }
 
     public List<UserAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
 

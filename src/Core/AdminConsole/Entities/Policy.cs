@@ -22,12 +22,14 @@ public class Policy : ITableObject<Guid>
         Id = CoreHelpers.GenerateComb();
     }
 
-    public T GetDataModel<T>() where T : IPolicyDataModel, new()
+    public T GetDataModel<T>()
+        where T : IPolicyDataModel, new()
     {
         return CoreHelpers.LoadClassFromJsonData<T>(Data);
     }
 
-    public void SetDataModel<T>(T dataModel) where T : IPolicyDataModel, new()
+    public void SetDataModel<T>(T dataModel)
+        where T : IPolicyDataModel, new()
     {
         Data = CoreHelpers.ClassToJsonData(dataModel);
     }

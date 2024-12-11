@@ -20,28 +20,40 @@ public partial class AddClientOrganizationMigrationRecordTable : Migration
                 PlanType = table.Column<byte>(type: "smallint", nullable: false),
                 Seats = table.Column<int>(type: "integer", nullable: false),
                 MaxStorageGb = table.Column<short>(type: "smallint", nullable: true),
-                GatewayCustomerId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                GatewaySubscriptionId = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                ExpirationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                GatewayCustomerId = table.Column<string>(
+                    type: "character varying(50)",
+                    maxLength: 50,
+                    nullable: false
+                ),
+                GatewaySubscriptionId = table.Column<string>(
+                    type: "character varying(50)",
+                    maxLength: 50,
+                    nullable: false
+                ),
+                ExpirationDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: true
+                ),
                 MaxAutoscaleSeats = table.Column<int>(type: "integer", nullable: true),
-                Status = table.Column<byte>(type: "smallint", nullable: false)
+                Status = table.Column<byte>(type: "smallint", nullable: false),
             },
             constraints: table =>
             {
                 table.PrimaryKey("PK_ClientOrganizationMigrationRecord", x => x.Id);
-            });
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ClientOrganizationMigrationRecord_ProviderId_OrganizationId",
             table: "ClientOrganizationMigrationRecord",
             columns: new[] { "ProviderId", "OrganizationId" },
-            unique: true);
+            unique: true
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "ClientOrganizationMigrationRecord");
+        migrationBuilder.DropTable(name: "ClientOrganizationMigrationRecord");
     }
 }

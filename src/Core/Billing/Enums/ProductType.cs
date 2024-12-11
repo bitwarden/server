@@ -6,6 +6,7 @@ public enum ProductType
 {
     [Display(Name = "Password Manager")]
     PasswordManager = 0,
+
     [Display(Name = "Secrets Manager")]
     SecretsManager = 1,
 }

@@ -48,7 +48,8 @@ public class PoliciesController : Controller
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IOrganizationHasVerifiedDomainsQuery organizationHasVerifiedDomainsQuery,
-        ISavePolicyCommand savePolicyCommand)
+        ISavePolicyCommand savePolicyCommand
+    )
     {
         _policyRepository = policyRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -56,7 +57,8 @@ public class PoliciesController : Controller
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
-            "OrganizationServiceDataProtector");
+            "OrganizationServiceDataProtector"
+        );
 
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
@@ -77,9 +79,14 @@ public class PoliciesController : Controller
             return new PolicyDetailResponseModel(new Policy { Type = (PolicyType)type });
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && policy.Type is PolicyType.SingleOrg)
+        if (
+            _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+            && policy.Type is PolicyType.SingleOrg
+        )
         {
-            return await policy.GetSingleOrgPolicyDetailResponseAsync(_organizationHasVerifiedDomainsQuery);
+            return await policy.GetSingleOrgPolicyDetailResponseAsync(
+                _organizationHasVerifiedDomainsQuery
+            );
         }
 
         return new PolicyDetailResponseModel(policy);
@@ -96,21 +103,37 @@ public class PoliciesController : Controller
 
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
 
-        return new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p)));
+        return new ListResponseModel<PolicyResponseModel>(
+            policies.Select(p => new PolicyResponseModel(p))
+        );
     }
 
     [AllowAnonymous]
     [HttpGet("token")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(Guid orgId, [FromQuery] string email,
-        [FromQuery] string token, [FromQuery] Guid organizationUserId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(
+        Guid orgId,
+        [FromQuery] string email,
+        [FromQuery] string token,
+        [FromQuery] Guid organizationUserId
+    )
     {
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, token, organizationUserId, email);
-
-        var tokenValid = newTokenValid || CoreHelpers.UserInviteTokenIsValid(
-            _organizationServiceDataProtector, token, email, organizationUserId, _globalSettings
+            _orgUserInviteTokenDataFactory,
+            token,
+            organizationUserId,
+            email
         );
+
+        var tokenValid =
+            newTokenValid
+            || CoreHelpers.UserInviteTokenIsValid(
+                _organizationServiceDataProtector,
+                token,
+                email,
+                organizationUserId,
+                _globalSettings
+            );
 
         if (!tokenValid)
         {
@@ -132,7 +155,10 @@ public class PoliciesController : Controller
     [Obsolete("Deprecated API", false)]
     [AllowAnonymous]
     [HttpGet("invited-user")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] Guid userId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(
+        Guid orgId,
+        [FromQuery] Guid userId
+    )
     {
         var user = await _userService.GetUserByIdAsync(userId);
         if (user == null)
@@ -167,7 +193,10 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.MasterPassword);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
+            orgId,
+            PolicyType.MasterPassword
+        );
 
         if (policy == null || !policy.Enabled)
         {
@@ -178,7 +207,11 @@ public class PoliciesController : Controller
     }
 
     [HttpPut("{type}")]
-    public async Task<PolicyResponseModel> Put(Guid orgId, PolicyType type, [FromBody] PolicyRequestModel model)
+    public async Task<PolicyResponseModel> Put(
+        Guid orgId,
+        PolicyType type,
+        [FromBody] PolicyRequestModel model
+    )
     {
         if (!await _currentContext.ManagePolicies(orgId))
         {

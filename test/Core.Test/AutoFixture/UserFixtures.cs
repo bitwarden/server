@@ -33,7 +33,9 @@ public class UserBuilder : ISpecimenBuilder
             var users = fixture.WithAutoNSubstitutions().CreateMany<User>(2);
             foreach (var user in users)
             {
-                var providers = fixture.Create<Dictionary<TwoFactorProviderType, TwoFactorProvider>>();
+                var providers = fixture.Create<
+                    Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                >();
                 user.SetTwoFactorProviders(providers);
             }
             return users;

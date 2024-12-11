@@ -25,6 +25,7 @@ public class ProfileProviderResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public string Key { get; set; }

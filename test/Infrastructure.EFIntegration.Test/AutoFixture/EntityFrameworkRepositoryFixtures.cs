@@ -21,6 +21,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 internal class ServiceScopeFactoryBuilder : ISpecimenBuilder
 {
     private DbContextOptions<DatabaseContext> _options { get; set; }
+
     public ServiceScopeFactoryBuilder(DbContextOptions<DatabaseContext> options)
     {
         _options = options;
@@ -42,7 +43,8 @@ internal class ServiceScopeFactoryBuilder : ISpecimenBuilder
     }
 }
 
-public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityFrameworkRepository
+public class EfRepositoryListBuilder<T> : ISpecimenBuilder
+    where T : BaseEntityFrameworkRepository
 {
     public object Create(object request, ISpecimenContext context)
     {
@@ -61,38 +63,43 @@ public class EfRepositoryListBuilder<T> : ISpecimenBuilder where T : BaseEntityF
         foreach (var option in DatabaseOptionsFactory.Options)
         {
             var fixture = new Fixture();
-            fixture.Customize<IServiceScopeFactory>(x => x.FromFactory(new ServiceScopeFactoryBuilder(option)));
-            fixture.Customize<IMapper>(x => x.FromFactory(() =>
-                new MapperConfiguration(cfg =>
-                {
-                    cfg.AddProfile<AuthRequestMapperProfile>();
-                    cfg.AddProfile<CipherMapperProfile>();
-                    cfg.AddProfile<CollectionCipherMapperProfile>();
-                    cfg.AddProfile<CollectionMapperProfile>();
-                    cfg.AddProfile<DeviceMapperProfile>();
-                    cfg.AddProfile<EmergencyAccessMapperProfile>();
-                    cfg.AddProfile<EventMapperProfile>();
-                    cfg.AddProfile<FolderMapperProfile>();
-                    cfg.AddProfile<GrantMapperProfile>();
-                    cfg.AddProfile<GroupMapperProfile>();
-                    cfg.AddProfile<GroupUserMapperProfile>();
-                    cfg.AddProfile<InstallationMapperProfile>();
-                    cfg.AddProfile<OrganizationMapperProfile>();
-                    cfg.AddProfile<OrganizationSponsorshipMapperProfile>();
-                    cfg.AddProfile<OrganizationUserMapperProfile>();
-                    cfg.AddProfile<ProviderMapperProfile>();
-                    cfg.AddProfile<ProviderUserMapperProfile>();
-                    cfg.AddProfile<ProviderOrganizationMapperProfile>();
-                    cfg.AddProfile<PolicyMapperProfile>();
-                    cfg.AddProfile<SendMapperProfile>();
-                    cfg.AddProfile<SsoConfigMapperProfile>();
-                    cfg.AddProfile<SsoUserMapperProfile>();
-                    cfg.AddProfile<TaxRateMapperProfile>();
-                    cfg.AddProfile<TransactionMapperProfile>();
-                    cfg.AddProfile<UserMapperProfile>();
-                    cfg.AddProfile<PasswordHealthReportApplicationProfile>();
-                })
-            .CreateMapper()));
+            fixture.Customize<IServiceScopeFactory>(x =>
+                x.FromFactory(new ServiceScopeFactoryBuilder(option))
+            );
+            fixture.Customize<IMapper>(x =>
+                x.FromFactory(
+                    () =>
+                        new MapperConfiguration(cfg =>
+                        {
+                            cfg.AddProfile<AuthRequestMapperProfile>();
+                            cfg.AddProfile<CipherMapperProfile>();
+                            cfg.AddProfile<CollectionCipherMapperProfile>();
+                            cfg.AddProfile<CollectionMapperProfile>();
+                            cfg.AddProfile<DeviceMapperProfile>();
+                            cfg.AddProfile<EmergencyAccessMapperProfile>();
+                            cfg.AddProfile<EventMapperProfile>();
+                            cfg.AddProfile<FolderMapperProfile>();
+                            cfg.AddProfile<GrantMapperProfile>();
+                            cfg.AddProfile<GroupMapperProfile>();
+                            cfg.AddProfile<GroupUserMapperProfile>();
+                            cfg.AddProfile<InstallationMapperProfile>();
+                            cfg.AddProfile<OrganizationMapperProfile>();
+                            cfg.AddProfile<OrganizationSponsorshipMapperProfile>();
+                            cfg.AddProfile<OrganizationUserMapperProfile>();
+                            cfg.AddProfile<ProviderMapperProfile>();
+                            cfg.AddProfile<ProviderUserMapperProfile>();
+                            cfg.AddProfile<ProviderOrganizationMapperProfile>();
+                            cfg.AddProfile<PolicyMapperProfile>();
+                            cfg.AddProfile<SendMapperProfile>();
+                            cfg.AddProfile<SsoConfigMapperProfile>();
+                            cfg.AddProfile<SsoUserMapperProfile>();
+                            cfg.AddProfile<TaxRateMapperProfile>();
+                            cfg.AddProfile<TransactionMapperProfile>();
+                            cfg.AddProfile<UserMapperProfile>();
+                            cfg.AddProfile<PasswordHealthReportApplicationProfile>();
+                        }).CreateMapper()
+                )
+            );
 
             fixture.Customize<ILogger<T>>(x => x.FromFactory(() => Substitute.For<ILogger<T>>()));
 

@@ -7,7 +7,8 @@ public class HttpResponseBuilder : IDisposable
     private bool _disposedValue;
 
     public HttpStatusCode StatusCode { get; set; }
-    public IEnumerable<KeyValuePair<string, string>> Headers { get; set; } = new List<KeyValuePair<string, string>>();
+    public IEnumerable<KeyValuePair<string, string>> Headers { get; set; } =
+        new List<KeyValuePair<string, string>>();
     public IEnumerable<string> HeadersToRemove { get; set; } = new List<string>();
     public HttpContent Content { get; set; }
 

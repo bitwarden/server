@@ -39,12 +39,10 @@
       "failure_balance_transaction": null,
       "failure_code": null,
       "failure_message": null,
-      "fraud_details": {
-      },
+      "fraud_details": {},
       "invoice": "in_1NvKgBIGBnsLynRrmRFHAcoV",
       "livemode": false,
-      "metadata": {
-      },
+      "metadata": {},
       "on_behalf_of": null,
       "order": null,
       "outcome": {
@@ -103,8 +101,7 @@
       "refunded": false,
       "refunds": {
         "object": "list",
-        "data": [
-        ],
+        "data": [],
         "has_more": false,
         "total_count": 0,
         "url": "/v1/charges/ch_3NvKgBIGBnsLynRr0ZyvP9AN/refunds"

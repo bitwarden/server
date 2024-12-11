@@ -10,6 +10,7 @@ public class ProviderOrganizationCreateRequestModel
     [StringLength(256)]
     [StrictEmailAddress]
     public string ClientOwnerEmail { get; set; }
+
     [Required]
     public OrganizationCreateRequestModel OrganizationCreateRequest { get; set; }
 }

@@ -11,13 +11,12 @@ public partial class UserForcePasswordReset : Migration
             table: "User",
             type: "boolean",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "ForcePasswordReset",
-            table: "User");
+        migrationBuilder.DropColumn(name: "ForcePasswordReset", table: "User");
     }
 }

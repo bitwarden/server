@@ -14,21 +14,27 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
 
     public FileUploadType FileUploadType => FileUploadType.Direct;
 
-    public LocalAttachmentStorageService(
-        IGlobalSettings globalSettings)
+    public LocalAttachmentStorageService(IGlobalSettings globalSettings)
     {
         _baseDirPath = globalSettings.Attachment.BaseDirectory;
         _baseTempDirPath = $"{_baseDirPath}/temp";
         _baseAttachmentUrl = globalSettings.Attachment.BaseUrl;
     }
 
-    public async Task<string> GetAttachmentDownloadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    public async Task<string> GetAttachmentDownloadUrlAsync(
+        Cipher cipher,
+        CipherAttachment.MetaData attachmentData
+    )
     {
         await InitAsync();
         return $"{_baseAttachmentUrl}/{cipher.Id}/{attachmentData.AttachmentId}";
     }
 
-    public async Task UploadNewAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentData)
+    public async Task UploadNewAttachmentAsync(
+        Stream stream,
+        Cipher cipher,
+        CipherAttachment.MetaData attachmentData
+    )
     {
         await InitAsync();
         var cipherDirPath = CipherDirectoryPath(cipher.Id, temp: false);
@@ -41,23 +47,41 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         }
     }
 
-    public async Task UploadShareAttachmentAsync(Stream stream, Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData)
+    public async Task UploadShareAttachmentAsync(
+        Stream stream,
+        Guid cipherId,
+        Guid organizationId,
+        CipherAttachment.MetaData attachmentData
+    )
     {
         await InitAsync();
         var tempCipherOrgDirPath = OrganizationDirectoryPath(cipherId, organizationId, temp: true);
         CreateDirectoryIfNotExists(tempCipherOrgDirPath);
 
-        using (var fs = File.Create(AttachmentFilePath(tempCipherOrgDirPath, attachmentData.AttachmentId)))
+        using (
+            var fs = File.Create(
+                AttachmentFilePath(tempCipherOrgDirPath, attachmentData.AttachmentId)
+            )
+        )
         {
             stream.Seek(0, SeekOrigin.Begin);
             await stream.CopyToAsync(fs);
         }
     }
 
-    public async Task StartShareAttachmentAsync(Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData)
+    public async Task StartShareAttachmentAsync(
+        Guid cipherId,
+        Guid organizationId,
+        CipherAttachment.MetaData attachmentData
+    )
     {
         await InitAsync();
-        var sourceFilePath = AttachmentFilePath(attachmentData.AttachmentId, cipherId, organizationId, temp: true);
+        var sourceFilePath = AttachmentFilePath(
+            attachmentData.AttachmentId,
+            cipherId,
+            organizationId,
+            temp: true
+        );
         if (!File.Exists(sourceFilePath))
         {
             return;
@@ -69,7 +93,11 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
             return;
         }
 
-        var originalFilePath = AttachmentFilePath(attachmentData.AttachmentId, cipherId, temp: true);
+        var originalFilePath = AttachmentFilePath(
+            attachmentData.AttachmentId,
+            cipherId,
+            temp: true
+        );
         DeleteFileIfExists(originalFilePath);
 
         File.Move(destFilePath, originalFilePath);
@@ -78,12 +106,23 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         File.Move(sourceFilePath, destFilePath);
     }
 
-    public async Task RollbackShareAttachmentAsync(Guid cipherId, Guid organizationId, CipherAttachment.MetaData attachmentData, string originalContainer)
+    public async Task RollbackShareAttachmentAsync(
+        Guid cipherId,
+        Guid organizationId,
+        CipherAttachment.MetaData attachmentData,
+        string originalContainer
+    )
     {
         await InitAsync();
-        DeleteFileIfExists(AttachmentFilePath(attachmentData.AttachmentId, cipherId, organizationId, temp: true));
+        DeleteFileIfExists(
+            AttachmentFilePath(attachmentData.AttachmentId, cipherId, organizationId, temp: true)
+        );
 
-        var originalFilePath = AttachmentFilePath(attachmentData.AttachmentId, cipherId, temp: true);
+        var originalFilePath = AttachmentFilePath(
+            attachmentData.AttachmentId,
+            cipherId,
+            temp: true
+        );
         if (!File.Exists(originalFilePath))
         {
             return;
@@ -124,7 +163,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         await InitAsync();
     }
 
-    private void DeleteFileIfExists(string path)
+    private static void DeleteFileIfExists(string path)
     {
         if (File.Exists(path))
         {
@@ -132,7 +171,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         }
     }
 
-    private void DeleteDirectoryIfExists(string path)
+    private static void DeleteDirectoryIfExists(string path)
     {
         if (Directory.Exists(path))
         {
@@ -140,7 +179,7 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
         }
     }
 
-    private void CreateDirectoryIfNotExists(string path)
+    private static void CreateDirectoryIfNotExists(string path)
     {
         if (!Directory.Exists(path))
         {
@@ -165,19 +204,44 @@ public class LocalAttachmentStorageService : IAttachmentStorageService
 
     private string CipherDirectoryPath(Guid cipherId, bool temp = false) =>
         Path.Combine(temp ? _baseTempDirPath : _baseDirPath, cipherId.ToString());
-    private string OrganizationDirectoryPath(Guid cipherId, Guid organizationId, bool temp = false) =>
-        Path.Combine(temp ? _baseTempDirPath : _baseDirPath, cipherId.ToString(), organizationId.ToString());
 
-    private string AttachmentFilePath(string dir, string attachmentId) => Path.Combine(dir, attachmentId);
-    private string AttachmentFilePath(string attachmentId, Guid cipherId, Guid? organizationId = null,
-        bool temp = false) =>
-        organizationId.HasValue ?
-        AttachmentFilePath(OrganizationDirectoryPath(cipherId, organizationId.Value, temp), attachmentId) :
-        AttachmentFilePath(CipherDirectoryPath(cipherId, temp), attachmentId);
-    public Task<string> GetAttachmentUploadUrlAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
-        => Task.FromResult($"{cipher.Id}/attachment/{attachmentData.AttachmentId}");
+    private string OrganizationDirectoryPath(
+        Guid cipherId,
+        Guid organizationId,
+        bool temp = false
+    ) =>
+        Path.Combine(
+            temp ? _baseTempDirPath : _baseDirPath,
+            cipherId.ToString(),
+            organizationId.ToString()
+        );
 
-    public Task<(bool, long?)> ValidateFileAsync(Cipher cipher, CipherAttachment.MetaData attachmentData, long leeway)
+    private static string AttachmentFilePath(string dir, string attachmentId) =>
+        Path.Combine(dir, attachmentId);
+
+    private string AttachmentFilePath(
+        string attachmentId,
+        Guid cipherId,
+        Guid? organizationId = null,
+        bool temp = false
+    ) =>
+        organizationId.HasValue
+            ? AttachmentFilePath(
+                OrganizationDirectoryPath(cipherId, organizationId.Value, temp),
+                attachmentId
+            )
+            : AttachmentFilePath(CipherDirectoryPath(cipherId, temp), attachmentId);
+
+    public Task<string> GetAttachmentUploadUrlAsync(
+        Cipher cipher,
+        CipherAttachment.MetaData attachmentData
+    ) => Task.FromResult($"{cipher.Id}/attachment/{attachmentData.AttachmentId}");
+
+    public Task<(bool, long?)> ValidateFileAsync(
+        Cipher cipher,
+        CipherAttachment.MetaData attachmentData,
+        long leeway
+    )
     {
         long? length = null;
         var path = AttachmentFilePath(attachmentData.AttachmentId, cipher.Id, temp: false);

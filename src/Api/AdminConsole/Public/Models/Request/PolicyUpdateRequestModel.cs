@@ -8,12 +8,13 @@ namespace Bit.Api.AdminConsole.Public.Models.Request;
 
 public class PolicyUpdateRequestModel : PolicyBaseModel
 {
-    public PolicyUpdate ToPolicyUpdate(Guid organizationId, PolicyType type) => new()
-    {
-        Type = type,
-        OrganizationId = organizationId,
-        Data = Data != null ? JsonSerializer.Serialize(Data) : null,
-        Enabled = Enabled.GetValueOrDefault(),
-        PerformedBy = new SystemUser(EventSystemUser.PublicApi)
-    };
+    public PolicyUpdate ToPolicyUpdate(Guid organizationId, PolicyType type) =>
+        new()
+        {
+            Type = type,
+            OrganizationId = organizationId,
+            Data = Data != null ? JsonSerializer.Serialize(Data) : null,
+            Enabled = Enabled.GetValueOrDefault(),
+            PerformedBy = new SystemUser(EventSystemUser.PublicApi),
+        };
 }

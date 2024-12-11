@@ -7,13 +7,13 @@ public class TransactionCompare : IEqualityComparer<Transaction>
 {
     public bool Equals(Transaction x, Transaction y)
     {
-        return x.Type == y.Type &&
-        x.Amount == y.Amount &&
-        x.Refunded == y.Refunded &&
-        x.Details == y.Details &&
-        x.PaymentMethodType == y.PaymentMethodType &&
-        x.Gateway == y.Gateway &&
-        x.GatewayId == y.GatewayId;
+        return x.Type == y.Type
+            && x.Amount == y.Amount
+            && x.Refunded == y.Refunded
+            && x.Details == y.Details
+            && x.PaymentMethodType == y.PaymentMethodType
+            && x.Gateway == y.Gateway
+            && x.GatewayId == y.GatewayId;
     }
 
     public int GetHashCode([DisallowNull] Transaction obj)

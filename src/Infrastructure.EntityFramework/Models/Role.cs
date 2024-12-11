@@ -2,9 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
-public class Role : Core.Entities.Role
-{
-}
+public class Role : Core.Entities.Role { }
 
 public class RoleMapperProfile : Profile
 {

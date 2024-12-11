@@ -18,7 +18,7 @@ public class OrganizationConnectionTests
             OrganizationId = organizationId,
             Enabled = true,
             Type = OrganizationConnectionType.Scim,
-            Config = new ScimConfig() { Enabled = true }
+            Config = new ScimConfig() { Enabled = true },
         };
 
         Assert.True(connection.Validate<ScimConfig>(out var exception));
@@ -27,16 +27,18 @@ public class OrganizationConnectionTests
 
     [Theory]
     [BitAutoData]
-    public void OrganizationConnection_CanUse_WhenDisabled_ReturnsFalse(Guid connectionId, Guid organizationId)
+    public void OrganizationConnection_CanUse_WhenDisabled_ReturnsFalse(
+        Guid connectionId,
+        Guid organizationId
+    )
     {
-
         var connection = new OrganizationConnection<ScimConfig>()
         {
             Id = connectionId,
             OrganizationId = organizationId,
             Enabled = false,
             Type = OrganizationConnectionType.Scim,
-            Config = new ScimConfig() { Enabled = true }
+            Config = new ScimConfig() { Enabled = true },
         };
 
         Assert.False(connection.Validate<ScimConfig>(out var exception));
@@ -45,7 +47,10 @@ public class OrganizationConnectionTests
 
     [Theory]
     [BitAutoData]
-    public void OrganizationConnection_CanUse_WhenNoConfig_ReturnsFalse(Guid connectionId, Guid organizationId)
+    public void OrganizationConnection_CanUse_WhenNoConfig_ReturnsFalse(
+        Guid connectionId,
+        Guid organizationId
+    )
     {
         var connection = new OrganizationConnection<ScimConfig>()
         {
@@ -61,7 +66,10 @@ public class OrganizationConnectionTests
 
     [Theory]
     [BitAutoData]
-    public void OrganizationConnection_CanUse_WhenConfigInvalid_ReturnsFalse(Guid connectionId, Guid organizationId)
+    public void OrganizationConnection_CanUse_WhenConfigInvalid_ReturnsFalse(
+        Guid connectionId,
+        Guid organizationId
+    )
     {
         var connection = new OrganizationConnection<ScimConfig>()
         {
@@ -69,7 +77,7 @@ public class OrganizationConnectionTests
             OrganizationId = organizationId,
             Enabled = true,
             Type = OrganizationConnectionType.Scim,
-            Config = new ScimConfig() { Enabled = false }
+            Config = new ScimConfig() { Enabled = false },
         };
 
         Assert.False(connection.Validate<ScimConfig>(out var exception));

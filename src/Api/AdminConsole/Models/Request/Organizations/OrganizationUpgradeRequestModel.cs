@@ -9,14 +9,19 @@ public class OrganizationUpgradeRequestModel
     [StringLength(50)]
     public string BusinessName { get; set; }
     public PlanType PlanType { get; set; }
+
     [Range(0, int.MaxValue)]
     public int AdditionalSeats { get; set; }
+
     [Range(0, 99)]
     public short? AdditionalStorageGb { get; set; }
+
     [Range(0, int.MaxValue)]
     public int? AdditionalSmSeats { get; set; }
+
     [Range(0, int.MaxValue)]
     public int? AdditionalServiceAccounts { get; set; }
+
     [Required]
     public bool UseSecretsManager { get; set; }
     public bool PremiumAccessAddon { get; set; }
@@ -39,8 +44,8 @@ public class OrganizationUpgradeRequestModel
             TaxInfo = new TaxInfo()
             {
                 BillingAddressCountry = BillingAddressCountry,
-                BillingAddressPostalCode = BillingAddressPostalCode
-            }
+                BillingAddressPostalCode = BillingAddressPostalCode,
+            },
         };
 
         Keys?.ToOrganizationUpgrade(orgUpgrade);

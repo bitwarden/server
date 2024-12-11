@@ -22,7 +22,10 @@ public class IpRateLimitSeedStartupService : IHostedService
     private readonly IIpPolicyStore _ipPolicyStore;
     private readonly IClientPolicyStore _clientPolicyStore;
 
-    public IpRateLimitSeedStartupService(IIpPolicyStore ipPolicyStore, IClientPolicyStore clientPolicyStore)
+    public IpRateLimitSeedStartupService(
+        IIpPolicyStore ipPolicyStore,
+        IClientPolicyStore clientPolicyStore
+    )
     {
         _ipPolicyStore = ipPolicyStore;
         _clientPolicyStore = clientPolicyStore;

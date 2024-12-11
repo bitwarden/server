@@ -25,7 +25,9 @@ public class StripeSyncService : IStripeSyncService
 
         var customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
-        await _stripeAdapter.CustomerUpdateAsync(customer.Id,
-            new Stripe.CustomerUpdateOptions { Email = emailAddress });
+        await _stripeAdapter.CustomerUpdateAsync(
+            customer.Id,
+            new Stripe.CustomerUpdateOptions { Email = emailAddress }
+        );
     }
 }

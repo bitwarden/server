@@ -18,7 +18,10 @@ public class AccessPolicyMapperProfile : Profile
             .ReverseMap()
             .ForMember(dst => dst.User, opt => opt.MapFrom(src => src.OrganizationUser.User));
 
-        CreateMap<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy, UserServiceAccountAccessPolicy>()
+        CreateMap<
+            Core.SecretsManager.Entities.UserServiceAccountAccessPolicy,
+            UserServiceAccountAccessPolicy
+        >()
             .ForMember(dst => dst.GrantedServiceAccount, opt => opt.Ignore())
             .ForMember(dst => dst.OrganizationUser, opt => opt.Ignore())
             .ReverseMap()
@@ -35,7 +38,10 @@ public class AccessPolicyMapperProfile : Profile
             .ForMember(dst => dst.Group, opt => opt.Ignore())
             .ReverseMap();
 
-        CreateMap<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy, GroupServiceAccountAccessPolicy>()
+        CreateMap<
+            Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy,
+            GroupServiceAccountAccessPolicy
+        >()
             .ForMember(dst => dst.GrantedServiceAccount, opt => opt.Ignore())
             .ForMember(dst => dst.Group, opt => opt.Ignore())
             .ReverseMap();
@@ -45,21 +51,25 @@ public class AccessPolicyMapperProfile : Profile
             .ForMember(dst => dst.Group, opt => opt.Ignore())
             .ReverseMap();
 
-        CreateMap<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy, ServiceAccountProjectAccessPolicy>()
+        CreateMap<
+            Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy,
+            ServiceAccountProjectAccessPolicy
+        >()
             .ForMember(dst => dst.GrantedProject, opt => opt.Ignore())
             .ForMember(dst => dst.ServiceAccount, opt => opt.Ignore())
             .ReverseMap();
 
-        CreateMap<Core.SecretsManager.Entities.ServiceAccountSecretAccessPolicy, ServiceAccountSecretAccessPolicy>()
+        CreateMap<
+            Core.SecretsManager.Entities.ServiceAccountSecretAccessPolicy,
+            ServiceAccountSecretAccessPolicy
+        >()
             .ForMember(dst => dst.GrantedSecret, opt => opt.Ignore())
             .ForMember(dst => dst.ServiceAccount, opt => opt.Ignore())
             .ReverseMap();
     }
 }
 
-public class AccessPolicy : BaseAccessPolicy
-{
-}
+public class AccessPolicy : BaseAccessPolicy { }
 
 public class UserProjectAccessPolicy : AccessPolicy
 {
@@ -124,4 +134,3 @@ public class ServiceAccountSecretAccessPolicy : AccessPolicy
     public Guid? GrantedSecretId { get; set; }
     public virtual Secret GrantedSecret { get; set; }
 }
-

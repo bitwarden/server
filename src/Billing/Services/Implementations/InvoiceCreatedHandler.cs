@@ -6,10 +6,9 @@ public class InvoiceCreatedHandler(
     ILogger<InvoiceCreatedHandler> logger,
     IStripeEventService stripeEventService,
     IStripeEventUtilityService stripeEventUtilityService,
-    IProviderEventService providerEventService)
-    : IInvoiceCreatedHandler
+    IProviderEventService providerEventService
+) : IInvoiceCreatedHandler
 {
-
     /// <summary>
     /// <para>
     /// This handler processes the `invoice.created` event in <see href="https://docs.stripe.com/api/events/types#event_types-invoice.created">Stripe</see>. It has
@@ -32,24 +31,30 @@ public class InvoiceCreatedHandler(
 
             var usingPayPal = invoice.Customer?.Metadata.ContainsKey("btCustomerId") ?? false;
 
-            if (usingPayPal && invoice is
-                {
-                    AmountDue: > 0,
-                    Paid: false,
-                    CollectionMethod: "charge_automatically",
-                    BillingReason:
-                    "subscription_create" or
-                    "subscription_cycle" or
-                    "automatic_pending_invoice_item_invoice",
-                    SubscriptionId: not null and not ""
-                })
+            if (
+                usingPayPal
+                && invoice
+                    is {
+                        AmountDue: > 0,
+                        Paid: false,
+                        CollectionMethod: "charge_automatically",
+                        BillingReason: "subscription_create"
+                            or "subscription_cycle"
+                            or "automatic_pending_invoice_item_invoice",
+                        SubscriptionId: not null and not ""
+                    }
+            )
             {
                 await stripeEventUtilityService.AttemptToPayInvoiceAsync(invoice);
             }
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Failed to attempt paying for invoice while handling 'invoice.created' event ({EventID})", parsedEvent.Id);
+            logger.LogError(
+                exception,
+                "Failed to attempt paying for invoice while handling 'invoice.created' event ({EventID})",
+                parsedEvent.Id
+            );
         }
 
         try
@@ -58,7 +63,11 @@ public class InvoiceCreatedHandler(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Failed to record provider invoice line items while handling 'invoice.created' event ({EventID})", parsedEvent.Id);
+            logger.LogError(
+                exception,
+                "Failed to record provider invoice line items while handling 'invoice.created' event ({EventID})",
+                parsedEvent.Id
+            );
         }
     }
 }

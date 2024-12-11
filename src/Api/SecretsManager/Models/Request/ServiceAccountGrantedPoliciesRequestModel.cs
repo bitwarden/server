@@ -12,7 +12,12 @@ public class ServiceAccountGrantedPoliciesRequestModel
     public ServiceAccountGrantedPolicies ToGrantedPolicies(ServiceAccount serviceAccount)
     {
         var projectGrantedPolicies = ProjectGrantedPolicyRequests
-            .Select(x => x.ToServiceAccountProjectAccessPolicy(serviceAccount.Id, serviceAccount.OrganizationId))
+            .Select(x =>
+                x.ToServiceAccountProjectAccessPolicy(
+                    serviceAccount.Id,
+                    serviceAccount.OrganizationId
+                )
+            )
             .ToList();
 
         AccessPolicyHelpers.CheckForDistinctAccessPolicies(projectGrantedPolicies);
@@ -22,7 +27,7 @@ public class ServiceAccountGrantedPoliciesRequestModel
         {
             ServiceAccountId = serviceAccount.Id,
             OrganizationId = serviceAccount.OrganizationId,
-            ProjectGrantedPolicies = projectGrantedPolicies
+            ProjectGrantedPolicies = projectGrantedPolicies,
         };
     }
 }

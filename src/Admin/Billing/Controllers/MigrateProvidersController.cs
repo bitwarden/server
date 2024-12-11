@@ -12,8 +12,7 @@ namespace Bit.Admin.Billing.Controllers;
 [Authorize]
 [Route("migrate-providers")]
 [SelfHosted(NotSelfHostedOnly = true)]
-public class MigrateProvidersController(
-    IProviderMigrator providerMigrator) : Controller
+public class MigrateProvidersController(IProviderMigrator providerMigrator) : Controller
 {
     [HttpGet]
     [RequirePermission(Permission.Tools_MigrateProviders)]
@@ -72,12 +71,10 @@ public class MigrateProvidersController(
         return View(result);
     }
 
-    private static List<Guid> GetProviderIdsFromInput(string text) => !string.IsNullOrEmpty(text)
-        ? text.Split(
-                ["\r\n", "\r", "\n"],
-                StringSplitOptions.TrimEntries
-            )
-            .Select(id => new Guid(id))
-            .ToList()
-        : [];
+    private static List<Guid> GetProviderIdsFromInput(string text) =>
+        !string.IsNullOrEmpty(text)
+            ? text.Split(["\r\n", "\r", "\n"], StringSplitOptions.TrimEntries)
+                .Select(id => new Guid(id))
+                .ToList()
+            : [];
 }
