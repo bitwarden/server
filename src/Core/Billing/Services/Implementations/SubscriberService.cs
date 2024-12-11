@@ -610,56 +610,54 @@ public class SubscriberService(
             }
         });
 
-        if (!subscriber.IsUser())
+        var taxId = customer.TaxIds?.FirstOrDefault();
+
+        if (taxId != null)
         {
-            var taxId = customer.TaxIds?.FirstOrDefault();
+            await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+        }
 
-            if (taxId != null)
-            {
-                await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
-            }
+        if (string.IsNullOrWhiteSpace(taxInformation.TaxId))
+        {
+            return;
+        }
 
-            if (string.IsNullOrWhiteSpace(taxInformation.TaxId))
-            {
-                return;
-            }
+        var taxIdType = taxInformation.TaxIdType;
+        if (string.IsNullOrWhiteSpace(taxIdType))
+        {
+            taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
+                taxInformation.TaxId);
 
-            var taxIdType = taxInformation.TaxIdType;
-            if (string.IsNullOrWhiteSpace(taxIdType))
+            if (taxIdType == null)
             {
-                taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
+                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                    taxInformation.Country,
                     taxInformation.TaxId);
+                throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
+            }
+        }
 
-                if (taxIdType == null)
-                {
-                    logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+        try
+        {
+            await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
+        }
+        catch (StripeException e)
+        {
+            switch (e.StripeError.Code)
+            {
+                case StripeConstants.ErrorCodes.TaxIdInvalid:
+                    logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                        taxInformation.TaxId,
+                        taxInformation.Country);
+                    throw new Exceptions.BadRequestException("billingInvalidTaxIdError");
+                default:
+                    logger.LogError(e,
+                        "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                        taxInformation.TaxId,
                         taxInformation.Country,
-                        taxInformation.TaxId);
-                    throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
-                }
-            }
-
-            try
-            {
-                await stripeAdapter.TaxIdCreateAsync(customer.Id,
-                    new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
-            }
-            catch (StripeException e)
-            {
-                switch (e.StripeError.Code)
-                {
-                    case StripeConstants.ErrorCodes.TaxIdInvalid:
-                        logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
-                            taxInformation.TaxId,
-                            taxInformation.Country);
-                        throw new Exceptions.BadRequestException("billingInvalidTaxIdError");
-                    default:
-                        logger.LogError(e, "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
-                            taxInformation.TaxId,
-                            taxInformation.Country,
-                            customer.Id);
-                        throw new Exceptions.BadRequestException("billingTaxIdCreationError");
-                }
+                        customer.Id);
+                    throw new Exceptions.BadRequestException("billingTaxIdCreationError");
             }
         }
 
@@ -668,8 +666,7 @@ public class SubscriberService(
             await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions
                 {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                 });
         }
 

@@ -38,6 +38,7 @@ public class StripePaymentService : IPaymentService
     private readonly IGlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
     private readonly ITaxService _taxService;
+    private readonly ISubscriberService _subscriberService;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -47,7 +48,8 @@ public class StripePaymentService : IPaymentService
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
         IFeatureService featureService,
-        ITaxService taxService)
+        ITaxService taxService,
+        ISubscriberService subscriberService)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -57,6 +59,7 @@ public class StripePaymentService : IPaymentService
         _globalSettings = globalSettings;
         _featureService = featureService;
         _taxService = taxService;
+        _subscriberService = subscriberService;
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -1492,6 +1495,8 @@ public class StripePaymentService : IPaymentService
                     await _stripeAdapter.PaymentMethodDetachAsync(cardMethod.Id, new PaymentMethodDetachOptions());
                 }
 
+                await _subscriberService.UpdateTaxInformation(subscriber, TaxInformation.From(taxInfo));
+
                 customer = await _stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
                 {
                     Metadata = stripeCustomerMetadata,
@@ -1507,15 +1512,6 @@ public class StripePaymentService : IPaymentService
                                 Value = GetFirstThirtyCharacters(subscriber.SubscriberName())
                             }
                         ]
-                    },
-                    Address = taxInfo == null ? null : new AddressOptions
-                    {
-                        Country = taxInfo.BillingAddressCountry,
-                        PostalCode = taxInfo.BillingAddressPostalCode,
-                        Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
-                        Line2 = taxInfo.BillingAddressLine2,
-                        City = taxInfo.BillingAddressCity,
-                        State = taxInfo.BillingAddressState,
                     },
                     Expand = ["tax", "subscriptions"]
                 });
