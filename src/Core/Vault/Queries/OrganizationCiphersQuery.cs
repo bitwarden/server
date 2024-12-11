@@ -52,4 +52,13 @@ public class OrganizationCiphersQuery : IOrganizationCiphersQuery
     {
         return await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId);
     }
+
+    /// <inheritdoc />
+    public async Task<IEnumerable<CipherOrganizationDetailsWithCollections>> GetOrganizationCiphersByCollectionIds(
+        Guid organizationId, IEnumerable<Guid> collectionIds)
+    {
+        var managedCollectionIds = collectionIds.ToHashSet();
+        var allOrganizationCiphers = await GetAllOrganizationCiphers(organizationId);
+        return allOrganizationCiphers.Where(c => c.CollectionIds.Intersect(managedCollectionIds).Any());
+    }
 }

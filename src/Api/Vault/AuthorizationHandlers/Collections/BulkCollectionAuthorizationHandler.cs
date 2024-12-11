@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System.Diagnostics;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -124,24 +123,15 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
+        var organizationAbility = await GetOrganizationAbilityAsync(org);
+
+        var userIsMemberOfOrg = org is not null;
+        var limitCollectionCreationEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionCreation: true };
+        var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+        // If the limit collection management setting is disabled, allow any user to create collections
+        if (userIsMemberOfOrg && (!limitCollectionCreationEnabled || userIsOrgOwnerOrAdmin))
         {
-            var userIsMemberOfOrg = org is not null;
-            var limitCollectionCreationEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionCreation: true };
-            var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-            // If the limit collection management setting is disabled, allow any user to create collections
-            if (userIsMemberOfOrg && (!limitCollectionCreationEnabled || userIsOrgOwnerOrAdmin))
-            {
-                return true;
-            }
-        }
-        else
-        {
-            // If the limit collection management setting is disabled, allow any user to create collections
-            if (await GetOrganizationAbilityAsync(org) is { LimitCollectionCreationDeletion: false })
-            {
-                return true;
-            }
+            return true;
         }
 
         // Allow provider users to create collections if they are a provider for the target organization
@@ -267,29 +257,13 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
             return true;
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
+        var userIsMemberOfOrg = org is not null;
+        var limitCollectionDeletionEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionDeletion: true };
+        var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
+        // If the limit collection management setting is disabled, allow any user to delete collections
+        if (userIsMemberOfOrg && (!limitCollectionDeletionEnabled || userIsOrgOwnerOrAdmin) && await CanManageCollectionsAsync(resources, org))
         {
-            var userIsMemberOfOrg = org is not null;
-            var limitCollectionDeletionEnabled = await GetOrganizationAbilityAsync(org) is { LimitCollectionDeletion: true };
-            var userIsOrgOwnerOrAdmin = org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-            // If the limit collection management setting is disabled, allow any user to delete collections
-            if (userIsMemberOfOrg && (!limitCollectionDeletionEnabled || userIsOrgOwnerOrAdmin) && await CanManageCollectionsAsync(resources, org))
-            {
-                return true;
-            }
-        }
-        else
-        {
-            // If LimitCollectionCreationDeletion is false, AllowAdminAccessToAllCollectionItems setting is irrelevant.
-            // Ensure acting user has manage permissions for all collections being deleted
-            // If LimitCollectionCreationDeletion is true, only Owners and Admins can delete collections they manage
-            var organizationAbility = await GetOrganizationAbilityAsync(org);
-            var canDeleteManagedCollections = organizationAbility is { LimitCollectionCreationDeletion: false } ||
-                                              org is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin };
-            if (canDeleteManagedCollections && await CanManageCollectionsAsync(resources, org))
-            {
-                return true;
-            }
+            return true;
         }
 
         // Allow providers to delete collections if they are a provider for the target organization
