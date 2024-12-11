@@ -23,15 +23,20 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
     public async Task ReadAll_AnyOrganizationMember_Success(
         OrganizationUserType userType,
         CurrentContextOrganization organization,
-        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
+        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = userType;
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .GetOrganization(organization.Id)
+            .Returns(organization);
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationScope(organization.Id));
+            new OrganizationScope(organization.Id)
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -41,20 +46,24 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
     [Theory, BitAutoData, CurrentContextOrganizationCustomize]
     public async Task ReadAll_ProviderUser_Success(
         CurrentContextOrganization organization,
-        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
+        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider
+    )
     {
         organization.Type = OrganizationUserType.User;
-        sutProvider.GetDependency<ICurrentContext>()
+        sutProvider
+            .GetDependency<ICurrentContext>()
             .GetOrganization(organization.Id)
             .Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>()
+        sutProvider
+            .GetDependency<ICurrentContext>()
             .ProviderUserForOrgAsync(organization.Id)
             .Returns(true);
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
             new ClaimsPrincipal(),
-            new OrganizationScope(organization.Id));
+            new OrganizationScope(organization.Id)
+        );
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -64,7 +73,8 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
     [Theory, BitAutoData, CurrentContextOrganizationCustomize]
     public async Task ReadAll_NotMember_NoSuccess(
         CurrentContextOrganization organization,
-        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider)
+        SutProvider<OrganizationUserUserMiniDetailsAuthorizationHandler> sutProvider
+    )
     {
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserUserMiniDetailsOperations.ReadAll },
@@ -72,8 +82,14 @@ public class OrganizationUserUserMiniDetailsAuthorizationHandlerTests
             new OrganizationScope(organization.Id)
         );
 
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(false);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .GetOrganization(Arg.Any<Guid>())
+            .Returns((CurrentContextOrganization)null);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderUserForOrgAsync(Arg.Any<Guid>())
+            .Returns(false);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.False(context.HasSucceeded);

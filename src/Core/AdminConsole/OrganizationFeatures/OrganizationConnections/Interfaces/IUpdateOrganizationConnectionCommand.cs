@@ -6,5 +6,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Int
 
 public interface IUpdateOrganizationConnectionCommand
 {
-    Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : IConnectionConfig;
+    Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData)
+        where T : IConnectionConfig;
 }

@@ -14,7 +14,8 @@ public class CreateServiceAccountCommand : ICreateServiceAccountCommand
     public CreateServiceAccountCommand(
         IAccessPolicyRepository accessPolicyRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository
+    )
     {
         _accessPolicyRepository = accessPolicyRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -25,8 +26,10 @@ public class CreateServiceAccountCommand : ICreateServiceAccountCommand
     {
         var createdServiceAccount = await _serviceAccountRepository.CreateAsync(serviceAccount);
 
-        var user = await _organizationUserRepository.GetByOrganizationAsync(createdServiceAccount.OrganizationId,
-            userId);
+        var user = await _organizationUserRepository.GetByOrganizationAsync(
+            createdServiceAccount.OrganizationId,
+            userId
+        );
         var accessPolicy = new UserServiceAccountAccessPolicy
         {
             OrganizationUserId = user.Id,

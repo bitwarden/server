@@ -34,9 +34,17 @@ public class SecretsManagerOrganizationHelper
         _createAccessTokenCommand = factory.GetService<ICreateAccessTokenCommand>();
     }
 
-    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets, bool organizationEnabled)
+    public async Task<(Organization organization, OrganizationUser owner)> Initialize(
+        bool useSecrets,
+        bool ownerAccessSecrets,
+        bool organizationEnabled
+    )
     {
-        (_organization, _owner!) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: _ownerEmail, billingEmail: _ownerEmail);
+        (_organization, _owner!) = await OrganizationTestHelpers.SignUpAsync(
+            _factory,
+            ownerEmail: _ownerEmail,
+            billingEmail: _ownerEmail
+        );
         Debug.Assert(_owner is not null);
 
         if (useSecrets || !organizationEnabled)
@@ -67,15 +75,28 @@ public class SecretsManagerOrganizationHelper
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: email, billingEmail: email);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(
+            _factory,
+            ownerEmail: email,
+            billingEmail: email
+        );
         return organization;
     }
 
-    public async Task<(string email, OrganizationUser orgUser)> CreateNewUser(OrganizationUserType userType, bool accessSecrets)
+    public async Task<(string email, OrganizationUser orgUser)> CreateNewUser(
+        OrganizationUserType userType,
+        bool accessSecrets
+    )
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
-        var orgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, userType, accessSecrets);
+        var orgUser = await OrganizationTestHelpers.CreateUserAsync(
+            _factory,
+            _organization.Id,
+            email,
+            userType,
+            accessSecrets
+        );
 
         return (email, orgUser);
     }
@@ -89,7 +110,7 @@ public class SecretsManagerOrganizationHelper
             OrganizationId = _organization.Id,
             Name = $"integration-test-{serviceAccountId}sa",
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
         };
         await _serviceAccountRepository.CreateAsync(serviceAccount);
 
@@ -100,7 +121,7 @@ public class SecretsManagerOrganizationHelper
             Key = Guid.NewGuid().ToString(),
             ExpireAt = null,
             Scope = "[\"api.secrets\"]",
-            EncryptedPayload = Guid.NewGuid().ToString()
+            EncryptedPayload = Guid.NewGuid().ToString(),
         };
         return await _createAccessTokenCommand.CreateAsync(apiKey);
     }

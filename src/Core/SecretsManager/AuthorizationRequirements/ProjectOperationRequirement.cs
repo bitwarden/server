@@ -2,9 +2,7 @@
 
 namespace Bit.Core.SecretsManager.AuthorizationRequirements;
 
-public class ProjectOperationRequirement : OperationAuthorizationRequirement
-{
-}
+public class ProjectOperationRequirement : OperationAuthorizationRequirement { }
 
 public static class ProjectOperations
 {

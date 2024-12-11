@@ -5,8 +5,7 @@ namespace Bit.Core.Models.Api;
 public class ErrorResponseModel : ResponseModel
 {
     public ErrorResponseModel()
-        : base("error")
-    { }
+        : base("error") { }
 
     public ErrorResponseModel(string message)
         : this()
@@ -46,16 +45,13 @@ public class ErrorResponseModel : ResponseModel
     }
 
     public ErrorResponseModel(Dictionary<string, IEnumerable<string>> errors)
-        : this("Errors have occurred.", errors)
-    { }
+        : this("Errors have occurred.", errors) { }
 
     public ErrorResponseModel(string errorKey, string errorValue)
-        : this(errorKey, new string[] { errorValue })
-    { }
+        : this(errorKey, new string[] { errorValue }) { }
 
     public ErrorResponseModel(string errorKey, IEnumerable<string> errorValues)
-        : this(new Dictionary<string, IEnumerable<string>> { { errorKey, errorValues } })
-    { }
+        : this(new Dictionary<string, IEnumerable<string>> { { errorKey, errorValues } }) { }
 
     public ErrorResponseModel(string message, Dictionary<string, IEnumerable<string>> errors)
         : this()
@@ -66,6 +62,7 @@ public class ErrorResponseModel : ResponseModel
 
     public string Message { get; set; }
     public Dictionary<string, IEnumerable<string>> ValidationErrors { get; set; }
+
     // For use in development environments.
     public string ExceptionMessage { get; set; }
     public string ExceptionStackTrace { get; set; }

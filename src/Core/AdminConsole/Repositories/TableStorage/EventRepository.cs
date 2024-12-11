@@ -13,8 +13,7 @@ public class EventRepository : IEventRepository
     private readonly TableClient _tableClient;
 
     public EventRepository(GlobalSettings globalSettings)
-        : this(globalSettings.Events.ConnectionString)
-    { }
+        : this(globalSettings.Events.ConnectionString) { }
 
     public EventRepository(string storageConnectionString)
     {
@@ -22,52 +21,122 @@ public class EventRepository : IEventRepository
         _tableClient = tableClient.GetTableClient("event");
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByUserAsync(Guid userId, DateTime startDate, DateTime endDate,
-        PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByUserAsync(
+        Guid userId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"UserId={userId}", "Date={{0}}", startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"UserId={userId}",
+            "Date={{0}}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(Guid organizationId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationAsync(
+        Guid organizationId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"OrganizationId={organizationId}", "Date={0}", startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"OrganizationId={organizationId}",
+            "Date={0}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(Guid organizationId, Guid actingUserId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationActingUserAsync(
+        Guid organizationId,
+        Guid actingUserId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"OrganizationId={organizationId}",
-            $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"OrganizationId={organizationId}",
+            $"ActingUserId={actingUserId}__Date={{0}}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProviderAsync(Guid providerId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByProviderAsync(
+        Guid providerId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"ProviderId={providerId}", "Date={0}", startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"ProviderId={providerId}",
+            "Date={0}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(Guid providerId, Guid actingUserId,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByProviderActingUserAsync(
+        Guid providerId,
+        Guid actingUserId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        return await GetManyAsync($"ProviderId={providerId}",
-            $"ActingUserId={actingUserId}__Date={{0}}", startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"ProviderId={providerId}",
+            $"ActingUserId={actingUserId}__Date={{0}}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate,
-        PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByCipherAsync(
+        Cipher cipher,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-        var partitionKey = cipher.OrganizationId.HasValue ?
-            $"OrganizationId={cipher.OrganizationId}" : $"UserId={cipher.UserId}";
-        return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
+        var partitionKey = cipher.OrganizationId.HasValue
+            ? $"OrganizationId={cipher.OrganizationId}"
+            : $"UserId={cipher.UserId}";
+        return await GetManyAsync(
+            partitionKey,
+            $"CipherId={cipher.Id}__Date={{0}}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId,
-        Guid serviceAccountId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(
+        Guid organizationId,
+        Guid serviceAccountId,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
-
-        return await GetManyAsync($"OrganizationId={organizationId}",
-            $"ServiceAccountId={serviceAccountId}__Date={{0}}", startDate, endDate, pageOptions);
+        return await GetManyAsync(
+            $"OrganizationId={organizationId}",
+            $"ServiceAccountId={serviceAccountId}__Date={{0}}",
+            startDate,
+            endDate,
+            pageOptions
+        );
     }
 
     public async Task CreateAsync(IEvent e)
@@ -117,8 +186,12 @@ public class EventRepository : IEventRepository
 
                 foreach (var entity in batchEntities)
                 {
-                    batch.Add(new TableTransactionAction(TableTransactionActionType.Add,
-                        entity.ToAzureEvent()));
+                    batch.Add(
+                        new TableTransactionAction(
+                            TableTransactionActionType.Add,
+                            entity.ToAzureEvent()
+                        )
+                    );
                 }
 
                 await _tableClient.SubmitTransactionAsync(batch);
@@ -126,18 +199,30 @@ public class EventRepository : IEventRepository
         }
     }
 
-    public async Task<PagedResult<IEvent>> GetManyAsync(string partitionKey, string rowKey,
-        DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    public async Task<PagedResult<IEvent>> GetManyAsync(
+        string partitionKey,
+        string rowKey,
+        DateTime startDate,
+        DateTime endDate,
+        PageOptions pageOptions
+    )
     {
         var start = CoreHelpers.DateTimeToTableStorageKey(startDate);
         var end = CoreHelpers.DateTimeToTableStorageKey(endDate);
-        var filter = MakeFilter(partitionKey, string.Format(rowKey, start), string.Format(rowKey, end));
+        var filter = MakeFilter(
+            partitionKey,
+            string.Format(rowKey, start),
+            string.Format(rowKey, end)
+        );
 
         var result = new PagedResult<IEvent>();
         var query = _tableClient.QueryAsync<AzureEvent>(filter, pageOptions.PageSize);
 
-        await using (var enumerator = query.AsPages(pageOptions.ContinuationToken,
-            pageOptions.PageSize).GetAsyncEnumerator())
+        await using (
+            var enumerator = query
+                .AsPages(pageOptions.ContinuationToken, pageOptions.PageSize)
+                .GetAsyncEnumerator()
+        )
         {
             await enumerator.MoveNextAsync();
 
@@ -153,7 +238,7 @@ public class EventRepository : IEventRepository
         await _tableClient.UpsertEntityAsync(entity.ToAzureEvent());
     }
 
-    private string MakeFilter(string partitionKey, string rowStart, string rowEnd)
+    private static string MakeFilter(string partitionKey, string rowStart, string rowEnd)
     {
         return $"PartitionKey eq '{partitionKey}' and RowKey le '{rowStart}' and RowKey ge '{rowEnd}'";
     }

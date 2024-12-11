@@ -11,8 +11,10 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 public class RotateOrganizationApiKeyCommandTests
 {
     [Theory, BitAutoData]
-    public async Task RotateApiKeyAsync_RotatesKey(SutProvider<RotateOrganizationApiKeyCommand> sutProvider,
-        OrganizationApiKey organizationApiKey)
+    public async Task RotateApiKeyAsync_RotatesKey(
+        SutProvider<RotateOrganizationApiKeyCommand> sutProvider,
+        OrganizationApiKey organizationApiKey
+    )
     {
         var existingKey = organizationApiKey.ApiKey;
         organizationApiKey = await sutProvider.Sut.RotateApiKeyAsync(organizationApiKey);

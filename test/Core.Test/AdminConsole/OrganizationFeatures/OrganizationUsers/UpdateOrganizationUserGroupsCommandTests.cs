@@ -17,13 +17,21 @@ public class UpdateOrganizationUserGroupsCommandTests
     public async Task UpdateUserGroups_ShouldUpdateUserGroupsAndLogUserEvent(
         OrganizationUser organizationUser,
         IEnumerable<Guid> groupIds,
-        SutProvider<UpdateOrganizationUserGroupsCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserGroupsCommand> sutProvider
+    )
     {
         await sutProvider.Sut.UpdateUserGroupsAsync(organizationUser, groupIds);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .Received(1)
             .UpdateGroupsAsync(organizationUser.Id, groupIds);
-        await sutProvider.GetDependency<IEventService>().Received(1)
-            .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
+        await sutProvider
+            .GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventAsync(
+                organizationUser,
+                EventType.OrganizationUser_UpdatedGroups
+            );
     }
 }

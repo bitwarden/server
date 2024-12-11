@@ -15,7 +15,9 @@ public class CipherAttachment
         private long _size;
 
         // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
-        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString)]
+        [JsonNumberHandling(
+            JsonNumberHandling.AllowReadingFromString | JsonNumberHandling.WriteAsString
+        )]
         public long Size
         {
             get { return _size; }

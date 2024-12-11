@@ -43,15 +43,19 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         await EnsureUserCreatedAsync();
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
+        var context = await _factory.Server.PostAsync(
+            "/connect/token",
             GetFormUrlEncodedContent(),
-            context => context.SetAuthEmail(DefaultUsername));
+            context => context.SetAuthEmail(DefaultUsername)
+        );
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        var token = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
+        var token = AssertHelper
+            .AssertJsonProperty(root, "access_token", JsonValueKind.String)
+            .GetString();
         Assert.NotNull(token);
     }
 
@@ -62,16 +66,15 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         await EnsureUserCreatedAsync();
 
         // Act
-        var context = await _factory.Server.PostAsync(
-            "/connect/token",
-            GetFormUrlEncodedContent()
-        );
+        var context = await _factory.Server.PostAsync("/connect/token", GetFormUrlEncodedContent());
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
+        var error = AssertHelper
+            .AssertJsonProperty(root, "error_description", JsonValueKind.String)
+            .GetString();
         Assert.Equal("Auth-Email header invalid.", error);
     }
 
@@ -79,16 +82,20 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
     public async Task ValidateAsync_UserNull_Failure(string username)
     {
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
+        var context = await _factory.Server.PostAsync(
+            "/connect/token",
             GetFormUrlEncodedContent(username: username),
-            context => context.SetAuthEmail(username));
+            context => context.SetAuthEmail(username)
+        );
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
         var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
+        var errorMessage = AssertHelper
+            .AssertJsonProperty(errorModel, "Message", JsonValueKind.String)
+            .GetString();
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
     }
 
@@ -114,16 +121,20 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         Assert.NotNull(await _userManager.FindByEmailAsync(DefaultUsername));
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
+        var context = await _factory.Server.PostAsync(
+            "/connect/token",
             GetFormUrlEncodedContent(password: badPassword),
-            context => context.SetAuthEmail(DefaultUsername));
+            context => context.SetAuthEmail(DefaultUsername)
+        );
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
         var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
+        var errorMessage = AssertHelper
+            .AssertJsonProperty(errorModel, "Message", JsonValueKind.String)
+            .GetString();
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
     }
 
@@ -148,25 +159,32 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         Assert.NotEmpty(expectedAuthRequest);
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }), context => context.SetAuthEmail(DefaultUsername));
+        var context = await _factory.Server.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+                    { "deviceIdentifier", DefaultDeviceIdentifier },
+                    { "deviceName", "firefox" },
+                    { "grant_type", "password" },
+                    { "username", DefaultUsername },
+                    { "password", DefaultPassword },
+                    { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() },
+                }
+            ),
+            context => context.SetAuthEmail(DefaultUsername)
+        );
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
-        var token = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
+        var token = AssertHelper
+            .AssertJsonProperty(root, "access_token", JsonValueKind.String)
+            .GetString();
         Assert.NotNull(token);
     }
 
@@ -187,19 +205,24 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         );
 
         // Act
-        var context = await _factory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }), context => context.SetAuthEmail(DefaultUsername));
+        var context = await _factory.Server.PostAsync(
+            "/connect/token",
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    { "scope", "api offline_access" },
+                    { "client_id", "web" },
+                    { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+                    { "deviceIdentifier", DefaultDeviceIdentifier },
+                    { "deviceName", "firefox" },
+                    { "grant_type", "password" },
+                    { "username", DefaultUsername },
+                    { "password", DefaultPassword },
+                    { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() },
+                }
+            ),
+            context => context.SetAuthEmail(DefaultUsername)
+        );
 
         // Assert
 
@@ -213,7 +236,9 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         var root = body.RootElement;
 
         var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
+        var errorMessage = AssertHelper
+            .AssertJsonProperty(errorModel, "Message", JsonValueKind.String)
+            .GetString();
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
     }
 
@@ -231,31 +256,39 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         });
 
         // Add User
-        await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = DefaultUsername,
-            MasterPasswordHash = DefaultPassword
-        });
+        await factory.RegisterAsync(
+            new RegisterRequestModel
+            {
+                Email = DefaultUsername,
+                MasterPasswordHash = DefaultPassword,
+            }
+        );
         var userManager = factory.GetService<UserManager<User>>();
-        await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = DefaultUsername,
-            MasterPasswordHash = DefaultPassword
-        });
+        await factory.RegisterAsync(
+            new RegisterRequestModel
+            {
+                Email = DefaultUsername,
+                MasterPasswordHash = DefaultPassword,
+            }
+        );
         var user = await userManager.FindByEmailAsync(DefaultUsername);
         Assert.NotNull(user);
 
         // Act
-        var context = await factory.Server.PostAsync("/connect/token",
+        var context = await factory.Server.PostAsync(
+            "/connect/token",
             GetFormUrlEncodedContent(),
-            context => context.SetAuthEmail(DefaultUsername));
+            context => context.SetAuthEmail(DefaultUsername)
+        );
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
         var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
+        var errorMessage = AssertHelper
+            .AssertJsonProperty(errorModel, "Message", JsonValueKind.String)
+            .GetString();
         Assert.Equal("No device information provided.", errorMessage);
     }
 
@@ -266,28 +299,35 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         if (await _userManager.FindByEmailAsync(DefaultUsername) == null)
         {
             // Register user
-            await factory.RegisterAsync(new RegisterRequestModel
-            {
-                Email = DefaultUsername,
-                MasterPasswordHash = DefaultPassword
-            });
+            await factory.RegisterAsync(
+                new RegisterRequestModel
+                {
+                    Email = DefaultUsername,
+                    MasterPasswordHash = DefaultPassword,
+                }
+            );
         }
     }
 
     private FormUrlEncodedContent GetFormUrlEncodedContent(
-        string deviceId = null, string username = null, string password = null)
+        string deviceId = null,
+        string username = null,
+        string password = null
+    )
     {
-        return new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-            { "deviceIdentifier", deviceId ?? DefaultDeviceIdentifier },
-            { "deviceName", "firefox" },
-            { "grant_type", "password" },
-            { "username", username ?? DefaultUsername },
-            { "password", password ?? DefaultPassword },
-        });
+        return new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "scope", "api offline_access" },
+                { "client_id", "web" },
+                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
+                { "deviceIdentifier", deviceId ?? DefaultDeviceIdentifier },
+                { "deviceName", "firefox" },
+                { "grant_type", "password" },
+                { "username", username ?? DefaultUsername },
+                { "password", password ?? DefaultPassword },
+            }
+        );
     }
 
     private static string DeviceTypeAsString(DeviceType deviceType)
@@ -300,7 +340,8 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         AuthRequestType authRequestType,
         DateTime creationDate,
         bool? approved = null,
-        DateTime? responseDate = null)
+        DateTime? responseDate = null
+    )
     {
         return new AuthRequest
         {

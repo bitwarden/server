@@ -11,12 +11,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
-public class ProviderUserRepository :
-    Repository<ProviderUser, Models.Provider.ProviderUser, Guid>, IProviderUserRepository
+public class ProviderUserRepository
+    : Repository<ProviderUser, Models.Provider.ProviderUser, Guid>,
+        IProviderUserRepository
 {
     public ProviderUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderUsers)
-    { }
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderUsers) { }
 
     public override async Task DeleteAsync(ProviderUser providerUser)
     {
@@ -29,19 +29,26 @@ public class ProviderUserRepository :
         await base.DeleteAsync(providerUser);
     }
 
-    public async Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers)
+    public async Task<int> GetCountByProviderAsync(
+        Guid providerId,
+        string email,
+        bool onlyRegisteredUsers
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from pu in dbContext.ProviderUsers
-                        join u in dbContext.Users
-                            on pu.UserId equals u.Id into u_g
-                        from u in u_g.DefaultIfEmpty()
-                        where pu.ProviderId == providerId &&
-                            ((!onlyRegisteredUsers && (pu.Email == email || u.Email == email)) ||
-                            (onlyRegisteredUsers && u.Email == email))
-                        select new { pu, u };
+            var query =
+                from pu in dbContext.ProviderUsers
+                join u in dbContext.Users on pu.UserId equals u.Id into u_g
+                from u in u_g.DefaultIfEmpty()
+                where
+                    pu.ProviderId == providerId
+                    && (
+                        (!onlyRegisteredUsers && (pu.Email == email || u.Email == email))
+                        || (onlyRegisteredUsers && u.Email == email)
+                    )
+                select new { pu, u };
             return await query.CountAsync();
         }
     }
@@ -56,13 +63,17 @@ public class ProviderUserRepository :
         }
     }
 
-    public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type = null)
+    public async Task<ICollection<ProviderUser>> GetManyByProviderAsync(
+        Guid providerId,
+        ProviderUserType? type = null
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.ProviderUsers.Where(pu => pu.ProviderId.Equals(providerId) &&
-                (type != null && pu.Type.Equals(type)));
+            var query = dbContext.ProviderUsers.Where(pu =>
+                pu.ProviderId.Equals(providerId) && (type != null && pu.Type.Equals(type))
+            );
             return await query.ToArrayAsync();
         }
     }
@@ -87,36 +98,40 @@ public class ProviderUserRepository :
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from pu in dbContext.ProviderUsers
-                        where pu.UserId == userId
-                        select pu;
+            var query = from pu in dbContext.ProviderUsers where pu.UserId == userId select pu;
             return await query.ToArrayAsync();
         }
     }
+
     public async Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from pu in dbContext.ProviderUsers
-                        where pu.UserId == userId &&
-                            pu.ProviderId == providerId
-                        select pu;
+            var query =
+                from pu in dbContext.ProviderUsers
+                where pu.UserId == userId && pu.ProviderId == providerId
+                select pu;
             return await query.FirstOrDefaultAsync();
         }
     }
-    public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status)
+
+    public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(
+        Guid providerId,
+        ProviderUserStatusType? status
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var view = from pu in dbContext.ProviderUsers
-                       join u in dbContext.Users
-                           on pu.UserId equals u.Id into u_g
-                       from u in u_g.DefaultIfEmpty()
-                       select new { pu, u };
-            var data = await view
-                .Where(e => e.pu.ProviderId == providerId && (status == null || e.pu.Status == status))
+            var view =
+                from pu in dbContext.ProviderUsers
+                join u in dbContext.Users on pu.UserId equals u.Id into u_g
+                from u in u_g.DefaultIfEmpty()
+                select new { pu, u };
+            var data = await view.Where(e =>
+                    e.pu.ProviderId == providerId && (status == null || e.pu.Status == status)
+                )
                 .Select(e => new ProviderUserUserDetails
                 {
                     Id = e.pu.Id,
@@ -127,12 +142,16 @@ public class ProviderUserRepository :
                     Status = e.pu.Status,
                     Type = e.pu.Type,
                     Permissions = e.pu.Permissions,
-                }).ToArrayAsync();
+                })
+                .ToArrayAsync();
             return data;
         }
     }
 
-    public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
+    public async Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(
+        Guid userId,
+        ProviderUserStatusType? status = null
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -143,7 +162,10 @@ public class ProviderUserRepository :
         }
     }
 
-    public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids)
+    public async Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(
+        Guid providerId,
+        IEnumerable<Guid> Ids
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -154,16 +176,18 @@ public class ProviderUserRepository :
         }
     }
 
-    public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
+    public async Task<
+        IEnumerable<ProviderUserOrganizationDetails>
+    > GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var view = new ProviderUserOrganizationDetailsViewQuery();
-            var query = from ou in view.Run(dbContext)
-                        where ou.UserId == userId &&
-                              (status == null || ou.Status == status)
-                        select ou;
+            var query =
+                from ou in view.Run(dbContext)
+                where ou.UserId == userId && (status == null || ou.Status == status)
+                select ou;
             var organizationUsers = await query.ToListAsync();
             return organizationUsers;
         }
@@ -174,8 +198,11 @@ public class ProviderUserRepository :
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            return await dbContext.ProviderUsers
-                .Where(pu => pu.Type == ProviderUserType.ProviderAdmin && pu.Status == ProviderUserStatusType.Confirmed)
+            return await dbContext
+                .ProviderUsers.Where(pu =>
+                    pu.Type == ProviderUserType.ProviderAdmin
+                    && pu.Status == ProviderUserStatusType.Confirmed
+                )
                 .GroupBy(pu => pu.UserId)
                 .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() })
                 .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
@@ -183,17 +210,19 @@ public class ProviderUserRepository :
         }
     }
 
-    public async Task<ICollection<ProviderUser>> GetManyByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null)
+    public async Task<ICollection<ProviderUser>> GetManyByOrganizationAsync(
+        Guid organizationId,
+        ProviderUserStatusType? status = null
+    )
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from pu in dbContext.ProviderUsers
-                        join po in dbContext.ProviderOrganizations
-                            on pu.ProviderId equals po.ProviderId
-                        where po.OrganizationId == organizationId &&
-                              (status == null || pu.Status == status)
-                        select pu;
+            var query =
+                from pu in dbContext.ProviderUsers
+                join po in dbContext.ProviderOrganizations on pu.ProviderId equals po.ProviderId
+                where po.OrganizationId == organizationId && (status == null || pu.Status == status)
+                select pu;
             return await query.ToArrayAsync();
         }
     }

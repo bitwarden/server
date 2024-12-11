@@ -25,7 +25,8 @@ public class CreateProviderCommand : ICreateProviderCommand
         IProviderUserRepository providerUserRepository,
         IProviderService providerService,
         IUserRepository userRepository,
-        IProviderPlanRepository providerPlanRepository)
+        IProviderPlanRepository providerPlanRepository
+    )
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -34,13 +35,19 @@ public class CreateProviderCommand : ICreateProviderCommand
         _providerPlanRepository = providerPlanRepository;
     }
 
-    public async Task CreateMspAsync(Provider provider, string ownerEmail, int teamsMinimumSeats, int enterpriseMinimumSeats)
+    public async Task CreateMspAsync(
+        Provider provider,
+        string ownerEmail,
+        int teamsMinimumSeats,
+        int enterpriseMinimumSeats
+    )
     {
         var providerId = await CreateProviderAsync(provider, ownerEmail);
 
         await Task.WhenAll(
             CreateProviderPlanAsync(providerId, PlanType.TeamsMonthly, teamsMinimumSeats),
-            CreateProviderPlanAsync(providerId, PlanType.EnterpriseMonthly, enterpriseMinimumSeats));
+            CreateProviderPlanAsync(providerId, PlanType.EnterpriseMonthly, enterpriseMinimumSeats)
+        );
     }
 
     public async Task CreateResellerAsync(Provider provider)
@@ -48,7 +55,12 @@ public class CreateProviderCommand : ICreateProviderCommand
         await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
     }
 
-    public async Task CreateMultiOrganizationEnterpriseAsync(Provider provider, string ownerEmail, PlanType plan, int minimumSeats)
+    public async Task CreateMultiOrganizationEnterpriseAsync(
+        Provider provider,
+        string ownerEmail,
+        PlanType plan,
+        int minimumSeats
+    )
     {
         var providerId = await CreateProviderAsync(provider, ownerEmail);
 
@@ -60,7 +72,9 @@ public class CreateProviderCommand : ICreateProviderCommand
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
-            throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
+            throw new BadRequestException(
+                "Invalid owner. Owner must be an existing Bitwarden user."
+            );
         }
 
         provider.Gateway = GatewayType.Stripe;
@@ -97,7 +111,7 @@ public class CreateProviderCommand : ICreateProviderCommand
             PlanType = planType,
             SeatMinimum = seatMinimum,
             PurchasedSeats = 0,
-            AllocatedSeats = 0
+            AllocatedSeats = 0,
         };
         await _providerPlanRepository.CreateAsync(plan);
     }

@@ -8,16 +8,19 @@ public partial class AddInstallationIdToEvents : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganizationId",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
-        migrationBuilder.AlterColumn<Guid>(
-            name: "SponsoringOrganizationId",
-            table: "OrganizationSponsorship",
-            type: "char(36)",
-            nullable: true,
-            collation: "ascii_general_ci",
-            oldClrType: typeof(Guid),
-            oldType: "char(36)")
+        migrationBuilder
+            .AlterColumn<Guid>(
+                name: "SponsoringOrganizationId",
+                table: "OrganizationSponsorship",
+                type: "char(36)",
+                nullable: true,
+                collation: "ascii_general_ci",
+                oldClrType: typeof(Guid),
+                oldType: "char(36)"
+            )
             .OldAnnotation("Relational:Collation", "ascii_general_ci");
 
         migrationBuilder.AddColumn<Guid>(
@@ -25,7 +28,8 @@ public partial class AddInstallationIdToEvents : Migration
             table: "Event",
             type: "char(36)",
             nullable: true,
-            collation: "ascii_general_ci");
+            collation: "ascii_general_ci"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganizationId",
@@ -33,29 +37,31 @@ public partial class AddInstallationIdToEvents : Migration
             column: "SponsoringOrganizationId",
             principalTable: "Organization",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Restrict);
+            onDelete: ReferentialAction.Restrict
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropForeignKey(
             name: "FK_OrganizationSponsorship_Organization_SponsoringOrganizationId",
-            table: "OrganizationSponsorship");
+            table: "OrganizationSponsorship"
+        );
 
-        migrationBuilder.DropColumn(
-            name: "InstallationId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "InstallationId", table: "Event");
 
-        migrationBuilder.AlterColumn<Guid>(
-            name: "SponsoringOrganizationId",
-            table: "OrganizationSponsorship",
-            type: "char(36)",
-            nullable: false,
-            defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
-            collation: "ascii_general_ci",
-            oldClrType: typeof(Guid),
-            oldType: "char(36)",
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<Guid>(
+                name: "SponsoringOrganizationId",
+                table: "OrganizationSponsorship",
+                type: "char(36)",
+                nullable: false,
+                defaultValue: new Guid("00000000-0000-0000-0000-000000000000"),
+                collation: "ascii_general_ci",
+                oldClrType: typeof(Guid),
+                oldType: "char(36)",
+                oldNullable: true
+            )
             .OldAnnotation("Relational:Collation", "ascii_general_ci");
 
         migrationBuilder.AddForeignKey(
@@ -64,6 +70,7 @@ public partial class AddInstallationIdToEvents : Migration
             column: "SponsoringOrganizationId",
             principalTable: "Organization",
             principalColumn: "Id",
-            onDelete: ReferentialAction.Cascade);
+            onDelete: ReferentialAction.Cascade
+        );
     }
 }

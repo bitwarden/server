@@ -9,6 +9,7 @@ namespace SqlServerEFScaffold;
 public static class GlobalSettingsFactory
 {
     public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
+
     static GlobalSettingsFactory()
     {
         var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
@@ -30,7 +31,8 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         }
         optionsBuilder.UseSqlServer(
             connectionString,
-            b => b.MigrationsAssembly("SqlServerEFScaffold"));
+            b => b.MigrationsAssembly("SqlServerEFScaffold")
+        );
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

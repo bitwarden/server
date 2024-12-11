@@ -10,6 +10,7 @@ public class ProviderOrganizationOrganizationDetails
     public Guid Id { get; set; }
     public Guid ProviderId { get; set; }
     public Guid OrganizationId { get; set; }
+
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
     /// </summary>

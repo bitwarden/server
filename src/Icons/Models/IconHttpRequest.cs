@@ -10,7 +10,13 @@ public class IconHttpRequest
 {
     private const int _maxRedirects = 2;
 
-    private static readonly HttpStatusCode[] _redirectStatusCodes = new HttpStatusCode[] { HttpStatusCode.Redirect, HttpStatusCode.MovedPermanently, HttpStatusCode.RedirectKeepVerb, HttpStatusCode.SeeOther };
+    private static readonly HttpStatusCode[] _redirectStatusCodes = new HttpStatusCode[]
+    {
+        HttpStatusCode.Redirect,
+        HttpStatusCode.MovedPermanently,
+        HttpStatusCode.RedirectKeepVerb,
+        HttpStatusCode.SeeOther,
+    };
 
     private readonly ILogger<IIconFetchingService> _logger;
     private readonly HttpClient _httpClient;
@@ -20,7 +26,13 @@ public class IconHttpRequest
     private readonly Uri _uri;
     private static HttpResponseMessage NotFound => new(HttpStatusCode.NotFound);
 
-    private IconHttpRequest(Uri uri, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService, int redirectsCount)
+    private IconHttpRequest(
+        Uri uri,
+        ILogger<IIconFetchingService> logger,
+        IHttpClientFactory httpClientFactory,
+        IUriService uriService,
+        int redirectsCount
+    )
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -30,7 +42,12 @@ public class IconHttpRequest
         _uri = uri;
     }
 
-    public static async Task<IconHttpResponse> FetchAsync(Uri uri, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
+    public static async Task<IconHttpResponse> FetchAsync(
+        Uri uri,
+        ILogger<IIconFetchingService> logger,
+        IHttpClientFactory httpClientFactory,
+        IUriService uriService
+    )
     {
         var pageIcons = new IconHttpRequest(uri, logger, httpClientFactory, uriService, 0);
         var httpResponse = await pageIcons.FetchAsync();
@@ -55,7 +72,6 @@ public class IconHttpRequest
         return await FollowRedirectsAsync(responseForRedirect, iconUri);
     }
 
-
     private async Task<HttpResponseMessage> GetAsync(IconUri iconUri)
     {
         using var message = new HttpRequestMessage();
@@ -73,18 +89,33 @@ public class IconHttpRequest
         }
     }
 
-    private async Task<HttpResponseMessage> FollowRedirectsAsync(HttpResponseMessage response, IconUri originalIconUri)
+    private async Task<HttpResponseMessage> FollowRedirectsAsync(
+        HttpResponseMessage response,
+        IconUri originalIconUri
+    )
     {
-        if (_redirectsCount >= _maxRedirects || response.Headers.Location == null ||
-            !_redirectStatusCodes.Contains(response.StatusCode))
+        if (
+            _redirectsCount >= _maxRedirects
+            || response.Headers.Location == null
+            || !_redirectStatusCodes.Contains(response.StatusCode)
+        )
         {
             return NotFound;
         }
 
         using var responseForRedirect = response;
-        var redirectUri = DetermineRedirectUri(responseForRedirect.Headers.Location, originalIconUri);
+        var redirectUri = DetermineRedirectUri(
+            responseForRedirect.Headers.Location,
+            originalIconUri
+        );
 
-        return await new IconHttpRequest(redirectUri, _logger, _httpClientFactory, _uriService, _redirectsCount + 1).FetchAsync();
+        return await new IconHttpRequest(
+            redirectUri,
+            _logger,
+            _httpClientFactory,
+            _uriService,
+            _redirectsCount + 1
+        ).FetchAsync();
     }
 
     private static Uri DetermineRedirectUri(Uri responseUri, IconUri originalIconUri)
@@ -103,7 +134,7 @@ public class IconHttpRequest
             {
                 Scheme = originalIconUri.Scheme,
                 Host = originalIconUri.Host,
-                Path = responseUri.ToString()
+                Path = responseUri.ToString(),
             }.Uri;
         }
     }

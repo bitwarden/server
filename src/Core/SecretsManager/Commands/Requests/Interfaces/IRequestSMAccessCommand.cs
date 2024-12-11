@@ -6,5 +6,10 @@ namespace Bit.Core.SecretsManager.Commands.Requests.Interfaces;
 
 public interface IRequestSMAccessCommand
 {
-    Task SendRequestAccessToSM(Organization organization, ICollection<OrganizationUserUserDetails> orgUsers, User user, string emailContent);
+    Task SendRequestAccessToSM(
+        Organization organization,
+        ICollection<OrganizationUserUserDetails> orgUsers,
+        User user,
+        string emailContent
+    );
 }

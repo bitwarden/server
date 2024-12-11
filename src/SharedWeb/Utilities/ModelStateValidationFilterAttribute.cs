@@ -6,9 +6,7 @@ namespace Bit.SharedWeb.Utilities;
 
 public class ModelStateValidationFilterAttribute : ActionFilterAttribute
 {
-    public ModelStateValidationFilterAttribute()
-    {
-    }
+    public ModelStateValidationFilterAttribute() { }
 
     public override void OnActionExecuting(ActionExecutingContext context)
     {

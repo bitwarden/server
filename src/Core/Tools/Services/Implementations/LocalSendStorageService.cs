@@ -9,12 +9,14 @@ public class LocalSendStorageService : ISendFileStorageService
     private readonly string _baseDirPath;
     private readonly string _baseSendUrl;
 
-    private string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
-    private string FilePath(Send send, string fileID) => $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
+    private static string RelativeFilePath(Send send, string fileID) => $"{send.Id}/{fileID}";
+
+    private string FilePath(Send send, string fileID) =>
+        $"{_baseDirPath}/{RelativeFilePath(send, fileID)}";
+
     public FileUploadType FileUploadType => FileUploadType.Direct;
 
-    public LocalSendStorageService(
-        GlobalSettings globalSettings)
+    public LocalSendStorageService(GlobalSettings globalSettings)
     {
         _baseDirPath = globalSettings.Send.BaseDirectory;
         _baseSendUrl = globalSettings.Send.BaseUrl;
@@ -56,7 +58,7 @@ public class LocalSendStorageService : ISendFileStorageService
         return $"{_baseSendUrl}/{RelativeFilePath(send, fileId)}";
     }
 
-    private void DeleteFileIfExists(string path)
+    private static void DeleteFileIfExists(string path)
     {
         if (File.Exists(path))
         {
@@ -64,7 +66,7 @@ public class LocalSendStorageService : ISendFileStorageService
         }
     }
 
-    private void DeleteDirectoryIfExistsAndEmpty(string path)
+    private static void DeleteDirectoryIfExistsAndEmpty(string path)
     {
         if (Directory.Exists(path) && !Directory.EnumerateFiles(path).Any())
         {
@@ -82,10 +84,15 @@ public class LocalSendStorageService : ISendFileStorageService
         return Task.FromResult(0);
     }
 
-    public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId)
-        => Task.FromResult($"/sends/{send.Id}/file/{fileId}");
+    public Task<string> GetSendFileUploadUrlAsync(Send send, string fileId) =>
+        Task.FromResult($"/sends/{send.Id}/file/{fileId}");
 
-    public Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+    public Task<(bool, long?)> ValidateFileAsync(
+        Send send,
+        string fileId,
+        long expectedFileSize,
+        long leeway
+    )
     {
         long? length = null;
         var path = FilePath(send, fileId);

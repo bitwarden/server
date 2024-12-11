@@ -35,7 +35,7 @@ public class ScimContext : IScimContext
         "108.128.250.27",
         "52.63.103.92",
         "13.54.131.18",
-        "52.62.204.36"
+        "52.62.204.36",
     ];
 
     public ScimProviderType RequestScimProvider { get; set; } = ScimProviderType.Default;
@@ -43,11 +43,12 @@ public class ScimContext : IScimContext
     public Guid? OrganizationId { get; set; }
     public Organization Organization { get; set; }
 
-    public async virtual Task BuildAsync(
+    public virtual async Task BuildAsync(
         HttpContext httpContext,
         GlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
-        IOrganizationConnectionRepository organizationConnectionRepository)
+        IOrganizationConnectionRepository organizationConnectionRepository
+    )
     {
         if (_builtHttpContext)
         {
@@ -68,14 +69,19 @@ public class ScimContext : IScimContext
             Organization = await organizationRepository.GetByIdAsync(orgId);
             if (Organization != null)
             {
-                var scimConnections = await organizationConnectionRepository.GetByOrganizationIdTypeAsync(Organization.Id,
-                    OrganizationConnectionType.Scim);
+                var scimConnections =
+                    await organizationConnectionRepository.GetByOrganizationIdTypeAsync(
+                        Organization.Id,
+                        OrganizationConnectionType.Scim
+                    );
                 ScimConfiguration = scimConnections?.FirstOrDefault()?.GetConfig<ScimConfig>();
             }
         }
 
-        if (RequestScimProvider == ScimProviderType.Default &&
-            httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent))
+        if (
+            RequestScimProvider == ScimProviderType.Default
+            && httpContext.Request.Headers.TryGetValue("User-Agent", out var userAgent)
+        )
         {
             if (userAgent.ToString().StartsWith("Okta"))
             {
@@ -83,15 +89,16 @@ public class ScimContext : IScimContext
             }
         }
 
-        if (RequestScimProvider == ScimProviderType.Default &&
-            httpContext.Request.Headers.ContainsKey("Adscimversion"))
+        if (
+            RequestScimProvider == ScimProviderType.Default
+            && httpContext.Request.Headers.ContainsKey("Adscimversion")
+        )
         {
             RequestScimProvider = ScimProviderType.AzureAd;
         }
 
         var ipAddress = CoreHelpers.GetIpAddress(httpContext, globalSettings);
-        if (RequestScimProvider == ScimProviderType.Default &&
-            _pingIpAddresses.Contains(ipAddress))
+        if (RequestScimProvider == ScimProviderType.Default && _pingIpAddresses.Contains(ipAddress))
         {
             RequestScimProvider = ScimProviderType.Ping;
         }

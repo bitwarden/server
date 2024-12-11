@@ -6,12 +6,24 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
 {
     public IQueryable<OrganizationUserUserDetails> Run(DatabaseContext dbContext)
     {
-        var query = from ou in dbContext.OrganizationUsers
-                    join u in dbContext.Users on ou.UserId equals u.Id into u_g
-                    from u in u_g.DefaultIfEmpty()
-                    join su in dbContext.SsoUsers on new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId } equals new { UserId = (Guid?)su.UserId, su.OrganizationId } into su_g
-                    from su in su_g.DefaultIfEmpty()
-                    select new { ou, u, su };
+        var query =
+            from ou in dbContext.OrganizationUsers
+            join u in dbContext.Users on ou.UserId equals u.Id into u_g
+            from u in u_g.DefaultIfEmpty()
+            join su in dbContext.SsoUsers
+                on new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId } equals new
+                {
+                    UserId = (Guid?)su.UserId,
+                    su.OrganizationId,
+                }
+                into su_g
+            from su in su_g.DefaultIfEmpty()
+            select new
+            {
+                ou,
+                u,
+                su,
+            };
         return query.Select(x => new OrganizationUserUserDetails
         {
             Id = x.ou.Id,
@@ -30,7 +42,7 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             ResetPasswordKey = x.ou.ResetPasswordKey,
             UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
             AccessSecretsManager = x.ou.AccessSecretsManager,
-            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword)
+            HasMasterPassword = x.u != null && !string.IsNullOrWhiteSpace(x.u.MasterPassword),
         });
     }
 }

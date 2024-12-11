@@ -30,10 +30,7 @@ public class TwoFactorDuoRequestModelValidationTests
     public void ShouldReturnValidationError_WhenValuesAreInvalid()
     {
         // Arrange
-        var model = new UpdateTwoFactorDuoRequestModel
-        {
-            Host = "api-12345abc.duosecurity.com"
-        };
+        var model = new UpdateTwoFactorDuoRequestModel { Host = "api-12345abc.duosecurity.com" };
 
         // Act
         var result = model.Validate(new ValidationContext(model));

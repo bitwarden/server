@@ -15,14 +15,16 @@ public class CreateSecretCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task CreateAsync_Success(Secret data,
-        SutProvider<CreateSecretCommand> sutProvider, Project mockProject)
+    public async Task CreateAsync_Success(
+        Secret data,
+        SutProvider<CreateSecretCommand> sutProvider,
+        Project mockProject
+    )
     {
         data.Projects = new List<Project>() { mockProject };
 
         await sutProvider.Sut.CreateAsync(data, null);
 
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .CreateAsync(data, null);
+        await sutProvider.GetDependency<ISecretRepository>().Received(1).CreateAsync(data, null);
     }
 }

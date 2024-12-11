@@ -20,11 +20,7 @@ public class RelayPushRegistrationServiceTests
         _httpFactory = Substitute.For<IHttpClientFactory>();
         _logger = Substitute.For<ILogger<RelayPushRegistrationService>>();
 
-        _sut = new RelayPushRegistrationService(
-            _httpFactory,
-            _globalSettings,
-            _logger
-        );
+        _sut = new RelayPushRegistrationService(_httpFactory, _globalSettings, _logger);
     }
 
     // Remove this test when we add actual tests. It only proves that

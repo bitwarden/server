@@ -14,30 +14,37 @@ public class SecurityTaskRepositoryTests
     public async Task CreateAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
-        ISecurityTaskRepository securityTaskRepository)
+        ISecurityTaskRepository securityTaskRepository
+    )
     {
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            PlanType = PlanType.EnterpriseAnnually,
-            Plan = "Test Plan",
-            BillingEmail = "billing@email.com"
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = "Test Org",
+                PlanType = PlanType.EnterpriseAnnually,
+                Plan = "Test Plan",
+                BillingEmail = "billing@email.com",
+            }
+        );
 
-        var cipher = await cipherRepository.CreateAsync(new Cipher
-        {
-            Type = CipherType.Login,
-            OrganizationId = organization.Id,
-            Data = "",
-        });
+        var cipher = await cipherRepository.CreateAsync(
+            new Cipher
+            {
+                Type = CipherType.Login,
+                OrganizationId = organization.Id,
+                Data = "",
+            }
+        );
 
-        var task = await securityTaskRepository.CreateAsync(new SecurityTask
-        {
-            OrganizationId = organization.Id,
-            CipherId = cipher.Id,
-            Status = SecurityTaskStatus.Pending,
-            Type = SecurityTaskType.UpdateAtRiskCredential,
-        });
+        var task = await securityTaskRepository.CreateAsync(
+            new SecurityTask
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            }
+        );
 
         Assert.NotNull(task);
     }
@@ -46,30 +53,37 @@ public class SecurityTaskRepositoryTests
     public async Task ReadByIdAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
-        ISecurityTaskRepository securityTaskRepository)
+        ISecurityTaskRepository securityTaskRepository
+    )
     {
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            PlanType = PlanType.EnterpriseAnnually,
-            Plan = "Test Plan",
-            BillingEmail = "billing@email.com"
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = "Test Org",
+                PlanType = PlanType.EnterpriseAnnually,
+                Plan = "Test Plan",
+                BillingEmail = "billing@email.com",
+            }
+        );
 
-        var cipher = await cipherRepository.CreateAsync(new Cipher
-        {
-            Type = CipherType.Login,
-            OrganizationId = organization.Id,
-            Data = "",
-        });
+        var cipher = await cipherRepository.CreateAsync(
+            new Cipher
+            {
+                Type = CipherType.Login,
+                OrganizationId = organization.Id,
+                Data = "",
+            }
+        );
 
-        var task = await securityTaskRepository.CreateAsync(new SecurityTask
-        {
-            OrganizationId = organization.Id,
-            CipherId = cipher.Id,
-            Status = SecurityTaskStatus.Pending,
-            Type = SecurityTaskType.UpdateAtRiskCredential,
-        });
+        var task = await securityTaskRepository.CreateAsync(
+            new SecurityTask
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            }
+        );
 
         Assert.NotNull(task);
 
@@ -84,30 +98,37 @@ public class SecurityTaskRepositoryTests
     public async Task UpdateAsync(
         IOrganizationRepository organizationRepository,
         ICipherRepository cipherRepository,
-        ISecurityTaskRepository securityTaskRepository)
+        ISecurityTaskRepository securityTaskRepository
+    )
     {
-        var organization = await organizationRepository.CreateAsync(new Organization
-        {
-            Name = "Test Org",
-            PlanType = PlanType.EnterpriseAnnually,
-            Plan = "Test Plan",
-            BillingEmail = "billing@email.com"
-        });
+        var organization = await organizationRepository.CreateAsync(
+            new Organization
+            {
+                Name = "Test Org",
+                PlanType = PlanType.EnterpriseAnnually,
+                Plan = "Test Plan",
+                BillingEmail = "billing@email.com",
+            }
+        );
 
-        var cipher = await cipherRepository.CreateAsync(new Cipher
-        {
-            Type = CipherType.Login,
-            OrganizationId = organization.Id,
-            Data = "",
-        });
+        var cipher = await cipherRepository.CreateAsync(
+            new Cipher
+            {
+                Type = CipherType.Login,
+                OrganizationId = organization.Id,
+                Data = "",
+            }
+        );
 
-        var task = await securityTaskRepository.CreateAsync(new SecurityTask
-        {
-            OrganizationId = organization.Id,
-            CipherId = cipher.Id,
-            Status = SecurityTaskStatus.Pending,
-            Type = SecurityTaskType.UpdateAtRiskCredential,
-        });
+        var task = await securityTaskRepository.CreateAsync(
+            new SecurityTask
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            }
+        );
 
         Assert.NotNull(task);
 

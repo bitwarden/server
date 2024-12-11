@@ -15,7 +15,8 @@ public class BulkAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { new TestOperationRequirement() },
             new ClaimsPrincipal(),
-            new TestResource());
+            new TestResource()
+        );
         await handler.HandleAsync(context);
         Assert.True(context.HasSucceeded);
     }
@@ -27,7 +28,8 @@ public class BulkAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { new TestOperationRequirement() },
             new ClaimsPrincipal(),
-            new[] { new TestResource(), new TestResource() });
+            new[] { new TestResource(), new TestResource() }
+        );
         await handler.HandleAsync(context);
         Assert.True(context.HasSucceeded);
     }
@@ -39,7 +41,8 @@ public class BulkAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { new TestOperationRequirement() },
             new ClaimsPrincipal(),
-            null);
+            null
+        );
         await handler.HandleAsync(context);
         Assert.False(context.HasSucceeded);
     }
@@ -51,7 +54,8 @@ public class BulkAuthorizationHandlerTests
         var context = new AuthorizationHandlerContext(
             new[] { new TestOperationRequirement() },
             new ClaimsPrincipal(),
-            new object());
+            new object()
+        );
         await handler.HandleAsync(context);
         Assert.False(context.HasSucceeded);
     }
@@ -60,11 +64,14 @@ public class BulkAuthorizationHandlerTests
 
     private class TestResource { }
 
-    private class TestBulkAuthorizationHandler : BulkAuthorizationHandler<TestOperationRequirement, TestResource>
+    private class TestBulkAuthorizationHandler
+        : BulkAuthorizationHandler<TestOperationRequirement, TestResource>
     {
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
+        protected override Task HandleRequirementAsync(
+            AuthorizationHandlerContext context,
             TestOperationRequirement requirement,
-            ICollection<TestResource> resources)
+            ICollection<TestResource> resources
+        )
         {
             context.Succeed(requirement);
             return Task.CompletedTask;

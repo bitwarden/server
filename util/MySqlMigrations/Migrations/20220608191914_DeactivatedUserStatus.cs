@@ -12,7 +12,8 @@ public partial class DeactivatedUserStatus : Migration
             type: "smallint",
             nullable: false,
             oldClrType: typeof(byte),
-            oldType: "tinyint unsigned");
+            oldType: "tinyint unsigned"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
@@ -23,6 +24,7 @@ public partial class DeactivatedUserStatus : Migration
             type: "tinyint unsigned",
             nullable: false,
             oldClrType: typeof(short),
-            oldType: "smallint");
+            oldType: "smallint"
+        );
     }
 }

@@ -13,7 +13,8 @@ public class EventsFormModel : IValidatableObject
     public bool Inspect { get; set; }
 
     public List<string> GetEventIds() =>
-        EventIds?.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries)
+        EventIds
+            ?.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries)
             .Select(eventId => eventId.Trim())
             .ToList() ?? [];
 

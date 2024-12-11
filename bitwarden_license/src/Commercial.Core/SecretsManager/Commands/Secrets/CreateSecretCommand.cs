@@ -15,7 +15,10 @@ public class CreateSecretCommand : ICreateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> CreateAsync(Secret secret, SecretAccessPoliciesUpdates? accessPoliciesUpdates)
+    public async Task<Secret> CreateAsync(
+        Secret secret,
+        SecretAccessPoliciesUpdates? accessPoliciesUpdates
+    )
     {
         return await _secretRepository.CreateAsync(secret, accessPoliciesUpdates);
     }

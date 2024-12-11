@@ -12,16 +12,22 @@ public class SecretsSyncResponseModel : ResponseModel
     public bool HasChanges { get; set; }
     public ListResponseModel<BaseSecretResponseModel>? Secrets { get; set; }
 
-    public SecretsSyncResponseModel(bool hasChanges, IEnumerable<Secret>? secrets, string obj = _objectName)
+    public SecretsSyncResponseModel(
+        bool hasChanges,
+        IEnumerable<Secret>? secrets,
+        string obj = _objectName
+    )
         : base(obj)
     {
-        Secrets = secrets != null
-            ? new ListResponseModel<BaseSecretResponseModel>(secrets.Select(s => new BaseSecretResponseModel(s)))
-            : null;
+        Secrets =
+            secrets != null
+                ? new ListResponseModel<BaseSecretResponseModel>(
+                    secrets.Select(s => new BaseSecretResponseModel(s))
+                )
+                : null;
         HasChanges = hasChanges;
     }
 
-    public SecretsSyncResponseModel() : base(_objectName)
-    {
-    }
+    public SecretsSyncResponseModel()
+        : base(_objectName) { }
 }

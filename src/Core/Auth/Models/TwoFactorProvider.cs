@@ -27,8 +27,10 @@ public class TwoFactorProvider
                 {
                     o.Descriptor.Type = "public-key";
                 }
-                Descriptor = JsonSerializer.Deserialize<PublicKeyCredentialDescriptor>(o.Descriptor.ToString(),
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                Descriptor = JsonSerializer.Deserialize<PublicKeyCredentialDescriptor>(
+                    o.Descriptor.ToString(),
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
             }
             PublicKey = o.PublicKey;
             UserHandle = o.UserHandle;

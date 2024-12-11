@@ -13,10 +13,7 @@ public class Program
     {
         CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-US");
 
-        _context = new Context
-        {
-            Args = args
-        };
+        _context = new Context { Args = args };
 
         ParseParameters();
 
@@ -42,8 +39,8 @@ public class Program
         }
         if (_context.Parameters.ContainsKey("stub"))
         {
-            _context.Stub = _context.Parameters["stub"] == "true" ||
-                _context.Parameters["stub"] == "1";
+            _context.Stub =
+                _context.Parameters["stub"] == "true" || _context.Parameters["stub"] == "1";
         }
 
         Helpers.WriteLine(_context);
@@ -96,8 +93,11 @@ public class Program
         certBuilder.BuildForInstall();
 
         // Set the URL
-        _context.Config.Url = string.Format("http{0}://{1}",
-            _context.Config.Ssl ? "s" : string.Empty, _context.Install.Domain);
+        _context.Config.Url = string.Format(
+            "http{0}://{1}",
+            _context.Config.Ssl ? "s" : string.Empty,
+            _context.Install.Domain
+        );
 
         var nginxBuilder = new NginxConfigBuilder(_context);
         nginxBuilder.BuildForInstaller();
@@ -115,11 +115,14 @@ public class Program
 
         Console.WriteLine("\nInstallation complete");
 
-        Console.WriteLine("\nIf you need to make additional configuration changes, you can modify\n" +
-            "the settings in `{0}` and then run:\n{1}",
+        Console.WriteLine(
+            "\nIf you need to make additional configuration changes, you can modify\n"
+                + "the settings in `{0}` and then run:\n{1}",
             _context.HostOS == "win" ? ".\\bwdata\\config.yml" : "./bwdata/config.yml",
-            _context.HostOS == "win" ? "`.\\bitwarden.ps1 -rebuild` or `.\\bitwarden.ps1 -update`" :
-                "`./bitwarden.sh rebuild` or `./bitwarden.sh update`");
+            _context.HostOS == "win"
+                ? "`.\\bitwarden.ps1 -rebuild` or `.\\bitwarden.ps1 -update`"
+                : "`./bitwarden.sh rebuild` or `./bitwarden.sh update`"
+        );
 
         Console.WriteLine("\nNext steps, run:");
         if (_context.HostOS == "win")
@@ -138,20 +141,32 @@ public class Program
         // This portion of code checks for multiple certs in the Identity.pfx PKCS12 bag.  If found, it generates
         // a new cert and bag to replace the old Identity.pfx.  This fixes an issue that came up as a result of
         // moving the project to .NET 5.
-        _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile("global", "globalSettings__identityServer__certificatePassword");
-        var certCountString = Helpers.Exec("openssl pkcs12 -nokeys -info -in /bitwarden/identity/identity.pfx " +
-            $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"", true);
+        _context.Install.IdentityCertPassword = Helpers.GetValueFromEnvFile(
+            "global",
+            "globalSettings__identityServer__certificatePassword"
+        );
+        var certCountString = Helpers.Exec(
+            "openssl pkcs12 -nokeys -info -in /bitwarden/identity/identity.pfx "
+                + $"-passin pass:{_context.Install.IdentityCertPassword} 2> /dev/null | grep -c \"\\-----BEGIN CERTIFICATE----\"",
+            true
+        );
         if (int.TryParse(certCountString, out var certCount) && certCount > 1)
         {
             // Extract key from identity.pfx
-            Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -nocerts -nodes -out identity.key " +
-                $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl pkcs12 -in /bitwarden/identity/identity.pfx -nocerts -nodes -out identity.key "
+                    + $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1"
+            );
             // Extract certificate from identity.pfx
-            Helpers.Exec("openssl pkcs12 -in /bitwarden/identity/identity.pfx -clcerts -nokeys -out identity.crt " +
-                $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl pkcs12 -in /bitwarden/identity/identity.pfx -clcerts -nokeys -out identity.crt "
+                    + $"-passin pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1"
+            );
             // Create new PKCS12 bag with certificate and key
-            Helpers.Exec("openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key " +
-                $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1");
+            Helpers.Exec(
+                "openssl pkcs12 -export -out /bitwarden/identity/identity.pfx -inkey identity.key "
+                    + $"-in identity.crt -passout pass:{_context.Install.IdentityCertPassword} > /dev/null 2>&1"
+            );
         }
 
         if (_context.Parameters.ContainsKey("db"))
@@ -188,8 +203,10 @@ public class Program
 
     private static void PrepareAndMigrateDatabase()
     {
-        var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
-            "globalSettings__sqlServer__connectionString");
+        var vaultConnectionString = Helpers.GetValueFromEnvFile(
+            "global",
+            "globalSettings__sqlServer__connectionString"
+        );
         var migrator = new DbMigrator(vaultConnectionString);
 
         var enableLogging = false;
@@ -198,7 +215,11 @@ public class Program
         migrator.MigrateMsSqlDatabaseWithRetries(enableLogging);
 
         // execute explicit transition migration scripts, per EDD
-        migrator.MigrateMsSqlDatabaseWithRetries(enableLogging, true, MigratorConstants.TransitionMigrationsFolderName);
+        migrator.MigrateMsSqlDatabaseWithRetries(
+            enableLogging,
+            true,
+            MigratorConstants.TransitionMigrationsFolderName
+        );
     }
 
     private static bool ValidateInstallation()
@@ -251,13 +272,15 @@ public class Program
         {
             var prompt = "Enter your region (US/EU) [US]";
             var region = Helpers.ReadInput(prompt);
-            if (string.IsNullOrEmpty(region)) region = "US";
+            if (string.IsNullOrEmpty(region))
+                region = "US";
 
             while (!Enum.TryParse(region, out cloudRegion))
             {
                 Helpers.WriteError("Invalid input for region. Please try again.");
                 region = Helpers.ReadInput(prompt);
-                if (string.IsNullOrEmpty(region)) region = "US";
+                if (string.IsNullOrEmpty(region))
+                    region = "US";
             }
         }
 
@@ -278,26 +301,38 @@ public class Program
                     url = "https://api.bitwarden.com/installations/";
                     break;
             }
-            var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
+            var response = new HttpClient()
+                .GetAsync(url + _context.Install.InstallationId)
+                .GetAwaiter()
+                .GetResult();
 
             if (!response.IsSuccessStatusCode)
             {
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Console.WriteLine($"Invalid installation id for {cloudRegion.ToString()} region.");
+                    Console.WriteLine(
+                        $"Invalid installation id for {cloudRegion.ToString()} region."
+                    );
                 }
                 else
                 {
-                    Console.WriteLine($"Unable to validate installation id for {cloudRegion.ToString()} region.");
+                    Console.WriteLine(
+                        $"Unable to validate installation id for {cloudRegion.ToString()} region."
+                    );
                 }
 
                 return false;
             }
 
-            var result = response.Content.ReadFromJsonAsync<InstallationValidationResponseModel>().GetAwaiter().GetResult();
+            var result = response
+                .Content.ReadFromJsonAsync<InstallationValidationResponseModel>()
+                .GetAwaiter()
+                .GetResult();
             if (!result.Enabled)
             {
-                Console.WriteLine($"Installation id has been disabled in the {cloudRegion.ToString()} region.");
+                Console.WriteLine(
+                    $"Installation id has been disabled in the {cloudRegion.ToString()} region."
+                );
                 return false;
             }
 
@@ -305,7 +340,9 @@ public class Program
         }
         catch
         {
-            Console.WriteLine($"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.");
+            Console.WriteLine(
+                $"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server."
+            );
             return false;
         }
     }

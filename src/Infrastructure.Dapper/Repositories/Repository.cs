@@ -12,8 +12,12 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
     where TId : IEquatable<TId>
     where T : class, ITableObject<TId>
 {
-    public Repository(string connectionString, string readOnlyConnectionString,
-        string? schema = null, string? table = null)
+    public Repository(
+        string connectionString,
+        string readOnlyConnectionString,
+        string? schema = null,
+        string? table = null
+    )
         : base(connectionString, readOnlyConnectionString)
     {
         if (!string.IsNullOrWhiteSpace(table))
@@ -37,7 +41,8 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
             var results = await connection.QueryAsync<T>(
                 $"[{Schema}].[{Table}_ReadById]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -54,7 +59,8 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Create]",
                 parameters,
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
             obj.Id = parameters.Get<TId>(nameof(obj.Id));
         }
         return obj;
@@ -67,7 +73,8 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Update]",
                 obj,
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
@@ -90,7 +97,8 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_DeleteById]",
                 new { Id = obj.Id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 }

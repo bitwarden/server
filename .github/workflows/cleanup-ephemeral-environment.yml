@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Checkout PR
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        
+
       - name: Validate config exists in path
         id: validate-config
         run: |
@@ -21,7 +21,6 @@ jobs:
             echo "Ephemeral environment config found in path, continuing."
             echo "config-exists=true" >> $GITHUB_OUTPUT
           fi
-
 
   cleanup-config:
     name: Cleanup ephemeral environment

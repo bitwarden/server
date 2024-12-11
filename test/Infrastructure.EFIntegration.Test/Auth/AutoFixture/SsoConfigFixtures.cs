@@ -47,13 +47,12 @@ internal class EfSsoConfig : ICustomization
 
 internal class EfSsoConfigAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfSsoConfigAutoDataAttribute() : base(new SutProviderCustomization(), new EfSsoConfig())
-    { }
+    public EfSsoConfigAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfSsoConfig()) { }
 }
 
 internal class InlineEfSsoConfigAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfSsoConfigAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfSsoConfig) }, values)
-    { }
+    public InlineEfSsoConfigAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfSsoConfig) }, values) { }
 }

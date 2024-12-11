@@ -3,7 +3,8 @@ using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 
-internal class GetWebAuthnLoginCredentialAssertionOptionsCommand : IGetWebAuthnLoginCredentialAssertionOptionsCommand
+internal class GetWebAuthnLoginCredentialAssertionOptionsCommand
+    : IGetWebAuthnLoginCredentialAssertionOptionsCommand
 {
     private readonly IFido2 _fido2;
 
@@ -14,6 +15,9 @@ internal class GetWebAuthnLoginCredentialAssertionOptionsCommand : IGetWebAuthnL
 
     public AssertionOptions GetWebAuthnLoginCredentialAssertionOptions()
     {
-        return _fido2.GetAssertionOptions(Enumerable.Empty<PublicKeyCredentialDescriptor>(), UserVerificationRequirement.Required);
+        return _fido2.GetAssertionOptions(
+            Enumerable.Empty<PublicKeyCredentialDescriptor>(),
+            UserVerificationRequirement.Required
+        );
     }
 }

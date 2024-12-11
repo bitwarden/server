@@ -20,10 +20,16 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public UserRepository(
         GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider)
-        : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
+        IDataProtectionProvider dataProtectionProvider
+    )
+        : base(
+            globalSettings.SqlServer.ConnectionString,
+            globalSettings.SqlServer.ReadOnlyConnectionString
+        )
     {
-        _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+        _dataProtector = dataProtectionProvider.CreateProtector(
+            Constants.DatabaseFieldProtectorPurpose
+        );
     }
 
     public override async Task<User?> GetByIdAsync(Guid id)
@@ -40,7 +46,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<User>(
                 $"[{Schema}].[{Table}_ReadByEmail]",
                 new { Email = email },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             UnprotectData(results);
             return results.SingleOrDefault();
@@ -61,7 +68,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<User>(
                 $"[{Schema}].[{Table}_ReadByEmails]",
                 new { Emails = emailTable.AsTableValuedParameter("dbo.EmailArray") },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             UnprotectData(results);
             return results.ToList();
@@ -75,7 +83,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<User>(
                 $"[{Schema}].[{Table}_ReadBySsoUserOrganizationIdExternalId]",
                 new { OrganizationId = organizationId, ExternalId = externalId },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             UnprotectData(results);
             return results.SingleOrDefault();
@@ -89,7 +98,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<UserKdfInformation>(
                 $"[{Schema}].[{Table}_ReadKdfByEmail]",
                 new { Email = email },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -101,9 +111,15 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             var results = await connection.QueryAsync<User>(
                 $"[{Schema}].[{Table}_Search]",
-                new { Email = email, Skip = skip, Take = take },
+                new
+                {
+                    Email = email,
+                    Skip = skip,
+                    Take = take,
+                },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 120);
+                commandTimeout: 120
+            );
 
             UnprotectData(results);
             return results.ToList();
@@ -117,7 +133,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<User>(
                 "[dbo].[User_ReadByPremium]",
                 new { Premium = premium },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             UnprotectData(results);
             return results.ToList();
@@ -131,7 +148,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<string>(
                 $"[{Schema}].[{Table}_ReadPublicKeyById]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -144,7 +162,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<DateTime>(
                 $"[{Schema}].[{Table}_ReadAccountRevisionDateById]",
                 new { Id = id },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             return results.SingleOrDefault();
         }
@@ -169,9 +188,11 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 $"[{Schema}].[{Table}_DeleteById]",
                 new { Id = user.Id },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 180);
+                commandTimeout: 180
+            );
         }
     }
+
     public async Task DeleteManyAsync(IEnumerable<User> users)
     {
         var ids = users.Select(user => user.Id);
@@ -181,7 +202,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 $"[{Schema}].[{Table}_DeleteByIds]",
                 new { Ids = JsonSerializer.Serialize(ids) },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 180);
+                commandTimeout: 180
+            );
         }
     }
 
@@ -193,7 +215,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 $"[{Schema}].[{Table}_UpdateStorage]",
                 new { Id = id },
                 commandType: CommandType.StoredProcedure,
-                commandTimeout: 180);
+                commandTimeout: 180
+            );
         }
     }
 
@@ -204,14 +227,16 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             await connection.ExecuteAsync(
                 $"[{Schema}].[User_UpdateRenewalReminderDate]",
                 new { Id = id, RenewalReminderDate = renewalReminderDate },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
         }
     }
 
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(
         User user,
-        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions
+    )
     {
         await using var connection = new SqlConnection(ConnectionString);
         connection.Open();
@@ -220,7 +245,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         try
         {
             // Update user
-            await using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
+            await using (
+                var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction)
+            )
             {
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
@@ -253,7 +280,6 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
@@ -261,21 +287,25 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             var results = await connection.QueryAsync<User>(
                 $"[{Schema}].[{Table}_ReadByIds]",
                 new { Ids = ids.ToGuidIdArrayTVP() },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             UnprotectData(results);
             return results.ToList();
         }
     }
 
-    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(
+        IEnumerable<Guid> ids
+    )
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
             var results = await connection.QueryAsync<UserWithCalculatedPremium>(
                 $"[{Schema}].[{Table}_ReadByIdsWithCalculatedPremium]",
                 new { Ids = JsonSerializer.Serialize(ids) },
-                commandType: CommandType.StoredProcedure);
+                commandType: CommandType.StoredProcedure
+            );
 
             UnprotectData(results);
             return results.ToList();
@@ -297,14 +327,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         // Protect values
         if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.MasterPassword!));
+            user.MasterPassword = string.Concat(
+                Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.MasterPassword!)
+            );
         }
 
         if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
-                _dataProtector.Protect(user.Key!));
+            user.Key = string.Concat(
+                Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.Key!)
+            );
         }
 
         // Save
@@ -325,13 +359,15 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         if (user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
             user.MasterPassword = _dataProtector.Unprotect(
-                user.MasterPassword.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+                user.MasterPassword.Substring(Constants.DatabaseFieldProtectedPrefix.Length)
+            );
         }
 
         if (user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
             user.Key = _dataProtector.Unprotect(
-                user.Key.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+                user.Key.Substring(Constants.DatabaseFieldProtectedPrefix.Length)
+            );
         }
     }
 

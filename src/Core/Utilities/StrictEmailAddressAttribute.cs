@@ -7,8 +7,7 @@ namespace Bit.Core.Utilities;
 public class StrictEmailAddressAttribute : ValidationAttribute
 {
     public StrictEmailAddressAttribute()
-        : base("The {0} field is not a supported e-mail address format.")
-    { }
+        : base("The {0} field is not a supported e-mail address format.") { }
 
     public override bool IsValid(object value)
     {

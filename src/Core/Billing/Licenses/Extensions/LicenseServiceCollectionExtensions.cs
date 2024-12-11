@@ -10,7 +10,10 @@ public static class LicenseServiceCollectionExtensions
 {
     public static void AddLicenseServices(this IServiceCollection services)
     {
-        services.AddTransient<ILicenseClaimsFactory<Organization>, OrganizationLicenseClaimsFactory>();
+        services.AddTransient<
+            ILicenseClaimsFactory<Organization>,
+            OrganizationLicenseClaimsFactory
+        >();
         services.AddTransient<ILicenseClaimsFactory<User>, UserLicenseClaimsFactory>();
     }
 }

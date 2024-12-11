@@ -51,13 +51,12 @@ internal class EfCollectionCipher : ICustomization
 
 internal class EfCollectionCipherAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfCollectionCipherAutoDataAttribute() : base(new SutProviderCustomization(), new EfCollectionCipher())
-    { }
+    public EfCollectionCipherAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfCollectionCipher()) { }
 }
 
 internal class InlineEfCollectionCipherAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfCollectionCipherAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfCollectionCipher) }, values)
-    { }
+    public InlineEfCollectionCipherAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfCollectionCipher) }, values) { }
 }

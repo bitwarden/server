@@ -9,20 +9,23 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
-public class
-    ServiceAccountPeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<
+public class ServiceAccountPeopleAccessPoliciesAuthorizationHandler
+    : AuthorizationHandler<
         ServiceAccountPeopleAccessPoliciesOperationRequirement,
-        ServiceAccountPeopleAccessPolicies>
+        ServiceAccountPeopleAccessPolicies
+    >
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly ISameOrganizationQuery _sameOrganizationQuery;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public ServiceAccountPeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ServiceAccountPeopleAccessPoliciesAuthorizationHandler(
+        ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
         ISameOrganizationQuery sameOrganizationQuery,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository
+    )
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
@@ -30,9 +33,11 @@ public class
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+    protected override async Task HandleRequirementAsync(
+        AuthorizationHandlerContext context,
         ServiceAccountPeopleAccessPoliciesOperationRequirement requirement,
-        ServiceAccountPeopleAccessPolicies resource)
+        ServiceAccountPeopleAccessPolicies resource
+    )
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -40,8 +45,10 @@ public class
         }
 
         // Only users and admins should be able to manipulate access policies
-        var (accessClient, userId) =
-            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(
+            context.User,
+            resource.OrganizationId
+        );
         if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
         {
             return;
@@ -50,25 +57,48 @@ public class
         switch (requirement)
         {
             case not null when requirement == ServiceAccountPeopleAccessPoliciesOperations.Replace:
-                await CanReplaceServiceAccountPeopleAsync(context, requirement, resource, accessClient, userId);
+                await CanReplaceServiceAccountPeopleAsync(
+                    context,
+                    requirement,
+                    resource,
+                    accessClient,
+                    userId
+                );
                 break;
             default:
-                throw new ArgumentException("Unsupported operation requirement type provided.",
-                    nameof(requirement));
+                throw new ArgumentException(
+                    "Unsupported operation requirement type provided.",
+                    nameof(requirement)
+                );
         }
     }
 
-    private async Task CanReplaceServiceAccountPeopleAsync(AuthorizationHandlerContext context,
-        ServiceAccountPeopleAccessPoliciesOperationRequirement requirement, ServiceAccountPeopleAccessPolicies resource,
-        AccessClientType accessClient, Guid userId)
+    private async Task CanReplaceServiceAccountPeopleAsync(
+        AuthorizationHandlerContext context,
+        ServiceAccountPeopleAccessPoliciesOperationRequirement requirement,
+        ServiceAccountPeopleAccessPolicies resource,
+        AccessClientType accessClient,
+        Guid userId
+    )
     {
-        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId, accessClient);
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(
+            resource.Id,
+            userId,
+            accessClient
+        );
         if (access.Write)
         {
             if (resource.UserAccessPolicies != null && resource.UserAccessPolicies.Any())
             {
-                var orgUserIds = resource.UserAccessPolicies.Select(ap => ap.OrganizationUserId!.Value).ToList();
-                if (!await _sameOrganizationQuery.OrgUsersInTheSameOrgAsync(orgUserIds, resource.OrganizationId))
+                var orgUserIds = resource
+                    .UserAccessPolicies.Select(ap => ap.OrganizationUserId!.Value)
+                    .ToList();
+                if (
+                    !await _sameOrganizationQuery.OrgUsersInTheSameOrgAsync(
+                        orgUserIds,
+                        resource.OrganizationId
+                    )
+                )
                 {
                     return;
                 }
@@ -76,8 +106,15 @@ public class
 
             if (resource.GroupAccessPolicies != null && resource.GroupAccessPolicies.Any())
             {
-                var groupIds = resource.GroupAccessPolicies.Select(ap => ap.GroupId!.Value).ToList();
-                if (!await _sameOrganizationQuery.GroupsInTheSameOrgAsync(groupIds, resource.OrganizationId))
+                var groupIds = resource
+                    .GroupAccessPolicies.Select(ap => ap.GroupId!.Value)
+                    .ToList();
+                if (
+                    !await _sameOrganizationQuery.GroupsInTheSameOrgAsync(
+                        groupIds,
+                        resource.OrganizationId
+                    )
+                )
                 {
                     return;
                 }

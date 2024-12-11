@@ -18,7 +18,8 @@ public partial class MakeBlobNonNull : Migration
             defaultValue: new byte[0],
             oldClrType: typeof(byte[]),
             oldType: "longblob",
-            oldNullable: true);
+            oldNullable: true
+        );
     }
 
     /// <inheritdoc />
@@ -30,6 +31,7 @@ public partial class MakeBlobNonNull : Migration
             type: "longblob",
             nullable: true,
             oldClrType: typeof(byte[]),
-            oldType: "longblob");
+            oldType: "longblob"
+        );
     }
 }

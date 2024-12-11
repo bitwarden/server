@@ -39,7 +39,8 @@ public class SendsController : Controller
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
         GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext
+    )
     {
         _sendRepository = sendRepository;
         _userService = userService;
@@ -62,8 +63,10 @@ public class SendsController : Controller
         //}
 
         var guid = new Guid(CoreHelpers.Base64UrlDecode(id));
-        var (send, passwordRequired, passwordInvalid) =
-            await _sendService.AccessAsync(guid, model.Password);
+        var (send, passwordRequired, passwordInvalid) = await _sendService.AccessAsync(
+            guid,
+            model.Password
+        );
         if (passwordRequired)
         {
             return new UnauthorizedResult();
@@ -89,8 +92,11 @@ public class SendsController : Controller
 
     [AllowAnonymous]
     [HttpPost("{encodedSendId}/access/file/{fileId}")]
-    public async Task<IActionResult> GetSendFileDownloadData(string encodedSendId,
-        string fileId, [FromBody] SendAccessRequestModel model)
+    public async Task<IActionResult> GetSendFileDownloadData(
+        string encodedSendId,
+        string fileId,
+        [FromBody] SendAccessRequestModel model
+    )
     {
         // Uncomment whenever we want to require the `send-id` header
         //if (!_currentContext.HttpContext.Request.Headers.ContainsKey("Send-Id") ||
@@ -107,8 +113,8 @@ public class SendsController : Controller
             throw new BadRequestException("Could not locate send");
         }
 
-        var (url, passwordRequired, passwordInvalid) = await _sendService.GetSendFileDownloadUrlAsync(send, fileId,
-            model.Password);
+        var (url, passwordRequired, passwordInvalid) =
+            await _sendService.GetSendFileDownloadUrlAsync(send, fileId, model.Password);
 
         if (passwordRequired)
         {
@@ -124,11 +130,7 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
-        return new ObjectResult(new SendFileDownloadDataResponseModel()
-        {
-            Id = fileId,
-            Url = url,
-        });
+        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
 
     [HttpGet("{id}")]
@@ -175,19 +177,24 @@ public class SendsController : Controller
         }
 
         Send send = null;
-        await Request.GetSendFileAsync(async (stream, fileName, model) =>
-        {
-            model.ValidateCreation();
-            var userId = _userService.GetProperUserId(User).Value;
-            var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
-            send = madeSend;
-            await _sendService.SaveFileSendAsync(send, madeData, model.FileLength.GetValueOrDefault(0));
-            await _sendService.UploadFileToExistingSendAsync(stream, send);
-        });
+        await Request.GetSendFileAsync(
+            async (stream, fileName, model) =>
+            {
+                model.ValidateCreation();
+                var userId = _userService.GetProperUserId(User).Value;
+                var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
+                send = madeSend;
+                await _sendService.SaveFileSendAsync(
+                    send,
+                    madeData,
+                    model.FileLength.GetValueOrDefault(0)
+                );
+                await _sendService.UploadFileToExistingSendAsync(stream, send);
+            }
+        );
 
         return new SendResponseModel(send, _globalSettings);
     }
-
 
     [HttpPost("file/v2")]
     public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
@@ -204,7 +211,9 @@ public class SendsController : Controller
 
         if (model.FileLength.Value > SendService.MAX_FILE_SIZE)
         {
-            throw new BadRequestException($"Max file size is {SendService.MAX_FILE_SIZE_READABLE}.");
+            throw new BadRequestException(
+                $"Max file size is {SendService.MAX_FILE_SIZE_READABLE}."
+            );
         }
 
         model.ValidateCreation();
@@ -215,7 +224,7 @@ public class SendsController : Controller
         {
             Url = uploadUrl,
             FileUploadType = _sendFileStorageService.FileUploadType,
-            SendResponse = new SendResponseModel(send, _globalSettings)
+            SendResponse = new SendResponseModel(send, _globalSettings),
         };
     }
 
@@ -227,8 +236,14 @@ public class SendsController : Controller
         var send = await _sendRepository.GetByIdAsync(sendId);
         var fileData = JsonSerializer.Deserialize<SendFileData>(send?.Data);
 
-        if (send == null || send.Type != SendType.File || (send.UserId.HasValue && send.UserId.Value != userId) ||
-            !send.UserId.HasValue || fileData.Id != fileId || fileData.Validated)
+        if (
+            send == null
+            || send.Type != SendType.File
+            || (send.UserId.HasValue && send.UserId.Value != userId)
+            || !send.UserId.HasValue
+            || fileData.Id != fileId
+            || fileData.Validated
+        )
         {
             // Not found if Send isn't found, user doesn't have access, request is faulty,
             // or we've already validated the file. This last is to emulate create-only blob permissions for Azure
@@ -255,44 +270,58 @@ public class SendsController : Controller
         }
 
         var send = await _sendRepository.GetByIdAsync(new Guid(id));
-        await Request.GetFileAsync(async (stream) =>
-        {
-            await _sendService.UploadFileToExistingSendAsync(stream, send);
-        });
+        await Request.GetFileAsync(
+            async (stream) =>
+            {
+                await _sendService.UploadFileToExistingSendAsync(stream, send);
+            }
+        );
     }
 
     [AllowAnonymous]
     [HttpPost("file/validate/azure")]
     public async Task<ObjectResult> AzureValidateFile()
     {
-        return await ApiHelpers.HandleAzureEvents(Request, new Dictionary<string, Func<EventGridEvent, Task>>
-        {
+        return await ApiHelpers.HandleAzureEvents(
+            Request,
+            new Dictionary<string, Func<EventGridEvent, Task>>
             {
-                "Microsoft.Storage.BlobCreated", async (eventGridEvent) =>
                 {
-                    try
+                    "Microsoft.Storage.BlobCreated",
+                    async (eventGridEvent) =>
                     {
-                        var blobName = eventGridEvent.Subject.Split($"{AzureSendFileStorageService.FilesContainerName}/blobs/")[1];
-                        var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
-                        var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
-                        if (send == null)
+                        try
                         {
-                            if (_sendFileStorageService is AzureSendFileStorageService azureSendFileStorageService)
+                            var blobName = eventGridEvent.Subject.Split(
+                                $"{AzureSendFileStorageService.FilesContainerName}/blobs/"
+                            )[1];
+                            var sendId = AzureSendFileStorageService.SendIdFromBlobName(blobName);
+                            var send = await _sendRepository.GetByIdAsync(new Guid(sendId));
+                            if (send == null)
                             {
-                                await azureSendFileStorageService.DeleteBlobAsync(blobName);
+                                if (
+                                    _sendFileStorageService
+                                    is AzureSendFileStorageService azureSendFileStorageService
+                                )
+                                {
+                                    await azureSendFileStorageService.DeleteBlobAsync(blobName);
+                                }
+                                return;
                             }
+                            await _sendService.ValidateSendFile(send);
+                        }
+                        catch (Exception e)
+                        {
+                            _logger.LogError(
+                                e,
+                                $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}"
+                            );
                             return;
                         }
-                        await _sendService.ValidateSendFile(send);
                     }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, $"Uncaught exception occurred while handling event grid event: {JsonSerializer.Serialize(eventGridEvent)}");
-                        return;
-                    }
-                }
+                },
             }
-        });
+        );
     }
 
     [HttpPut("{id}")]

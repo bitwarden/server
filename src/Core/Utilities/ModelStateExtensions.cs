@@ -6,8 +6,8 @@ public static class ModelStateExtensions
 {
     public static string GetErrorMessage(this ModelStateDictionary modelState)
     {
-        var errors = modelState.Values
-            .SelectMany(v => v.Errors)
+        var errors = modelState
+            .Values.SelectMany(v => v.Errors)
             .Select(e => e.ErrorMessage)
             .ToList();
 

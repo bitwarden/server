@@ -7,7 +7,8 @@ namespace Bit.Core.Billing.Models;
 public class BillingHistoryInfo
 {
     public IEnumerable<BillingInvoice> Invoices { get; set; } = new List<BillingInvoice>();
-    public IEnumerable<BillingTransaction> Transactions { get; set; } = new List<BillingTransaction>();
+    public IEnumerable<BillingTransaction> Transactions { get; set; } =
+        new List<BillingTransaction>();
 
     public class BillingTransaction
     {
@@ -27,7 +28,8 @@ public class BillingHistoryInfo
         public DateTime CreatedDate { get; set; }
         public decimal Amount { get; set; }
         public bool? Refunded { get; set; }
-        public bool? PartiallyRefunded => !Refunded.GetValueOrDefault() && RefundedAmount.GetValueOrDefault() > 0;
+        public bool? PartiallyRefunded =>
+            !Refunded.GetValueOrDefault() && RefundedAmount.GetValueOrDefault() > 0;
         public decimal? RefundedAmount { get; set; }
         public TransactionType Type { get; set; }
         public PaymentMethodType? PaymentMethodType { get; set; }
@@ -55,5 +57,4 @@ public class BillingHistoryInfo
         public string Number { get; set; }
         public bool Paid { get; set; }
     }
-
 }

@@ -13,9 +13,10 @@ public class OrganizationUserReadCountByOrganizationIdQuery : IQuery<Organizatio
 
     public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
     {
-        var query = from ou in dbContext.OrganizationUsers
-                    where ou.OrganizationId == _organizationId
-                    select ou;
+        var query =
+            from ou in dbContext.OrganizationUsers
+            where ou.OrganizationId == _organizationId
+            select ou;
         return query;
     }
 }

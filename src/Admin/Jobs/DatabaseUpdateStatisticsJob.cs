@@ -11,19 +11,32 @@ public class DatabaseUpdateStatisticsJob : BaseJob
 
     public DatabaseUpdateStatisticsJob(
         IMaintenanceRepository maintenanceRepository,
-        ILogger<DatabaseUpdateStatisticsJob> logger)
+        ILogger<DatabaseUpdateStatisticsJob> logger
+    )
         : base(logger)
     {
         _maintenanceRepository = maintenanceRepository;
     }
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+    protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: UpdateStatisticsAsync");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Execute job task: UpdateStatisticsAsync"
+        );
         await _maintenanceRepository.UpdateStatisticsAsync();
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: UpdateStatisticsAsync");
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DisableCipherAutoStatsAsync");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Finished job task: UpdateStatisticsAsync"
+        );
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Execute job task: DisableCipherAutoStatsAsync"
+        );
         await _maintenanceRepository.DisableCipherAutoStatsAsync();
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DisableCipherAutoStatsAsync");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Finished job task: DisableCipherAutoStatsAsync"
+        );
     }
 }

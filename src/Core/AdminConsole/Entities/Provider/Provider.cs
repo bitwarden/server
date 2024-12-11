@@ -11,10 +11,12 @@ namespace Bit.Core.AdminConsole.Entities.Provider;
 public class Provider : ITableObject<Guid>, ISubscriber
 {
     public Guid Id { get; set; }
+
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
     /// </summary>
     public string? Name { get; set; }
+
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>

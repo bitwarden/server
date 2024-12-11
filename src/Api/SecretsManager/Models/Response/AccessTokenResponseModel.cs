@@ -19,9 +19,8 @@ public class AccessTokenResponseModel : ResponseModel
         RevisionDate = apiKey.RevisionDate;
     }
 
-    public AccessTokenResponseModel() : base(_objectName)
-    {
-    }
+    public AccessTokenResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
     public string Name { get; set; }

@@ -6,5 +6,7 @@ namespace Bit.Core.NotificationCenter.Queries.Interfaces;
 
 public interface IGetNotificationStatusDetailsForUserQuery
 {
-    Task<IEnumerable<NotificationStatusDetails>> GetByUserIdStatusFilterAsync(NotificationStatusFilter statusFilter);
+    Task<IEnumerable<NotificationStatusDetails>> GetByUserIdStatusFilterAsync(
+        NotificationStatusFilter statusFilter
+    );
 }

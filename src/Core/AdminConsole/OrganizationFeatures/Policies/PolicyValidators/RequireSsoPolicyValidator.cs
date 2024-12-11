@@ -24,15 +24,17 @@ public class RequireSsoPolicyValidator : IPolicyValidator
     {
         if (policyUpdate is not { Enabled: true })
         {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            return ssoConfig.ValidateDecryptionOptionsNotEnabled([
-                MemberDecryptionType.KeyConnector,
-                MemberDecryptionType.TrustedDeviceEncryption
-            ]);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(
+                policyUpdate.OrganizationId
+            );
+            return ssoConfig.ValidateDecryptionOptionsNotEnabled(
+                [MemberDecryptionType.KeyConnector, MemberDecryptionType.TrustedDeviceEncryption]
+            );
         }
 
         return "";
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) =>
+        Task.FromResult(0);
 }

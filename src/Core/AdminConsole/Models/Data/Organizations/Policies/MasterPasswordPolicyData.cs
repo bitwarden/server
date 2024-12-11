@@ -21,7 +21,10 @@ public class MasterPasswordPolicyData : IPolicyDataModel
             return;
         }
 
-        if (other.MinComplexity.HasValue && (!MinComplexity.HasValue || other.MinComplexity > MinComplexity))
+        if (
+            other.MinComplexity.HasValue
+            && (!MinComplexity.HasValue || other.MinComplexity > MinComplexity)
+        )
         {
             MinComplexity = other.MinComplexity;
         }

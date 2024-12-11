@@ -14,7 +14,8 @@ public class CurrentContextOrganization
         Id = orgUser.OrganizationId;
         Type = orgUser.Type;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
-        AccessSecretsManager = orgUser.AccessSecretsManager && orgUser.UseSecretsManager && orgUser.Enabled;
+        AccessSecretsManager =
+            orgUser.AccessSecretsManager && orgUser.UseSecretsManager && orgUser.Enabled;
     }
 
     public Guid Id { get; set; }

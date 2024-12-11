@@ -14,14 +14,19 @@ public class StaticClientStoreTests
         _store = new StaticClientStore(new GlobalSettings());
     }
 
-    [Params("mobile", "connector", "invalid", "a_much_longer_invalid_value_that_i_am_making_up", "WEB", "")]
+    [Params(
+        "mobile",
+        "connector",
+        "invalid",
+        "a_much_longer_invalid_value_that_i_am_making_up",
+        "WEB",
+        ""
+    )]
     public string ClientId { get; set; } = null!;
 
     [Benchmark]
     public Client? TryGetValue()
     {
-        return _store.ApiClients.TryGetValue(ClientId, out var client)
-          ? client
-          : null;
+        return _store.ApiClients.TryGetValue(ClientId, out var client) ? client : null;
     }
 }

@@ -56,12 +56,12 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
         var model = new EmailTokenRequestModel
         {
             NewEmail = $"{Guid.NewGuid()}@example.com",
-            MasterPasswordHash = "master_password_hash"
+            MasterPasswordHash = "master_password_hash",
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email-token")
         {
-            Content = JsonContent.Create(model)
+            Content = JsonContent.Create(model),
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
         var response = await client.SendAsync(message);
@@ -85,12 +85,12 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
             MasterPasswordHash = "master_password_hash",
             NewMasterPasswordHash = "master_password_hash",
             Token = "validtoken",
-            Key = "key"
+            Key = "key",
         };
 
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email")
         {
-            Content = JsonContent.Create(model)
+            Content = JsonContent.Create(model),
         };
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
         var response = await client.SendAsync(message);
@@ -103,22 +103,36 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
     private async Task<string> SetupOrganizationManagedAccount()
     {
         _factory.SubstituteService<IFeatureService>(featureService =>
-            featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true));
+            featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true)
+        );
 
         // Create the owner account
         var ownerEmail = $"{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);
 
         // Create the organization
-        var (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually2023,
-            ownerEmail: ownerEmail, passwordManagerSeats: 10, paymentMethod: PaymentMethodType.Card);
+        var (_organization, _) = await OrganizationTestHelpers.SignUpAsync(
+            _factory,
+            plan: PlanType.EnterpriseAnnually2023,
+            ownerEmail: ownerEmail,
+            passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card
+        );
 
         // Create a new organization member
-        var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
-            OrganizationUserType.Custom, new Permissions { AccessReports = true, ManageScim = true });
+        var (email, orgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory,
+            _organization.Id,
+            OrganizationUserType.Custom,
+            new Permissions { AccessReports = true, ManageScim = true }
+        );
 
         // Add a verified domain
-        await OrganizationTestHelpers.CreateVerifiedDomainAsync(_factory, _organization.Id, "bitwarden.com");
+        await OrganizationTestHelpers.CreateVerifiedDomainAsync(
+            _factory,
+            _organization.Id,
+            "bitwarden.com"
+        );
 
         return email;
     }

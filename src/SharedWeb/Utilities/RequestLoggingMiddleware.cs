@@ -16,7 +16,11 @@ public sealed class RequestLoggingMiddleware
     private readonly ILogger<RequestLoggingMiddleware> _logger;
     private readonly GlobalSettings _globalSettings;
 
-    public RequestLoggingMiddleware(RequestDelegate next, ILogger<RequestLoggingMiddleware> logger, GlobalSettings globalSettings)
+    public RequestLoggingMiddleware(
+        RequestDelegate next,
+        ILogger<RequestLoggingMiddleware> logger,
+        GlobalSettings globalSettings
+    )
     {
         _next = next;
         _logger = logger;
@@ -34,12 +38,17 @@ public sealed class RequestLoggingMiddleware
             });
         }
 
-        using (_logger.BeginScope(
-          new RequestLogScope(context.GetIpAddress(_globalSettings),
-            GetHeaderValue(context, "user-agent"),
-            GetHeaderValue(context, "device-type"),
-            GetHeaderValue(context, "device-type"),
-            GetHeaderValue(context, "bitwarden-client-version"))))
+        using (
+            _logger.BeginScope(
+                new RequestLogScope(
+                    context.GetIpAddress(_globalSettings),
+                    GetHeaderValue(context, "user-agent"),
+                    GetHeaderValue(context, "device-type"),
+                    GetHeaderValue(context, "device-type"),
+                    GetHeaderValue(context, "bitwarden-client-version")
+                )
+            )
+        )
         {
             return _next(context);
         }
@@ -55,12 +64,17 @@ public sealed class RequestLoggingMiddleware
         }
     }
 
-
     private sealed class RequestLogScope : IReadOnlyList<KeyValuePair<string, object?>>
     {
         private string? _cachedToString;
 
-        public RequestLogScope(string? ipAddress, string? userAgent, string? deviceType, string? origin, string? clientVersion)
+        public RequestLogScope(
+            string? ipAddress,
+            string? userAgent,
+            string? deviceType,
+            string? origin,
+            string? clientVersion
+        )
         {
             IpAddress = ipAddress;
             UserAgent = userAgent;
@@ -113,11 +127,13 @@ public sealed class RequestLoggingMiddleware
                 yield return this[i];
             }
         }
+
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public override string ToString()
         {
-            _cachedToString ??= $"IpAddress:{IpAddress} UserAgent:{UserAgent} DeviceType:{DeviceType} Origin:{Origin} ClientVersion:{ClientVersion}";
+            _cachedToString ??=
+                $"IpAddress:{IpAddress} UserAgent:{UserAgent} DeviceType:{DeviceType} Origin:{Origin} ClientVersion:{ClientVersion}";
             return _cachedToString;
         }
     }

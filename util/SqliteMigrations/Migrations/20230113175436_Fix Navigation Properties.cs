@@ -10,27 +10,18 @@ public partial class FixNavigationProperties : Migration
     {
         migrationBuilder.DropForeignKey(
             name: "FK_CollectionUsers_User_UserId",
-            table: "CollectionUsers");
+            table: "CollectionUsers"
+        );
 
-        migrationBuilder.DropForeignKey(
-            name: "FK_GroupUser_User_UserId",
-            table: "GroupUser");
+        migrationBuilder.DropForeignKey(name: "FK_GroupUser_User_UserId", table: "GroupUser");
 
-        migrationBuilder.DropIndex(
-            name: "IX_GroupUser_UserId",
-            table: "GroupUser");
+        migrationBuilder.DropIndex(name: "IX_GroupUser_UserId", table: "GroupUser");
 
-        migrationBuilder.DropIndex(
-            name: "IX_CollectionUsers_UserId",
-            table: "CollectionUsers");
+        migrationBuilder.DropIndex(name: "IX_CollectionUsers_UserId", table: "CollectionUsers");
 
-        migrationBuilder.DropColumn(
-            name: "UserId",
-            table: "GroupUser");
+        migrationBuilder.DropColumn(name: "UserId", table: "GroupUser");
 
-        migrationBuilder.DropColumn(
-            name: "UserId",
-            table: "CollectionUsers");
+        migrationBuilder.DropColumn(name: "UserId", table: "CollectionUsers");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
@@ -39,36 +30,42 @@ public partial class FixNavigationProperties : Migration
             name: "UserId",
             table: "GroupUser",
             type: "TEXT",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<Guid>(
             name: "UserId",
             table: "CollectionUsers",
             type: "TEXT",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_GroupUser_UserId",
             table: "GroupUser",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_CollectionUsers_UserId",
             table: "CollectionUsers",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_CollectionUsers_User_UserId",
             table: "CollectionUsers",
             column: "UserId",
             principalTable: "User",
-            principalColumn: "Id");
+            principalColumn: "Id"
+        );
 
         migrationBuilder.AddForeignKey(
             name: "FK_GroupUser_User_UserId",
             table: "GroupUser",
             column: "UserId",
             principalTable: "User",
-            principalColumn: "Id");
+            principalColumn: "Id"
+        );
     }
 }

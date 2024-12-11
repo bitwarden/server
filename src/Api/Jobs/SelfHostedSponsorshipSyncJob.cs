@@ -23,7 +23,8 @@ public class SelfHostedSponsorshipSyncJob : BaseJob
         IOrganizationConnectionRepository organizationConnectionRepository,
         ILicensingService licensingService,
         ILogger<SelfHostedSponsorshipSyncJob> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
         : base(logger)
     {
         _serviceProvider = serviceProvider;
@@ -37,7 +38,9 @@ public class SelfHostedSponsorshipSyncJob : BaseJob
     {
         if (!_globalSettings.EnableCloudCommunication)
         {
-            _logger.LogInformation("Skipping Organization sync with cloud - Cloud communication is disabled in global settings");
+            _logger.LogInformation(
+                "Skipping Organization sync with cloud - Cloud communication is disabled in global settings"
+            );
             return;
         }
 
@@ -45,20 +48,34 @@ public class SelfHostedSponsorshipSyncJob : BaseJob
 
         using (var scope = _serviceProvider.CreateScope())
         {
-            var syncCommand = scope.ServiceProvider.GetRequiredService<ISelfHostedSyncSponsorshipsCommand>();
+            var syncCommand =
+                scope.ServiceProvider.GetRequiredService<ISelfHostedSyncSponsorshipsCommand>();
             foreach (var org in organizations)
             {
-                var connection = (await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(org.Id, OrganizationConnectionType.CloudBillingSync)).FirstOrDefault();
+                var connection = (
+                    await _organizationConnectionRepository.GetEnabledByOrganizationIdTypeAsync(
+                        org.Id,
+                        OrganizationConnectionType.CloudBillingSync
+                    )
+                ).FirstOrDefault();
                 if (connection != null)
                 {
                     try
                     {
                         var config = connection.GetConfig<BillingSyncConfig>();
-                        await syncCommand.SyncOrganization(org.Id, config.CloudOrganizationId, connection);
+                        await syncCommand.SyncOrganization(
+                            org.Id,
+                            config.CloudOrganizationId,
+                            connection
+                        );
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Sponsorship sync for organization {OrganizationName} Failed", org.DisplayName());
+                        _logger.LogError(
+                            ex,
+                            "Sponsorship sync for organization {OrganizationName} Failed",
+                            org.DisplayName()
+                        );
                     }
                 }
             }

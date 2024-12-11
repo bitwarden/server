@@ -12,6 +12,7 @@ namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 internal class TransactionBuilder : ISpecimenBuilder
 {
     public bool OrganizationOwned { get; set; }
+
     public object Create(object request, ISpecimenContext context)
     {
         if (context == null)
@@ -28,8 +29,7 @@ internal class TransactionBuilder : ISpecimenBuilder
         var fixture = new Fixture();
         if (!OrganizationOwned)
         {
-            fixture.Customize<Transaction>(composer => composer
-                    .Without(c => c.OrganizationId));
+            fixture.Customize<Transaction>(composer => composer.Without(c => c.OrganizationId));
         }
         fixture.Customizations.Add(new MaxLengthStringRelay());
         var obj = fixture.WithAutoNSubstitutions().Create<Transaction>();
@@ -40,6 +40,7 @@ internal class TransactionBuilder : ISpecimenBuilder
 internal class EfTransaction : ICustomization
 {
     public bool OrganizationOwned { get; set; }
+
     public void Customize(IFixture fixture)
     {
         fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
@@ -55,15 +56,12 @@ internal class EfTransaction : ICustomization
 
 internal class EfUserTransactionAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfUserTransactionAutoDataAttribute() : base(new SutProviderCustomization(), new EfTransaction())
-    { }
+    public EfUserTransactionAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfTransaction()) { }
 }
 
 internal class EfOrganizationTransactionAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfOrganizationTransactionAutoDataAttribute() : base(new SutProviderCustomization(), new EfTransaction()
-    {
-        OrganizationOwned = true,
-    })
-    { }
+    public EfOrganizationTransactionAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfTransaction() { OrganizationOwned = true }) { }
 }

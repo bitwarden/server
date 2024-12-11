@@ -32,18 +32,16 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         services.AddDataProtection();
         var serviceProvider = services.BuildServiceProvider();
 
-        var globalSettings = new GlobalSettingsFactory(args)
-            .GlobalSettings;
+        var globalSettings = new GlobalSettingsFactory(args).GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.Sqlite?.ConnectionString ?? "Data Source=:memory:";
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No Sqlite connection string found.");
         }
-        optionsBuilder.UseSqlite(
-            connectionString,
-            b => b.MigrationsAssembly("SqliteMigrations"))
-           .UseApplicationServiceProvider(serviceProvider);
+        optionsBuilder
+            .UseSqlite(connectionString, b => b.MigrationsAssembly("SqliteMigrations"))
+            .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

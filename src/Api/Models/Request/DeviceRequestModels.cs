@@ -9,21 +9,21 @@ public class DeviceRequestModel
 {
     [Required]
     public DeviceType? Type { get; set; }
+
     [Required]
     [StringLength(50)]
     public string Name { get; set; }
+
     [Required]
     [StringLength(50)]
     public string Identifier { get; set; }
+
     [StringLength(255)]
     public string PushToken { get; set; }
 
     public Device ToDevice(Guid? userId = null)
     {
-        return ToDevice(new Device
-        {
-            UserId = userId == null ? default(Guid) : userId.Value
-        });
+        return ToDevice(new Device { UserId = userId == null ? default(Guid) : userId.Value });
     }
 
     public Device ToDevice(Device existingDevice)

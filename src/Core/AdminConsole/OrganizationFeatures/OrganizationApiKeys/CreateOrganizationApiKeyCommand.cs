@@ -10,13 +10,17 @@ public class CreateOrganizationApiKeyCommand : ICreateOrganizationApiKeyCommand
 {
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
-    public CreateOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
+    public CreateOrganizationApiKeyCommand(
+        IOrganizationApiKeyRepository organizationApiKeyRepository
+    )
     {
         _organizationApiKeyRepository = organizationApiKeyRepository;
     }
 
-    public async Task<OrganizationApiKey> CreateAsync(Guid organizationId,
-        OrganizationApiKeyType organizationApiKeyType)
+    public async Task<OrganizationApiKey> CreateAsync(
+        Guid organizationId,
+        OrganizationApiKeyType organizationApiKeyType
+    )
     {
         var apiKey = new OrganizationApiKey
         {

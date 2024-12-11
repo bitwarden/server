@@ -11,7 +11,8 @@ public partial class OrganizationDomainClaimRenameNextRunCount : Migration
         migrationBuilder.RenameColumn(
             name: "NextRunCount",
             table: "OrganizationDomain",
-            newName: "JobRunCount");
+            newName: "JobRunCount"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
@@ -19,6 +20,7 @@ public partial class OrganizationDomainClaimRenameNextRunCount : Migration
         migrationBuilder.RenameColumn(
             name: "JobRunCount",
             table: "OrganizationDomain",
-            newName: "NextRunCount");
+            newName: "NextRunCount"
+        );
     }
 }

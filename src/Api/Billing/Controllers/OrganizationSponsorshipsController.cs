@@ -52,7 +52,8 @@ public class OrganizationSponsorshipsController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         IPolicyRepository policyRepository,
-        IFeatureService featureService)
+        IFeatureService featureService
+    )
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _organizationRepository = organizationRepository;
@@ -74,15 +75,27 @@ public class OrganizationSponsorshipsController : Controller
     [Authorize("Application")]
     [HttpPost("{sponsoringOrgId}/families-for-enterprise")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task CreateSponsorship(Guid sponsoringOrgId, [FromBody] OrganizationSponsorshipCreateRequestModel model)
+    public async Task CreateSponsorship(
+        Guid sponsoringOrgId,
+        [FromBody] OrganizationSponsorshipCreateRequestModel model
+    )
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
 
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
-            model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
-        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
+            await _organizationUserRepository.GetByOrganizationAsync(
+                sponsoringOrgId,
+                _currentContext.UserId ?? default
+            ),
+            model.PlanSponsorshipType,
+            model.SponsoredEmail,
+            model.FriendlyName
+        );
+        await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
+            sponsorship,
+            sponsoringOrg.Name
+        );
     }
 
     [Authorize("Application")]
@@ -90,27 +103,43 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task ResendSponsorshipOffer(Guid sponsoringOrgId)
     {
-        var sponsoringOrgUser = await _organizationUserRepository
-            .GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default);
+        var sponsoringOrgUser = await _organizationUserRepository.GetByOrganizationAsync(
+            sponsoringOrgId,
+            _currentContext.UserId ?? default
+        );
 
         await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(
             await _organizationRepository.GetByIdAsync(sponsoringOrgId),
             sponsoringOrgUser,
-            await _organizationSponsorshipRepository
-                .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id));
+            await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(
+                sponsoringOrgUser.Id
+            )
+        );
     }
 
     [Authorize("Application")]
     [HttpPost("validate-token")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken([FromQuery] string sponsorshipToken)
+    public async Task<PreValidateSponsorshipResponseModel> PreValidateSponsorshipToken(
+        [FromQuery] string sponsorshipToken
+    )
     {
         var isFreeFamilyPolicyEnabled = false;
-        var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
-        if (isValid && _featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship) && sponsorship.SponsoringOrganizationId.HasValue)
+        var (isValid, sponsorship) =
+            await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(
+                sponsorshipToken,
+                (await CurrentUser).Email
+            );
+        if (
+            isValid
+            && _featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship)
+            && sponsorship.SponsoringOrganizationId.HasValue
+        )
         {
-            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsorship.SponsoringOrganizationId.Value,
-                PolicyType.FreeFamiliesSponsorshipPolicy);
+            var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
+                sponsorship.SponsoringOrganizationId.Value,
+                PolicyType.FreeFamiliesSponsorshipPolicy
+            );
             isFreeFamilyPolicyEnabled = policy?.Enabled ?? false;
         }
 
@@ -122,9 +151,16 @@ public class OrganizationSponsorshipsController : Controller
     [Authorize("Application")]
     [HttpPost("redeem")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task RedeemSponsorship([FromQuery] string sponsorshipToken, [FromBody] OrganizationSponsorshipRedeemRequestModel model)
+    public async Task RedeemSponsorship(
+        [FromQuery] string sponsorshipToken,
+        [FromBody] OrganizationSponsorshipRedeemRequestModel model
+    )
     {
-        var (valid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
+        var (valid, sponsorship) =
+            await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(
+                sponsorshipToken,
+                (await CurrentUser).Email
+            );
 
         if (!valid)
         {
@@ -133,26 +169,44 @@ public class OrganizationSponsorshipsController : Controller
 
         if (!await _currentContext.OrganizationOwner(model.SponsoredOrganizationId))
         {
-            throw new BadRequestException("Can only redeem sponsorship for an organization you own.");
+            throw new BadRequestException(
+                "Can only redeem sponsorship for an organization you own."
+            );
         }
 
         await _setUpSponsorshipCommand.SetUpSponsorshipAsync(
             sponsorship,
-            await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId));
+            await _organizationRepository.GetByIdAsync(model.SponsoredOrganizationId)
+        );
     }
 
     [Authorize("Installation")]
     [HttpPost("sync")]
-    public async Task<OrganizationSponsorshipSyncResponseModel> Sync([FromBody] OrganizationSponsorshipSyncRequestModel model)
+    public async Task<OrganizationSponsorshipSyncResponseModel> Sync(
+        [FromBody] OrganizationSponsorshipSyncRequestModel model
+    )
     {
-        var sponsoringOrg = await _organizationRepository.GetByIdAsync(model.SponsoringOrganizationCloudId);
-        if (!await _validateBillingSyncKeyCommand.ValidateBillingSyncKeyAsync(sponsoringOrg, model.BillingSyncKey))
+        var sponsoringOrg = await _organizationRepository.GetByIdAsync(
+            model.SponsoringOrganizationCloudId
+        );
+        if (
+            !await _validateBillingSyncKeyCommand.ValidateBillingSyncKeyAsync(
+                sponsoringOrg,
+                model.BillingSyncKey
+            )
+        )
         {
             throw new BadRequestException("Invalid Billing Sync Key");
         }
 
-        var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(sponsoringOrg, model.ToOrganizationSponsorshipSync().SponsorshipsBatch);
-        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(sponsoringOrg.DisplayName(), offersToSend);
+        var (syncResponseData, offersToSend) = await _syncSponsorshipsCommand.SyncOrganization(
+            sponsoringOrg,
+            model.ToOrganizationSponsorshipSync().SponsorshipsBatch
+        );
+        await _sendSponsorshipOfferCommand.BulkSendSponsorshipOfferAsync(
+            sponsoringOrg.DisplayName(),
+            offersToSend
+        );
         return new OrganizationSponsorshipSyncResponseModel(syncResponseData);
     }
 
@@ -162,15 +216,19 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RevokeSponsorship(Guid sponsoringOrganizationId)
     {
-
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrganizationId, _currentContext.UserId ?? default);
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(
+            sponsoringOrganizationId,
+            _currentContext.UserId ?? default
+        );
         if (_currentContext.UserId != orgUser?.UserId)
         {
             throw new BadRequestException("Can only revoke a sponsorship you granted.");
         }
 
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(orgUser.Id);
+        var existingOrgSponsorship =
+            await _organizationSponsorshipRepository.GetBySponsoringOrganizationUserIdAsync(
+                orgUser.Id
+            );
 
         await _revokeSponsorshipCommand.RevokeSponsorshipAsync(existingOrgSponsorship);
     }
@@ -181,14 +239,17 @@ public class OrganizationSponsorshipsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task RemoveSponsorship(Guid sponsoredOrgId)
     {
-
         if (!await _currentContext.OrganizationOwner(sponsoredOrgId))
         {
-            throw new BadRequestException("Only the owner of an organization can remove sponsorship.");
+            throw new BadRequestException(
+                "Only the owner of an organization can remove sponsorship."
+            );
         }
 
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoredOrganizationIdAsync(sponsoredOrgId);
+        var existingOrgSponsorship =
+            await _organizationSponsorshipRepository.GetBySponsoredOrganizationIdAsync(
+                sponsoredOrgId
+            );
 
         await _removeSponsorshipCommand.RemoveSponsorshipAsync(existingOrgSponsorship);
     }
@@ -203,7 +264,10 @@ public class OrganizationSponsorshipsController : Controller
             throw new NotFoundException();
         }
 
-        var lastSyncDate = await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(sponsoringOrg.Id);
+        var lastSyncDate =
+            await _organizationSponsorshipRepository.GetLatestSyncDateBySponsoringOrganizationIdAsync(
+                sponsoringOrg.Id
+            );
         return new OrganizationSponsorshipSyncStatusResponseModel(lastSyncDate);
     }
 

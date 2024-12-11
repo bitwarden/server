@@ -2,8 +2,7 @@
 
 public static class BitwardenClient
 {
-    public const string
-        Web = "web",
+    public const string Web = "web",
         Browser = "browser",
         Desktop = "desktop",
         Mobile = "mobile",

@@ -6,7 +6,8 @@ using Bit.Core.Vault.Repositories;
 
 namespace Bit.Api.KeyManagement.Validators;
 
-public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>
+public class CipherRotationValidator
+    : IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>
 {
     private readonly ICipherRepository _cipherRepository;
 
@@ -15,7 +16,10 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
         _cipherRepository = cipherRepository;
     }
 
-    public async Task<IEnumerable<Cipher>> ValidateAsync(User user, IEnumerable<CipherWithIdRequestModel> ciphers)
+    public async Task<IEnumerable<Cipher>> ValidateAsync(
+        User user,
+        IEnumerable<CipherWithIdRequestModel> ciphers
+    )
     {
         var result = new List<Cipher>();
 
@@ -26,7 +30,7 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
         }
 
         var existingUserCiphers = existingCiphers.Where(c => c.OrganizationId == null);
-        if (existingUserCiphers.Count() == 0)
+        if (!existingUserCiphers.Any())
         {
             return result;
         }
@@ -36,7 +40,9 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
             var cipher = ciphers.FirstOrDefault(c => c.Id == existing.Id);
             if (cipher == null)
             {
-                throw new BadRequestException("All existing ciphers must be included in the rotation.");
+                throw new BadRequestException(
+                    "All existing ciphers must be included in the rotation."
+                );
             }
             result.Add(cipher.ToCipher(existing));
         }

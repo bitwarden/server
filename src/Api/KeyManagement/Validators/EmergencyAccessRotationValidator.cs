@@ -7,21 +7,28 @@ using Bit.Core.Services;
 
 namespace Bit.Api.KeyManagement.Validators;
 
-public class EmergencyAccessRotationValidator : IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
-    IEnumerable<EmergencyAccess>>
+public class EmergencyAccessRotationValidator
+    : IRotationValidator<
+        IEnumerable<EmergencyAccessWithIdRequestModel>,
+        IEnumerable<EmergencyAccess>
+    >
 {
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IUserService _userService;
 
-    public EmergencyAccessRotationValidator(IEmergencyAccessRepository emergencyAccessRepository,
-        IUserService userService)
+    public EmergencyAccessRotationValidator(
+        IEmergencyAccessRepository emergencyAccessRepository,
+        IUserService userService
+    )
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _userService = userService;
     }
 
-    public async Task<IEnumerable<EmergencyAccess>> ValidateAsync(User user,
-        IEnumerable<EmergencyAccessWithIdRequestModel> emergencyAccessKeys)
+    public async Task<IEnumerable<EmergencyAccess>> ValidateAsync(
+        User user,
+        IEnumerable<EmergencyAccessWithIdRequestModel> emergencyAccessKeys
+    )
     {
         var result = new List<EmergencyAccess>();
 
@@ -38,12 +45,16 @@ public class EmergencyAccessRotationValidator : IRotationValidator<IEnumerable<E
             var emergencyAccess = emergencyAccessKeys.FirstOrDefault(c => c.Id == ea.Id);
             if (emergencyAccess == null)
             {
-                throw new BadRequestException("All existing emergency access keys must be included in the rotation.");
+                throw new BadRequestException(
+                    "All existing emergency access keys must be included in the rotation."
+                );
             }
 
             if (emergencyAccess.KeyEncrypted == null)
             {
-                throw new BadRequestException("Emergency access keys cannot be set to null during rotation.");
+                throw new BadRequestException(
+                    "Emergency access keys cannot be set to null during rotation."
+                );
             }
 
             result.Add(emergencyAccess.ToEmergencyAccess(ea));

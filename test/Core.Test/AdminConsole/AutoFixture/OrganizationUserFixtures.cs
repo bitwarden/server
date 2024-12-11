@@ -11,7 +11,10 @@ public class OrganizationUserCustomization : ICustomization
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
 
-    public OrganizationUserCustomization(OrganizationUserStatusType status, OrganizationUserType type)
+    public OrganizationUserCustomization(
+        OrganizationUserStatusType status,
+        OrganizationUserType type
+    )
     {
         Status = status;
         Type = type;
@@ -19,9 +22,9 @@ public class OrganizationUserCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<OrganizationUser>(composer => composer
-            .With(o => o.Type, Type)
-            .With(o => o.Status, Status));
+        fixture.Customize<OrganizationUser>(composer =>
+            composer.With(o => o.Type, Type).With(o => o.Status, Status)
+        );
     }
 }
 
@@ -32,7 +35,8 @@ public class OrganizationUserAttribute : CustomizeAttribute
 
     public OrganizationUserAttribute(
         OrganizationUserStatusType status = OrganizationUserStatusType.Confirmed,
-        OrganizationUserType type = OrganizationUserType.User)
+        OrganizationUserType type = OrganizationUserType.User
+    )
     {
         _status = status;
         _type = type;

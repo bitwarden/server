@@ -12,7 +12,8 @@ public partial class OrganizationUserAccessAllDefaultValue : Migration
     {
         migrationBuilder.DropIndex(
             name: "IX_OrganizationUser_UserId_OrganizationId_Status",
-            table: "OrganizationUser");
+            table: "OrganizationUser"
+        );
 
         migrationBuilder.AlterColumn<bool>(
             name: "AccessAll",
@@ -21,7 +22,8 @@ public partial class OrganizationUserAccessAllDefaultValue : Migration
             nullable: false,
             defaultValue: false,
             oldClrType: typeof(bool),
-            oldType: "INTEGER");
+            oldType: "INTEGER"
+        );
     }
 
     /// <inheritdoc />
@@ -34,11 +36,13 @@ public partial class OrganizationUserAccessAllDefaultValue : Migration
             nullable: false,
             oldClrType: typeof(bool),
             oldType: "INTEGER",
-            oldDefaultValue: false);
+            oldDefaultValue: false
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationUser_UserId_OrganizationId_Status",
             table: "OrganizationUser",
-            columns: new[] { "UserId", "OrganizationId", "Status" });
+            columns: new[] { "UserId", "OrganizationId", "Status" }
+        );
     }
 }

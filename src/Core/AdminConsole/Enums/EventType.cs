@@ -59,7 +59,7 @@ public enum EventType : int
     OrganizationUser_ApprovedAuthRequest = 1513,
     OrganizationUser_RejectedAuthRequest = 1514,
     OrganizationUser_Deleted = 1515, // Both user and organization user data were deleted
-    OrganizationUser_Left = 1516,    // User voluntarily left the organization
+    OrganizationUser_Left = 1516, // User voluntarily left the organization
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,

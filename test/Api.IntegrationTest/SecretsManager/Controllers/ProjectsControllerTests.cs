@@ -58,9 +58,17 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task ListByOrganization_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task ListByOrganization_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
@@ -79,7 +87,9 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ProjectResponseModel>>();
+        var result = await response.Content.ReadFromJsonAsync<
+            ListResponseModel<ProjectResponseModel>
+        >();
         Assert.NotNull(result);
         Assert.Empty(result.Data);
     }
@@ -94,7 +104,9 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ProjectResponseModel>>();
+        var result = await response.Content.ReadFromJsonAsync<
+            ListResponseModel<ProjectResponseModel>
+        >();
         Assert.NotNull(result);
         Assert.NotEmpty(result.Data);
         Assert.Equal(projectIds.Count, result.Data.Count());
@@ -108,9 +120,17 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task Create_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task Create_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
@@ -127,7 +147,10 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (_, organization) = await SetupProjectsWithAccessAsync(permissionType);
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
 
-        var response = await _client.PostAsJsonAsync($"/organizations/{organization.Id}/projects", request);
+        var response = await _client.PostAsJsonAsync(
+            $"/organizations/{organization.Id}/projects",
+            request
+        );
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -144,7 +167,10 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
-            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(
+                OrganizationUserType.User,
+                true
+            );
             await _loginHelper.LoginAsync(email);
             orgUserId = orgUser.Id;
             currentUserId = orgUser.UserId!.Value;
@@ -169,7 +195,10 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Null(createdProject.DeletedDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(createdProject.Id, currentUserId);
+        var accessPolicies = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(
+            createdProject.Id,
+            currentUserId
+        );
         Assert.NotNull(accessPolicies);
         var ap = (UserProjectAccessPolicy)accessPolicies.First();
         Assert.Equal(createdProject.Id, ap.GrantedProjectId);
@@ -188,16 +217,22 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task Update_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task Update_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
+        var initialProject = await _projectRepository.CreateAsync(
+            new Project { OrganizationId = org.Id, Name = _mockEncryptedString }
+        );
 
         var mockEncryptedString2 =
             "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
@@ -247,7 +282,10 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
                 "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
         };
 
-        var response = await _client.PutAsJsonAsync("/projects/c53de509-4581-402c-8cbd-f26d2c516fba", request);
+        var response = await _client.PutAsJsonAsync(
+            "/projects/c53de509-4581-402c-8cbd-f26d2c516fba",
+            request
+        );
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -259,11 +297,9 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _loginHelper.LoginAsync(email);
 
-        var project = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
+        var project = await _projectRepository.CreateAsync(
+            new Project { OrganizationId = org.Id, Name = _mockEncryptedString }
+        );
 
         var request = new ProjectUpdateRequestModel
         {
@@ -284,16 +320,22 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task Get_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task Get_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
-        var project = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
+        var project = await _projectRepository.CreateAsync(
+            new Project { OrganizationId = org.Id, Name = _mockEncryptedString }
+        );
 
         var response = await _client.GetAsync($"/projects/{project.Id}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -306,11 +348,9 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _loginHelper.LoginAsync(email);
 
-        var createdProject = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
+        var createdProject = await _projectRepository.CreateAsync(
+            new Project { OrganizationId = org.Id, Name = _mockEncryptedString }
+        );
 
         var response = await _client.GetAsync($"/projects/{createdProject.Id}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -323,11 +363,9 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _loginHelper.LoginAsync(email);
 
-        var createdProject = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
+        var createdProject = await _projectRepository.CreateAsync(
+            new Project { OrganizationId = org.Id, Name = _mockEncryptedString }
+        );
 
         await _client.PostAsync("/projects/delete", JsonContent.Create(createdProject.Id));
 
@@ -360,9 +398,17 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(true, false, false)]
     [InlineData(true, false, true)]
     [InlineData(true, true, false)]
-    public async Task Delete_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    public async Task Delete_SmAccessDenied_NotFound(
+        bool useSecrets,
+        bool accessSecrets,
+        bool organizationEnabled
+    )
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        var (org, _) = await _organizationHelper.Initialize(
+            useSecrets,
+            accessSecrets,
+            organizationEnabled
+        );
         await _loginHelper.LoginAsync(_email);
 
         var projectIds = await CreateProjectsAsync(org.Id);
@@ -382,10 +428,11 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         var response = await _client.PostAsync("/projects/delete", JsonContent.Create(projectIds));
 
-        var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
+        var results = await response.Content.ReadFromJsonAsync<
+            ListResponseModel<BulkDeleteResponseModel>
+        >();
         Assert.NotNull(results);
-        Assert.Equal(projectIds.OrderBy(x => x),
-            results.Data.Select(x => x.Id).OrderBy(x => x));
+        Assert.Equal(projectIds.OrderBy(x => x), results.Data.Select(x => x.Id).OrderBy(x => x));
         Assert.All(results.Data, item => Assert.Equal("access denied", item.Error));
     }
 
@@ -399,10 +446,11 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var response = await _client.PostAsync("/projects/delete", JsonContent.Create(projectIds));
         response.EnsureSuccessStatusCode();
 
-        var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
+        var results = await response.Content.ReadFromJsonAsync<
+            ListResponseModel<BulkDeleteResponseModel>
+        >();
         Assert.NotNull(results);
-        Assert.Equal(projectIds.OrderBy(x => x),
-            results.Data.Select(x => x.Id).OrderBy(x => x));
+        Assert.Equal(projectIds.OrderBy(x => x), results.Data.Select(x => x.Id).OrderBy(x => x));
         Assert.DoesNotContain(results.Data, x => x.Error != null);
 
         var projects = await _projectRepository.GetManyWithSecretsByIds(projectIds);
@@ -414,19 +462,19 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var projectIds = new List<Guid>();
         for (var i = 0; i < numberToCreate; i++)
         {
-            var project = await _projectRepository.CreateAsync(new Project
-            {
-                OrganizationId = orgId,
-                Name = _mockEncryptedString,
-            });
+            var project = await _projectRepository.CreateAsync(
+                new Project { OrganizationId = orgId, Name = _mockEncryptedString }
+            );
             projectIds.Add(project.Id);
         }
 
         return projectIds;
     }
 
-    private async Task<(List<Guid>, Organization)> SetupProjectsWithAccessAsync(PermissionType permissionType,
-        int projectsToCreate = 3)
+    private async Task<(List<Guid>, Organization)> SetupProjectsWithAccessAsync(
+        PermissionType permissionType,
+        int projectsToCreate = 3
+    )
     {
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
@@ -437,16 +485,20 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             return (projectIds, org);
         }
 
-        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(
+            OrganizationUserType.User,
+            true
+        );
         await _loginHelper.LoginAsync(email);
 
-        var accessPolicies = projectIds.Select(projectId => new UserProjectAccessPolicy
-        {
-            GrantedProjectId = projectId,
-            OrganizationUserId = orgUser.Id,
-            Read = true,
-            Write = true,
-        })
+        var accessPolicies = projectIds
+            .Select(projectId => new UserProjectAccessPolicy
+            {
+                GrantedProjectId = projectId,
+                OrganizationUserId = orgUser.Id,
+                Read = true,
+                Write = true,
+            })
             .Cast<BaseAccessPolicy>()
             .ToList();
 
@@ -460,25 +512,29 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _loginHelper.LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
+        var initialProject = await _projectRepository.CreateAsync(
+            new Project { OrganizationId = org.Id, Name = _mockEncryptedString }
+        );
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
             return initialProject;
         }
 
-        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(
+            OrganizationUserType.User,
+            true
+        );
         await _loginHelper.LoginAsync(email);
 
         var accessPolicies = new List<BaseAccessPolicy>
         {
             new UserProjectAccessPolicy
             {
-                GrantedProjectId = initialProject.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                GrantedProjectId = initialProject.Id,
+                OrganizationUserId = orgUser.Id,
+                Read = true,
+                Write = true,
             },
         };
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);

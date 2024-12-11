@@ -16,7 +16,8 @@ public class MultiServicePushNotificationService : IPushNotificationService
     public MultiServicePushNotificationService(
         [FromKeyedServices("implementation")] IEnumerable<IPushNotificationService> services,
         ILogger<MultiServicePushNotificationService> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _services = services;
 
@@ -24,7 +25,13 @@ public class MultiServicePushNotificationService : IPushNotificationService
         _logger.LogInformation("Hub services: {Services}", _services.Count());
         globalSettings?.NotificationHubPool?.NotificationHubs?.ForEach(hub =>
         {
-            _logger.LogInformation("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
+            _logger.LogInformation(
+                "HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}",
+                hub.HubName,
+                hub.EnableSendTracing,
+                hub.RegistrationStartDate,
+                hub.RegistrationEndDate
+            );
         });
     }
 
@@ -130,17 +137,31 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public Task SendPayloadToUserAsync(
+        string userId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
-        PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId));
+        PushToServices(
+            (s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId)
+        );
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+    public Task SendPayloadToOrganizationAsync(
+        string orgId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    )
     {
-        PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId));
+        PushToServices(
+            (s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId)
+        );
         return Task.FromResult(0);
     }
 

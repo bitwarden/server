@@ -10,6 +10,7 @@ public class CollectionRequestModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
+
     [StringLength(300)]
     public string ExternalId { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
@@ -17,10 +18,7 @@ public class CollectionRequestModel
 
     public Collection ToCollection(Guid orgId)
     {
-        return ToCollection(new Collection
-        {
-            OrganizationId = orgId
-        });
+        return ToCollection(new Collection { OrganizationId = orgId });
     }
 
     public virtual Collection ToCollection(Collection existingCollection)

@@ -24,7 +24,8 @@ public class RequireFeatureAttribute : ActionFilterAttribute
 
     public override void OnActionExecuting(ActionExecutingContext context)
     {
-        var featureService = context.HttpContext.RequestServices.GetRequiredService<IFeatureService>();
+        var featureService =
+            context.HttpContext.RequestServices.GetRequiredService<IFeatureService>();
 
         if (!featureService.IsEnabled(_featureFlagKey))
         {

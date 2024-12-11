@@ -11,17 +11,17 @@ public static class Utilities
 
     public static async Task<SubscriptionSuspension> GetSubscriptionSuspensionAsync(
         IStripeAdapter stripeAdapter,
-        Subscription subscription)
+        Subscription subscription
+    )
     {
         if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
         {
             return null;
         }
 
-        var openInvoices = await stripeAdapter.InvoiceSearchAsync(new InvoiceSearchOptions
-        {
-            Query = $"subscription:'{subscription.Id}' status:'open'"
-        });
+        var openInvoices = await stripeAdapter.InvoiceSearchAsync(
+            new InvoiceSearchOptions { Query = $"subscription:'{subscription.Id}' status:'open'" }
+        );
 
         if (openInvoices.Count == 0)
         {
@@ -48,7 +48,8 @@ public static class Utilities
                     return new SubscriptionSuspension(
                         firstOverdueInvoice.Created.AddDays(gracePeriod),
                         firstOverdueInvoice.PeriodEnd,
-                        gracePeriod);
+                        gracePeriod
+                    );
                 }
             case "send_invoice":
                 {
@@ -66,9 +67,11 @@ public static class Utilities
                     return new SubscriptionSuspension(
                         firstOverdueInvoice.DueDate.Value.AddDays(gracePeriod),
                         firstOverdueInvoice.PeriodEnd,
-                        gracePeriod);
+                        gracePeriod
+                    );
                 }
-            default: return null;
+            default:
+                return null;
         }
     }
 
@@ -86,6 +89,7 @@ public static class Utilities
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,
-            customer.Address.State);
+            customer.Address.State
+        );
     }
 }

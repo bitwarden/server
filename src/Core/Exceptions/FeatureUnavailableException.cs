@@ -5,10 +5,8 @@
 /// </summary>
 public class FeatureUnavailableException : NotFoundException
 {
-    public FeatureUnavailableException()
-    { }
+    public FeatureUnavailableException() { }
 
     public FeatureUnavailableException(string message)
-        : base(message)
-    { }
+        : base(message) { }
 }

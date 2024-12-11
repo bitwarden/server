@@ -8,7 +8,8 @@ public class AccessTokenCreationResponseModel : ResponseModel
 {
     private const string _objectName = "accessTokenCreation";
 
-    public AccessTokenCreationResponseModel(ApiKeyClientSecretDetails details) : base(_objectName)
+    public AccessTokenCreationResponseModel(ApiKeyClientSecretDetails details)
+        : base(_objectName)
     {
         Id = details.ApiKey.Id;
         Name = details.ApiKey.Name;
@@ -18,9 +19,8 @@ public class AccessTokenCreationResponseModel : ResponseModel
         ClientSecret = details.ClientSecret;
     }
 
-    public AccessTokenCreationResponseModel() : base(_objectName)
-    {
-    }
+    public AccessTokenCreationResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
     public string? Name { get; set; }

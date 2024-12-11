@@ -13,13 +13,12 @@ public partial class SecretsManagerOrganizationUser : Migration
             table: "OrganizationUser",
             type: "INTEGER",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "AccessSecretsManager",
-            table: "OrganizationUser");
+        migrationBuilder.DropColumn(name: "AccessSecretsManager", table: "OrganizationUser");
     }
 }

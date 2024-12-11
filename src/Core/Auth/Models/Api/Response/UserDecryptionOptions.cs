@@ -7,9 +7,8 @@ namespace Bit.Core.Auth.Models.Api.Response;
 
 public class UserDecryptionOptions : ResponseModel
 {
-    public UserDecryptionOptions() : base("userDecryptionOptions")
-    {
-    }
+    public UserDecryptionOptions()
+        : base("userDecryptionOptions") { }
 
     /// <summary>
     /// Gets or sets whether the current user has a master password that can be used to decrypt their vault.
@@ -40,9 +39,7 @@ public class WebAuthnPrfDecryptionOption
     public string EncryptedPrivateKey { get; }
     public string EncryptedUserKey { get; }
 
-    public WebAuthnPrfDecryptionOption(
-        string encryptedPrivateKey,
-        string encryptedUserKey)
+    public WebAuthnPrfDecryptionOption(string encryptedPrivateKey, string encryptedUserKey)
     {
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
@@ -58,12 +55,14 @@ public class TrustedDeviceUserDecryptionOption
     public string? EncryptedPrivateKey { get; }
     public string? EncryptedUserKey { get; }
 
-    public TrustedDeviceUserDecryptionOption(bool hasAdminApproval,
+    public TrustedDeviceUserDecryptionOption(
+        bool hasAdminApproval,
         bool hasLoginApprovingDevice,
         bool hasManageResetPasswordPermission,
         bool isTdeOffboarding,
         string? encryptedPrivateKey,
-        string? encryptedUserKey)
+        string? encryptedUserKey
+    )
     {
         HasAdminApproval = hasAdminApproval;
         HasLoginApprovingDevice = hasLoginApprovingDevice;

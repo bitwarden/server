@@ -5,5 +5,7 @@ namespace Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 
 public interface IOrganizationUserUserDetailsQuery
 {
-    Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(OrganizationUserUserDetailsQueryRequest request);
+    Task<IEnumerable<OrganizationUserUserDetails>> GetOrganizationUserUserDetails(
+        OrganizationUserUserDetailsQueryRequest request
+    );
 }

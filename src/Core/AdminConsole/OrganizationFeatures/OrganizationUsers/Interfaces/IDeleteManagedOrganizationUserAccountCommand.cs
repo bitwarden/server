@@ -15,5 +15,9 @@ public interface IDeleteManagedOrganizationUserAccountCommand
     /// <returns>
     /// An error message for each user that could not be removed, otherwise null.
     /// </returns>
-    Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId);
+    Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(
+        Guid organizationId,
+        IEnumerable<Guid> orgUserIds,
+        Guid? deletingUserId
+    );
 }

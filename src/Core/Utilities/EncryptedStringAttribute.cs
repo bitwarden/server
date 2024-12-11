@@ -11,20 +11,20 @@ namespace Bit.Core.Utilities;
 /// </summary>
 public class EncryptedStringAttribute : ValidationAttribute
 {
-    internal static readonly Dictionary<EncryptionType, int> _encryptionTypeToRequiredPiecesMap = new()
-    {
-        [EncryptionType.AesCbc256_B64] = 2, // iv|ct
-        [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
-        [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
-        [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
-        [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
-        [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac
-        [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2, // rsaCt|mac
-    };
+    internal static readonly Dictionary<EncryptionType, int> _encryptionTypeToRequiredPiecesMap =
+        new()
+        {
+            [EncryptionType.AesCbc256_B64] = 2, // iv|ct
+            [EncryptionType.AesCbc128_HmacSha256_B64] = 3, // iv|ct|mac
+            [EncryptionType.AesCbc256_HmacSha256_B64] = 3, // iv|ct|mac
+            [EncryptionType.Rsa2048_OaepSha256_B64] = 1, // rsaCt
+            [EncryptionType.Rsa2048_OaepSha1_B64] = 1, // rsaCt
+            [EncryptionType.Rsa2048_OaepSha256_HmacSha256_B64] = 2, // rsaCt|mac
+            [EncryptionType.Rsa2048_OaepSha1_HmacSha256_B64] = 2, // rsaCt|mac
+        };
 
     public EncryptedStringAttribute()
-        : base("{0} is not a valid encrypted string.")
-    { }
+        : base("{0} is not a valid encrypted string.") { }
 
     public override bool IsValid(object? value)
     {
@@ -62,11 +62,17 @@ public class EncryptedStringAttribute : ValidationAttribute
 
             if (splitChars == 2)
             {
-                return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc128_HmacSha256_B64]);
+                return ValidatePieces(
+                    rest,
+                    _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc128_HmacSha256_B64]
+                );
             }
             else
             {
-                return ValidatePieces(rest, _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc256_B64]);
+                return ValidatePieces(
+                    rest,
+                    _encryptionTypeToRequiredPiecesMap[EncryptionType.AesCbc256_B64]
+                );
             }
         }
 
@@ -92,7 +98,12 @@ public class EncryptedStringAttribute : ValidationAttribute
         // numbers will be filtered out there.
         encryptionType = (EncryptionType)encryptionTypeNumber;
 
-        if (!_encryptionTypeToRequiredPiecesMap.TryGetValue(encryptionType, out var encryptionPieces))
+        if (
+            !_encryptionTypeToRequiredPiecesMap.TryGetValue(
+                encryptionType,
+                out var encryptionPieces
+            )
+        )
         {
             // Could not find a configuration map for the given header piece. This is an invalid string
             return false;

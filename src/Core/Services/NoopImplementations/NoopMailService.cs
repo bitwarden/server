@@ -29,7 +29,8 @@ public class NoopMailService : IMailService
         string email,
         string token,
         ProductTierType productTier,
-        IEnumerable<ProductType> products)
+        IEnumerable<ProductType> products
+    )
     {
         return Task.FromResult(0);
     }
@@ -49,23 +50,39 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
+    public Task SendOrganizationMaxSeatLimitReachedEmailAsync(
+        Organization organization,
+        int maxSeatCount,
+        IEnumerable<string> ownerEmails
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
+    public Task SendOrganizationAutoscaledEmailAsync(
+        Organization organization,
+        int initialSeatCount,
+        IEnumerable<string> ownerEmails
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier,
-        IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false)
+    public Task SendOrganizationAcceptedEmailAsync(
+        Organization organization,
+        string userIdentifier,
+        IEnumerable<string> adminEmails,
+        bool hasAccessSecretsManager = false
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false)
+    public Task SendOrganizationConfirmedEmailAsync(
+        string organizationName,
+        string email,
+        bool hasAccessSecretsManager = false
+    )
     {
         return Task.FromResult(0);
     }
@@ -75,16 +92,23 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
+    public Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+        string organizationName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email) =>
-        Task.CompletedTask;
+    public Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(
+        string organizationName,
+        string email
+    ) => Task.CompletedTask;
 
-    public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
-        Task.CompletedTask;
+    public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(
+        string organizationName,
+        string email
+    ) => Task.CompletedTask;
 
     public Task SendTwoFactorEmailAsync(string email, string token)
     {
@@ -116,14 +140,16 @@ public class NoopMailService : IMailService
         decimal amount,
         DateTime dueDate,
         List<string> items,
-        bool mentionInvoices) => Task.FromResult(0);
+        bool mentionInvoices
+    ) => Task.FromResult(0);
 
     public Task SendInvoiceUpcoming(
         IEnumerable<string> emails,
         decimal amount,
         DateTime dueDate,
         List<string> items,
-        bool mentionInvoices) => Task.FromResult(0);
+        bool mentionInvoices
+    ) => Task.FromResult(0);
 
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
@@ -140,7 +166,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip)
+    public Task SendNewDeviceLoggedInEmail(
+        string email,
+        string deviceType,
+        DateTime timestamp,
+        string ip
+    )
     {
         return Task.FromResult(0);
     }
@@ -150,12 +181,19 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
+    public Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(
+        string organizationName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
+    public Task SendEmergencyAccessInviteEmailAsync(
+        EmergencyAccess emergencyAccess,
+        string name,
+        string token
+    )
     {
         return Task.FromResult(0);
     }
@@ -170,27 +208,47 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendEmergencyAccessRecoveryInitiated(EmergencyAccess emergencyAccess, string initiatingName, string email)
+    public Task SendEmergencyAccessRecoveryInitiated(
+        EmergencyAccess emergencyAccess,
+        string initiatingName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendEmergencyAccessRecoveryApproved(EmergencyAccess emergencyAccess, string approvingName, string email)
+    public Task SendEmergencyAccessRecoveryApproved(
+        EmergencyAccess emergencyAccess,
+        string approvingName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendEmergencyAccessRecoveryRejected(EmergencyAccess emergencyAccess, string rejectingName, string email)
+    public Task SendEmergencyAccessRecoveryRejected(
+        EmergencyAccess emergencyAccess,
+        string rejectingName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendEmergencyAccessRecoveryReminder(EmergencyAccess emergencyAccess, string initiatingName, string email)
+    public Task SendEmergencyAccessRecoveryReminder(
+        EmergencyAccess emergencyAccess,
+        string initiatingName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendEmergencyAccessRecoveryTimedOut(EmergencyAccess ea, string initiatingName, string email)
+    public Task SendEmergencyAccessRecoveryTimedOut(
+        EmergencyAccess ea,
+        string initiatingName,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
@@ -210,7 +268,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email)
+    public Task SendProviderInviteEmailAsync(
+        string providerName,
+        ProviderUser providerUser,
+        string token,
+        string email
+    )
     {
         return Task.FromResult(0);
     }
@@ -225,30 +288,48 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendProviderUpdatePaymentMethod(Guid organizationId, string organizationName, string providerName,
-        IEnumerable<string> emails) => Task.FromResult(0);
+    public Task SendProviderUpdatePaymentMethod(
+        Guid organizationId,
+        string organizationName,
+        string providerName,
+        IEnumerable<string> emails
+    ) => Task.FromResult(0);
 
     public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, string email, bool existingAccount, string token)
+    public Task SendFamiliesForEnterpriseOfferEmailAsync(
+        string SponsorOrgName,
+        string email,
+        bool existingAccount,
+        string token
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites)
+    public Task BulkSendFamiliesForEnterpriseOfferEmailAsync(
+        string SponsorOrgName,
+        IEnumerable<(string Email, bool ExistingAccount, string Token)> invites
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendFamiliesForEnterpriseRedeemedEmailsAsync(string familyUserEmail, string sponsorEmail)
+    public Task SendFamiliesForEnterpriseRedeemedEmailsAsync(
+        string familyUserEmail,
+        string sponsorEmail
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(string email, DateTime expirationDate)
+    public Task SendFamiliesForEnterpriseSponsorshipRevertingEmailAsync(
+        string email,
+        DateTime expirationDate
+    )
     {
         return Task.FromResult(0);
     }
@@ -268,25 +349,39 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
+    public Task SendUnverifiedOrganizationDomainEmailAsync(
+        IEnumerable<string> adminEmails,
+        string organizationId,
+        string domainName
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
-        IEnumerable<string> ownerEmails)
-    {
-        return Task.FromResult(0);
-    }
-
-    public Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization,
+    public Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(
+        Organization organization,
         int maxSeatCount,
-        IEnumerable<string> ownerEmails)
+        IEnumerable<string> ownerEmails
+    )
     {
         return Task.FromResult(0);
     }
 
-    public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier)
+    public Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(
+        Organization organization,
+        int maxSeatCount,
+        IEnumerable<string> ownerEmails
+    )
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendTrustedDeviceAdminApprovalEmailAsync(
+        string email,
+        DateTime utcNow,
+        string ip,
+        string deviceTypeAndIdentifier
+    )
     {
         return Task.FromResult(0);
     }
@@ -296,20 +391,38 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendInitiateDeletProviderEmailAsync(string email, Provider provider, string token) => throw new NotImplementedException();
+    public Task SendInitiateDeletProviderEmailAsync(
+        string email,
+        Provider provider,
+        string token
+    ) => throw new NotImplementedException();
 
-    public Task SendInitiateDeleteOrganzationEmailAsync(string email, Organization organization, string token)
+    public Task SendInitiateDeleteOrganzationEmailAsync(
+        string email,
+        Organization organization,
+        string token
+    )
     {
         return Task.FromResult(0);
     }
-    public Task SendRequestSMAccessToAdminEmailAsync(IEnumerable<string> adminEmails, string organizationName, string userRequestingAccess, string emailContent) => throw new NotImplementedException();
 
-    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
+    public Task SendRequestSMAccessToAdminEmailAsync(
+        IEnumerable<string> adminEmails,
+        string organizationName,
+        string userRequestingAccess,
+        string emailContent
+    ) => throw new NotImplementedException();
+
+    public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(
+        string email,
+        string offerAcceptanceDate,
         string organizationId,
-        string organizationName)
+        string organizationName
+    )
     {
         return Task.FromResult(0);
     }
-    public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
-}
 
+    public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) =>
+        Task.CompletedTask;
+}

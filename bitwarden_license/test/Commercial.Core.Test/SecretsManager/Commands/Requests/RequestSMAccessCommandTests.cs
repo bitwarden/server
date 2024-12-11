@@ -19,11 +19,12 @@ public class RequestSMAccessCommandTests
     [Theory]
     [BitAutoData]
     public async Task SendRequestAccessToSM_Success(
-          User user,
-          Organization organization,
-          ICollection<OrganizationUserUserDetails> orgUsers,
-          string emailContent,
-          SutProvider<RequestSMAccessCommand> sutProvider)
+        User user,
+        Organization organization,
+        ICollection<OrganizationUserUserDetails> orgUsers,
+        string emailContent,
+        SutProvider<RequestSMAccessCommand> sutProvider
+    )
     {
         foreach (var userDetails in orgUsers)
         {
@@ -40,19 +41,26 @@ public class RequestSMAccessCommandTests
             .Distinct()
             .ToList();
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider
+            .GetDependency<IMailService>()
             .Received(1)
-            .SendRequestSMAccessToAdminEmailAsync(Arg.Is(AssertHelper.AssertPropertyEqual(adminEmailList)), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendRequestSMAccessToAdminEmailAsync(
+                Arg.Is(AssertHelper.AssertPropertyEqual(adminEmailList)),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>()
+            );
     }
 
     [Theory]
     [BitAutoData]
     public async Task SendRequestAccessToSM_NoAdmins_ThrowsBadRequestException(
-       User user,
-       Organization organization,
-       ICollection<OrganizationUserUserDetails> orgUsers,
-       string emailContent,
-       SutProvider<RequestSMAccessCommand> sutProvider)
+        User user,
+        Organization organization,
+        ICollection<OrganizationUserUserDetails> orgUsers,
+        string emailContent,
+        SutProvider<RequestSMAccessCommand> sutProvider
+    )
     {
         // Set OrgUsers so they are only users, no admins or owners
         foreach (OrganizationUserUserDetails userDetails in orgUsers)
@@ -60,18 +68,20 @@ public class RequestSMAccessCommandTests
             userDetails.Type = OrganizationUserType.User;
         }
 
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SendRequestAccessToSM(organization, orgUsers, user, emailContent));
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SendRequestAccessToSM(organization, orgUsers, user, emailContent)
+        );
     }
-
 
     [Theory]
     [BitAutoData]
     public async Task SendRequestAccessToSM_SomeAdmins_EmailListIsAsExpected(
-       User user,
-       Organization organization,
-       ICollection<OrganizationUserUserDetails> orgUsers,
-       string emailContent,
-       SutProvider<RequestSMAccessCommand> sutProvider)
+        User user,
+        Organization organization,
+        ICollection<OrganizationUserUserDetails> orgUsers,
+        string emailContent,
+        SutProvider<RequestSMAccessCommand> sutProvider
+    )
     {
         foreach (OrganizationUserUserDetails userDetails in orgUsers)
         {
@@ -89,8 +99,14 @@ public class RequestSMAccessCommandTests
 
         await sutProvider.Sut.SendRequestAccessToSM(organization, orgUsers, user, emailContent);
 
-        await sutProvider.GetDependency<IMailService>()
+        await sutProvider
+            .GetDependency<IMailService>()
             .Received(1)
-            .SendRequestSMAccessToAdminEmailAsync(Arg.Is(AssertHelper.AssertPropertyEqual(adminEmailList)), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>());
+            .SendRequestSMAccessToAdminEmailAsync(
+                Arg.Is(AssertHelper.AssertPropertyEqual(adminEmailList)),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>()
+            );
     }
 }

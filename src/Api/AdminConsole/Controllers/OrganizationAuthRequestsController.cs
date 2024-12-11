@@ -21,9 +21,12 @@ public class OrganizationAuthRequestsController : Controller
     private readonly IAuthRequestService _authRequestService;
     private readonly IUpdateOrganizationAuthRequestCommand _updateOrganizationAuthRequestCommand;
 
-    public OrganizationAuthRequestsController(IAuthRequestRepository authRequestRepository,
-        ICurrentContext currentContext, IAuthRequestService authRequestService,
-        IUpdateOrganizationAuthRequestCommand updateOrganizationAuthRequestCommand)
+    public OrganizationAuthRequestsController(
+        IAuthRequestRepository authRequestRepository,
+        ICurrentContext currentContext,
+        IAuthRequestService authRequestService,
+        IUpdateOrganizationAuthRequestCommand updateOrganizationAuthRequestCommand
+    )
     {
         _authRequestRepository = authRequestRepository;
         _currentContext = currentContext;
@@ -32,7 +35,9 @@ public class OrganizationAuthRequestsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<PendingOrganizationAuthRequestResponseModel>> GetPendingRequests(Guid orgId)
+    public async Task<
+        ListResponseModel<PendingOrganizationAuthRequestResponseModel>
+    > GetPendingRequests(Guid orgId)
     {
         await ValidateAdminRequest(orgId);
 
@@ -44,40 +49,68 @@ public class OrganizationAuthRequestsController : Controller
     }
 
     [HttpPost("{requestId}")]
-    public async Task UpdateAuthRequest(Guid orgId, Guid requestId, [FromBody] AdminAuthRequestUpdateRequestModel model)
+    public async Task UpdateAuthRequest(
+        Guid orgId,
+        Guid requestId,
+        [FromBody] AdminAuthRequestUpdateRequestModel model
+    )
     {
         await ValidateAdminRequest(orgId);
 
-        var authRequest =
-            (await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, new[] { requestId })).FirstOrDefault();
+        var authRequest = (
+            await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(
+                orgId,
+                new[] { requestId }
+            )
+        ).FirstOrDefault();
 
         if (authRequest == null || authRequest.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        await _updateOrganizationAuthRequestCommand.UpdateAsync(authRequest.Id, authRequest.UserId, model.RequestApproved, model.EncryptedUserKey);
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(
+            authRequest.Id,
+            authRequest.UserId,
+            model.RequestApproved,
+            model.EncryptedUserKey
+        );
     }
 
     [HttpPost("deny")]
-    public async Task BulkDenyRequests(Guid orgId, [FromBody] BulkDenyAdminAuthRequestRequestModel model)
+    public async Task BulkDenyRequests(
+        Guid orgId,
+        [FromBody] BulkDenyAdminAuthRequestRequestModel model
+    )
     {
         await ValidateAdminRequest(orgId);
 
-        var authRequests = await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, model.Ids);
+        var authRequests = await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(
+            orgId,
+            model.Ids
+        );
 
         foreach (var authRequest in authRequests)
         {
-            await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
-                new AuthRequestUpdateRequestModel { RequestApproved = false, });
+            await _authRequestService.UpdateAuthRequestAsync(
+                authRequest.Id,
+                authRequest.UserId,
+                new AuthRequestUpdateRequestModel { RequestApproved = false }
+            );
         }
     }
 
     [HttpPost("")]
-    public async Task UpdateManyAuthRequests(Guid orgId, [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model)
+    public async Task UpdateManyAuthRequests(
+        Guid orgId,
+        [FromBody] IEnumerable<OrganizationAuthRequestUpdateManyRequestModel> model
+    )
     {
         await ValidateAdminRequest(orgId);
-        await _updateOrganizationAuthRequestCommand.UpdateAsync(orgId, model.Select(x => x.ToOrganizationAuthRequestUpdate()));
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(
+            orgId,
+            model.Select(x => x.ToOrganizationAuthRequestUpdate())
+        );
     }
 
     [NonAction]
@@ -89,4 +122,3 @@ public class OrganizationAuthRequestsController : Controller
         }
     }
 }
-

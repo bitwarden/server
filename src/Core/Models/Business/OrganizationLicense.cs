@@ -15,12 +15,15 @@ namespace Bit.Core.Models.Business;
 
 public class OrganizationLicense : ILicense
 {
-    public OrganizationLicense()
-    {
-    }
+    public OrganizationLicense() { }
 
-    public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
-        ILicensingService licenseService, int? version = null)
+    public OrganizationLicense(
+        Organization org,
+        SubscriptionInfo subscriptionInfo,
+        Guid installationId,
+        ILicensingService licenseService,
+        int? version = null
+    )
     {
         Version = version.GetValueOrDefault(CurrentLicenseFileVersion); // TODO: Remember to change the constant
         LicenseType = Enums.LicenseType.Organization;
@@ -57,7 +60,8 @@ public class OrganizationLicense : ILicense
         SmServiceAccounts = org.SmServiceAccounts;
 
         // Deprecated. Left for backwards compatibility with old license versions.
-        LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
+        LimitCollectionCreationDeletion =
+            org.LimitCollectionCreation || org.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
         //
 
@@ -74,8 +78,10 @@ public class OrganizationLicense : ILicense
                 Trial = true;
             }
         }
-        else if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
-                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
+        else if (
+            subscriptionInfo.Subscription.TrialEndDate.HasValue
+            && subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow
+        )
         {
             Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
             Trial = true;
@@ -87,18 +93,26 @@ public class OrganizationLicense : ILicense
                 // expired
                 Expires = Refresh = org.ExpirationDate.Value;
             }
-            else if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
-                     subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+            else if (
+                subscriptionInfo?.Subscription?.PeriodDuration != null
+                && subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180)
+            )
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants
-                    .OrganizationSelfHostSubscriptionGracePeriodDays);
+                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(
+                    Constants.OrganizationSelfHostSubscriptionGracePeriodDays
+                );
                 ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
             }
             else
             {
-                Expires = org.ExpirationDate.HasValue ? org.ExpirationDate.Value.AddMonths(11) : Issued.AddYears(1);
-                Refresh = DateTime.UtcNow - Expires > TimeSpan.FromDays(30) ? DateTime.UtcNow.AddDays(30) : Expires;
+                Expires = org.ExpirationDate.HasValue
+                    ? org.ExpirationDate.Value.AddMonths(11)
+                    : Issued.AddYears(1);
+                Refresh =
+                    DateTime.UtcNow - Expires > TimeSpan.FromDays(30)
+                        ? DateTime.UtcNow.AddDays(30)
+                        : Expires;
             }
 
             Trial = false;
@@ -147,6 +161,7 @@ public class OrganizationLicense : ILicense
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
     public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
+
     //
 
     public bool Trial { get; set; }
@@ -154,7 +169,9 @@ public class OrganizationLicense : ILicense
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
-    [JsonIgnore] public byte[] SignatureBytes => Convert.FromBase64String(Signature);
+
+    [JsonIgnore]
+    public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
@@ -176,51 +193,71 @@ public class OrganizationLicense : ILicense
             var props = typeof(OrganizationLicense)
                 .GetProperties(BindingFlags.Public | BindingFlags.Instance)
                 .Where(p =>
-                    !p.Name.Equals(nameof(Signature)) &&
-                    !p.Name.Equals(nameof(SignatureBytes)) &&
-                    !p.Name.Equals(nameof(LicenseType)) &&
-                    !p.Name.Equals(nameof(Token)) &&
+                    !p.Name.Equals(nameof(Signature))
+                    && !p.Name.Equals(nameof(SignatureBytes))
+                    && !p.Name.Equals(nameof(LicenseType))
+                    && !p.Name.Equals(nameof(Token))
+                    &&
                     // UsersGetPremium was added in Version 2
-                    (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium))) &&
+                    (Version >= 2 || !p.Name.Equals(nameof(UsersGetPremium)))
+                    &&
                     // UseEvents was added in Version 3
-                    (Version >= 3 || !p.Name.Equals(nameof(UseEvents))) &&
+                    (Version >= 3 || !p.Name.Equals(nameof(UseEvents)))
+                    &&
                     // Use2fa was added in Version 4
-                    (Version >= 4 || !p.Name.Equals(nameof(Use2fa))) &&
+                    (Version >= 4 || !p.Name.Equals(nameof(Use2fa)))
+                    &&
                     // UseApi was added in Version 5
-                    (Version >= 5 || !p.Name.Equals(nameof(UseApi))) &&
+                    (Version >= 5 || !p.Name.Equals(nameof(UseApi)))
+                    &&
                     // UsePolicies was added in Version 6
-                    (Version >= 6 || !p.Name.Equals(nameof(UsePolicies))) &&
+                    (Version >= 6 || !p.Name.Equals(nameof(UsePolicies)))
+                    &&
                     // UseSso was added in Version 7
-                    (Version >= 7 || !p.Name.Equals(nameof(UseSso))) &&
+                    (Version >= 7 || !p.Name.Equals(nameof(UseSso)))
+                    &&
                     // UseResetPassword was added in Version 8
-                    (Version >= 8 || !p.Name.Equals(nameof(UseResetPassword))) &&
+                    (Version >= 8 || !p.Name.Equals(nameof(UseResetPassword)))
+                    &&
                     // UseKeyConnector was added in Version 9
-                    (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
+                    (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector)))
+                    &&
                     // UseScim was added in Version 10
-                    (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
+                    (Version >= 10 || !p.Name.Equals(nameof(UseScim)))
+                    &&
                     // UseCustomPermissions was added in Version 11
-                    (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
+                    (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions)))
+                    &&
                     // ExpirationWithoutGracePeriod was added in Version 12
-                    (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
+                    (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod)))
+                    &&
                     // UseSecretsManager, UsePasswordManager, SmSeats, and SmServiceAccounts were added in Version 13
-                    (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager))) &&
-                    (Version >= 13 || !p.Name.Equals(nameof(UsePasswordManager))) &&
-                    (Version >= 13 || !p.Name.Equals(nameof(SmSeats))) &&
-                    (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager)))
+                    && (Version >= 13 || !p.Name.Equals(nameof(UsePasswordManager)))
+                    && (Version >= 13 || !p.Name.Equals(nameof(SmSeats)))
+                    && (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts)))
+                    &&
                     // LimitCollectionCreationDeletion was added in Version 14
-                    (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
+                    (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion)))
+                    &&
                     // AllowAdminAccessToAllCollectionItems was added in Version 15
-                    (Version >= 15 || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))) &&
                     (
-                        !forHash ||
-                        (
-                            !p.Name.Equals(nameof(Hash)) &&
-                            !p.Name.Equals(nameof(Issued)) &&
-                            !p.Name.Equals(nameof(Refresh))
+                        Version >= 15
+                        || !p.Name.Equals(nameof(AllowAdminAccessToAllCollectionItems))
+                    )
+                    && (
+                        !forHash
+                        || (
+                            !p.Name.Equals(nameof(Hash))
+                            && !p.Name.Equals(nameof(Issued))
+                            && !p.Name.Equals(nameof(Refresh))
                         )
-                    ))
+                    )
+                )
                 .OrderBy(p => p.Name)
-                .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
+                .Select(p =>
+                    $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}"
+                )
                 .Aggregate((c, n) => $"{c}|{n}");
             data = $"license:organization|{props}";
         }
@@ -244,7 +281,8 @@ public class OrganizationLicense : ILicense
         IGlobalSettings globalSettings,
         ILicensingService licensingService,
         ClaimsPrincipal claimsPrincipal,
-        out string exception)
+        out string exception
+    )
     {
         if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
         {
@@ -262,20 +300,26 @@ public class OrganizationLicense : ILicense
         var installationId = claimsPrincipal.GetValue<Guid>(nameof(InstallationId));
         if (installationId != globalSettings.Installation.Id)
         {
-            errorMessages.AppendLine("The installation ID does not match the current installation.");
+            errorMessages.AppendLine(
+                "The installation ID does not match the current installation."
+            );
         }
 
         var selfHost = claimsPrincipal.GetValue<bool>(nameof(SelfHost));
         if (!selfHost)
         {
-            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
+            errorMessages.AppendLine(
+                "The license does not allow for on-premise hosting of organizations."
+            );
         }
 
         var licenseType = claimsPrincipal.GetValue<LicenseType>(nameof(LicenseType));
         if (licenseType != Enums.LicenseType.Organization)
         {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
+            errorMessages.AppendLine(
+                "Premium licenses cannot be applied to an organization. "
+                    + "Upload this license from your personal account settings page."
+            );
         }
 
         if (errorMessages.Length > 0)
@@ -296,7 +340,11 @@ public class OrganizationLicense : ILicense
     /// <param name="licensingService"></param>
     /// <param name="exception"></param>
     /// <returns></returns>
-    private bool ObsoleteCanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
+    private bool ObsoleteCanUse(
+        IGlobalSettings globalSettings,
+        ILicensingService licensingService,
+        out string exception
+    )
     {
         // Do not extend this method. It is only here for backwards compatibility with old licenses.
         var errorMessages = new StringBuilder();
@@ -323,18 +371,24 @@ public class OrganizationLicense : ILicense
 
         if (InstallationId != globalSettings.Installation.Id)
         {
-            errorMessages.AppendLine("The installation ID does not match the current installation.");
+            errorMessages.AppendLine(
+                "The installation ID does not match the current installation."
+            );
         }
 
         if (!SelfHost)
         {
-            errorMessages.AppendLine("The license does not allow for on-premise hosting of organizations.");
+            errorMessages.AppendLine(
+                "The license does not allow for on-premise hosting of organizations."
+            );
         }
 
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
         {
-            errorMessages.AppendLine("Premium licenses cannot be applied to an organization. " +
-                                     "Upload this license from your personal account settings page.");
+            errorMessages.AppendLine(
+                "Premium licenses cannot be applied to an organization. "
+                    + "Upload this license from your personal account settings page."
+            );
         }
 
         if (!licensingService.VerifyLicense(this))
@@ -355,7 +409,8 @@ public class OrganizationLicense : ILicense
     public bool VerifyData(
         Organization organization,
         ClaimsPrincipal claimsPrincipal,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings
+    )
     {
         if (string.IsNullOrWhiteSpace(Token))
         {
@@ -390,33 +445,33 @@ public class OrganizationLicense : ILicense
         var smSeats = claimsPrincipal.GetValue<int?>(nameof(SmSeats));
         var smServiceAccounts = claimsPrincipal.GetValue<int?>(nameof(SmServiceAccounts));
 
-        return issued <= DateTime.UtcNow &&
-               expires >= DateTime.UtcNow &&
-               installationId == globalSettings.Installation.Id &&
-               licenseKey == organization.LicenseKey &&
-               enabled == organization.Enabled &&
-               planType == organization.PlanType &&
-               seats == organization.Seats &&
-               maxCollections == organization.MaxCollections &&
-               useGroups == organization.UseGroups &&
-               useDirectory == organization.UseDirectory &&
-               useTotp == organization.UseTotp &&
-               selfHost == organization.SelfHost &&
-               name == organization.Name &&
-               usersGetPremium == organization.UsersGetPremium &&
-               useEvents == organization.UseEvents &&
-               use2fa == organization.Use2fa &&
-               useApi == organization.UseApi &&
-               usePolicies == organization.UsePolicies &&
-               useSso == organization.UseSso &&
-               useResetPassword == organization.UseResetPassword &&
-               useKeyConnector == organization.UseKeyConnector &&
-               useScim == organization.UseScim &&
-               useCustomPermissions == organization.UseCustomPermissions &&
-               useSecretsManager == organization.UseSecretsManager &&
-               usePasswordManager == organization.UsePasswordManager &&
-               smSeats == organization.SmSeats &&
-               smServiceAccounts == organization.SmServiceAccounts;
+        return issued <= DateTime.UtcNow
+            && expires >= DateTime.UtcNow
+            && installationId == globalSettings.Installation.Id
+            && licenseKey == organization.LicenseKey
+            && enabled == organization.Enabled
+            && planType == organization.PlanType
+            && seats == organization.Seats
+            && maxCollections == organization.MaxCollections
+            && useGroups == organization.UseGroups
+            && useDirectory == organization.UseDirectory
+            && useTotp == organization.UseTotp
+            && selfHost == organization.SelfHost
+            && name == organization.Name
+            && usersGetPremium == organization.UsersGetPremium
+            && useEvents == organization.UseEvents
+            && use2fa == organization.Use2fa
+            && useApi == organization.UseApi
+            && usePolicies == organization.UsePolicies
+            && useSso == organization.UseSso
+            && useResetPassword == organization.UseResetPassword
+            && useKeyConnector == organization.UseKeyConnector
+            && useScim == organization.UseScim
+            && useCustomPermissions == organization.UseCustomPermissions
+            && useSecretsManager == organization.UseSecretsManager
+            && usePasswordManager == organization.UsePasswordManager
+            && smSeats == organization.SmSeats
+            && smServiceAccounts == organization.SmServiceAccounts;
     }
 
     /// <summary>
@@ -441,17 +496,18 @@ public class OrganizationLicense : ILicense
         }
 
         var valid =
-            globalSettings.Installation.Id == InstallationId &&
-            organization.LicenseKey != null && organization.LicenseKey.Equals(LicenseKey) &&
-            organization.Enabled == Enabled &&
-            organization.PlanType == PlanType &&
-            organization.Seats == Seats &&
-            organization.MaxCollections == MaxCollections &&
-            organization.UseGroups == UseGroups &&
-            organization.UseDirectory == UseDirectory &&
-            organization.UseTotp == UseTotp &&
-            organization.SelfHost == SelfHost &&
-            organization.Name.Equals(Name);
+            globalSettings.Installation.Id == InstallationId
+            && organization.LicenseKey != null
+            && organization.LicenseKey.Equals(LicenseKey)
+            && organization.Enabled == Enabled
+            && organization.PlanType == PlanType
+            && organization.Seats == Seats
+            && organization.MaxCollections == MaxCollections
+            && organization.UseGroups == UseGroups
+            && organization.UseDirectory == UseDirectory
+            && organization.UseTotp == UseTotp
+            && organization.SelfHost == SelfHost
+            && organization.Name.Equals(Name);
 
         if (valid && Version >= 2)
         {
@@ -509,10 +565,11 @@ public class OrganizationLicense : ILicense
 
         if (valid && Version >= 13)
         {
-            valid = organization.UseSecretsManager == UseSecretsManager &&
-                    organization.UsePasswordManager == UsePasswordManager &&
-                    organization.SmSeats == SmSeats &&
-                    organization.SmServiceAccounts == SmServiceAccounts;
+            valid =
+                organization.UseSecretsManager == UseSecretsManager
+                && organization.UsePasswordManager == UsePasswordManager
+                && organization.SmSeats == SmSeats
+                && organization.SmServiceAccounts == SmServiceAccounts;
         }
 
         /*
@@ -529,7 +586,12 @@ public class OrganizationLicense : ILicense
     {
         using (var rsa = certificate.GetRSAPublicKey())
         {
-            return rsa.VerifyData(GetDataBytes(), SignatureBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return rsa.VerifyData(
+                GetDataBytes(),
+                SignatureBytes,
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1
+            );
         }
     }
 
@@ -542,7 +604,11 @@ public class OrganizationLicense : ILicense
 
         using (var rsa = certificate.GetRSAPrivateKey())
         {
-            return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return rsa.SignData(
+                GetDataBytes(),
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1
+            );
         }
     }
 }

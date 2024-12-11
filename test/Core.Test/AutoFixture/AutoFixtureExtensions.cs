@@ -16,16 +16,23 @@ public static class AutoFixtureExtensions
     /// <param name="composer"></param>
     /// <param name="propertyPicker">The Guid property to register</param>
     /// <param name="seed">The random seed to use for random Guid generation</param>
-    public static IPostprocessComposer<T> WithGuidFromSeed<T>(this IPostprocessComposer<T> composer, Expression<Func<T, Guid>> propertyPicker, int seed)
+    public static IPostprocessComposer<T> WithGuidFromSeed<T>(
+        this IPostprocessComposer<T> composer,
+        Expression<Func<T, Guid>> propertyPicker,
+        int seed
+    )
     {
         var rnd = new Random(seed);
-        return composer.With(propertyPicker, () =>
-        {
-            // While not as random/unique as Guid.NewGuid(), this is works well enough for testing purposes.
-            var bytes = new byte[16];
-            rnd.NextBytes(bytes);
-            return new Guid(bytes);
-        });
+        return composer.With(
+            propertyPicker,
+            () =>
+            {
+                // While not as random/unique as Guid.NewGuid(), this is works well enough for testing purposes.
+                var bytes = new byte[16];
+                rnd.NextBytes(bytes);
+                return new Guid(bytes);
+            }
+        );
     }
 
     /// <summary>
@@ -41,14 +48,18 @@ public static class AutoFixtureExtensions
     public static IPostprocessComposer<T> WithValueFromList<T, TValue>(
         this IPostprocessComposer<T> composer,
         Expression<Func<T, TValue>> propertyPicker,
-        ICollection<TValue> values)
+        ICollection<TValue> values
+    )
     {
         var index = 0;
-        return composer.With(propertyPicker, () =>
-        {
-            var value = values.ElementAt(index);
-            index = (index + 1) % values.Count;
-            return value;
-        });
+        return composer.With(
+            propertyPicker,
+            () =>
+            {
+                var value = values.ElementAt(index);
+                index = (index + 1) % values.Count;
+                return value;
+            }
+        );
     }
 }

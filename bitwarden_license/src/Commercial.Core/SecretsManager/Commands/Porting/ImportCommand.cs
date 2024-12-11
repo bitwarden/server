@@ -27,35 +27,43 @@ public class ImportCommand : IImportCommand
 
             if (import.Projects.Any())
             {
-                importedProjects = (await _projectRepository.ImportAsync(import.Projects.Select(p => new Project
-                {
-                    Id = p.Id,
-                    OrganizationId = organizationId,
-                    Name = p.Name,
-                }))).Select(p => p.Id).ToList();
+                importedProjects = (
+                    await _projectRepository.ImportAsync(
+                        import.Projects.Select(p => new Project
+                        {
+                            Id = p.Id,
+                            OrganizationId = organizationId,
+                            Name = p.Name,
+                        })
+                    )
+                ).Select(p => p.Id).ToList();
             }
 
             if (import.Secrets != null && import.Secrets.Any())
             {
-                importedSecrets = (await _secretRepository.ImportAsync(import.Secrets.Select(s => new Secret
-                {
-                    Id = s.Id,
-                    OrganizationId = organizationId,
-                    Key = s.Key,
-                    Value = s.Value,
-                    Note = s.Note,
-                    Projects = s.ProjectIds?.Select(id => new Project { Id = id }).ToList(),
-                }))).Select(s => s.Id).ToList();
+                importedSecrets = (
+                    await _secretRepository.ImportAsync(
+                        import.Secrets.Select(s => new Secret
+                        {
+                            Id = s.Id,
+                            OrganizationId = organizationId,
+                            Key = s.Key,
+                            Value = s.Value,
+                            Note = s.Note,
+                            Projects = s.ProjectIds?.Select(id => new Project { Id = id }).ToList(),
+                        })
+                    )
+                ).Select(s => s.Id).ToList();
             }
         }
         catch (Exception)
         {
-            if (importedProjects.Any())
+            if (importedProjects.Count != 0)
             {
                 await _projectRepository.DeleteManyByIdAsync(importedProjects);
             }
 
-            if (importedSecrets.Any())
+            if (importedSecrets.Count != 0)
             {
                 await _secretRepository.HardDeleteManyByIdAsync(importedSecrets);
             }
@@ -81,21 +89,19 @@ public class ImportCommand : IImportCommand
         {
             foreach (var secret in import.Secrets)
             {
-                secrets.Add(new SMImport.InnerSecret
-                {
-                    Id = Guid.NewGuid(),
-                    Key = secret.Key,
-                    Value = secret.Value,
-                    Note = secret.Note,
-                    ProjectIds = secret.ProjectIds?.Select(id => projects[id].Id),
-                });
+                secrets.Add(
+                    new SMImport.InnerSecret
+                    {
+                        Id = Guid.NewGuid(),
+                        Key = secret.Key,
+                        Value = secret.Value,
+                        Note = secret.Note,
+                        ProjectIds = secret.ProjectIds?.Select(id => projects[id].Id),
+                    }
+                );
             }
         }
 
-        return new SMImport
-        {
-            Projects = projects.Values,
-            Secrets = secrets,
-        };
+        return new SMImport { Projects = projects.Values, Secrets = secrets };
     }
 }

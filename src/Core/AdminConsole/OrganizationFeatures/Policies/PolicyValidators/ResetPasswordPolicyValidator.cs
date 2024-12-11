@@ -22,15 +22,22 @@ public class ResetPasswordPolicyValidator : IPolicyValidator
 
     public async Task<string> ValidateAsync(PolicyUpdate policyUpdate, Policy? currentPolicy)
     {
-        if (policyUpdate is not { Enabled: true } ||
-            policyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false)
+        if (
+            policyUpdate is not { Enabled: true }
+            || policyUpdate.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled == false
+        )
         {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(policyUpdate.OrganizationId);
-            return ssoConfig.ValidateDecryptionOptionsNotEnabled([MemberDecryptionType.TrustedDeviceEncryption]);
+            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(
+                policyUpdate.OrganizationId
+            );
+            return ssoConfig.ValidateDecryptionOptionsNotEnabled(
+                [MemberDecryptionType.TrustedDeviceEncryption]
+            );
         }
 
         return "";
     }
 
-    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) => Task.FromResult(0);
+    public Task OnSaveSideEffectsAsync(PolicyUpdate policyUpdate, Policy? currentPolicy) =>
+        Task.FromResult(0);
 }

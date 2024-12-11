@@ -15,9 +15,11 @@ public class CreateNotificationCommand : ICreateNotificationCommand
     private readonly IAuthorizationService _authorizationService;
     private readonly INotificationRepository _notificationRepository;
 
-    public CreateNotificationCommand(ICurrentContext currentContext,
+    public CreateNotificationCommand(
+        ICurrentContext currentContext,
         IAuthorizationService authorizationService,
-        INotificationRepository notificationRepository)
+        INotificationRepository notificationRepository
+    )
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
@@ -28,8 +30,11 @@ public class CreateNotificationCommand : ICreateNotificationCommand
     {
         notification.CreationDate = notification.RevisionDate = DateTime.UtcNow;
 
-        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, notification,
-            NotificationOperations.Create);
+        await _authorizationService.AuthorizeOrThrowAsync(
+            _currentContext.HttpContext.User,
+            notification,
+            NotificationOperations.Create
+        );
 
         return await _notificationRepository.CreateAsync(notification);
     }

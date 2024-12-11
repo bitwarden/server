@@ -14,9 +14,15 @@ public class AuthorizationServiceExtensionTests
     async Task AuthorizeOrThrowAsync_ThrowsNotFoundException_IfResourceIsNull()
     {
         var authorizationService = Substitute.For<IAuthorizationService>();
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            AuthorizationServiceExtensions.AuthorizeOrThrowAsync(authorizationService, new ClaimsPrincipal(),
-                null, new OperationAuthorizationRequirement()));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () =>
+                AuthorizationServiceExtensions.AuthorizeOrThrowAsync(
+                    authorizationService,
+                    new ClaimsPrincipal(),
+                    null,
+                    new OperationAuthorizationRequirement()
+                )
+        );
     }
 
     [Fact]
@@ -28,11 +34,21 @@ public class AuthorizationServiceExtensionTests
         var resource = new object();
 
         authorizationService
-            .AuthorizeAsync(claimsPrincipal, resource, Arg.Is<IEnumerable<IAuthorizationRequirement>>(r =>
-                r.First() == requirement))
+            .AuthorizeAsync(
+                claimsPrincipal,
+                resource,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.First() == requirement)
+            )
             .Returns(AuthorizationResult.Failed());
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            AuthorizationServiceExtensions.AuthorizeOrThrowAsync(authorizationService, claimsPrincipal, resource, requirement));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () =>
+                AuthorizationServiceExtensions.AuthorizeOrThrowAsync(
+                    authorizationService,
+                    claimsPrincipal,
+                    resource,
+                    requirement
+                )
+        );
     }
 }

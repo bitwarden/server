@@ -27,7 +27,6 @@ public class Token
         return new Token(_token[expectedPrefix.Length..]);
     }
 
-
     public Token ProtectWith(IDataProtector dataProtector, ILogger logger)
     {
         logger.LogDebug("Protecting token: {token}", this);

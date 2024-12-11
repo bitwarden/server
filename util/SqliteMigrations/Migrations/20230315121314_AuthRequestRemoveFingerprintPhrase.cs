@@ -8,9 +8,7 @@ public partial class AuthRequestRemoveFingerprintPhrase : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "RequestFingerprint",
-            table: "AuthRequest");
+        migrationBuilder.DropColumn(name: "RequestFingerprint", table: "AuthRequest");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
@@ -19,6 +17,7 @@ public partial class AuthRequestRemoveFingerprintPhrase : Migration
             name: "RequestFingerprint",
             table: "AuthRequest",
             type: "TEXT",
-            nullable: true);
+            nullable: true
+        );
     }
 }

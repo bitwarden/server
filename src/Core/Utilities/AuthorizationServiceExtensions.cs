@@ -16,7 +16,11 @@ public static class AuthorizationServiceExtensions
     /// A flag indicating whether requirement evaluation has succeeded or failed.
     /// This value is <value>true</value> when the user fulfills the policy, otherwise <value>false</value>.
     /// </returns>
-    public static Task<AuthorizationResult> AuthorizeAsync(this IAuthorizationService service, ClaimsPrincipal user, IAuthorizationRequirement requirement)
+    public static Task<AuthorizationResult> AuthorizeAsync(
+        this IAuthorizationService service,
+        ClaimsPrincipal user,
+        IAuthorizationRequirement requirement
+    )
     {
         if (service == null)
         {
@@ -35,8 +39,12 @@ public static class AuthorizationServiceExtensions
     /// Performs an authorization check and throws a <see cref="Bit.Core.Exceptions.NotFoundException"/> if the
     /// check fails or the resource is null.
     /// </summary>
-    public static async Task AuthorizeOrThrowAsync(this IAuthorizationService service,
-        ClaimsPrincipal user, object resource, IAuthorizationRequirement requirement)
+    public static async Task AuthorizeOrThrowAsync(
+        this IAuthorizationService service,
+        ClaimsPrincipal user,
+        object resource,
+        IAuthorizationRequirement requirement
+    )
     {
         ArgumentNullException.ThrowIfNull(service);
         ArgumentNullException.ThrowIfNull(requirement);

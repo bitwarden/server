@@ -25,8 +25,7 @@ public class WebAuthnLoginRotateKeyRequestModel
         {
             Id = Id,
             EncryptedUserKey = EncryptedUserKey,
-            EncryptedPublicKey = EncryptedPublicKey
+            EncryptedPublicKey = EncryptedPublicKey,
         };
     }
-
 }

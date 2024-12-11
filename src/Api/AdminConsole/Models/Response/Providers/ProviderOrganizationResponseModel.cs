@@ -8,13 +8,13 @@ namespace Bit.Api.AdminConsole.Models.Response.Providers;
 
 public class ProviderOrganizationResponseModel : ResponseModel
 {
-    public ProviderOrganizationResponseModel(ProviderOrganization providerOrganization,
-        string obj = "providerOrganization") : base(obj)
+    public ProviderOrganizationResponseModel(
+        ProviderOrganization providerOrganization,
+        string obj = "providerOrganization"
+    )
+        : base(obj)
     {
-        if (providerOrganization == null)
-        {
-            throw new ArgumentNullException(nameof(providerOrganization));
-        }
+        ArgumentNullException.ThrowIfNull(providerOrganization);
 
         Id = providerOrganization.Id;
         ProviderId = providerOrganization.ProviderId;
@@ -25,13 +25,13 @@ public class ProviderOrganizationResponseModel : ResponseModel
         RevisionDate = providerOrganization.RevisionDate;
     }
 
-    public ProviderOrganizationResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
-        string obj = "providerOrganization") : base(obj)
+    public ProviderOrganizationResponseModel(
+        ProviderOrganizationOrganizationDetails providerOrganization,
+        string obj = "providerOrganization"
+    )
+        : base(obj)
     {
-        if (providerOrganization == null)
-        {
-            throw new ArgumentNullException(nameof(providerOrganization));
-        }
+        ArgumentNullException.ThrowIfNull(providerOrganization);
 
         Id = providerOrganization.Id;
         ProviderId = providerOrganization.ProviderId;
@@ -61,15 +61,16 @@ public class ProviderOrganizationResponseModel : ResponseModel
     public string Plan { get; set; }
 }
 
-public class ProviderOrganizationOrganizationDetailsResponseModel : ProviderOrganizationResponseModel
+public class ProviderOrganizationOrganizationDetailsResponseModel
+    : ProviderOrganizationResponseModel
 {
-    public ProviderOrganizationOrganizationDetailsResponseModel(ProviderOrganizationOrganizationDetails providerOrganization,
-        string obj = "providerOrganizationOrganizationDetail") : base(providerOrganization, obj)
+    public ProviderOrganizationOrganizationDetailsResponseModel(
+        ProviderOrganizationOrganizationDetails providerOrganization,
+        string obj = "providerOrganizationOrganizationDetail"
+    )
+        : base(providerOrganization, obj)
     {
-        if (providerOrganization == null)
-        {
-            throw new ArgumentNullException(nameof(providerOrganization));
-        }
+        ArgumentNullException.ThrowIfNull(providerOrganization);
 
         OrganizationName = providerOrganization.OrganizationName;
     }

@@ -2,9 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.Models;
 
-public class Event : Core.Entities.Event
-{
-}
+public class Event : Core.Entities.Event { }
 
 public class EventMapperProfile : Profile
 {

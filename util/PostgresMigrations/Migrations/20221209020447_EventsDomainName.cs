@@ -12,13 +12,12 @@ public partial class EventsDomainName : Migration
             name: "DomainName",
             table: "Event",
             type: "text",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "DomainName",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "DomainName", table: "Event");
     }
 }

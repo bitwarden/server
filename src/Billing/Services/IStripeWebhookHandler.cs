@@ -1,4 +1,5 @@
 ﻿using Event = Stripe.Event;
+
 namespace Bit.Billing.Services;
 
 public interface IStripeWebhookHandler

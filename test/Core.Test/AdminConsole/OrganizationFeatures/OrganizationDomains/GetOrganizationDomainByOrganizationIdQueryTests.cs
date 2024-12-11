@@ -11,12 +11,16 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationDomains;
 public class GetOrganizationDomainByOrganizationIdQueryTests
 {
     [Theory, BitAutoData]
-    public async Task GetDomainsByOrganizationId_CallsGetDomainsByOrganizationIdAsync(Guid orgId,
-        SutProvider<GetOrganizationDomainByOrganizationIdQuery> sutProvider)
+    public async Task GetDomainsByOrganizationId_CallsGetDomainsByOrganizationIdAsync(
+        Guid orgId,
+        SutProvider<GetOrganizationDomainByOrganizationIdQuery> sutProvider
+    )
     {
         await sutProvider.Sut.GetDomainsByOrganizationIdAsync(orgId);
 
-        await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IOrganizationDomainRepository>()
+            .Received(1)
             .GetDomainsByOrganizationIdAsync(orgId);
     }
 }

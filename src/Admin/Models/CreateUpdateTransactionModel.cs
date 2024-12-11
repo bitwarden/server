@@ -28,29 +28,39 @@ public class CreateUpdateTransactionModel : IValidatableObject
 
     [Display(Name = "User Id")]
     public Guid? UserId { get; set; }
+
     [Display(Name = "Organization Id")]
     public Guid? OrganizationId { get; set; }
+
     [Required]
     public decimal? Amount { get; set; }
+
     [Display(Name = "Refunded Amount")]
     public decimal? RefundedAmount { get; set; }
     public bool Refunded { get; set; }
+
     [Required]
     public string Details { get; set; }
+
     [Required]
     public DateTime? Date { get; set; }
+
     [Display(Name = "Payment Method")]
     public PaymentMethodType? PaymentMethod { get; set; }
     public GatewayType? Gateway { get; set; }
+
     [Display(Name = "Gateway Id")]
     public string GatewayId { get; set; }
+
     [Required]
     public TransactionType? Type { get; set; }
 
-
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if ((!UserId.HasValue && !OrganizationId.HasValue) || (UserId.HasValue && OrganizationId.HasValue))
+        if (
+            (!UserId.HasValue && !OrganizationId.HasValue)
+            || (UserId.HasValue && OrganizationId.HasValue)
+        )
         {
             yield return new ValidationResult("Must provide either User Id, or Organization Id.");
         }
@@ -71,7 +81,7 @@ public class CreateUpdateTransactionModel : IValidatableObject
             PaymentMethodType = PaymentMethod,
             Gateway = Gateway,
             GatewayId = GatewayId,
-            Type = Type.Value
+            Type = Type.Value,
         };
     }
 }

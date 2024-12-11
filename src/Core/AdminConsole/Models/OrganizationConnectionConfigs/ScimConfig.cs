@@ -7,6 +7,7 @@ namespace Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 public class ScimConfig : IConnectionConfig
 {
     public bool Enabled { get; set; }
+
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ScimProviderType? ScimProvider { get; set; }
 

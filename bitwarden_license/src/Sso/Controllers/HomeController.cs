@@ -24,8 +24,9 @@ public class HomeController : Controller
         var vm = new ErrorViewModel();
 
         // retrieve error details from identityserver
-        var message = string.IsNullOrWhiteSpace(errorId) ? null :
-            await _interaction.GetErrorContextAsync(errorId);
+        var message = string.IsNullOrWhiteSpace(errorId)
+            ? null
+            : await _interaction.GetErrorContextAsync(errorId);
         if (message != null)
         {
             vm.Error = message;
@@ -33,9 +34,13 @@ public class HomeController : Controller
         else
         {
             vm.RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
-            var exceptionHandlerPathFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
+            var exceptionHandlerPathFeature =
+                HttpContext.Features.Get<IExceptionHandlerPathFeature>();
             var exception = exceptionHandlerPathFeature?.Error;
-            if (exception is InvalidOperationException opEx && opEx.Message.Contains("schemes are: "))
+            if (
+                exception is InvalidOperationException opEx
+                && opEx.Message.Contains("schemes are: ")
+            )
             {
                 // Messages coming from aspnetcore with a message
                 //  similar to "The registered sign-in schemes are: {schemes}."

@@ -6,7 +6,8 @@ using Bit.Core.Vault.Repositories;
 
 namespace Bit.Api.KeyManagement.Validators;
 
-public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>
+public class FolderRotationValidator
+    : IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>
 {
     private readonly IFolderRepository _folderRepository;
 
@@ -15,7 +16,10 @@ public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWith
         _folderRepository = folderRepository;
     }
 
-    public async Task<IEnumerable<Folder>> ValidateAsync(User user, IEnumerable<FolderWithIdRequestModel> folders)
+    public async Task<IEnumerable<Folder>> ValidateAsync(
+        User user,
+        IEnumerable<FolderWithIdRequestModel> folders
+    )
     {
         var result = new List<Folder>();
 
@@ -30,7 +34,9 @@ public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWith
             var folder = folders.FirstOrDefault(c => c.Id == existing.Id);
             if (folder == null)
             {
-                throw new BadRequestException("All existing folders must be included in the rotation.");
+                throw new BadRequestException(
+                    "All existing folders must be included in the rotation."
+                );
             }
             result.Add(folder.ToFolder(existing));
         }

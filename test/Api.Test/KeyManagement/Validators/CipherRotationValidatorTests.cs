@@ -15,27 +15,42 @@ namespace Bit.Api.Test.KeyManagement.Validators;
 public class CipherRotationValidatorTests
 {
     [Theory, BitAutoData]
-    public async Task ValidateAsync_MissingCipher_Throws(SutProvider<CipherRotationValidator> sutProvider, User user,
-        IEnumerable<CipherWithIdRequestModel> ciphers)
+    public async Task ValidateAsync_MissingCipher_Throws(
+        SutProvider<CipherRotationValidator> sutProvider,
+        User user,
+        IEnumerable<CipherWithIdRequestModel> ciphers
+    )
     {
-        var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
+        var userCiphers = ciphers
+            .Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
             .ToList();
-        userCiphers.Add(new CipherDetails { Id = Guid.NewGuid(), Type = Core.Vault.Enums.CipherType.Login });
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+        userCiphers.Add(
+            new CipherDetails { Id = Guid.NewGuid(), Type = Core.Vault.Enums.CipherType.Login }
+        );
+        sutProvider
+            .GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
             .Returns(userCiphers);
 
-
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, ciphers));
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.ValidateAsync(user, ciphers)
+        );
     }
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_CipherDoesNotBelongToUser_NotIncluded(
-        SutProvider<CipherRotationValidator> sutProvider, User user, IEnumerable<CipherWithIdRequestModel> ciphers)
+        SutProvider<CipherRotationValidator> sutProvider,
+        User user,
+        IEnumerable<CipherWithIdRequestModel> ciphers
+    )
     {
-        var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
+        var userCiphers = ciphers
+            .Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
             .ToList();
         userCiphers.RemoveAt(0);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+        sutProvider
+            .GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
             .Returns(userCiphers);
 
         var result = await sutProvider.Sut.ValidateAsync(user, ciphers);
@@ -45,13 +60,25 @@ public class CipherRotationValidatorTests
 
     [Theory, BitAutoData]
     public async Task ValidateAsync_SentCiphersAreEmptyButDatabaseCiphersAreNot_Throws(
-        SutProvider<CipherRotationValidator> sutProvider, User user, IEnumerable<CipherWithIdRequestModel> ciphers)
+        SutProvider<CipherRotationValidator> sutProvider,
+        User user,
+        IEnumerable<CipherWithIdRequestModel> ciphers
+    )
     {
-        var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
+        var userCiphers = ciphers
+            .Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
             .ToList();
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+        sutProvider
+            .GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
             .Returns(userCiphers);
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<CipherWithIdRequestModel>()));
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () =>
+                await sutProvider.Sut.ValidateAsync(
+                    user,
+                    Enumerable.Empty<CipherWithIdRequestModel>()
+                )
+        );
     }
 }

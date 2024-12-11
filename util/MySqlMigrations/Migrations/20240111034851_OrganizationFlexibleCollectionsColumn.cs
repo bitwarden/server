@@ -15,14 +15,13 @@ public partial class OrganizationFlexibleCollectionsColumn : Migration
             table: "Organization",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "FlexibleCollections",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "FlexibleCollections", table: "Organization");
     }
 }

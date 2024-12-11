@@ -7,8 +7,7 @@ using Stripe;
 namespace Bit.Api.Billing.Controllers;
 
 [Authorize("Application")]
-public class StripeController(
-    IStripeAdapter stripeAdapter) : Controller
+public class StripeController(IStripeAdapter stripeAdapter) : Controller
 {
     [HttpPost]
     [Route("~/setup-intent/bank-account")]
@@ -20,11 +19,11 @@ public class StripeController(
             {
                 UsBankAccount = new SetupIntentPaymentMethodOptionsUsBankAccountOptions
                 {
-                    VerificationMethod = "microdeposits"
-                }
+                    VerificationMethod = "microdeposits",
+                },
             },
             PaymentMethodTypes = ["us_bank_account"],
-            Usage = "off_session"
+            Usage = "off_session",
         };
 
         var setupIntent = await stripeAdapter.SetupIntentCreate(options);
@@ -39,7 +38,7 @@ public class StripeController(
         var options = new SetupIntentCreateOptions
         {
             PaymentMethodTypes = ["card"],
-            Usage = "off_session"
+            Usage = "off_session",
         };
 
         var setupIntent = await stripeAdapter.SetupIntentCreate(options);

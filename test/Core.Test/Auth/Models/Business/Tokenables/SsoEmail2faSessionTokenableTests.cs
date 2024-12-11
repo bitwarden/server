@@ -3,6 +3,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Xunit;
+
 namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 
 // Note: these test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
@@ -54,10 +55,7 @@ public class SsoEmail2faSessionTokenableTests
     public void Constructor_CustomExpirationDate_ExpirationMatchesProvidedValue()
     {
         var customExpiration = DateTime.UtcNow.AddHours(3);
-        var token = new SsoEmail2faSessionTokenable
-        {
-            ExpirationDate = customExpiration
-        };
+        var token = new SsoEmail2faSessionTokenable { ExpirationDate = customExpiration };
 
         Assert.True((customExpiration - token.ExpirationDate).Duration() < _timeTolerance);
     }
@@ -79,10 +77,7 @@ public class SsoEmail2faSessionTokenableTests
     [Theory, AutoData]
     public void Valid_WrongIdentifier_ReturnsFalse(User user)
     {
-        var token = new SsoEmail2faSessionTokenable(user)
-        {
-            Identifier = "not correct"
-        };
+        var token = new SsoEmail2faSessionTokenable(user) { Identifier = "not correct" };
 
         Assert.False(token.Valid);
     }
@@ -161,10 +156,7 @@ public class SsoEmail2faSessionTokenableTests
     public void FromToken_SerializedToken_PreservesExpirationDate(User user)
     {
         var expectedDateTime = DateTime.UtcNow.AddHours(-5);
-        var token = new SsoEmail2faSessionTokenable(user)
-        {
-            ExpirationDate = expectedDateTime
-        };
+        var token = new SsoEmail2faSessionTokenable(user) { ExpirationDate = expectedDateTime };
 
         var result = Tokenable.FromToken<SsoEmail2faSessionTokenable>(token.ToToken());
 

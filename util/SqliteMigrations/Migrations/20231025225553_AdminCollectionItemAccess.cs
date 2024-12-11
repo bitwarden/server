@@ -15,7 +15,8 @@ public partial class AdminCollectionItemAccess : Migration
             table: "Organization",
             type: "INTEGER",
             nullable: false,
-            defaultValue: true);
+            defaultValue: true
+        );
     }
 
     /// <inheritdoc />
@@ -23,6 +24,7 @@ public partial class AdminCollectionItemAccess : Migration
     {
         migrationBuilder.DropColumn(
             name: "AllowAdminAccessToAllCollectionItems",
-            table: "Organization");
+            table: "Organization"
+        );
     }
 }

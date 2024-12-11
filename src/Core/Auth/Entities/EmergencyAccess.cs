@@ -10,6 +10,7 @@ public class EmergencyAccess : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid GrantorId { get; set; }
     public Guid? GranteeId { get; set; }
+
     [MaxLength(256)]
     public string Email { get; set; }
     public string KeyEncrypted { get; set; }

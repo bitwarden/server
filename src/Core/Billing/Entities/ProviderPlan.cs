@@ -23,5 +23,6 @@ public class ProviderPlan : ITableObject<Guid>
         }
     }
 
-    public bool IsConfigured() => SeatMinimum.HasValue && PurchasedSeats.HasValue && AllocatedSeats.HasValue;
+    public bool IsConfigured() =>
+        SeatMinimum.HasValue && PurchasedSeats.HasValue && AllocatedSeats.HasValue;
 }

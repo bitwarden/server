@@ -46,14 +46,12 @@ internal class EfDevice : ICustomization
 
 internal class EfDeviceAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfDeviceAutoDataAttribute() : base(new SutProviderCustomization(), new EfDevice())
-    { }
+    public EfDeviceAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfDevice()) { }
 }
 
 internal class InlineEfDeviceAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfDeviceAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfDevice) }, values)
-    { }
+    public InlineEfDeviceAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfDevice) }, values) { }
 }
-

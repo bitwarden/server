@@ -16,7 +16,7 @@ public class StaticClientStore
             new ApiClient(globalSettings, BitwardenClient.Browser, 30, 1),
             new ApiClient(globalSettings, BitwardenClient.Desktop, 30, 1),
             new ApiClient(globalSettings, BitwardenClient.Cli, 30, 1),
-            new ApiClient(globalSettings, BitwardenClient.DirectoryConnector, 30, 24)
+            new ApiClient(globalSettings, BitwardenClient.DirectoryConnector, 30, 24),
         }.ToFrozenDictionary(c => c.ClientId);
     }
 

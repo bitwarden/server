@@ -9,12 +9,15 @@ public class BitMemberAutoDataAttribute : MemberDataAttributeBase
 {
     private readonly Func<IFixture> _createFixture;
 
-    public BitMemberAutoDataAttribute(string memberName, params object[] parameters) :
-        this(() => new Fixture(), memberName, parameters)
-    { }
+    public BitMemberAutoDataAttribute(string memberName, params object[] parameters)
+        : this(() => new Fixture(), memberName, parameters) { }
 
-    public BitMemberAutoDataAttribute(Func<IFixture> createFixture, string memberName, params object[] parameters) :
-        base(memberName, parameters)
+    public BitMemberAutoDataAttribute(
+        Func<IFixture> createFixture,
+        string memberName,
+        params object[] parameters
+    )
+        : base(memberName, parameters)
     {
         _createFixture = createFixture;
     }

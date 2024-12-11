@@ -15,6 +15,7 @@ public class CipherAttachmentModel
 
     [EncryptedStringLength(1000)]
     public string FileName { get; set; }
+
     [EncryptedStringLength(1000)]
     public string Key { get; set; }
 }

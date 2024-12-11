@@ -21,18 +21,23 @@ public class CipherCardModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string CardholderName { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Brand { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Number { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string ExpMonth { get; set; }
+
     [EncryptedString]
     [StringLength(1000)]
     public string ExpYear { get; set; }
+
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Code { get; set; }

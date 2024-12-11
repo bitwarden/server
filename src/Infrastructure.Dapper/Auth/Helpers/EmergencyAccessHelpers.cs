@@ -19,8 +19,16 @@ public static class EmergencyAccessHelpers
             (nameof(EmergencyAccess.WaitTimeDays), typeof(int), c => c.WaitTimeDays),
             (nameof(EmergencyAccess.Type), typeof(short), c => c.Type),
             (nameof(EmergencyAccess.Status), typeof(short), c => c.Status),
-            (nameof(EmergencyAccess.RecoveryInitiatedDate), typeof(DateTime), c => c.RecoveryInitiatedDate),
-            (nameof(EmergencyAccess.LastNotificationDate), typeof(DateTime), c => c.LastNotificationDate),
+            (
+                nameof(EmergencyAccess.RecoveryInitiatedDate),
+                typeof(DateTime),
+                c => c.RecoveryInitiatedDate
+            ),
+            (
+                nameof(EmergencyAccess.LastNotificationDate),
+                typeof(DateTime),
+                c => c.LastNotificationDate
+            ),
             (nameof(EmergencyAccess.CreationDate), typeof(DateTime), c => c.CreationDate),
             (nameof(EmergencyAccess.RevisionDate), typeof(DateTime), c => c.RevisionDate),
         };

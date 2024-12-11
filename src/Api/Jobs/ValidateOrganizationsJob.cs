@@ -10,13 +10,14 @@ public class ValidateOrganizationsJob : BaseJob
 
     public ValidateOrganizationsJob(
         ILicensingService licensingService,
-        ILogger<ValidateOrganizationsJob> logger)
+        ILogger<ValidateOrganizationsJob> logger
+    )
         : base(logger)
     {
         _licensingService = licensingService;
     }
 
-    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+    protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
         await _licensingService.ValidateOrganizationsAsync();
     }

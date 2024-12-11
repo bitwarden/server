@@ -6,6 +6,11 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnte
 
 public interface ICreateSponsorshipCommand
 {
-    Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
-        PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName);
+    Task<OrganizationSponsorship> CreateSponsorshipAsync(
+        Organization sponsoringOrg,
+        OrganizationUser sponsoringOrgUser,
+        PlanSponsorshipType sponsorshipType,
+        string sponsoredEmail,
+        string friendlyName
+    );
 }

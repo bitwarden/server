@@ -7,19 +7,19 @@ public partial class AvatarColor : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "AvatarColor",
-            table: "User",
-            type: "varchar(7)",
-            maxLength: 7,
-            nullable: true)
+        migrationBuilder
+            .AddColumn<string>(
+                name: "AvatarColor",
+                table: "User",
+                type: "varchar(7)",
+                maxLength: 7,
+                nullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "AvatarColor",
-            table: "User");
+        migrationBuilder.DropColumn(name: "AvatarColor", table: "User");
     }
 }

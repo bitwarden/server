@@ -9,7 +9,9 @@ public class RotateOrganizationApiKeyCommand : IRotateOrganizationApiKeyCommand
 {
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
 
-    public RotateOrganizationApiKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
+    public RotateOrganizationApiKeyCommand(
+        IOrganizationApiKeyRepository organizationApiKeyRepository
+    )
     {
         _organizationApiKeyRepository = organizationApiKeyRepository;
     }

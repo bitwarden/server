@@ -12,13 +12,12 @@ public partial class CipherKeyUpdate : Migration
             name: "Key",
             table: "Cipher",
             type: "TEXT",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "Key",
-            table: "Cipher");
+        migrationBuilder.DropColumn(name: "Key", table: "Cipher");
     }
 }

@@ -15,16 +15,20 @@ public class DistributedCacheCookieManager : ICookieManager
         _cookieManager = new ChunkingCookieManager();
     }
 
-    private string CacheKeyPrefix => "cookie-data";
+    private static string CacheKeyPrefix => "cookie-data";
 
-    public void AppendResponseCookie(HttpContext context, string key, string value, CookieOptions options)
+    public void AppendResponseCookie(
+        HttpContext context,
+        string key,
+        string value,
+        CookieOptions options
+    )
     {
         var id = Guid.NewGuid().ToString();
         var cacheKey = GetKey(key, id);
 
         var expiresUtc = options.Expires ?? DateTimeOffset.UtcNow.AddMinutes(15);
-        var cacheOptions = new DistributedCacheEntryOptions()
-            .SetAbsoluteExpiration(expiresUtc);
+        var cacheOptions = new DistributedCacheEntryOptions().SetAbsoluteExpiration(expiresUtc);
 
         var data = Encoding.UTF8.GetBytes(value);
 
@@ -57,12 +61,11 @@ public class DistributedCacheCookieManager : ICookieManager
         return GetCache(context).GetString(cacheKey);
     }
 
-    private IDistributedCache GetCache(HttpContext context) =>
+    private static IDistributedCache GetCache(HttpContext context) =>
         context.RequestServices.GetRequiredKeyedService<IDistributedCache>("persistent");
 
     private string GetKey(string key, string id) => $"{CacheKeyPrefix}-{key}-{id}";
 
-    private string GetId(HttpContext context, string key) =>
-        context.Request.Cookies.ContainsKey(key) ?
-        context.Request.Cookies[key] : null;
+    private static string GetId(HttpContext context, string key) =>
+        context.Request.Cookies.ContainsKey(key) ? context.Request.Cookies[key] : null;
 }

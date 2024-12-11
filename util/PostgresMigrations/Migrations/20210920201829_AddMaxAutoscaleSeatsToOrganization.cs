@@ -10,33 +10,30 @@ public partial class AddMaxAutoscaleSeatsToOrganization : Migration
             name: "MaxAutoscaleSeats",
             table: "Organization",
             type: "integer",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<DateTime>(
             name: "OwnersNotifiedOfAutoscaling",
             table: "Organization",
             type: "timestamp without time zone",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<Guid>(
             name: "ProviderOrganizationId",
             table: "Event",
             type: "uuid",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "MaxAutoscaleSeats",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "MaxAutoscaleSeats", table: "Organization");
 
-        migrationBuilder.DropColumn(
-            name: "OwnersNotifiedOfAutoscaling",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "OwnersNotifiedOfAutoscaling", table: "Organization");
 
-        migrationBuilder.DropColumn(
-            name: "ProviderOrganizationId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "ProviderOrganizationId", table: "Event");
     }
 }

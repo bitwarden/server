@@ -7,5 +7,4 @@ public enum AccessPolicyType
     ServiceAccountProjectAccessPolicy,
     UserServiceAccountAccessPolicy,
     GroupServiceAccountAccessPolicy,
-
 }

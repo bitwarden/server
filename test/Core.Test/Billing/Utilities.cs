@@ -9,7 +9,8 @@ public static class Utilities
         Func<Task> function,
         string response = null,
         string message = null,
-        Exception innerException = null)
+        Exception innerException = null
+    )
     {
         var expected = new BillingException(response, message, innerException);
 

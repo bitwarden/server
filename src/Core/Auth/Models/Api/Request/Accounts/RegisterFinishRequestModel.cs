@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
+
 using System.ComponentModel.DataAnnotations;
 
 public enum RegisterFinishTokenType : byte
@@ -80,7 +81,10 @@ public class RegisterFinishRequestModel : IValidatableObject
         {
             return RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan;
         }
-        if (!string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken) && AcceptEmergencyAccessId.HasValue)
+        if (
+            !string.IsNullOrWhiteSpace(AcceptEmergencyAccessInviteToken)
+            && AcceptEmergencyAccessId.HasValue
+        )
         {
             return RegisterFinishTokenType.EmergencyAccessInvite;
         }
@@ -91,7 +95,6 @@ public class RegisterFinishRequestModel : IValidatableObject
 
         throw new InvalidOperationException("Invalid token type.");
     }
-
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

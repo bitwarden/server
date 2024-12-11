@@ -40,8 +40,7 @@ public class OrganizationSponsorshipResponseModel
             LastSyncDate = LastSyncDate,
             ValidUntil = ValidUntil,
             ToDelete = ToDelete,
-            CloudSponsorshipRemoved = CloudSponsorshipRemoved
+            CloudSponsorshipRemoved = CloudSponsorshipRemoved,
         };
-
     }
 }

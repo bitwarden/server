@@ -11,19 +11,26 @@ public class UpdateOrganizationConnectionCommand : IUpdateOrganizationConnection
 {
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
 
-    public UpdateOrganizationConnectionCommand(IOrganizationConnectionRepository organizationConnectionRepository)
+    public UpdateOrganizationConnectionCommand(
+        IOrganizationConnectionRepository organizationConnectionRepository
+    )
     {
         _organizationConnectionRepository = organizationConnectionRepository;
     }
 
-    public async Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : IConnectionConfig
+    public async Task<OrganizationConnection> UpdateAsync<T>(
+        OrganizationConnectionData<T> connectionData
+    )
+        where T : IConnectionConfig
     {
         if (!connectionData.Id.HasValue)
         {
             throw new Exception("Cannot update connection, Connection does not exist.");
         }
 
-        var connection = await _organizationConnectionRepository.GetByIdAsync(connectionData.Id.Value);
+        var connection = await _organizationConnectionRepository.GetByIdAsync(
+            connectionData.Id.Value
+        );
 
         if (connection == null)
         {

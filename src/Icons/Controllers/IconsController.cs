@@ -9,14 +9,16 @@ namespace Bit.Icons.Controllers;
 public class IconsController : Controller
 {
     // Basic bwi-globe icon
-    private static readonly byte[] _notFoundImage = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUg" +
-        "AAABMAAAATCAQAAADYWf5HAAABu0lEQVR42nXSvWuTURTH8R+t0heI9Y04aJycdBLNJNrBFBU7OFgUER3q21I0bXK+JwZ" +
-        "pXISm/QdcRB3EgqBBsNihsUbbgODQQSKCuKSDOApJuuhj8tCYQj/jvYfD795z1MZ+nBKrNKhSwrMxbZTrtRnqlEjZkB/x" +
-        "C/xmhZrlc71qS0Up8yVzTCGucFNKD1JhORVd70SZNU4okNx5d4+U2UXRIpJFWLClsR79YzN88wQvLWNzzPKEeS/wkQGpW" +
-        "VhhqhW8TtDJD3Mm1x/23zLSrZCdpBY8BueTNjHSbc+8wC9HlHgU5Aj5AW5zPdcVdpq0UcknWBSr/pjixO4gfp899Kd23p" +
-        "M2qQCH7LkCnqAqGh73OK/8NPOcaibr90LrW/yWAnaUhqjaOSl9nFR2r5rsqo22ypn1B5IN8VOUMHVgOnNQIX+d62plcz6" +
-        "rg1/jskK8CMb4we4pG6OWHtR/LBJkC2E4a7ZPkuX5ntumAOM2xxveclEhLvGH6XCmLPs735Eetrw63NnOgr9P9q1viC3x" +
-        "lRUGOjImqFDuOBvrYYoaZU9z1uPpYae5NfdvbNVG2ZjDIlXq/oMi46lo++4vjjPBl2Dlg00AAAAASUVORK5CYII=");
+    private static readonly byte[] _notFoundImage = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUg"
+            + "AAABMAAAATCAQAAADYWf5HAAABu0lEQVR42nXSvWuTURTH8R+t0heI9Y04aJycdBLNJNrBFBU7OFgUER3q21I0bXK+JwZ"
+            + "pXISm/QdcRB3EgqBBsNihsUbbgODQQSKCuKSDOApJuuhj8tCYQj/jvYfD795z1MZ+nBKrNKhSwrMxbZTrtRnqlEjZkB/x"
+            + "C/xmhZrlc71qS0Up8yVzTCGucFNKD1JhORVd70SZNU4okNx5d4+U2UXRIpJFWLClsR79YzN88wQvLWNzzPKEeS/wkQGpW"
+            + "VhhqhW8TtDJD3Mm1x/23zLSrZCdpBY8BueTNjHSbc+8wC9HlHgU5Aj5AW5zPdcVdpq0UcknWBSr/pjixO4gfp899Kd23p"
+            + "M2qQCH7LkCnqAqGh73OK/8NPOcaibr90LrW/yWAnaUhqjaOSl9nFR2r5rsqo22ypn1B5IN8VOUMHVgOnNQIX+d62plcz6"
+            + "rg1/jskK8CMb4we4pG6OWHtR/LBJkC2E4a7ZPkuX5ntumAOM2xxveclEhLvGH6XCmLPs735Eetrw63NnOgr9P9q1viC3x"
+            + "lRUGOjImqFDuOBvrYYoaZU9z1uPpYae5NfdvbNVG2ZjDIlXq/oMi46lo++4vjjPBl2Dlg00AAAAASUVORK5CYII="
+    );
 
     private readonly IMemoryCache _memoryCache;
     private readonly IDomainMappingService _domainMappingService;
@@ -29,7 +31,8 @@ public class IconsController : Controller
         IDomainMappingService domainMappingService,
         IIconFetchingService iconFetchingService,
         ILogger<IconsController> logger,
-        IconsSettings iconsSettings)
+        IconsSettings iconsSettings
+    )
     {
         _memoryCache = memoryCache;
         _domainMappingService = domainMappingService;
@@ -41,12 +44,14 @@ public class IconsController : Controller
     [HttpGet("~/config")]
     public IActionResult GetConfig()
     {
-        return new JsonResult(new
-        {
-            CacheEnabled = _iconsSettings.CacheEnabled,
-            CacheHours = _iconsSettings.CacheHours,
-            CacheSizeLimit = _iconsSettings.CacheSizeLimit
-        });
+        return new JsonResult(
+            new
+            {
+                CacheEnabled = _iconsSettings.CacheEnabled,
+                CacheHours = _iconsSettings.CacheHours,
+                CacheSizeLimit = _iconsSettings.CacheSizeLimit,
+            }
+        );
     }
 
     [HttpGet("{hostname}/icon.png")]
@@ -88,12 +93,20 @@ public class IconsController : Controller
             if (_iconsSettings.CacheEnabled && (icon == null || icon.Image.Length <= 50012))
             {
                 _logger.LogInformation("Cache icon for {0}.", domain);
-                _memoryCache.Set(mappedDomain, icon, new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = new TimeSpan(_iconsSettings.CacheHours, 0, 0),
-                    Size = icon?.Image.Length ?? 0,
-                    Priority = icon == null ? CacheItemPriority.High : CacheItemPriority.Normal
-                });
+                _memoryCache.Set(
+                    mappedDomain,
+                    icon,
+                    new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = new TimeSpan(
+                            _iconsSettings.CacheHours,
+                            0,
+                            0
+                        ),
+                        Size = icon?.Image.Length ?? 0,
+                        Priority = icon == null ? CacheItemPriority.High : CacheItemPriority.Normal,
+                    }
+                );
             }
         }
 

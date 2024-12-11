@@ -2,5 +2,5 @@
 
 public enum SecureNoteType : byte
 {
-    Generic = 0
+    Generic = 0,
 }

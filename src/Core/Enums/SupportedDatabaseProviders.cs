@@ -7,4 +7,3 @@ public enum SupportedDatabaseProviders
     Postgres,
     Sqlite,
 }
-

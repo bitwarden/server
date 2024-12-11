@@ -18,24 +18,33 @@ public class CreateProjectCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task CreateAsync_CallsCreate(Project data,
+    public async Task CreateAsync_CallsCreate(
+        Project data,
         Guid userId,
-        SutProvider<CreateProjectCommand> sutProvider)
+        SutProvider<CreateProjectCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationUserRepository>()
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
             .Returns(new OrganizationUser() { Id = userId });
 
-        sutProvider.GetDependency<IProjectRepository>()
+        sutProvider
+            .GetDependency<IProjectRepository>()
             .CreateAsync(Arg.Any<Project>())
             .Returns(data);
 
-        await sutProvider.Sut.CreateAsync(data, userId, sutProvider.GetDependency<ICurrentContext>().IdentityClientType);
+        await sutProvider.Sut.CreateAsync(
+            data,
+            userId,
+            sutProvider.GetDependency<ICurrentContext>().IdentityClientType
+        );
 
-        await sutProvider.GetDependency<IProjectRepository>().Received(1)
-            .CreateAsync(Arg.Is(data));
+        await sutProvider.GetDependency<IProjectRepository>().Received(1).CreateAsync(Arg.Is(data));
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
+        await sutProvider
+            .GetDependency<IAccessPolicyRepository>()
+            .Received(1)
             .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
     }
 }

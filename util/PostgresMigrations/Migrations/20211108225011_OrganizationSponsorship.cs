@@ -11,7 +11,8 @@ public partial class OrganizationSponsorship : Migration
             table: "User",
             type: "boolean",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
 
         migrationBuilder.CreateTable(
             name: "OrganizationSponsorship",
@@ -22,13 +23,30 @@ public partial class OrganizationSponsorship : Migration
                 SponsoringOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
                 SponsoringOrganizationUserId = table.Column<Guid>(type: "uuid", nullable: true),
                 SponsoredOrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
-                FriendlyName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
-                OfferedToEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                FriendlyName = table.Column<string>(
+                    type: "character varying(256)",
+                    maxLength: 256,
+                    nullable: true
+                ),
+                OfferedToEmail = table.Column<string>(
+                    type: "character varying(256)",
+                    maxLength: 256,
+                    nullable: true
+                ),
                 PlanSponsorshipType = table.Column<byte>(type: "smallint", nullable: true),
                 CloudSponsor = table.Column<bool>(type: "boolean", nullable: false),
-                LastSyncDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                TimesRenewedWithoutValidation = table.Column<byte>(type: "smallint", nullable: false),
-                SponsorshipLapsedDate = table.Column<DateTime>(type: "timestamp without time zone", nullable: true)
+                LastSyncDate = table.Column<DateTime>(
+                    type: "timestamp without time zone",
+                    nullable: true
+                ),
+                TimesRenewedWithoutValidation = table.Column<byte>(
+                    type: "smallint",
+                    nullable: false
+                ),
+                SponsorshipLapsedDate = table.Column<DateTime>(
+                    type: "timestamp without time zone",
+                    nullable: true
+                ),
             },
             constraints: table =>
             {
@@ -38,44 +56,48 @@ public partial class OrganizationSponsorship : Migration
                     column: x => x.InstallationId,
                     principalTable: "Installation",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Restrict);
+                    onDelete: ReferentialAction.Restrict
+                );
                 table.ForeignKey(
                     name: "FK_OrganizationSponsorship_Organization_SponsoredOrganizationId",
                     column: x => x.SponsoredOrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Restrict);
+                    onDelete: ReferentialAction.Restrict
+                );
                 table.ForeignKey(
                     name: "FK_OrganizationSponsorship_Organization_SponsoringOrganization~",
                     column: x => x.SponsoringOrganizationId,
                     principalTable: "Organization",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Restrict);
-            });
+                    onDelete: ReferentialAction.Restrict
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationSponsorship_InstallationId",
             table: "OrganizationSponsorship",
-            column: "InstallationId");
+            column: "InstallationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationSponsorship_SponsoredOrganizationId",
             table: "OrganizationSponsorship",
-            column: "SponsoredOrganizationId");
+            column: "SponsoredOrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_OrganizationSponsorship_SponsoringOrganizationId",
             table: "OrganizationSponsorship",
-            column: "SponsoringOrganizationId");
+            column: "SponsoringOrganizationId"
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "OrganizationSponsorship");
+        migrationBuilder.DropTable(name: "OrganizationSponsorship");
 
-        migrationBuilder.DropColumn(
-            name: "UsesCryptoAgent",
-            table: "User");
+        migrationBuilder.DropColumn(name: "UsesCryptoAgent", table: "User");
     }
 }

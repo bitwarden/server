@@ -20,7 +20,9 @@ public static class TestCaseHelper
         }
     }
 
-    public static IEnumerable<IEnumerable<object>> GetCombinationsOfMultipleLists(params IEnumerable<object>[] optionLists)
+    public static IEnumerable<IEnumerable<object>> GetCombinationsOfMultipleLists(
+        params IEnumerable<object>[] optionLists
+    )
     {
         if (!optionLists.Any())
         {
@@ -36,7 +38,9 @@ public static class TestCaseHelper
                 yield return itemArray;
             }
 
-            foreach (var nextCombination in GetCombinationsOfMultipleLists(optionLists.Skip(1).ToArray()))
+            foreach (
+                var nextCombination in GetCombinationsOfMultipleLists(optionLists.Skip(1).ToArray())
+            )
             {
                 yield return itemArray.Concat(nextCombination);
             }

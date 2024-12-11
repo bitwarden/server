@@ -16,8 +16,8 @@ public static class DeviceExtensions
     /// </remarks>
     public static bool IsTrusted(this Device device)
     {
-        return !string.IsNullOrEmpty(device.EncryptedUserKey) &&
-            !string.IsNullOrEmpty(device.EncryptedPublicKey) &&
-            !string.IsNullOrEmpty(device.EncryptedPrivateKey);
+        return !string.IsNullOrEmpty(device.EncryptedUserKey)
+            && !string.IsNullOrEmpty(device.EncryptedPublicKey)
+            && !string.IsNullOrEmpty(device.EncryptedPrivateKey);
     }
 }

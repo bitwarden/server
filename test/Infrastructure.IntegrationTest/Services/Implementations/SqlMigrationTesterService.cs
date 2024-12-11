@@ -44,13 +44,17 @@ public class SqlMigrationTesterService : IMigrationTesterService
 
     private string GetMigrationScript(string scriptName)
     {
-        var assembly = typeof(DbMigrator).Assembly; ;
-        var resourceName = assembly.GetManifestResourceNames()
+        var assembly = typeof(DbMigrator).Assembly;
+        ;
+        var resourceName = assembly
+            .GetManifestResourceNames()
             .FirstOrDefault(r => r.EndsWith($"{scriptName}.sql"));
 
         if (resourceName == null)
         {
-            throw new FileNotFoundException($"SQL migration script file for '{scriptName}' was not found.");
+            throw new FileNotFoundException(
+                $"SQL migration script file for '{scriptName}' was not found."
+            );
         }
 
         using var stream = assembly.GetManifestResourceStream(resourceName);

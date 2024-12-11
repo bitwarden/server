@@ -35,31 +35,41 @@ public static class Utilities
 
     public static void ConfigureStableProviderAdminInputs<T>(
         Provider provider,
-        SutProvider<T> sutProvider) where T : BaseProviderController
+        SutProvider<T> sutProvider
+    )
+        where T : BaseProviderController
     {
         ConfigureBaseProviderInputs(provider, sutProvider);
 
-        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id)
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderProviderAdmin(provider.Id)
             .Returns(true);
     }
 
     public static void ConfigureStableProviderServiceUserInputs<T>(
         Provider provider,
-        SutProvider<T> sutProvider) where T : BaseProviderController
+        SutProvider<T> sutProvider
+    )
+        where T : BaseProviderController
     {
         ConfigureBaseProviderInputs(provider, sutProvider);
 
-        sutProvider.GetDependency<ICurrentContext>().ProviderUser(provider.Id)
-            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUser(provider.Id).Returns(true);
     }
 
     private static void ConfigureBaseProviderInputs<T>(
         Provider provider,
-        SutProvider<T> sutProvider) where T : BaseProviderController
+        SutProvider<T> sutProvider
+    )
+        where T : BaseProviderController
     {
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        sutProvider
+            .GetDependency<IProviderRepository>()
+            .GetByIdAsync(provider.Id)
+            .Returns(provider);
     }
 }

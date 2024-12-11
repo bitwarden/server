@@ -15,7 +15,7 @@ public class NotificationHubConnectionTests
             ConnectionString = null,
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
 
         // Act
@@ -34,7 +34,7 @@ public class NotificationHubConnectionTests
             ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;",
             HubName = null,
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
 
         // Act
@@ -53,7 +53,7 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
 
         // Act
@@ -72,7 +72,7 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow.AddDays(1),
-            RegistrationEndDate = DateTime.UtcNow.AddDays(2)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(2),
         };
         var connection = NotificationHubConnection.From(hub);
 
@@ -92,7 +92,7 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
         var connection = NotificationHubConnection.From(hub);
 
@@ -112,7 +112,7 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = null,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
         var connection = NotificationHubConnection.From(hub);
 
@@ -132,7 +132,7 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
         var connection = NotificationHubConnection.From(hub);
 
@@ -152,12 +152,14 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow.AddDays(1),
-            RegistrationEndDate = DateTime.UtcNow.AddDays(2)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(2),
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow));
+        var result = connection.RegistrationEnabled(
+            CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow)
+        );
 
         // Assert
         Assert.False(result);
@@ -172,12 +174,14 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddDays(2)));
+        var result = connection.RegistrationEnabled(
+            CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddDays(2))
+        );
 
         // Assert
         Assert.False(result);
@@ -192,12 +196,14 @@ public class NotificationHubConnectionTests
             ConnectionString = "connection",
             HubName = "hub",
             RegistrationStartDate = DateTime.UtcNow,
-            RegistrationEndDate = DateTime.UtcNow.AddDays(1)
+            RegistrationEndDate = DateTime.UtcNow.AddDays(1),
         };
         var connection = NotificationHubConnection.From(hub);
 
         // Act
-        var result = connection.RegistrationEnabled(CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1)));
+        var result = connection.RegistrationEnabled(
+            CoreHelpers.GenerateComb(Guid.NewGuid(), DateTime.UtcNow.AddHours(1))
+        );
 
         // Assert
         Assert.True(result);

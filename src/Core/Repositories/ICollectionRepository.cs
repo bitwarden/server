@@ -23,7 +23,9 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// <summary>
     /// Return all collections that belong to the organization. Includes group/user access relationships for each collection.
     /// </summary>
-    Task<ICollection<Tuple<Collection, CollectionAccessDetails>>> GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
+    Task<
+        ICollection<Tuple<Collection, CollectionAccessDetails>>
+    > GetManyByOrganizationIdWithAccessAsync(Guid organizationId);
 
     Task<ICollection<Collection>> GetManyByManyIdsAsync(IEnumerable<Guid> collectionIds);
 
@@ -38,21 +40,41 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collections.
     /// </summary>
-    Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(Guid organizationId, Guid userId, bool includeAccessRelationships);
+    Task<ICollection<CollectionAdminDetails>> GetManyByOrganizationIdWithPermissionsAsync(
+        Guid organizationId,
+        Guid userId,
+        bool includeAccessRelationships
+    );
 
     /// <summary>
     /// Returns the collection by Id, including permission info for the specified user.
     /// This does not perform any authorization checks internally!
     /// Optionally, you can include access relationships for other Groups/Users and the collection.
     /// </summary>
-    Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(Guid collectionId, Guid? userId, bool includeAccessRelationships);
+    Task<CollectionAdminDetails?> GetByIdWithPermissionsAsync(
+        Guid collectionId,
+        Guid? userId,
+        bool includeAccessRelationships
+    );
 
-    Task CreateAsync(Collection obj, IEnumerable<CollectionAccessSelection>? groups, IEnumerable<CollectionAccessSelection>? users);
-    Task ReplaceAsync(Collection obj, IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users);
+    Task CreateAsync(
+        Collection obj,
+        IEnumerable<CollectionAccessSelection>? groups,
+        IEnumerable<CollectionAccessSelection>? users
+    );
+    Task ReplaceAsync(
+        Collection obj,
+        IEnumerable<CollectionAccessSelection> groups,
+        IEnumerable<CollectionAccessSelection> users
+    );
     Task DeleteUserAsync(Guid collectionId, Guid organizationUserId);
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
-    Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
-        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
+    Task CreateOrUpdateAccessForManyAsync(
+        Guid organizationId,
+        IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> users,
+        IEnumerable<CollectionAccessSelection> groups
+    );
 }

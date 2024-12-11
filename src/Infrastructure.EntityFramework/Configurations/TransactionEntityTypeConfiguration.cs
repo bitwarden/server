@@ -8,16 +8,17 @@ public class TransactionEntityTypeConfiguration : IEntityTypeConfiguration<Trans
 {
     public void Configure(EntityTypeBuilder<Transaction> builder)
     {
-        builder
-            .Property(t => t.Id)
-            .ValueGeneratedNever();
+        builder.Property(t => t.Id).ValueGeneratedNever();
+
+        builder.HasIndex(t => t.UserId).IsClustered(false);
 
         builder
-            .HasIndex(t => t.UserId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(t => new { t.UserId, t.OrganizationId, t.CreationDate })
+            .HasIndex(t => new
+            {
+                t.UserId,
+                t.OrganizationId,
+                t.CreationDate,
+            })
             .IsClustered(false);
 
         builder.ToTable(nameof(Transaction));

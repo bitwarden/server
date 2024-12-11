@@ -11,7 +11,10 @@ public class UpdateServiceAccountCommand : IUpdateServiceAccountCommand
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICurrentContext _currentContext;
 
-    public UpdateServiceAccountCommand(IServiceAccountRepository serviceAccountRepository, ICurrentContext currentContext)
+    public UpdateServiceAccountCommand(
+        IServiceAccountRepository serviceAccountRepository,
+        ICurrentContext currentContext
+    )
     {
         _serviceAccountRepository = serviceAccountRepository;
         _currentContext = currentContext;

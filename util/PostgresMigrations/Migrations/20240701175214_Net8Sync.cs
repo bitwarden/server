@@ -12,7 +12,8 @@ public partial class Net8Sync : Migration
     {
         migrationBuilder.DropIndex(
             name: "IX_ProviderInvoiceItem_Id_InvoiceId",
-            table: "ProviderInvoiceItem");
+            table: "ProviderInvoiceItem"
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "PlanName",
@@ -22,7 +23,8 @@ public partial class Net8Sync : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "text",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "InvoiceNumber",
@@ -32,7 +34,8 @@ public partial class Net8Sync : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "text",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "InvoiceId",
@@ -42,7 +45,8 @@ public partial class Net8Sync : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "text",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ClientName",
@@ -52,7 +56,8 @@ public partial class Net8Sync : Migration
             nullable: true,
             oldClrType: typeof(string),
             oldType: "text",
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Discriminator",
@@ -61,7 +66,8 @@ public partial class Net8Sync : Migration
             maxLength: 34,
             nullable: false,
             oldClrType: typeof(string),
-            oldType: "text");
+            oldType: "text"
+        );
     }
 
     /// <inheritdoc />
@@ -75,7 +81,8 @@ public partial class Net8Sync : Migration
             oldClrType: typeof(string),
             oldType: "character varying(50)",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "InvoiceNumber",
@@ -85,7 +92,8 @@ public partial class Net8Sync : Migration
             oldClrType: typeof(string),
             oldType: "character varying(50)",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "InvoiceId",
@@ -95,7 +103,8 @@ public partial class Net8Sync : Migration
             oldClrType: typeof(string),
             oldType: "character varying(50)",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "ClientName",
@@ -105,7 +114,8 @@ public partial class Net8Sync : Migration
             oldClrType: typeof(string),
             oldType: "character varying(50)",
             oldMaxLength: 50,
-            oldNullable: true);
+            oldNullable: true
+        );
 
         migrationBuilder.AlterColumn<string>(
             name: "Discriminator",
@@ -114,12 +124,14 @@ public partial class Net8Sync : Migration
             nullable: false,
             oldClrType: typeof(string),
             oldType: "character varying(34)",
-            oldMaxLength: 34);
+            oldMaxLength: 34
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_ProviderInvoiceItem_Id_InvoiceId",
             table: "ProviderInvoiceItem",
             columns: new[] { "Id", "InvoiceId" },
-            unique: true);
+            unique: true
+        );
     }
 }

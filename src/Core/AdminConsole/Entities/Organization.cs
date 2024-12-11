@@ -20,30 +20,40 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     private Dictionary<TwoFactorProviderType, TwoFactorProvider>? _twoFactorProviders;
 
     public Guid Id { get; set; }
+
     [MaxLength(50)]
     public string? Identifier { get; set; }
+
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayName() instead.
     /// </summary>
     [MaxLength(50)]
     public string Name { get; set; } = null!;
+
     /// <summary>
     /// This value is HTML encoded. For display purposes use the method DisplayBusinessName() instead.
     /// </summary>
     [MaxLength(50)]
     public string? BusinessName { get; set; }
+
     [MaxLength(50)]
     public string? BusinessAddress1 { get; set; }
+
     [MaxLength(50)]
     public string? BusinessAddress2 { get; set; }
+
     [MaxLength(50)]
     public string? BusinessAddress3 { get; set; }
+
     [MaxLength(2)]
     public string? BusinessCountry { get; set; }
+
     [MaxLength(30)]
     public string? BusinessTaxNumber { get; set; }
+
     [MaxLength(256)]
     public string BillingEmail { get; set; } = null!;
+
     [MaxLength(50)]
     public string Plan { get; set; } = null!;
     public PlanType PlanType { get; set; }
@@ -67,12 +77,15 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public long? Storage { get; set; }
     public short? MaxStorageGb { get; set; }
     public GatewayType? Gateway { get; set; }
+
     [MaxLength(50)]
     public string? GatewayCustomerId { get; set; }
+
     [MaxLength(50)]
     public string? GatewaySubscriptionId { get; set; }
     public string? ReferenceData { get; set; }
     public bool Enabled { get; set; } = true;
+
     [MaxLength(100)]
     public string? LicenseKey { get; set; }
     public string? PublicKey { get; set; }
@@ -89,6 +102,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+
     /// <summary>
     /// If set to true, only owners, admins, and some custom users can create and delete collections.
     /// If set to false, any organization member can create a collection, and any member can delete a collection that
@@ -162,7 +176,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         return "region";
     }
 
-    public string GatewayIdField()
+    public static string GatewayIdField()
     {
         return "organizationId";
     }
@@ -213,9 +227,9 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         {
             if (_twoFactorProviders == null)
             {
-                _twoFactorProviders =
-                    JsonHelpers.LegacyDeserialize<Dictionary<TwoFactorProviderType, TwoFactorProvider>>(
-                        TwoFactorProviders);
+                _twoFactorProviders = JsonHelpers.LegacyDeserialize<
+                    Dictionary<TwoFactorProviderType, TwoFactorProvider>
+                >(TwoFactorProviders);
             }
 
             return _twoFactorProviders;
@@ -226,7 +240,9 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         }
     }
 
-    public void SetTwoFactorProviders(Dictionary<TwoFactorProviderType, TwoFactorProvider> providers)
+    public void SetTwoFactorProviders(
+        Dictionary<TwoFactorProviderType, TwoFactorProvider> providers
+    )
     {
         if (!providers.Any())
         {
@@ -235,7 +251,10 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
             return;
         }
 
-        TwoFactorProviders = JsonHelpers.LegacySerialize(providers, JsonHelpers.LegacyEnumKeyResolver);
+        TwoFactorProviders = JsonHelpers.LegacySerialize(
+            providers,
+            JsonHelpers.LegacyEnumKeyResolver
+        );
         _twoFactorProviders = providers;
     }
 

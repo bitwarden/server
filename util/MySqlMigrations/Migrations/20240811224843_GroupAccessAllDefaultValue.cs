@@ -17,7 +17,8 @@ public partial class GroupAccessAllDefaultValue : Migration
             nullable: false,
             defaultValue: false,
             oldClrType: typeof(bool),
-            oldType: "tinyint(1)");
+            oldType: "tinyint(1)"
+        );
     }
 
     /// <inheritdoc />
@@ -30,6 +31,7 @@ public partial class GroupAccessAllDefaultValue : Migration
             nullable: false,
             oldClrType: typeof(bool),
             oldType: "tinyint(1)",
-            oldDefaultValue: false);
+            oldDefaultValue: false
+        );
     }
 }

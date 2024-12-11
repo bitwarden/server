@@ -7,13 +7,17 @@ public class AuthRequestCreateRequestModel
 {
     [Required]
     public string Email { get; set; }
+
     [Required]
     public string PublicKey { get; set; }
+
     [Required]
     public string DeviceIdentifier { get; set; }
+
     [Required]
     [StringLength(25)]
     public string AccessCode { get; set; }
+
     [Required]
     public AuthRequestType? Type { get; set; }
 }

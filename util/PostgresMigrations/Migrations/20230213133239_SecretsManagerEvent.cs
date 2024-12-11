@@ -12,23 +12,21 @@ public partial class SecretsManagerEvent : Migration
             name: "SecretId",
             table: "Event",
             type: "uuid",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<Guid>(
             name: "ServiceAccountId",
             table: "Event",
             type: "uuid",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "SecretId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "SecretId", table: "Event");
 
-        migrationBuilder.DropColumn(
-            name: "ServiceAccountId",
-            table: "Event");
+        migrationBuilder.DropColumn(name: "ServiceAccountId", table: "Event");
     }
 }

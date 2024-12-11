@@ -4,5 +4,5 @@ public enum Saml2SigningBehavior : byte
 {
     IfIdpWantAuthnRequestsSigned = 0,
     Always = 1,
-    Never = 3
+    Never = 3,
 }

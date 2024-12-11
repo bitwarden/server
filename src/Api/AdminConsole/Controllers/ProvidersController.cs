@@ -22,8 +22,13 @@ public class ProvidersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
 
-    public ProvidersController(IUserService userService, IProviderRepository providerRepository,
-        IProviderService providerService, ICurrentContext currentContext, GlobalSettings globalSettings)
+    public ProvidersController(
+        IUserService userService,
+        IProviderRepository providerRepository,
+        IProviderService providerService,
+        ICurrentContext currentContext,
+        GlobalSettings globalSettings
+    )
     {
         _userService = userService;
         _providerRepository = providerRepository;
@@ -51,7 +56,10 @@ public class ProvidersController : Controller
 
     [HttpPut("{id:guid}")]
     [HttpPost("{id:guid}")]
-    public async Task<ProviderResponseModel> Put(Guid id, [FromBody] ProviderUpdateRequestModel model)
+    public async Task<ProviderResponseModel> Put(
+        Guid id,
+        [FromBody] ProviderUpdateRequestModel model
+    )
     {
         if (!_currentContext.ProviderProviderAdmin(id))
         {
@@ -69,7 +77,10 @@ public class ProvidersController : Controller
     }
 
     [HttpPost("{id:guid}/setup")]
-    public async Task<ProviderResponseModel> Setup(Guid id, [FromBody] ProviderSetupRequestModel model)
+    public async Task<ProviderResponseModel> Setup(
+        Guid id,
+        [FromBody] ProviderSetupRequestModel model
+    )
     {
         if (!_currentContext.ProviderProviderAdmin(id))
         {
@@ -84,29 +95,37 @@ public class ProvidersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
 
-        var taxInfo = model.TaxInfo != null
-            ? new TaxInfo
-            {
-                BillingAddressCountry = model.TaxInfo.Country,
-                BillingAddressPostalCode = model.TaxInfo.PostalCode,
-                TaxIdNumber = model.TaxInfo.TaxId,
-                BillingAddressLine1 = model.TaxInfo.Line1,
-                BillingAddressLine2 = model.TaxInfo.Line2,
-                BillingAddressCity = model.TaxInfo.City,
-                BillingAddressState = model.TaxInfo.State
-            }
-            : null;
+        var taxInfo =
+            model.TaxInfo != null
+                ? new TaxInfo
+                {
+                    BillingAddressCountry = model.TaxInfo.Country,
+                    BillingAddressPostalCode = model.TaxInfo.PostalCode,
+                    TaxIdNumber = model.TaxInfo.TaxId,
+                    BillingAddressLine1 = model.TaxInfo.Line1,
+                    BillingAddressLine2 = model.TaxInfo.Line2,
+                    BillingAddressCity = model.TaxInfo.City,
+                    BillingAddressState = model.TaxInfo.State,
+                }
+                : null;
 
-        var response =
-            await _providerService.CompleteSetupAsync(model.ToProvider(provider), userId, model.Token, model.Key,
-                taxInfo);
+        var response = await _providerService.CompleteSetupAsync(
+            model.ToProvider(provider),
+            userId,
+            model.Token,
+            model.Key,
+            taxInfo
+        );
 
         return new ProviderResponseModel(response);
     }
 
     [HttpPost("{id}/delete-recover-token")]
     [AllowAnonymous]
-    public async Task PostDeleteRecoverToken(Guid id, [FromBody] ProviderVerifyDeleteRecoverRequestModel model)
+    public async Task PostDeleteRecoverToken(
+        Guid id,
+        [FromBody] ProviderVerifyDeleteRecoverRequestModel model
+    )
     {
         var provider = await _providerRepository.GetByIdAsync(id);
         if (provider == null)

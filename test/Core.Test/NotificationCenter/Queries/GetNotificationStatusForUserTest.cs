@@ -20,17 +20,31 @@ using Xunit;
 [NotificationStatusCustomize]
 public class GetNotificationStatusForUserQueryTest
 {
-    private static void Setup(SutProvider<GetNotificationStatusForUserQuery> sutProvider,
-        Guid notificationId, NotificationStatus? notificationStatus, Guid? userId, bool authorized = false)
+    private static void Setup(
+        SutProvider<GetNotificationStatusForUserQuery> sutProvider,
+        Guid notificationId,
+        NotificationStatus? notificationStatus,
+        Guid? userId,
+        bool authorized = false
+    )
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<INotificationStatusRepository>()
-            .GetByNotificationIdAndUserIdAsync(notificationId, userId.GetValueOrDefault(Guid.NewGuid()))
+        sutProvider
+            .GetDependency<INotificationStatusRepository>()
+            .GetByNotificationIdAndUserIdAsync(
+                notificationId,
+                userId.GetValueOrDefault(Guid.NewGuid())
+            )
             .Returns(notificationStatus);
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), notificationStatus ?? Arg.Any<NotificationStatus>(),
+        sutProvider
+            .GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                notificationStatus ?? Arg.Any<NotificationStatus>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
-                    reqs.Contains(NotificationStatusOperations.Read)))
+                    reqs.Contains(NotificationStatusOperations.Read)
+                )
+            )
             .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
     }
 
@@ -38,47 +52,59 @@ public class GetNotificationStatusForUserQueryTest
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_UserNotLoggedIn_NotFoundException(
         SutProvider<GetNotificationStatusForUserQuery> sutProvider,
-        Guid notificationId, NotificationStatus notificationStatus)
+        Guid notificationId,
+        NotificationStatus notificationStatus
+    )
     {
         Setup(sutProvider, notificationId, notificationStatus, userId: null, true);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_NotificationStatusNotFound_NotFoundException(
         SutProvider<GetNotificationStatusForUserQuery> sutProvider,
-        Guid notificationId)
+        Guid notificationId
+    )
     {
         Setup(sutProvider, notificationId, notificationStatus: null, Guid.NewGuid(), true);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_AuthorizationFailed_NotFoundException(
         SutProvider<GetNotificationStatusForUserQuery> sutProvider,
-        Guid notificationId, NotificationStatus notificationStatus)
+        Guid notificationId,
+        NotificationStatus notificationStatus
+    )
     {
         Setup(sutProvider, notificationId, notificationStatus, Guid.NewGuid(), authorized: false);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId)
+        );
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_NotificationFoundAuthorized_Returned(
         SutProvider<GetNotificationStatusForUserQuery> sutProvider,
-        Guid notificationId, NotificationStatus notificationStatus)
+        Guid notificationId,
+        NotificationStatus notificationStatus
+    )
     {
         Setup(sutProvider, notificationId, notificationStatus, Guid.NewGuid(), true);
 
-        var actualNotificationStatus = await sutProvider.Sut.GetByNotificationIdAndUserIdAsync(notificationId);
+        var actualNotificationStatus = await sutProvider.Sut.GetByNotificationIdAndUserIdAsync(
+            notificationId
+        );
 
         Assert.Equal(notificationStatus, actualNotificationStatus);
     }

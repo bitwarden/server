@@ -15,14 +15,15 @@ public class OrganizationUserReadCountByFreeOrganizationAdminUserQuery : IQuery<
 
     public IQueryable<OrganizationUser> Run(DatabaseContext dbContext)
     {
-        var query = from ou in dbContext.OrganizationUsers
-                    join o in dbContext.Organizations
-                        on ou.OrganizationId equals o.Id
-                    where ou.UserId == _userId &&
-                        (ou.Type == OrganizationUserType.Owner || ou.Type == OrganizationUserType.Admin) &&
-                        o.PlanType == PlanType.Free &&
-                        ou.Status == OrganizationUserStatusType.Confirmed
-                    select ou;
+        var query =
+            from ou in dbContext.OrganizationUsers
+            join o in dbContext.Organizations on ou.OrganizationId equals o.Id
+            where
+                ou.UserId == _userId
+                && (ou.Type == OrganizationUserType.Owner || ou.Type == OrganizationUserType.Admin)
+                && o.PlanType == PlanType.Free
+                && ou.Status == OrganizationUserStatusType.Confirmed
+            select ou;
 
         return query;
     }

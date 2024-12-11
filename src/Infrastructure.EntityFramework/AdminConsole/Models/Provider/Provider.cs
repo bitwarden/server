@@ -2,9 +2,7 @@
 
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 
-public class Provider : Core.AdminConsole.Entities.Provider.Provider
-{
-}
+public class Provider : Core.AdminConsole.Entities.Provider.Provider { }
 
 public class ProviderMapperProfile : Profile
 {

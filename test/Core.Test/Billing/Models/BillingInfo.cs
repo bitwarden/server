@@ -8,11 +8,7 @@ public class BillingInfoTests
     [Fact]
     public void BillingInvoice_Amount_ShouldComeFrom_InvoiceTotal()
     {
-        var invoice = new Stripe.Invoice
-        {
-            AmountDue = 1000,
-            Total = 2000,
-        };
+        var invoice = new Stripe.Invoice { AmountDue = 1000, Total = 2000 };
 
         var billingInvoice = new BillingHistoryInfo.BillingInvoice(invoice);
 

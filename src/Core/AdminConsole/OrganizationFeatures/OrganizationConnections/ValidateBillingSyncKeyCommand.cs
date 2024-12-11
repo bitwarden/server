@@ -9,13 +9,15 @@ public class ValidateBillingSyncKeyCommand : IValidateBillingSyncKeyCommand
 {
     private readonly IOrganizationApiKeyRepository _apiKeyRepository;
 
-    public ValidateBillingSyncKeyCommand(
-        IOrganizationApiKeyRepository organizationApiKeyRepository)
+    public ValidateBillingSyncKeyCommand(IOrganizationApiKeyRepository organizationApiKeyRepository)
     {
         _apiKeyRepository = organizationApiKeyRepository;
     }
 
-    public async Task<bool> ValidateBillingSyncKeyAsync(Organization organization, string billingSyncKey)
+    public async Task<bool> ValidateBillingSyncKeyAsync(
+        Organization organization,
+        string billingSyncKey
+    )
     {
         if (organization == null)
         {
@@ -26,7 +28,12 @@ public class ValidateBillingSyncKeyCommand : IValidateBillingSyncKeyCommand
             return false;
         }
 
-        var orgApiKey = (await _apiKeyRepository.GetManyByOrganizationIdTypeAsync(organization.Id, Core.Enums.OrganizationApiKeyType.BillingSync)).FirstOrDefault();
+        var orgApiKey = (
+            await _apiKeyRepository.GetManyByOrganizationIdTypeAsync(
+                organization.Id,
+                Core.Enums.OrganizationApiKeyType.BillingSync
+            )
+        ).FirstOrDefault();
         if (string.Equals(orgApiKey.ApiKey, billingSyncKey))
         {
             return true;

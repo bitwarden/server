@@ -18,15 +18,17 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubs = new() {
-                    new() {
+                NotificationHubs = new()
+                {
+                    new()
+                    {
                         ConnectionString = null,
                         HubName = "hub",
                         RegistrationStartDate = DateTime.UtcNow,
-                        RegistrationEndDate = DateTime.UtcNow.AddDays(1)
-                    }
-                }
-            }
+                        RegistrationEndDate = DateTime.UtcNow.AddDays(1),
+                    },
+                },
+            },
         };
         var logger = Substitute.For<ILogger<NotificationHubPool>>();
 
@@ -34,10 +36,15 @@ public class NotificationHubPoolTests
         var sut = new NotificationHubPool(logger, globalSettings);
 
         // Assert
-        logger.Received().Log(LogLevel.Warning, Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString() == "Invalid notification hub settings: hub"),
-            null,
-            Arg.Any<Func<object, Exception, string>>());
+        logger
+            .Received()
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o => o.ToString() == "Invalid notification hub settings: hub"),
+                null,
+                Arg.Any<Func<object, Exception, string>>()
+            );
     }
 
     [Fact]
@@ -48,15 +55,17 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubs = new() {
-                    new() {
+                NotificationHubs = new()
+                {
+                    new()
+                    {
                         ConnectionString = "connection",
                         HubName = null,
                         RegistrationStartDate = DateTime.UtcNow,
-                        RegistrationEndDate = DateTime.UtcNow.AddDays(1)
-                    }
-                }
-            }
+                        RegistrationEndDate = DateTime.UtcNow.AddDays(1),
+                    },
+                },
+            },
         };
         var logger = Substitute.For<ILogger<NotificationHubPool>>();
 
@@ -64,10 +73,17 @@ public class NotificationHubPoolTests
         var sut = new NotificationHubPool(logger, globalSettings);
 
         // Assert
-        logger.Received().Log(LogLevel.Warning, Arg.Any<EventId>(),
-            Arg.Is<object>(o => o.ToString() == "Invalid notification hub settings: hub name missing"),
-            null,
-            Arg.Any<Func<object, Exception, string>>());
+        logger
+            .Received()
+            .Log(
+                LogLevel.Warning,
+                Arg.Any<EventId>(),
+                Arg.Is<object>(o =>
+                    o.ToString() == "Invalid notification hub settings: hub name missing"
+                ),
+                null,
+                Arg.Any<Func<object, Exception, string>>()
+            );
     }
 
     [Fact]
@@ -78,15 +94,17 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubs = new() {
-                    new() {
+                NotificationHubs = new()
+                {
+                    new()
+                    {
                         ConnectionString = "connection",
                         HubName = "hub",
                         RegistrationStartDate = null,
                         RegistrationEndDate = null,
-                    }
-                }
-            }
+                    },
+                },
+            },
         };
         var logger = Substitute.For<ILogger<NotificationHubPool>>();
         var sut = new NotificationHubPool(logger, globalSettings);
@@ -106,15 +124,18 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubs = new() {
-                    new() {
-                        ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
+                NotificationHubs = new()
+                {
+                    new()
+                    {
+                        ConnectionString =
+                            "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
                         HubName = "hub",
                         RegistrationStartDate = DateTime.UtcNow.AddMinutes(-1),
                         RegistrationEndDate = DateTime.UtcNow.AddDays(1),
-                    }
-                }
-            }
+                    },
+                },
+            },
         };
         var logger = Substitute.For<ILogger<NotificationHubPool>>();
         var sut = new NotificationHubPool(logger, globalSettings);
@@ -134,15 +155,17 @@ public class NotificationHubPoolTests
         {
             NotificationHubPool = new NotificationHubPoolSettings()
             {
-                NotificationHubs = new() {
-                    new() {
+                NotificationHubs = new()
+                {
+                    new()
+                    {
                         ConnectionString = "connection",
                         HubName = "hub",
                         RegistrationStartDate = DateTime.UtcNow,
                         RegistrationEndDate = DateTime.UtcNow.AddDays(1),
-                    }
-                }
-            }
+                    },
+                },
+            },
         };
         var logger = Substitute.For<ILogger<NotificationHubPool>>();
         var sut = new NotificationHubPool(logger, globalSettings);

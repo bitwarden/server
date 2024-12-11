@@ -31,13 +31,20 @@ public class DeviceServiceTests
             Type = DeviceType.Android,
             UserId = userId,
             PushToken = "testtoken",
-            Identifier = "testid"
+            Identifier = "testid",
         };
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-        await pushRepo.Received().CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
-            userId.ToString(), "testid", DeviceType.Android);
+        await pushRepo
+            .Received()
+            .CreateOrUpdateRegistrationAsync(
+                "testtoken",
+                id.ToString(),
+                userId.ToString(),
+                "testid",
+                DeviceType.Android
+            );
     }
 
     /// <summary>
@@ -51,7 +58,8 @@ public class DeviceServiceTests
         Guid currentUserId,
         Device deviceOne,
         Device deviceTwo,
-        Device deviceThree)
+        Device deviceThree
+    )
     {
         SetupOldTrust(deviceOne);
         SetupOldTrust(deviceTwo);
@@ -59,14 +67,10 @@ public class DeviceServiceTests
 
         deviceOne.Identifier = "current_device";
 
-        sutProvider.GetDependency<IDeviceRepository>()
+        sutProvider
+            .GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-                deviceThree,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo, deviceThree });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -84,40 +88,61 @@ public class DeviceServiceTests
             },
         };
 
-        await sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel, alteredDeviceModels);
+        await sutProvider.Sut.UpdateDevicesTrustAsync(
+            "current_device",
+            currentUserId,
+            currentDeviceModel,
+            alteredDeviceModels
+        );
 
         // Updating trust, "current" or "other" only needs to change the EncryptedPublicKey & EncryptedUserKey
-        await sutProvider.GetDependency<IDeviceRepository>()
+        await sutProvider
+            .GetDependency<IDeviceRepository>()
             .Received(1)
-            .UpsertAsync(Arg.Is<Device>(d =>
-                d.Id == deviceOne.Id &&
-                d.EncryptedPublicKey == "current_encrypted_public_key" &&
-                d.EncryptedUserKey == "current_encrypted_user_key" &&
-                d.EncryptedPrivateKey == "old_private_deviceOne"));
+            .UpsertAsync(
+                Arg.Is<Device>(d =>
+                    d.Id == deviceOne.Id
+                    && d.EncryptedPublicKey == "current_encrypted_public_key"
+                    && d.EncryptedUserKey == "current_encrypted_user_key"
+                    && d.EncryptedPrivateKey == "old_private_deviceOne"
+                )
+            );
 
-        await sutProvider.GetDependency<IDeviceRepository>()
+        await sutProvider
+            .GetDependency<IDeviceRepository>()
             .Received(1)
-            .UpsertAsync(Arg.Is<Device>(d =>
-                d.Id == deviceTwo.Id &&
-                d.EncryptedPublicKey == "encrypted_public_key_two" &&
-                d.EncryptedUserKey == "encrypted_user_key_two" &&
-                d.EncryptedPrivateKey == "old_private_deviceTwo"));
+            .UpsertAsync(
+                Arg.Is<Device>(d =>
+                    d.Id == deviceTwo.Id
+                    && d.EncryptedPublicKey == "encrypted_public_key_two"
+                    && d.EncryptedUserKey == "encrypted_user_key_two"
+                    && d.EncryptedPrivateKey == "old_private_deviceTwo"
+                )
+            );
 
         // Clearing trust should remove all key values
-        await sutProvider.GetDependency<IDeviceRepository>()
+        await sutProvider
+            .GetDependency<IDeviceRepository>()
             .Received(1)
-            .UpsertAsync(Arg.Is<Device>(d =>
-                d.Id == deviceThree.Id &&
-                d.EncryptedPublicKey == null &&
-                d.EncryptedUserKey == null &&
-                d.EncryptedPrivateKey == null));
+            .UpsertAsync(
+                Arg.Is<Device>(d =>
+                    d.Id == deviceThree.Id
+                    && d.EncryptedPublicKey == null
+                    && d.EncryptedUserKey == null
+                    && d.EncryptedPrivateKey == null
+                )
+            );
 
         // Should have recieved a total of 3 calls, the ones asserted above
-        await sutProvider.GetDependency<IDeviceRepository>()
+        await sutProvider
+            .GetDependency<IDeviceRepository>()
             .Received(3)
             .UpsertAsync(Arg.Any<Device>());
 
-        static void SetupOldTrust(Device device, [CallerArgumentExpression(nameof(device))] string expression = null)
+        static void SetupOldTrust(
+            Device device,
+            [CallerArgumentExpression(nameof(device))] string expression = null
+        )
         {
             device.EncryptedPublicKey = $"old_public_{expression}";
             device.EncryptedPrivateKey = $"old_private_{expression}";
@@ -137,7 +162,8 @@ public class DeviceServiceTests
         SutProvider<DeviceService> sutProvider,
         Guid currentUserId,
         Device deviceOne,
-        Device deviceTwo)
+        Device deviceTwo
+    )
     {
         deviceOne.Identifier = "current_device";
 
@@ -146,13 +172,10 @@ public class DeviceServiceTests
         deviceTwo.EncryptedPublicKey = string.Empty;
         deviceTwo.EncryptedPrivateKey = string.Empty;
 
-        sutProvider.GetDependency<IDeviceRepository>()
+        sutProvider
+            .GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -170,18 +193,28 @@ public class DeviceServiceTests
             },
         };
 
-        await sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel, alteredDeviceModels);
+        await sutProvider.Sut.UpdateDevicesTrustAsync(
+            "current_device",
+            currentUserId,
+            currentDeviceModel,
+            alteredDeviceModels
+        );
 
         // Check that UpsertAsync was called for the trusted device
-        await sutProvider.GetDependency<IDeviceRepository>()
+        await sutProvider
+            .GetDependency<IDeviceRepository>()
             .Received(1)
-            .UpsertAsync(Arg.Is<Device>(d =>
-                d.Id == deviceOne.Id &&
-                d.EncryptedPublicKey == "current_encrypted_public_key" &&
-                d.EncryptedUserKey == "current_encrypted_user_key"));
+            .UpsertAsync(
+                Arg.Is<Device>(d =>
+                    d.Id == deviceOne.Id
+                    && d.EncryptedPublicKey == "current_encrypted_public_key"
+                    && d.EncryptedUserKey == "current_encrypted_user_key"
+                )
+            );
 
         // Check that UpsertAsync was not called for the untrusted device
-        await sutProvider.GetDependency<IDeviceRepository>()
+        await sutProvider
+            .GetDependency<IDeviceRepository>()
             .DidNotReceive()
             .UpsertAsync(Arg.Is<Device>(d => d.Id == deviceTwo.Id));
     }
@@ -195,18 +228,16 @@ public class DeviceServiceTests
         SutProvider<DeviceService> sutProvider,
         Guid currentUserId,
         Device deviceOne,
-        Device deviceTwo)
+        Device deviceTwo
+    )
     {
         deviceOne.Identifier = "some_other_device";
         deviceTwo.Identifier = "another_device";
 
-        sutProvider.GetDependency<IDeviceRepository>()
+        sutProvider
+            .GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -214,9 +245,15 @@ public class DeviceServiceTests
             EncryptedUserKey = "current_encrypted_user_key",
         };
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel,
-                Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>()));
+        await Assert.ThrowsAsync<NotFoundException>(
+            () =>
+                sutProvider.Sut.UpdateDevicesTrustAsync(
+                    "current_device",
+                    currentUserId,
+                    currentDeviceModel,
+                    Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>()
+                )
+        );
     }
 
     /// <summary>
@@ -230,17 +267,15 @@ public class DeviceServiceTests
         SutProvider<DeviceService> sutProvider,
         Guid currentUserId,
         Device deviceOne,
-        Device deviceTwo)
+        Device deviceTwo
+    )
     {
         deviceOne.Identifier = "current_device";
 
-        sutProvider.GetDependency<IDeviceRepository>()
+        sutProvider
+            .GetDependency<IDeviceRepository>()
             .GetManyByUserIdAsync(currentUserId)
-            .Returns(new List<Device>
-            {
-                deviceOne,
-                deviceTwo,
-            });
+            .Returns(new List<Device> { deviceOne, deviceTwo });
 
         var currentDeviceModel = new DeviceKeysUpdateRequestModel
         {
@@ -258,7 +293,14 @@ public class DeviceServiceTests
             },
         };
 
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.UpdateDevicesTrustAsync("current_device", currentUserId, currentDeviceModel, alteredDeviceModels));
+        await Assert.ThrowsAsync<BadRequestException>(
+            () =>
+                sutProvider.Sut.UpdateDevicesTrustAsync(
+                    "current_device",
+                    currentUserId,
+                    currentDeviceModel,
+                    alteredDeviceModels
+                )
+        );
     }
 }

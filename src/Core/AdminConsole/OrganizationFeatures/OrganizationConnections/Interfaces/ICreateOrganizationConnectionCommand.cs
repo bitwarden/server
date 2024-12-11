@@ -6,5 +6,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Int
 
 public interface ICreateOrganizationConnectionCommand
 {
-    Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData) where T : IConnectionConfig;
+    Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData)
+        where T : IConnectionConfig;
 }

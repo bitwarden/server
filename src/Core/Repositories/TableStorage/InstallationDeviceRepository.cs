@@ -11,8 +11,7 @@ public class InstallationDeviceRepository : IInstallationDeviceRepository
     private readonly TableClient _tableClient;
 
     public InstallationDeviceRepository(GlobalSettings globalSettings)
-        : this(globalSettings.Events.ConnectionString)
-    { }
+        : this(globalSettings.Events.ConnectionString) { }
 
     public InstallationDeviceRepository(string storageConnectionString)
     {
@@ -61,7 +60,9 @@ public class InstallationDeviceRepository : IInstallationDeviceRepository
 
                 foreach (var entity in batchEntities)
                 {
-                    batch.Add(new TableTransactionAction(TableTransactionActionType.UpsertReplace, entity));
+                    batch.Add(
+                        new TableTransactionAction(TableTransactionActionType.UpsertReplace, entity)
+                    );
                 }
 
                 await _tableClient.SubmitTransactionAsync(batch);

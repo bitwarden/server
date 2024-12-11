@@ -5,7 +5,6 @@ namespace Bit.Core.Auth.UserFeatures.Registration;
 
 public interface IRegisterUserCommand
 {
-
     /// <summary>
     /// Creates a new user, sends a welcome email, and raises the signup reference event.
     /// </summary>
@@ -24,7 +23,12 @@ public interface IRegisterUserCommand
     /// <param name="orgInviteToken">The org invite token sent to the user via email</param>
     /// <param name="orgUserId">The associated org user guid that was created at the time of invite</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaOrganizationInviteToken(User user, string masterPasswordHash, string orgInviteToken, Guid? orgUserId);
+    public Task<IdentityResult> RegisterUserViaOrganizationInviteToken(
+        User user,
+        string masterPasswordHash,
+        string orgInviteToken,
+        Guid? orgUserId
+    );
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -35,7 +39,11 @@ public interface IRegisterUserCommand
     /// <param name="masterPasswordHash">The hashed master password the user entered</param>
     /// <param name="emailVerificationToken">The email verification token sent to the user via email</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(User user, string masterPasswordHash, string emailVerificationToken);
+    public Task<IdentityResult> RegisterUserViaEmailVerificationToken(
+        User user,
+        string masterPasswordHash,
+        string emailVerificationToken
+    );
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -46,7 +54,11 @@ public interface IRegisterUserCommand
     /// <param name="masterPasswordHash">The hashed master password the user entered</param>
     /// <param name="orgSponsoredFreeFamilyPlanInviteToken">The org sponsored free family plan invite token sent to the user via email</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(User user, string masterPasswordHash, string orgSponsoredFreeFamilyPlanInviteToken);
+    public Task<IdentityResult> RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(
+        User user,
+        string masterPasswordHash,
+        string orgSponsoredFreeFamilyPlanInviteToken
+    );
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -58,8 +70,12 @@ public interface IRegisterUserCommand
     /// <param name="acceptEmergencyAccessInviteToken">The emergency access invite token sent to the user via email</param>
     /// <param name="acceptEmergencyAccessId">The emergency access id (used to validate the token)</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(User user, string masterPasswordHash,
-        string acceptEmergencyAccessInviteToken, Guid acceptEmergencyAccessId);
+    public Task<IdentityResult> RegisterUserViaAcceptEmergencyAccessInviteToken(
+        User user,
+        string masterPasswordHash,
+        string acceptEmergencyAccessInviteToken,
+        Guid acceptEmergencyAccessId
+    );
 
     /// <summary>
     /// Creates a new user with a given master password hash, sends a welcome email, and raises the signup reference event.
@@ -71,6 +87,10 @@ public interface IRegisterUserCommand
     /// <param name="providerInviteToken">The provider invite token sent to the user via email</param>
     /// <param name="providerUserId">The provider user id which is used to validate the invite token</param>
     /// <returns><see cref="IdentityResult"/></returns>
-    public Task<IdentityResult> RegisterUserViaProviderInviteToken(User user, string masterPasswordHash, string providerInviteToken, Guid providerUserId);
-
+    public Task<IdentityResult> RegisterUserViaProviderInviteToken(
+        User user,
+        string masterPasswordHash,
+        string providerInviteToken,
+        Guid providerUserId
+    );
 }

@@ -10,12 +10,15 @@ public class GetPasswordHealthReportApplicationQuery : IGetPasswordHealthReportA
     private IPasswordHealthReportApplicationRepository _passwordHealthReportApplicationRepo;
 
     public GetPasswordHealthReportApplicationQuery(
-        IPasswordHealthReportApplicationRepository passwordHealthReportApplicationRepo)
+        IPasswordHealthReportApplicationRepository passwordHealthReportApplicationRepo
+    )
     {
         _passwordHealthReportApplicationRepo = passwordHealthReportApplicationRepo;
     }
 
-    public async Task<IEnumerable<PasswordHealthReportApplication>> GetPasswordHealthReportApplicationAsync(Guid organizationId)
+    public async Task<
+        IEnumerable<PasswordHealthReportApplication>
+    > GetPasswordHealthReportApplicationAsync(Guid organizationId)
     {
         if (organizationId == Guid.Empty)
         {

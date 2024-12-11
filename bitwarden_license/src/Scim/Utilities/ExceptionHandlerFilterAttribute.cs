@@ -17,10 +17,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
 
         int statusCode = StatusCodes.Status500InternalServerError;
-        var scimErrorResponseModel = new ScimErrorResponseModel
-        {
-            Detail = exception.Message
-        };
+        var scimErrorResponseModel = new ScimErrorResponseModel { Detail = exception.Message };
 
         if (exception is NotFoundException)
         {

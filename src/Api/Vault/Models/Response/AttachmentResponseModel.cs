@@ -8,7 +8,8 @@ namespace Bit.Api.Vault.Models.Response;
 
 public class AttachmentResponseModel : ResponseModel
 {
-    public AttachmentResponseModel(AttachmentResponseData data) : base("attachment")
+    public AttachmentResponseModel(AttachmentResponseData data)
+        : base("attachment")
     {
         Id = data.Id;
         Url = data.Url;
@@ -18,8 +19,12 @@ public class AttachmentResponseModel : ResponseModel
         SizeName = CoreHelpers.ReadableBytesSize(data.Data.Size);
     }
 
-    public AttachmentResponseModel(string id, CipherAttachment.MetaData data, Cipher cipher,
-        IGlobalSettings globalSettings)
+    public AttachmentResponseModel(
+        string id,
+        CipherAttachment.MetaData data,
+        Cipher cipher,
+        IGlobalSettings globalSettings
+    )
         : base("attachment")
     {
         Id = id;
@@ -37,7 +42,10 @@ public class AttachmentResponseModel : ResponseModel
     public string Size { get; set; }
     public string SizeName { get; set; }
 
-    public static IEnumerable<AttachmentResponseModel> FromCipher(Cipher cipher, IGlobalSettings globalSettings)
+    public static IEnumerable<AttachmentResponseModel> FromCipher(
+        Cipher cipher,
+        IGlobalSettings globalSettings
+    )
     {
         var attachments = cipher.GetAttachments();
         if (attachments == null)
@@ -45,6 +53,11 @@ public class AttachmentResponseModel : ResponseModel
             return null;
         }
 
-        return attachments.Select(a => new AttachmentResponseModel(a.Key, a.Value, cipher, globalSettings));
+        return attachments.Select(a => new AttachmentResponseModel(
+            a.Key,
+            a.Value,
+            cipher,
+            globalSettings
+        ));
     }
 }

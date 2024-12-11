@@ -35,5 +35,5 @@ public class EventResponseBody
 public enum EventActionType
 {
     Inspect,
-    Process
+    Process,
 }

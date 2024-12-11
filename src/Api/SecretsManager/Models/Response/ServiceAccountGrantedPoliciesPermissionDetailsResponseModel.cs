@@ -9,7 +9,8 @@ public class ServiceAccountGrantedPoliciesPermissionDetailsResponseModel : Respo
     private const string _objectName = "ServiceAccountGrantedPoliciesPermissionDetails";
 
     public ServiceAccountGrantedPoliciesPermissionDetailsResponseModel(
-        ServiceAccountGrantedPoliciesPermissionDetails? grantedPoliciesPermissionDetails)
+        ServiceAccountGrantedPoliciesPermissionDetails? grantedPoliciesPermissionDetails
+    )
         : base(_objectName)
     {
         if (grantedPoliciesPermissionDetails == null)
@@ -17,13 +18,15 @@ public class ServiceAccountGrantedPoliciesPermissionDetailsResponseModel : Respo
             return;
         }
 
-        GrantedProjectPolicies = grantedPoliciesPermissionDetails.ProjectGrantedPolicies
-            .Select(x => new GrantedProjectAccessPolicyPermissionDetailsResponseModel(x)).ToList();
+        GrantedProjectPolicies = grantedPoliciesPermissionDetails
+            .ProjectGrantedPolicies.Select(
+                x => new GrantedProjectAccessPolicyPermissionDetailsResponseModel(x)
+            )
+            .ToList();
     }
 
-    public ServiceAccountGrantedPoliciesPermissionDetailsResponseModel() : base(_objectName)
-    {
-    }
+    public ServiceAccountGrantedPoliciesPermissionDetailsResponseModel()
+        : base(_objectName) { }
 
     public List<GrantedProjectAccessPolicyPermissionDetailsResponseModel> GrantedProjectPolicies { get; set; } =
         [];

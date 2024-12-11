@@ -12,15 +12,19 @@ public class ProviderSetupRequestModel
     [StringLength(50, ErrorMessage = "The field Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+
     [StringLength(50, ErrorMessage = "The field Business Name exceeds the maximum length.")]
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
+
     [Required]
     [StringLength(256)]
     [EmailAddress]
     public string BillingEmail { get; set; }
+
     [Required]
     public string Token { get; set; }
+
     [Required]
     public string Key { get; set; }
     public ExpandedTaxInfoUpdateRequestModel TaxInfo { get; set; }

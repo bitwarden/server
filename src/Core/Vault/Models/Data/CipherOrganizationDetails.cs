@@ -12,7 +12,8 @@ public class CipherOrganizationDetailsWithCollections : CipherOrganizationDetail
 {
     public CipherOrganizationDetailsWithCollections(
         CipherOrganizationDetails cipher,
-        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict)
+        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict
+    )
     {
         Id = cipher.Id;
         UserId = cipher.UserId;
@@ -33,5 +34,6 @@ public class CipherOrganizationDetailsWithCollections : CipherOrganizationDetail
             ? value.Select(cc => cc.CollectionId)
             : Array.Empty<Guid>();
     }
+
     public IEnumerable<Guid> CollectionIds { get; set; }
 }

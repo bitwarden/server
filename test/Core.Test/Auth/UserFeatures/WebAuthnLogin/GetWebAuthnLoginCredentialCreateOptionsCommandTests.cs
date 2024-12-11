@@ -15,10 +15,14 @@ namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 public class GetWebAuthnLoginCredentialCreateOptionsTests
 {
     [Theory, BitAutoData]
-    internal async Task NoExistingCredentials_ReturnsOptionsWithoutExcludedCredentials(SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider, User user)
+    internal async Task NoExistingCredentials_ReturnsOptionsWithoutExcludedCredentials(
+        SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider,
+        User user
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>()
+        sutProvider
+            .GetDependency<IWebAuthnCredentialRepository>()
             .GetManyByUserIdAsync(user.Id)
             .Returns(new List<WebAuthnCredential>());
 
@@ -26,21 +30,28 @@ public class GetWebAuthnLoginCredentialCreateOptionsTests
         var result = await sutProvider.Sut.GetWebAuthnLoginCredentialCreateOptionsAsync(user);
 
         // Assert
-        sutProvider.GetDependency<IFido2>()
+        sutProvider
+            .GetDependency<IFido2>()
             .Received()
             .RequestNewCredential(
                 Arg.Any<Fido2User>(),
                 Arg.Is<List<PublicKeyCredentialDescriptor>>(list => list.Count == 0),
                 Arg.Any<AuthenticatorSelection>(),
                 Arg.Any<AttestationConveyancePreference>(),
-                Arg.Any<AuthenticationExtensionsClientInputs>());
+                Arg.Any<AuthenticationExtensionsClientInputs>()
+            );
     }
 
     [Theory, BitAutoData]
-    internal async Task HasExistingCredential_ReturnsOptionsWithExcludedCredential(SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider, User user, WebAuthnCredential credential)
+    internal async Task HasExistingCredential_ReturnsOptionsWithExcludedCredential(
+        SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider,
+        User user,
+        WebAuthnCredential credential
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>()
+        sutProvider
+            .GetDependency<IWebAuthnCredentialRepository>()
             .GetManyByUserIdAsync(user.Id)
             .Returns(new List<WebAuthnCredential> { credential });
 
@@ -48,13 +59,15 @@ public class GetWebAuthnLoginCredentialCreateOptionsTests
         var result = await sutProvider.Sut.GetWebAuthnLoginCredentialCreateOptionsAsync(user);
 
         // Assert
-        sutProvider.GetDependency<IFido2>()
+        sutProvider
+            .GetDependency<IFido2>()
             .Received()
             .RequestNewCredential(
                 Arg.Any<Fido2User>(),
                 Arg.Is<List<PublicKeyCredentialDescriptor>>(list => list.Count == 1),
                 Arg.Any<AuthenticatorSelection>(),
                 Arg.Any<AttestationConveyancePreference>(),
-                Arg.Any<AuthenticationExtensionsClientInputs>());
+                Arg.Any<AuthenticationExtensionsClientInputs>()
+            );
     }
 }

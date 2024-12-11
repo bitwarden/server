@@ -3,8 +3,5 @@
 public class InvalidGatewayCustomerIdException : Exception
 {
     public InvalidGatewayCustomerIdException()
-        : base("Invalid gateway customerId.")
-    {
-
-    }
+        : base("Invalid gateway customerId.") { }
 }

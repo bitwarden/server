@@ -8,10 +8,7 @@ public class ApiKeyResponseModel : ResponseModel
     public ApiKeyResponseModel(OrganizationApiKey organizationApiKey, string obj = "apiKey")
         : base(obj)
     {
-        if (organizationApiKey == null)
-        {
-            throw new ArgumentNullException(nameof(organizationApiKey));
-        }
+        ArgumentNullException.ThrowIfNull(organizationApiKey);
         ApiKey = organizationApiKey.ApiKey;
         RevisionDate = organizationApiKey.RevisionDate;
     }
@@ -19,10 +16,7 @@ public class ApiKeyResponseModel : ResponseModel
     public ApiKeyResponseModel(User user, string obj = "apiKey")
         : base(obj)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
         ApiKey = user.ApiKey;
         RevisionDate = user.RevisionDate;
     }

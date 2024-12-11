@@ -19,7 +19,6 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IPushNotificationService _pushService;
 
-
     public TdeOffboardingPasswordCommand(
         IUserService userService,
         IUserRepository userRepository,
@@ -27,7 +26,8 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
         IOrganizationUserRepository organizationUserRepository,
         ISsoUserRepository ssoUserRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IPushNotificationService pushService)
+        IPushNotificationService pushService
+    )
     {
         _userService = userService;
         _userRepository = userRepository;
@@ -38,7 +38,12 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
         _pushService = pushService;
     }
 
-    public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(User user, string newMasterPassword, string key, string hint)
+    public async Task<IdentityResult> UpdateTdeOffboardingPasswordAsync(
+        User user,
+        string newMasterPassword,
+        string key,
+        string hint
+    )
     {
         if (string.IsNullOrWhiteSpace(newMasterPassword))
         {
@@ -58,24 +63,36 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
         orgUserDetails = orgUserDetails.Where(x => x.UseSso).ToList();
         if (orgUserDetails.Count == 0)
         {
-            throw new BadRequestException("User is not part of any organization that has SSO enabled.");
+            throw new BadRequestException(
+                "User is not part of any organization that has SSO enabled."
+            );
         }
 
-        var orgSSOUsers = await Task.WhenAll(orgUserDetails.Select(async x => await _ssoUserRepository.GetByUserIdOrganizationIdAsync(x.OrganizationId, user.Id)));
+        var orgSSOUsers = await Task.WhenAll(
+            orgUserDetails.Select(async x =>
+                await _ssoUserRepository.GetByUserIdOrganizationIdAsync(x.OrganizationId, user.Id)
+            )
+        );
         if (orgSSOUsers.Length != 1)
         {
             throw new BadRequestException("User is part of no or multiple SSO configurations.");
         }
 
         var orgUser = orgUserDetails.First();
-        var orgSSOConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgUser.OrganizationId);
+        var orgSSOConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(
+            orgUser.OrganizationId
+        );
         if (orgSSOConfig == null)
         {
             throw new BadRequestException("Organization SSO configuration not found.");
         }
-        else if (orgSSOConfig.GetData().MemberDecryptionType != Enums.MemberDecryptionType.MasterPassword)
+        else if (
+            orgSSOConfig.GetData().MemberDecryptionType != Enums.MemberDecryptionType.MasterPassword
+        )
         {
-            throw new BadRequestException("Organization SSO Member Decryption Type is not Master Password.");
+            throw new BadRequestException(
+                "Organization SSO Member Decryption Type is not Master Password."
+            );
         }
 
         var result = await _userService.UpdatePasswordHash(user, newMasterPassword);
@@ -95,5 +112,4 @@ public class TdeOffboardingPasswordCommand : ITdeOffboardingPasswordCommand
 
         return IdentityResult.Success;
     }
-
 }

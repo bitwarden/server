@@ -6,7 +6,6 @@ namespace Bit.Test.Common.AutoFixture.JsonDocumentFixtures;
 
 public class JsonDocumentCustomization : ICustomization, ISpecimenBuilder
 {
-
     public string Json { get; set; }
 
     public void Customize(IFixture fixture)

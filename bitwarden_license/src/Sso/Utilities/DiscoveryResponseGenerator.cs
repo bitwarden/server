@@ -20,17 +20,31 @@ public class DiscoveryResponseGenerator : DIR.DiscoveryResponseGenerator
         ISecretsListParser secretParsers,
         IResourceOwnerPasswordValidator resourceOwnerValidator,
         ILogger<DiscoveryResponseGenerator> logger,
-        GlobalSettings globalSettings)
-        : base(options, resourceStore, keys, extensionGrants, secretParsers, resourceOwnerValidator, logger)
+        GlobalSettings globalSettings
+    )
+        : base(
+            options,
+            resourceStore,
+            keys,
+            extensionGrants,
+            secretParsers,
+            resourceOwnerValidator,
+            logger
+        )
     {
         _globalSettings = globalSettings;
     }
 
     public override async Task<Dictionary<string, object>> CreateDiscoveryDocumentAsync(
-        string baseUrl, string issuerUri)
+        string baseUrl,
+        string issuerUri
+    )
     {
         var dict = await base.CreateDiscoveryDocumentAsync(baseUrl, issuerUri);
-        return CoreHelpers.AdjustIdentityServerConfig(dict, _globalSettings.BaseServiceUri.Sso,
-            _globalSettings.BaseServiceUri.InternalSso);
+        return CoreHelpers.AdjustIdentityServerConfig(
+            dict,
+            _globalSettings.BaseServiceUri.Sso,
+            _globalSettings.BaseServiceUri.InternalSso
+        );
     }
 }

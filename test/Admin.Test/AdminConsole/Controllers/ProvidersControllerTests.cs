@@ -24,7 +24,8 @@ public class ProvidersControllerTests
     [Theory]
     public async Task CreateMspAsync_WithValidModel_CreatesProvider(
         CreateMspProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
 
@@ -33,13 +34,15 @@ public class ProvidersControllerTests
 
         // Assert
         Assert.NotNull(actual);
-        await sutProvider.GetDependency<ICreateProviderCommand>()
+        await sutProvider
+            .GetDependency<ICreateProviderCommand>()
             .Received(Quantity.Exactly(1))
             .CreateMspAsync(
                 Arg.Is<Provider>(x => x.Type == ProviderType.Msp),
                 model.OwnerEmail,
                 model.TeamsMonthlySeatMinimum,
-                model.EnterpriseMonthlySeatMinimum);
+                model.EnterpriseMonthlySeatMinimum
+            );
     }
 
     [BitAutoData]
@@ -48,16 +51,20 @@ public class ProvidersControllerTests
     public async Task CreateMspAsync_RedirectsToExpectedPage_AfterCreatingProvider(
         CreateMspProviderModel model,
         Guid expectedProviderId,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<ICreateProviderCommand>()
+        sutProvider
+            .GetDependency<ICreateProviderCommand>()
             .When(x =>
                 x.CreateMspAsync(
                     Arg.Is<Provider>(y => y.Type == ProviderType.Msp),
                     model.OwnerEmail,
                     model.TeamsMonthlySeatMinimum,
-                    model.EnterpriseMonthlySeatMinimum))
+                    model.EnterpriseMonthlySeatMinimum
+                )
+            )
             .Do(callInfo =>
             {
                 var providerArgument = callInfo.ArgAt<Provider>(0);
@@ -83,10 +90,12 @@ public class ProvidersControllerTests
     [Theory]
     public async Task CreateMultiOrganizationEnterpriseAsync_WithValidModel_CreatesProvider(
         CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
             .Returns(true);
 
@@ -95,14 +104,17 @@ public class ProvidersControllerTests
 
         // Assert
         Assert.NotNull(actual);
-        await sutProvider.GetDependency<ICreateProviderCommand>()
+        await sutProvider
+            .GetDependency<ICreateProviderCommand>()
             .Received(Quantity.Exactly(1))
             .CreateMultiOrganizationEnterpriseAsync(
                 Arg.Is<Provider>(x => x.Type == ProviderType.MultiOrganizationEnterprise),
                 model.OwnerEmail,
                 Arg.Is<PlanType>(y => y == model.Plan),
-                model.EnterpriseSeatMinimum);
-        sutProvider.GetDependency<IFeatureService>()
+                model.EnterpriseSeatMinimum
+            );
+        sutProvider
+            .GetDependency<IFeatureService>()
             .Received(Quantity.Exactly(1))
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
     }
@@ -113,23 +125,28 @@ public class ProvidersControllerTests
     public async Task CreateMultiOrganizationEnterpriseAsync_RedirectsToExpectedPage_AfterCreatingProvider(
         CreateMultiOrganizationEnterpriseProviderModel model,
         Guid expectedProviderId,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<ICreateProviderCommand>()
+        sutProvider
+            .GetDependency<ICreateProviderCommand>()
             .When(x =>
                 x.CreateMultiOrganizationEnterpriseAsync(
                     Arg.Is<Provider>(y => y.Type == ProviderType.MultiOrganizationEnterprise),
                     model.OwnerEmail,
                     Arg.Is<PlanType>(y => y == model.Plan),
-                    model.EnterpriseSeatMinimum))
+                    model.EnterpriseSeatMinimum
+                )
+            )
             .Do(callInfo =>
             {
                 var providerArgument = callInfo.ArgAt<Provider>(0);
                 providerArgument.Id = expectedProviderId;
             });
 
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
             .Returns(true);
 
@@ -150,10 +167,12 @@ public class ProvidersControllerTests
     [Theory]
     public async Task CreateMultiOrganizationEnterpriseAsync_ChecksFeatureFlag(
         CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
             .Returns(true);
 
@@ -161,7 +180,8 @@ public class ProvidersControllerTests
         await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
 
         // Assert
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .Received(Quantity.Exactly(1))
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
     }
@@ -171,10 +191,12 @@ public class ProvidersControllerTests
     [Theory]
     public async Task CreateMultiOrganizationEnterpriseAsync_RedirectsToProviderTypeSelectionPage_WhenFeatureFlagIsDisabled(
         CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
             .Returns(false);
 
@@ -182,7 +204,8 @@ public class ProvidersControllerTests
         var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
 
         // Assert
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .Received(Quantity.Exactly(1))
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
 
@@ -199,10 +222,12 @@ public class ProvidersControllerTests
     [Theory]
     public async Task CreateResellerAsync_WithValidModel_CreatesProvider(
         CreateResellerProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
+        sutProvider
+            .GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
             .Returns(true);
 
@@ -211,10 +236,10 @@ public class ProvidersControllerTests
 
         // Assert
         Assert.NotNull(actual);
-        await sutProvider.GetDependency<ICreateProviderCommand>()
+        await sutProvider
+            .GetDependency<ICreateProviderCommand>()
             .Received(Quantity.Exactly(1))
-            .CreateResellerAsync(
-                Arg.Is<Provider>(x => x.Type == ProviderType.Reseller));
+            .CreateResellerAsync(Arg.Is<Provider>(x => x.Type == ProviderType.Reseller));
     }
 
     [BitAutoData]
@@ -223,13 +248,15 @@ public class ProvidersControllerTests
     public async Task CreateResellerAsync_RedirectsToExpectedPage_AfterCreatingProvider(
         CreateResellerProviderModel model,
         Guid expectedProviderId,
-        SutProvider<ProvidersController> sutProvider)
+        SutProvider<ProvidersController> sutProvider
+    )
     {
         // Arrange
-        sutProvider.GetDependency<ICreateProviderCommand>()
+        sutProvider
+            .GetDependency<ICreateProviderCommand>()
             .When(x =>
-                x.CreateResellerAsync(
-                    Arg.Is<Provider>(y => y.Type == ProviderType.Reseller)))
+                x.CreateResellerAsync(Arg.Is<Provider>(y => y.Type == ProviderType.Reseller))
+            )
             .Do(callInfo =>
             {
                 var providerArgument = callInfo.ArgAt<Provider>(0);

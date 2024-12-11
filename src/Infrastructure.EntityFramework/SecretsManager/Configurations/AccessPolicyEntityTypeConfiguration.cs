@@ -15,24 +15,27 @@ public class AccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<Acce
             .HasValue<UserServiceAccountAccessPolicy>(AccessPolicyDiscriminator.UserServiceAccount)
             .HasValue<UserSecretAccessPolicy>(AccessPolicyDiscriminator.UserSecret)
             .HasValue<GroupProjectAccessPolicy>(AccessPolicyDiscriminator.GroupProject)
-            .HasValue<GroupServiceAccountAccessPolicy>(AccessPolicyDiscriminator.GroupServiceAccount)
+            .HasValue<GroupServiceAccountAccessPolicy>(
+                AccessPolicyDiscriminator.GroupServiceAccount
+            )
             .HasValue<GroupSecretAccessPolicy>(AccessPolicyDiscriminator.GroupSecret)
-            .HasValue<ServiceAccountProjectAccessPolicy>(AccessPolicyDiscriminator.ServiceAccountProject)
-            .HasValue<ServiceAccountSecretAccessPolicy>(AccessPolicyDiscriminator.ServiceAccountSecret);
+            .HasValue<ServiceAccountProjectAccessPolicy>(
+                AccessPolicyDiscriminator.ServiceAccountProject
+            )
+            .HasValue<ServiceAccountSecretAccessPolicy>(
+                AccessPolicyDiscriminator.ServiceAccountSecret
+            );
 
-        builder
-            .Property(s => s.Id)
-            .ValueGeneratedNever();
+        builder.Property(s => s.Id).ValueGeneratedNever();
 
-        builder
-            .HasKey(s => s.Id)
-            .IsClustered();
+        builder.HasKey(s => s.Id).IsClustered();
 
         builder.ToTable(nameof(AccessPolicy));
     }
 }
 
-public class UserProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<UserProjectAccessPolicy>
+public class UserProjectAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<UserProjectAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<UserProjectAccessPolicy> builder)
     {
@@ -52,7 +55,8 @@ public class UserProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfigu
     }
 }
 
-public class UserServiceAccountAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<UserServiceAccountAccessPolicy>
+public class UserServiceAccountAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<UserServiceAccountAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<UserServiceAccountAccessPolicy> builder)
     {
@@ -66,7 +70,8 @@ public class UserServiceAccountAccessPolicyEntityTypeConfiguration : IEntityType
     }
 }
 
-public class UserSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<UserSecretAccessPolicy>
+public class UserSecretAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<UserSecretAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<UserSecretAccessPolicy> builder)
     {
@@ -86,13 +91,12 @@ public class UserSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfigur
     }
 }
 
-public class GroupProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<GroupProjectAccessPolicy>
+public class GroupProjectAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<GroupProjectAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<GroupProjectAccessPolicy> builder)
     {
-        builder
-            .Property(e => e.GroupId)
-            .HasColumnName(nameof(GroupProjectAccessPolicy.GroupId));
+        builder.Property(e => e.GroupId).HasColumnName(nameof(GroupProjectAccessPolicy.GroupId));
 
         builder
             .Property(e => e.GrantedProjectId)
@@ -112,7 +116,8 @@ public class GroupProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfig
     }
 }
 
-public class GroupServiceAccountAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<GroupServiceAccountAccessPolicy>
+public class GroupServiceAccountAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<GroupServiceAccountAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<GroupServiceAccountAccessPolicy> builder)
     {
@@ -132,13 +137,12 @@ public class GroupServiceAccountAccessPolicyEntityTypeConfiguration : IEntityTyp
     }
 }
 
-public class GroupSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<GroupSecretAccessPolicy>
+public class GroupSecretAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<GroupSecretAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<GroupSecretAccessPolicy> builder)
     {
-        builder
-            .Property(e => e.GroupId)
-            .HasColumnName(nameof(GroupSecretAccessPolicy.GroupId));
+        builder.Property(e => e.GroupId).HasColumnName(nameof(GroupSecretAccessPolicy.GroupId));
 
         builder
             .Property(e => e.GrantedSecretId)
@@ -158,7 +162,8 @@ public class GroupSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfigu
     }
 }
 
-public class ServiceAccountProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<ServiceAccountProjectAccessPolicy>
+public class ServiceAccountProjectAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<ServiceAccountProjectAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<ServiceAccountProjectAccessPolicy> builder)
     {
@@ -178,7 +183,8 @@ public class ServiceAccountProjectAccessPolicyEntityTypeConfiguration : IEntityT
     }
 }
 
-public class ServiceAccountSecretAccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<ServiceAccountSecretAccessPolicy>
+public class ServiceAccountSecretAccessPolicyEntityTypeConfiguration
+    : IEntityTypeConfiguration<ServiceAccountSecretAccessPolicy>
 {
     public void Configure(EntityTypeBuilder<ServiceAccountSecretAccessPolicy> builder)
     {

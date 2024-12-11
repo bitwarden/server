@@ -11,8 +11,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, IDeviceRepository
 {
     public DeviceRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices)
-    { }
+        : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices) { }
 
     public async Task ClearPushTokenAsync(Guid id)
     {
@@ -53,7 +52,9 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Devices.Where(d => d.Identifier == identifier && d.UserId == userId);
+            var query = dbContext.Devices.Where(d =>
+                d.Identifier == identifier && d.UserId == userId
+            );
             var device = await query.FirstOrDefaultAsync();
             return Mapper.Map<Core.Entities.Device>(device);
         }

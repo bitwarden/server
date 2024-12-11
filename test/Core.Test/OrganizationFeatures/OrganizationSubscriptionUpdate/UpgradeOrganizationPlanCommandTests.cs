@@ -19,61 +19,98 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 public class UpgradeOrganizationPlanCommandTests
 {
     [Theory, BitAutoData]
-    public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, OrganizationUpgrade upgrade,
-            SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_OrganizationIsNull_Throws(
+        Guid organizationId,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(Task.FromResult<Organization>(null));
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns(Task.FromResult<Organization>(null));
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organizationId, upgrade));
+            () => sutProvider.Sut.UpgradePlanAsync(organizationId, upgrade)
+        );
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
         organization.GatewayCustomerId = string.Empty;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade)
+        );
         Assert.Contains("no payment method", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradePlan_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_AlreadyInPlan_Throws(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
         upgrade.Plan = organization.PlanType;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade)
+        );
         Assert.Contains("already on this plan", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradePlan_SM_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
-        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_SM_AlreadyInPlan_Throws(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
         upgrade.Plan = organization.PlanType;
         upgrade.UseSecretsManager = true;
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalServiceAccounts = 10;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade)
+        );
         Assert.Contains("already on this plan", exception.Message);
     }
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_Passes(
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalSeats = 10;
         upgrade.Plan = PlanType.TeamsAnnually;
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
     }
 
     [Theory]
@@ -86,9 +123,13 @@ public class UpgradeOrganizationPlanCommandTests
         PlanType planType,
         Organization organization,
         OrganizationUpgrade organizationUpgrade,
-        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
 
         organization.PlanType = PlanType.FamiliesAnnually;
 
@@ -100,15 +141,22 @@ public class UpgradeOrganizationPlanCommandTests
         organizationUpgrade.Plan = planType;
 
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, organizationUpgrade);
-        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSubscription(
-            organization,
-            StaticStore.GetPlan(planType),
-            organizationUpgrade.AdditionalSeats,
-            organizationUpgrade.UseSecretsManager,
-            organizationUpgrade.AdditionalSmSeats,
-            5,
-            3);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await sutProvider
+            .GetDependency<IPaymentService>()
+            .Received(1)
+            .AdjustSubscription(
+                organization,
+                StaticStore.GetPlan(planType),
+                organizationUpgrade.AdditionalSeats,
+                organizationUpgrade.UseSecretsManager,
+                organizationUpgrade.AdditionalSmSeats,
+                5,
+                3
+            );
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(organization);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]
@@ -117,14 +165,21 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
-    public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
-        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_SM_Passes(
+        PlanType planType,
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
         upgrade.Plan = planType;
 
         var plan = StaticStore.GetPlan(upgrade.Plan);
 
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
 
         upgrade.AdditionalSeats = 15;
         upgrade.AdditionalSmSeats = 10;
@@ -132,11 +187,18 @@ public class UpgradeOrganizationPlanCommandTests
 
         var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-            Arg.Is<Organization>(o =>
-                o.Seats == plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats
-                && o.SmSeats == plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats
-                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .Received(1)
+            .ReplaceAndUpdateCacheAsync(
+                Arg.Is<Organization>(o =>
+                    o.Seats == plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats
+                    && o.SmSeats == plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats
+                    && o.SmServiceAccounts
+                        == plan.SecretsManager.BaseServiceAccount
+                            + upgrade.AdditionalServiceAccounts
+                )
+            );
 
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);
@@ -148,8 +210,12 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsStarter)]
-    public async Task UpgradePlan_SM_NotEnoughSmSeats_Throws(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
-        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_SM_NotEnoughSmSeats_Throws(
+        PlanType planType,
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
         upgrade.Plan = planType;
         upgrade.AdditionalSeats = 15;
@@ -158,14 +224,27 @@ public class UpgradeOrganizationPlanCommandTests
 
         organization.SmSeats = 2;
 
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(2);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(2);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains("Your organization currently has 2 Secrets Manager seats filled. Your new plan only has", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade)
+        );
+        Assert.Contains(
+            "Your organization currently has 2 Secrets Manager seats filled. Your new plan only has",
+            exception.Message
+        );
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAndUpdateCacheAsync(default);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]
@@ -174,8 +253,13 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.TeamsMonthly, 51)]
     [BitAutoData(PlanType.TeamsAnnually, 51)]
     [BitAutoData(PlanType.TeamsStarter, 51)]
-    public async Task UpgradePlan_SM_NotEnoughServiceAccounts_Throws(PlanType planType, int currentServiceAccounts,
-     Organization organization, OrganizationUpgrade upgrade, SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    public async Task UpgradePlan_SM_NotEnoughServiceAccounts_Throws(
+        PlanType planType,
+        int currentServiceAccounts,
+        Organization organization,
+        OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider
+    )
     {
         upgrade.Plan = planType;
         upgrade.AdditionalSeats = 15;
@@ -185,15 +269,30 @@ public class UpgradeOrganizationPlanCommandTests
         organization.SmSeats = 1;
         organization.SmServiceAccounts = currentServiceAccounts;
 
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
-        sutProvider.GetDependency<IServiceAccountRepository>()
-            .GetServiceAccountCountByOrganizationIdAsync(organization.Id).Returns(currentServiceAccounts);
+        sutProvider
+            .GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        sutProvider
+            .GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(1);
+        sutProvider
+            .GetDependency<IServiceAccountRepository>()
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
+            .Returns(currentServiceAccounts);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains($"Your organization currently has {currentServiceAccounts} machine accounts. Your new plan only allows", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade)
+        );
+        Assert.Contains(
+            $"Your organization currently has {currentServiceAccounts} machine accounts. Your new plan only allows",
+            exception.Message
+        );
 
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider
+            .GetDependency<IOrganizationService>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAndUpdateCacheAsync(default);
     }
 }

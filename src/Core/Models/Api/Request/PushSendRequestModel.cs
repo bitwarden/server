@@ -9,8 +9,10 @@ public class PushSendRequestModel : IValidatableObject
     public string OrganizationId { get; set; }
     public string DeviceId { get; set; }
     public string Identifier { get; set; }
+
     [Required]
     public PushType? Type { get; set; }
+
     [Required]
     public object Payload { get; set; }
 
@@ -18,7 +20,9 @@ public class PushSendRequestModel : IValidatableObject
     {
         if (string.IsNullOrWhiteSpace(UserId) && string.IsNullOrWhiteSpace(OrganizationId))
         {
-            yield return new ValidationResult($"{nameof(UserId)} or {nameof(OrganizationId)} is required.");
+            yield return new ValidationResult(
+                $"{nameof(UserId)} or {nameof(OrganizationId)} is required."
+            );
         }
     }
 }

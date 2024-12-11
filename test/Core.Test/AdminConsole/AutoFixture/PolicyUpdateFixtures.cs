@@ -11,10 +11,12 @@ internal class PolicyUpdateCustomization(PolicyType type, bool enabled) : ICusto
 {
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<PolicyUpdate>(composer => composer
-            .With(o => o.Type, type)
-            .With(o => o.Enabled, enabled)
-            .With(o => o.PerformedBy, new StandardUser(Guid.NewGuid(), false)));
+        fixture.Customize<PolicyUpdate>(composer =>
+            composer
+                .With(o => o.Type, type)
+                .With(o => o.Enabled, enabled)
+                .With(o => o.PerformedBy, new StandardUser(Guid.NewGuid(), false))
+        );
     }
 }
 

@@ -6,9 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
-public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTask, SecurityTask, Guid>, ISecurityTaskRepository
+public class SecurityTaskRepository
+    : Repository<Core.Vault.Entities.SecurityTask, SecurityTask, Guid>,
+        ISecurityTaskRepository
 {
     public SecurityTaskRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, (context) => context.SecurityTasks)
-    { }
+        : base(serviceScopeFactory, mapper, (context) => context.SecurityTasks) { }
 }

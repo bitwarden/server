@@ -6,8 +6,12 @@ namespace Bit.Core.Utilities;
 
 public static class BillingHelpers
 {
-    internal static async Task<string> AdjustStorageAsync(IPaymentService paymentService, IStorableSubscriber storableSubscriber,
-        short storageAdjustmentGb, string storagePlanId)
+    internal static async Task<string> AdjustStorageAsync(
+        IPaymentService paymentService,
+        IStorableSubscriber storableSubscriber,
+        short storageAdjustmentGb,
+        string storagePlanId
+    )
     {
         if (storableSubscriber == null)
         {
@@ -43,14 +47,19 @@ public static class BillingHelpers
         var remainingStorage = storableSubscriber.StorageBytesRemaining(newStorageGb);
         if (remainingStorage < 0)
         {
-            throw new BadRequestException("You are currently using " +
-                $"{CoreHelpers.ReadableBytesSize(storableSubscriber.Storage.GetValueOrDefault(0))} of storage. " +
-                "Delete some stored data first.");
+            throw new BadRequestException(
+                "You are currently using "
+                    + $"{CoreHelpers.ReadableBytesSize(storableSubscriber.Storage.GetValueOrDefault(0))} of storage. "
+                    + "Delete some stored data first."
+            );
         }
 
         var additionalStorage = newStorageGb - 1;
-        var paymentIntentClientSecret = await paymentService.AdjustStorageAsync(storableSubscriber,
-            additionalStorage, storagePlanId);
+        var paymentIntentClientSecret = await paymentService.AdjustStorageAsync(
+            storableSubscriber,
+            additionalStorage,
+            storagePlanId
+        );
         storableSubscriber.MaxStorageGb = newStorageGb;
         return paymentIntentClientSecret;
     }

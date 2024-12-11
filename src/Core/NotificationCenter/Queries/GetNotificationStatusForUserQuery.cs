@@ -16,9 +16,11 @@ public class GetNotificationStatusForUserQuery : IGetNotificationStatusForUserQu
     private readonly IAuthorizationService _authorizationService;
     private readonly INotificationStatusRepository _notificationStatusRepository;
 
-    public GetNotificationStatusForUserQuery(ICurrentContext currentContext,
+    public GetNotificationStatusForUserQuery(
+        ICurrentContext currentContext,
         IAuthorizationService authorizationService,
-        INotificationStatusRepository notificationStatusRepository)
+        INotificationStatusRepository notificationStatusRepository
+    )
     {
         _currentContext = currentContext;
         _authorizationService = authorizationService;
@@ -32,15 +34,21 @@ public class GetNotificationStatusForUserQuery : IGetNotificationStatusForUserQu
             throw new NotFoundException();
         }
 
-        var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(notificationId,
-            _currentContext.UserId.Value);
+        var notificationStatus =
+            await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(
+                notificationId,
+                _currentContext.UserId.Value
+            );
         if (notificationStatus == null)
         {
             throw new NotFoundException();
         }
 
-        await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User,
-            notificationStatus, NotificationStatusOperations.Read);
+        await _authorizationService.AuthorizeOrThrowAsync(
+            _currentContext.HttpContext.User,
+            notificationStatus,
+            NotificationStatusOperations.Read
+        );
 
         return notificationStatus;
     }

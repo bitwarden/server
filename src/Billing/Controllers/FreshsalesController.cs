@@ -21,11 +21,13 @@ public class FreshsalesController : Controller
 
     private readonly HttpClient _httpClient;
 
-    public FreshsalesController(IUserRepository userRepository,
+    public FreshsalesController(
+        IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOptions<BillingSettings> billingSettings,
         ILogger<FreshsalesController> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings
+    )
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
@@ -34,21 +36,23 @@ public class FreshsalesController : Controller
 
         _httpClient = new HttpClient
         {
-            BaseAddress = new Uri("https://bitwarden.freshsales.io/api/")
+            BaseAddress = new Uri("https://bitwarden.freshsales.io/api/"),
         };
 
         _freshsalesApiKey = billingSettings.Value.FreshsalesApiKey;
 
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Token",
-            $"token={_freshsalesApiKey}");
+            $"token={_freshsalesApiKey}"
+        );
     }
 
-
     [HttpPost("webhook")]
-    public async Task<IActionResult> PostWebhook([FromHeader(Name = "Authorization")] string key,
+    public async Task<IActionResult> PostWebhook(
+        [FromHeader(Name = "Authorization")] string key,
         [FromBody] CustomWebhookRequestModel request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken
+    )
     {
         if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(_freshsalesApiKey, key))
         {
@@ -58,14 +62,13 @@ public class FreshsalesController : Controller
         try
         {
             var leadResponse = await _httpClient.GetFromJsonAsync<LeadWrapper<FreshsalesLeadModel>>(
-                    $"leads/{request.LeadId}",
-                    cancellationToken);
+                $"leads/{request.LeadId}",
+                cancellationToken
+            );
 
             var lead = leadResponse.Lead;
 
-            var primaryEmail = lead.Emails
-                .Where(e => e.IsPrimary)
-                .FirstOrDefault();
+            var primaryEmail = lead.Emails.Where(e => e.IsPrimary).FirstOrDefault();
 
             if (primaryEmail == null)
             {
@@ -88,33 +91,38 @@ public class FreshsalesController : Controller
 
             var noteItems = new List<string>
             {
-                $"User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}"
+                $"User, {user.Email}: {_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}",
             };
 
             var orgs = await _organizationRepository.GetManyByUserIdAsync(user.Id);
 
             foreach (var org in orgs)
             {
-                noteItems.Add($"Org, {org.DisplayName()}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
+                noteItems.Add(
+                    $"Org, {org.DisplayName()}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}"
+                );
                 if (TryGetPlanName(org.PlanType, out var planName))
                 {
                     newTags.Add($"Org: {planName}");
                 }
             }
 
-            if (newTags.Any())
+            if (newTags.Count != 0)
             {
                 var allTags = newTags.Concat(lead.Tags);
                 var updateLeadResponse = await _httpClient.PutAsJsonAsync(
                     $"leads/{request.LeadId}",
                     CreateWrapper(new { tags = allTags }),
-                    cancellationToken);
+                    cancellationToken
+                );
                 updateLeadResponse.EnsureSuccessStatusCode();
             }
 
             var createNoteResponse = await _httpClient.PostAsJsonAsync(
                 "notes",
-                CreateNoteRequestModel(request.LeadId, string.Join('\n', noteItems)), cancellationToken);
+                CreateNoteRequestModel(request.LeadId, string.Join('\n', noteItems)),
+                cancellationToken
+            );
             createNoteResponse.EnsureSuccessStatusCode();
             return NoContent();
         }
@@ -128,10 +136,7 @@ public class FreshsalesController : Controller
 
     private static LeadWrapper<T> CreateWrapper<T>(T lead)
     {
-        return new LeadWrapper<T>
-        {
-            Lead = lead,
-        };
+        return new LeadWrapper<T> { Lead = lead };
     }
 
     private static CreateNoteRequestModel CreateNoteRequestModel(long leadId, string content)
@@ -203,10 +208,7 @@ public class LeadWrapper<T>
 
     public static LeadWrapper<TItem> Create<TItem>(TItem lead)
     {
-        return new LeadWrapper<TItem>
-        {
-            Lead = lead,
-        };
+        return new LeadWrapper<TItem> { Lead = lead };
     }
 }
 

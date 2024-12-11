@@ -19,13 +19,18 @@ public static class DatabaseOptionsFactory
             .AddSingleton(sp =>
             {
                 var dataProtector = Substitute.For<IDataProtector>();
-                dataProtector.Unprotect(Arg.Any<byte[]>())
+                dataProtector
+                    .Unprotect(Arg.Any<byte[]>())
                     .Returns<byte[]>(data =>
-                        Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
-                                               Encoding.UTF8.GetString((byte[])data[0])));
+                        Encoding.UTF8.GetBytes(
+                            Constants.DatabaseFieldProtectedPrefix
+                                + Encoding.UTF8.GetString((byte[])data[0])
+                        )
+                    );
 
                 var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
-                dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
+                dataProtectionProvider
+                    .CreateProtector(Constants.DatabaseFieldProtectorPurpose)
                     .Returns(dataProtector);
 
                 return dataProtectionProvider;
@@ -33,38 +38,70 @@ public static class DatabaseOptionsFactory
             .BuildServiceProvider();
 
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.PostgreSql?.ConnectionString))
+        if (
+            !string.IsNullOrWhiteSpace(
+                GlobalSettingsFactory.GlobalSettings.PostgreSql?.ConnectionString
+            )
+        )
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-            Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
-                .UseNpgsql(globalSettings.PostgreSql.ConnectionString, npgsqlDbContextOptionsBuilder =>
-                {
-                    npgsqlDbContextOptionsBuilder.MigrationsAssembly(nameof(PostgresMigrations));
-                })
-                .UseApplicationServiceProvider(services)
-                .Options);
+            Options.Add(
+                new DbContextOptionsBuilder<DatabaseContext>()
+                    .UseNpgsql(
+                        globalSettings.PostgreSql.ConnectionString,
+                        npgsqlDbContextOptionsBuilder =>
+                        {
+                            npgsqlDbContextOptionsBuilder.MigrationsAssembly(
+                                nameof(PostgresMigrations)
+                            );
+                        }
+                    )
+                    .UseApplicationServiceProvider(services)
+                    .Options
+            );
         }
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.MySql?.ConnectionString))
+        if (
+            !string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.MySql?.ConnectionString)
+        )
         {
             var mySqlConnectionString = globalSettings.MySql.ConnectionString;
-            Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
-                .UseMySql(mySqlConnectionString, ServerVersion.AutoDetect(mySqlConnectionString), mySqlDbContextOptionsBuilder =>
-                {
-                    mySqlDbContextOptionsBuilder.MigrationsAssembly(nameof(MySqlMigrations));
-                })
-                .UseApplicationServiceProvider(services)
-                .Options);
+            Options.Add(
+                new DbContextOptionsBuilder<DatabaseContext>()
+                    .UseMySql(
+                        mySqlConnectionString,
+                        ServerVersion.AutoDetect(mySqlConnectionString),
+                        mySqlDbContextOptionsBuilder =>
+                        {
+                            mySqlDbContextOptionsBuilder.MigrationsAssembly(
+                                nameof(MySqlMigrations)
+                            );
+                        }
+                    )
+                    .UseApplicationServiceProvider(services)
+                    .Options
+            );
         }
-        if (!string.IsNullOrWhiteSpace(GlobalSettingsFactory.GlobalSettings.Sqlite?.ConnectionString))
+        if (
+            !string.IsNullOrWhiteSpace(
+                GlobalSettingsFactory.GlobalSettings.Sqlite?.ConnectionString
+            )
+        )
         {
             var sqliteConnectionString = globalSettings.Sqlite.ConnectionString;
-            Options.Add(new DbContextOptionsBuilder<DatabaseContext>()
-                .UseSqlite(sqliteConnectionString, mySqlDbContextOptionsBuilder =>
-                {
-                    mySqlDbContextOptionsBuilder.MigrationsAssembly(nameof(SqliteMigrations));
-                })
-                .UseApplicationServiceProvider(services)
-                .Options);
+            Options.Add(
+                new DbContextOptionsBuilder<DatabaseContext>()
+                    .UseSqlite(
+                        sqliteConnectionString,
+                        mySqlDbContextOptionsBuilder =>
+                        {
+                            mySqlDbContextOptionsBuilder.MigrationsAssembly(
+                                nameof(SqliteMigrations)
+                            );
+                        }
+                    )
+                    .UseApplicationServiceProvider(services)
+                    .Options
+            );
         }
     }
 }

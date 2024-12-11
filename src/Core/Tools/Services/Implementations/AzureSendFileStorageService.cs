@@ -19,11 +19,13 @@ public class AzureSendFileStorageService : ISendFileStorageService
     public FileUploadType FileUploadType => FileUploadType.Azure;
 
     public static string SendIdFromBlobName(string blobName) => blobName.Split('/')[0];
+
     public static string BlobName(Send send, string fileId) => $"{send.Id}/{fileId}";
 
     public AzureSendFileStorageService(
         GlobalSettings globalSettings,
-        ILogger<AzureSendFileStorageService> logger)
+        ILogger<AzureSendFileStorageService> logger
+    )
     {
         _blobServiceClient = new BlobServiceClient(globalSettings.Send.ConnectionString);
         _logger = logger;
@@ -47,13 +49,17 @@ public class AzureSendFileStorageService : ISendFileStorageService
 
         var headers = new BlobHttpHeaders
         {
-            ContentDisposition = $"attachment; filename=\"{fileId}\""
+            ContentDisposition = $"attachment; filename=\"{fileId}\"",
         };
 
-        await blobClient.UploadAsync(stream, new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers });
+        await blobClient.UploadAsync(
+            stream,
+            new BlobUploadOptions { Metadata = metadata, HttpHeaders = headers }
+        );
     }
 
-    public async Task DeleteFileAsync(Send send, string fileId) => await DeleteBlobAsync(BlobName(send, fileId));
+    public async Task DeleteFileAsync(Send send, string fileId) =>
+        await DeleteBlobAsync(BlobName(send, fileId));
 
     public async Task DeleteBlobAsync(string blobName)
     {
@@ -76,7 +82,10 @@ public class AzureSendFileStorageService : ISendFileStorageService
     {
         await InitAsync();
         var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
-        var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+        var sasUri = blobClient.GenerateSasUri(
+            BlobSasPermissions.Read,
+            DateTime.UtcNow.Add(_downloadLinkLiveTime)
+        );
         return sasUri.ToString();
     }
 
@@ -84,11 +93,19 @@ public class AzureSendFileStorageService : ISendFileStorageService
     {
         await InitAsync();
         var blobClient = _sendFilesContainerClient.GetBlobClient(BlobName(send, fileId));
-        var sasUri = blobClient.GenerateSasUri(BlobSasPermissions.Create | BlobSasPermissions.Write, DateTime.UtcNow.Add(_downloadLinkLiveTime));
+        var sasUri = blobClient.GenerateSasUri(
+            BlobSasPermissions.Create | BlobSasPermissions.Write,
+            DateTime.UtcNow.Add(_downloadLinkLiveTime)
+        );
         return sasUri.ToString();
     }
 
-    public async Task<(bool, long?)> ValidateFileAsync(Send send, string fileId, long expectedFileSize, long leeway)
+    public async Task<(bool, long?)> ValidateFileAsync(
+        Send send,
+        string fileId,
+        long expectedFileSize,
+        long leeway
+    )
     {
         await InitAsync();
 
@@ -111,7 +128,7 @@ public class AzureSendFileStorageService : ISendFileStorageService
 
             var headers = new BlobHttpHeaders
             {
-                ContentDisposition = $"attachment; filename=\"{fileId}\""
+                ContentDisposition = $"attachment; filename=\"{fileId}\"",
             };
             await blobClient.SetHttpHeadersAsync(headers);
 
@@ -134,8 +151,14 @@ public class AzureSendFileStorageService : ISendFileStorageService
     {
         if (_sendFilesContainerClient == null)
         {
-            _sendFilesContainerClient = _blobServiceClient.GetBlobContainerClient(FilesContainerName);
-            await _sendFilesContainerClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
+            _sendFilesContainerClient = _blobServiceClient.GetBlobContainerClient(
+                FilesContainerName
+            );
+            await _sendFilesContainerClient.CreateIfNotExistsAsync(
+                PublicAccessType.None,
+                null,
+                null
+            );
         }
     }
 }

@@ -34,7 +34,9 @@ public class MemberUpdateRequestModel : MemberBaseModel, IValidatableObject
     {
         if (Type is not OrganizationUserType.Custom && Permissions is not null)
         {
-            yield return new ValidationResult("Only users with the Custom role may use custom permissions.");
+            yield return new ValidationResult(
+                "Only users with the Custom role may use custom permissions."
+            );
         }
     }
 }

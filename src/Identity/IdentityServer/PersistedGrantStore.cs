@@ -12,7 +12,8 @@ public class PersistedGrantStore : IPersistedGrantStore
 
     public PersistedGrantStore(
         IGrantRepository grantRepository,
-        Func<PersistedGrant, IGrant> toGrant)
+        Func<PersistedGrant, IGrant> toGrant
+    )
     {
         _grantRepository = grantRepository;
         _toGrant = toGrant;
@@ -32,15 +33,24 @@ public class PersistedGrantStore : IPersistedGrantStore
 
     public async Task<IEnumerable<PersistedGrant>> GetAllAsync(PersistedGrantFilter filter)
     {
-        var grants = await _grantRepository.GetManyAsync(filter.SubjectId, filter.SessionId,
-            filter.ClientId, filter.Type);
+        var grants = await _grantRepository.GetManyAsync(
+            filter.SubjectId,
+            filter.SessionId,
+            filter.ClientId,
+            filter.Type
+        );
         var pGrants = grants.Select(g => ToPersistedGrant(g));
         return pGrants;
     }
 
     public async Task RemoveAllAsync(PersistedGrantFilter filter)
     {
-        await _grantRepository.DeleteManyAsync(filter.SubjectId, filter.SessionId, filter.ClientId, filter.Type);
+        await _grantRepository.DeleteManyAsync(
+            filter.SubjectId,
+            filter.SessionId,
+            filter.ClientId,
+            filter.Type
+        );
     }
 
     public async Task RemoveAsync(string key)
@@ -67,7 +77,7 @@ public class PersistedGrantStore : IPersistedGrantStore
             CreationTime = grant.CreationDate,
             Expiration = grant.ExpirationDate,
             ConsumedTime = grant.ConsumedDate,
-            Data = grant.Data
+            Data = grant.Data,
         };
     }
 }

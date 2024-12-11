@@ -5,12 +5,10 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationPublicKeyResponseModel : ResponseModel
 {
-    public OrganizationPublicKeyResponseModel(Organization org) : base("organizationPublicKey")
+    public OrganizationPublicKeyResponseModel(Organization org)
+        : base("organizationPublicKey")
     {
-        if (org == null)
-        {
-            throw new ArgumentNullException(nameof(org));
-        }
+        ArgumentNullException.ThrowIfNull(org);
 
         PublicKey = org.PublicKey;
     }

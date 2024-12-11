@@ -11,12 +11,21 @@ public class DnsResolverService : IDnsResolverService
     {
         _client = client;
     }
-    public async Task<bool> ResolveAsync(string domain, string txtRecord, CancellationToken cancellationToken = default)
+
+    public async Task<bool> ResolveAsync(
+        string domain,
+        string txtRecord,
+        CancellationToken cancellationToken = default
+    )
     {
-        var result = await _client.QueryAsync(new DnsQuestion(domain, QueryType.TXT), cancellationToken);
+        var result = await _client.QueryAsync(
+            new DnsQuestion(domain, QueryType.TXT),
+            cancellationToken
+        );
         if (!result.HasError)
         {
-            return result.Answers.TxtRecords()
+            return result
+                .Answers.TxtRecords()
                 .Select(t => t?.EscapedText?.FirstOrDefault())
                 .Any(t => t == txtRecord);
         }

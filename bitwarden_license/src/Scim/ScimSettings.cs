@@ -1,5 +1,3 @@
 ﻿namespace Bit.Scim;
 
-public class ScimSettings
-{
-}
+public class ScimSettings { }

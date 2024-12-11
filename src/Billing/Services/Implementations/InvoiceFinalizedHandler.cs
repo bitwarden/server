@@ -4,7 +4,6 @@ namespace Bit.Billing.Services.Implementations;
 
 public class InvoiceFinalizedHandler : IInvoiceFinalizedHandler
 {
-
     private readonly IProviderEventService _providerEventService;
 
     public InvoiceFinalizedHandler(IProviderEventService providerEventService)

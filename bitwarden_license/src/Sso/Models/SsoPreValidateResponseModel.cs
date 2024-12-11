@@ -4,9 +4,6 @@ namespace Bit.Sso.Models;
 
 public class SsoPreValidateResponseModel : JsonResult
 {
-    public SsoPreValidateResponseModel(string token) : base(new
-    {
-        token
-    })
-    { }
+    public SsoPreValidateResponseModel(string token)
+        : base(new { token }) { }
 }

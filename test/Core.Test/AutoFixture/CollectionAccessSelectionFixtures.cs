@@ -20,10 +20,12 @@ public class CollectionAccessSelectionCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        fixture.Customize<CollectionAccessSelection>(composer => composer
-            .With(o => o.Manage, Manage)
-            .With(o => o.ReadOnly, ReadOnly)
-            .With(o => o.HidePasswords, HidePasswords));
+        fixture.Customize<CollectionAccessSelection>(composer =>
+            composer
+                .With(o => o.Manage, Manage)
+                .With(o => o.ReadOnly, ReadOnly)
+                .With(o => o.HidePasswords, HidePasswords)
+        );
     }
 }
 

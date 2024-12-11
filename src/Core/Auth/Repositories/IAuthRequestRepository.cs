@@ -7,9 +7,18 @@ namespace Bit.Core.Repositories;
 
 public interface IAuthRequestRepository : IRepository<AuthRequest, Guid>
 {
-    Task<int> DeleteExpiredAsync(TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration);
+    Task<int> DeleteExpiredAsync(
+        TimeSpan userRequestExpiration,
+        TimeSpan adminRequestExpiration,
+        TimeSpan afterAdminApprovalExpiration
+    );
     Task<ICollection<AuthRequest>> GetManyByUserIdAsync(Guid userId);
-    Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId);
-    Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
+    Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(
+        Guid organizationId
+    );
+    Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(
+        Guid organizationId,
+        IEnumerable<Guid> ids
+    );
     Task UpdateManyAsync(IEnumerable<AuthRequest> authRequests);
 }

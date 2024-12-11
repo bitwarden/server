@@ -32,18 +32,16 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         services.AddDataProtection();
         var serviceProvider = services.BuildServiceProvider();
 
-        var globalSettings = new GlobalSettingsFactory(args)
-            .GlobalSettings;
+        var globalSettings = new GlobalSettingsFactory(args).GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.PostgreSql?.ConnectionString;
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No Postgres connection string found.");
         }
-        optionsBuilder.UseNpgsql(
-            connectionString,
-            b => b.MigrationsAssembly("PostgresMigrations"))
-           .UseApplicationServiceProvider(serviceProvider);
+        optionsBuilder
+            .UseNpgsql(connectionString, b => b.MigrationsAssembly("PostgresMigrations"))
+            .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

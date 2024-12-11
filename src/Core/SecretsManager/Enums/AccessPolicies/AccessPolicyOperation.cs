@@ -4,5 +4,5 @@ public enum AccessPolicyOperation
 {
     Create,
     Update,
-    Delete
+    Delete,
 }

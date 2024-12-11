@@ -11,7 +11,8 @@ public class DeleteUnverifiedOrganizationDomainsJob : BaseJob
 
     public DeleteUnverifiedOrganizationDomainsJob(
         IServiceProvider serviceProvider,
-        ILogger<DeleteUnverifiedOrganizationDomainsJob> logger)
+        ILogger<DeleteUnverifiedOrganizationDomainsJob> logger
+    )
         : base(logger)
     {
         _serviceProvider = serviceProvider;
@@ -19,13 +20,19 @@ public class DeleteUnverifiedOrganizationDomainsJob : BaseJob
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteUnverifiedOrganizationDomainsJob: Start");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Execute job task: DeleteUnverifiedOrganizationDomainsJob: Start"
+        );
         using (var serviceScope = _serviceProvider.CreateScope())
         {
             var organizationDomainService =
                 serviceScope.ServiceProvider.GetRequiredService<IOrganizationDomainService>();
             await organizationDomainService.OrganizationDomainMaintenanceAsync();
         }
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteUnverifiedOrganizationDomainsJob: End");
+        _logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            "Execute job task: DeleteUnverifiedOrganizationDomainsJob: End"
+        );
     }
 }

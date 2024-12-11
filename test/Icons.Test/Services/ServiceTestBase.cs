@@ -25,13 +25,14 @@ public class ServiceTestBase
         _provider = _services.BuildServiceProvider();
     }
 
-    public T GetService<T>() =>
-        _provider.GetRequiredService<T>();
+    public T GetService<T>() => _provider.GetRequiredService<T>();
 }
 
-public class ServiceTestBase<TSut> : ServiceTestBase where TSut : class
+public class ServiceTestBase<TSut> : ServiceTestBase
+    where TSut : class
 {
-    public ServiceTestBase() : base()
+    public ServiceTestBase()
+        : base()
     {
         _services.AddTransient<TSut>();
         _provider = _services.BuildServiceProvider();

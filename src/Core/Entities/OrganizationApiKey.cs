@@ -11,6 +11,7 @@ public class OrganizationApiKey : ITableObject<Guid>
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
     public OrganizationApiKeyType Type { get; set; }
+
     [MaxLength(30)]
     public string ApiKey { get; set; } = null!;
     public DateTime RevisionDate { get; set; }

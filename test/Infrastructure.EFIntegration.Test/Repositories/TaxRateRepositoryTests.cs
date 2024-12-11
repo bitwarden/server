@@ -16,7 +16,7 @@ public class TaxRateRepositoryTests
         TaxRateCompare equalityComparer,
         List<EfRepo.TaxRateRepository> suts,
         SqlRepo.TaxRateRepository sqlTaxRateRepo
-        )
+    )
     {
         var savedTaxRates = new List<TaxRate>();
         foreach (var sut in suts)

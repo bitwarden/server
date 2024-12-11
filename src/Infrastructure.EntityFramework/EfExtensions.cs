@@ -6,7 +6,11 @@ namespace Bit.Infrastructure.EntityFramework;
 
 public static class EfExtensions
 {
-    public static T AttachToOrGet<T>(this DbContext context, Func<T, bool> predicate, Func<T> factory)
+    public static T AttachToOrGet<T>(
+        this DbContext context,
+        Func<T, bool> predicate,
+        Func<T> factory
+    )
         where T : class, new()
     {
         var match = context.Set<T>().Local.FirstOrDefault(predicate);

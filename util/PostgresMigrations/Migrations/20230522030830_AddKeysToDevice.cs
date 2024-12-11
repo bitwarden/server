@@ -12,33 +12,30 @@ public partial class AddKeysToDevice : Migration
             name: "EncryptedPrivateKey",
             table: "Device",
             type: "text",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<string>(
             name: "EncryptedPublicKey",
             table: "Device",
             type: "text",
-            nullable: true);
+            nullable: true
+        );
 
         migrationBuilder.AddColumn<string>(
             name: "EncryptedUserKey",
             table: "Device",
             type: "text",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "EncryptedPrivateKey",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "EncryptedPrivateKey", table: "Device");
 
-        migrationBuilder.DropColumn(
-            name: "EncryptedPublicKey",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "EncryptedPublicKey", table: "Device");
 
-        migrationBuilder.DropColumn(
-            name: "EncryptedUserKey",
-            table: "Device");
+        migrationBuilder.DropColumn(name: "EncryptedUserKey", table: "Device");
     }
 }

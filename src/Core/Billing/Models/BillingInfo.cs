@@ -21,7 +21,8 @@ public class BillingInfo
 
             Type = PaymentMethodType.Card;
             var card = method.Card;
-            Description = $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}, {card.ExpMonth:00}/{card.ExpYear}";
+            Description =
+                $"{card.Brand?.ToUpperInvariant()}, *{card.Last4}, {card.ExpMonth:00}/{card.ExpYear}";
             CardBrand = card.Brand;
         }
 
@@ -35,7 +36,7 @@ public class BillingInfo
                         "verified" => "verified",
                         "errored" => "invalid",
                         "verification_failed" => "verification failed",
-                        _ => "unverified"
+                        _ => "unverified",
                     };
                     Type = PaymentMethodType.BankAccount;
                     Description = $"{bankAccount.BankName}, *{bankAccount.Last4} - {bankStatus}";
@@ -48,7 +49,8 @@ public class BillingInfo
                     break;
                 case Source { Card: not null } src:
                     Type = PaymentMethodType.Card;
-                    Description = $"{src.Card.Brand}, *{src.Card.Last4}, {src.Card.ExpMonth:00}/{src.Card.ExpYear}";
+                    Description =
+                        $"{src.Card.Brand}, *{src.Card.Last4}, {src.Card.ExpMonth:00}/{src.Card.ExpYear}";
                     CardBrand = src.Card.Brand;
                     break;
             }
@@ -64,8 +66,9 @@ public class BillingInfo
                     break;
                 case Braintree.CreditCard card:
                     Type = PaymentMethodType.Card;
-                    Description = $"{card.CardType.ToString()}, *{card.LastFour}, " +
-                                  $"{card.ExpirationMonth.PadLeft(2, '0')}/{card.ExpirationYear}";
+                    Description =
+                        $"{card.CardType.ToString()}, *{card.LastFour}, "
+                        + $"{card.ExpirationMonth.PadLeft(2, '0')}/{card.ExpirationYear}";
                     CardBrand = card.CardType.ToString();
                     break;
                 case Braintree.UsBankAccount bank:

@@ -1,37 +1,35 @@
-﻿using Bit.Api.Utilities;
-using Bit.Core;
-using Bit.Core.Context;
-using Bit.Core.Settings;
+﻿using System.Globalization;
 using AspNetCoreRateLimit;
-using Stripe;
-using Bit.Core.Utilities;
-using IdentityModel;
-using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.UserFeatures;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.IdentityServer;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.ReportFeatures;
+using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Bit.SharedWeb.Health;
-using Microsoft.IdentityModel.Logging;
-using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
+using IdentityModel;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Bit.Core.Auth.UserFeatures;
-using Bit.Core.Entities;
-using Bit.Core.Billing.Extensions;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Vault.Entities;
-using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Tools.ReportFeatures;
-
-
+using Microsoft.IdentityModel.Logging;
+using Microsoft.OpenApi.Models;
+using Stripe;
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
 using Bit.Commercial.Core.Utilities;
@@ -62,7 +60,9 @@ public class Startup
         if (!globalSettings.SelfHosted)
         {
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
-            services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+            services.Configure<IpRateLimitPolicies>(
+                Configuration.GetSection("IpRateLimitPolicies")
+            );
         }
 
         // Data Protection
@@ -99,74 +99,126 @@ public class Startup
 
         // Identity
         services.AddCustomIdentityServices(globalSettings);
-        services.AddIdentityAuthenticationServices(globalSettings, Environment, config =>
-        {
-            config.AddPolicy("Application", policy =>
+        services.AddIdentityAuthenticationServices(
+            globalSettings,
+            Environment,
+            config =>
             {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
-            });
-            config.AddPolicy("Web", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
-                policy.RequireClaim(JwtClaimTypes.ClientId, "web");
-            });
-            config.AddPolicy("Push", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
-            });
-            config.AddPolicy("Licensing", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
-            });
-            config.AddPolicy("Organization", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
-            });
-            config.AddPolicy("Installation", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
-            });
-            config.AddPolicy("Secrets", policy =>
-            {
-                policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
-                    c.Type == JwtClaimTypes.Scope &&
-                    (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
-                ));
-            });
-        });
+                config.AddPolicy(
+                    "Application",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(
+                            JwtClaimTypes.AuthenticationMethod,
+                            "Application",
+                            "external"
+                        );
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
+                    }
+                );
+                config.AddPolicy(
+                    "Web",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(
+                            JwtClaimTypes.AuthenticationMethod,
+                            "Application",
+                            "external"
+                        );
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
+                        policy.RequireClaim(JwtClaimTypes.ClientId, "web");
+                    }
+                );
+                config.AddPolicy(
+                    "Push",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
+                    }
+                );
+                config.AddPolicy(
+                    "Licensing",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
+                    }
+                );
+                config.AddPolicy(
+                    "Organization",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
+                    }
+                );
+                config.AddPolicy(
+                    "Installation",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
+                    }
+                );
+                config.AddPolicy(
+                    "Secrets",
+                    policy =>
+                    {
+                        policy.RequireAuthenticatedUser();
+                        policy.RequireAssertion(ctx =>
+                            ctx.User.HasClaim(c =>
+                                c.Type == JwtClaimTypes.Scope
+                                && (
+                                    c.Value.Contains(ApiScopes.Api)
+                                    || c.Value.Contains(ApiScopes.ApiSecrets)
+                                )
+                            )
+                        );
+                    }
+                );
+            }
+        );
 
         services.AddScoped<AuthenticatorTokenProvider>();
 
         // Key Rotation
         services.AddUserKeyCommands(globalSettings);
-        services
-            .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
-                CipherRotationValidator>();
-        services
-            .AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>,
-                FolderRotationValidator>();
-        services
-            .AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>,
-                SendRotationValidator>();
-        services
-            .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
-                EmergencyAccessRotationValidator>();
-        services
-            .AddScoped<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
-                    IReadOnlyList<OrganizationUser>>
-                , OrganizationUserRotationValidator>();
-        services
-            .AddScoped<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>,
-                WebAuthnLoginKeyRotationValidator>();
+        services.AddScoped<
+            IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
+            CipherRotationValidator
+        >();
+        services.AddScoped<
+            IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>,
+            FolderRotationValidator
+        >();
+        services.AddScoped<
+            IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>,
+            SendRotationValidator
+        >();
+        services.AddScoped<
+            IRotationValidator<
+                IEnumerable<EmergencyAccessWithIdRequestModel>,
+                IEnumerable<EmergencyAccess>
+            >,
+            EmergencyAccessRotationValidator
+        >();
+        services.AddScoped<
+            IRotationValidator<
+                IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+                IReadOnlyList<OrganizationUser>
+            >,
+            OrganizationUserRotationValidator
+        >();
+        services.AddScoped<
+            IRotationValidator<
+                IEnumerable<WebAuthnLoginRotateKeyRequestModel>,
+                IEnumerable<WebAuthnLoginRotateKeyData>
+            >,
+            WebAuthnLoginKeyRotationValidator
+        >();
 
         // Services
         services.AddBaseServices(globalSettings);
@@ -205,8 +257,10 @@ public class Startup
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
 
-        if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
-            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
+        if (
+            CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString)
+            && CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName)
+        )
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
@@ -217,7 +271,8 @@ public class Startup
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
-        ILogger<Startup> logger)
+        ILogger<Startup> logger
+    )
     {
         IdentityModelEventSource.ShowPII = true;
         app.UseSerilog(env, appLifetime, globalSettings);
@@ -248,8 +303,13 @@ public class Startup
         app.UseRouting();
 
         // Add Cors
-        app.UseCors(policy => policy.SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
-            .AllowAnyMethod().AllowAnyHeader().AllowCredentials());
+        app.UseCors(policy =>
+            policy
+                .SetIsOriginAllowed(o => CoreHelpers.IsCorsOriginAllowed(o, globalSettings))
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials()
+        );
 
         // Add authentication and authorization to the request pipeline.
         app.UseAuthentication();
@@ -267,10 +327,13 @@ public class Startup
             {
                 endpoints.MapHealthChecks("/healthz");
 
-                endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
-                {
-                    ResponseWriter = HealthCheckServiceExtensions.WriteResponse
-                });
+                endpoints.MapHealthChecks(
+                    "/healthz/extended",
+                    new HealthCheckOptions
+                    {
+                        ResponseWriter = HealthCheckServiceExtensions.WriteResponse,
+                    }
+                );
             }
         });
 
@@ -280,18 +343,22 @@ public class Startup
             app.UseSwagger(config =>
             {
                 config.RouteTemplate = "specs/{documentName}/swagger.json";
-                config.PreSerializeFilters.Add((swaggerDoc, httpReq) =>
-                    swaggerDoc.Servers = new List<OpenApiServer>
-                    {
-                        new OpenApiServer { Url = globalSettings.BaseServiceUri.Api }
-                    });
+                config.PreSerializeFilters.Add(
+                    (swaggerDoc, httpReq) =>
+                        swaggerDoc.Servers = new List<OpenApiServer>
+                        {
+                            new OpenApiServer { Url = globalSettings.BaseServiceUri.Api },
+                        }
+                );
             });
             app.UseSwaggerUI(config =>
             {
                 config.DocumentTitle = "Bitwarden API Documentation";
                 config.RoutePrefix = "docs";
-                config.SwaggerEndpoint($"{globalSettings.BaseServiceUri.Api}/specs/public/swagger.json",
-                    "Bitwarden Public API");
+                config.SwaggerEndpoint(
+                    $"{globalSettings.BaseServiceUri.Api}/specs/public/swagger.json",
+                    "Bitwarden Public API"
+                );
                 config.OAuthClientId("accountType.id");
                 config.OAuthClientSecret("secretKey");
 
@@ -304,6 +371,9 @@ public class Startup
         }
 
         // Log startup
-        logger.LogInformation(Constants.BypassFiltersEventId, globalSettings.ProjectName + " started.");
+        logger.LogInformation(
+            Constants.BypassFiltersEventId,
+            globalSettings.ProjectName + " started."
+        );
     }
 }

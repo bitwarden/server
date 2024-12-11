@@ -19,17 +19,23 @@ public class SsoAuthenticationMiddleware
 
     public async Task Invoke(HttpContext context)
     {
-        if ((context.Request.Method == "GET" && context.Request.Query.ContainsKey("SAMLart"))
-            || (context.Request.Method == "POST" && context.Request.Form.ContainsKey("SAMLart")))
+        if (
+            (context.Request.Method == "GET" && context.Request.Query.ContainsKey("SAMLart"))
+            || (context.Request.Method == "POST" && context.Request.Form.ContainsKey("SAMLart"))
+        )
         {
-            throw new Exception("SAMLart parameter detected. SAML Artifact binding is not allowed.");
+            throw new Exception(
+                "SAMLart parameter detected. SAML Artifact binding is not allowed."
+            );
         }
 
-        context.Features.Set<IAuthenticationFeature>(new AuthenticationFeature
-        {
-            OriginalPath = context.Request.Path,
-            OriginalPathBase = context.Request.PathBase
-        });
+        context.Features.Set<IAuthenticationFeature>(
+            new AuthenticationFeature
+            {
+                OriginalPath = context.Request.Path,
+                OriginalPathBase = context.Request.PathBase,
+            }
+        );
 
         // Give any IAuthenticationRequestHandler schemes a chance to handle the request
         var handlers = context.RequestServices.GetRequiredService<IAuthenticationHandlerProvider>();
@@ -42,16 +48,20 @@ public class SsoAuthenticationMiddleware
                 {
                     case SsoType.OpenIdConnect:
                     default:
-                        if (dynamicScheme.Options is OpenIdConnectOptions oidcOptions &&
-                            !await oidcOptions.CouldHandleAsync(scheme.Name, context))
+                        if (
+                            dynamicScheme.Options is OpenIdConnectOptions oidcOptions
+                            && !await oidcOptions.CouldHandleAsync(scheme.Name, context)
+                        )
                         {
                             // It's OIDC and Dynamic, but not a good fit
                             continue;
                         }
                         break;
                     case SsoType.Saml2:
-                        if (dynamicScheme.Options is Saml2Options samlOptions &&
-                            !await samlOptions.CouldHandleAsync(scheme.Name, context))
+                        if (
+                            dynamicScheme.Options is Saml2Options samlOptions
+                            && !await samlOptions.CouldHandleAsync(scheme.Name, context)
+                        )
                         {
                             // It's SAML and Dynamic, but not a good fit
                             continue;
@@ -61,8 +71,11 @@ public class SsoAuthenticationMiddleware
             }
 
             // This far it's not dynamic OR it is but "could" be handled
-            if (await handlers.GetHandlerAsync(context, scheme.Name) is IAuthenticationRequestHandler handler &&
-                await handler.HandleRequestAsync())
+            if (
+                await handlers.GetHandlerAsync(context, scheme.Name)
+                    is IAuthenticationRequestHandler handler
+                && await handler.HandleRequestAsync()
+            )
             {
                 return;
             }

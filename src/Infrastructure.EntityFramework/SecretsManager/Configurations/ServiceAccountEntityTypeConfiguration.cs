@@ -8,17 +8,11 @@ public class ServiceAccountEntityTypeConfiguration : IEntityTypeConfiguration<Se
 {
     public void Configure(EntityTypeBuilder<ServiceAccount> builder)
     {
-        builder
-            .Property(s => s.Id)
-            .ValueGeneratedNever();
+        builder.Property(s => s.Id).ValueGeneratedNever();
 
-        builder
-            .HasKey(s => s.Id)
-            .IsClustered();
+        builder.HasKey(s => s.Id).IsClustered();
 
-        builder
-            .HasIndex(s => s.OrganizationId)
-            .IsClustered(false);
+        builder.HasIndex(s => s.OrganizationId).IsClustered(false);
 
         builder.ToTable(nameof(ServiceAccount));
     }

@@ -16,7 +16,8 @@ public abstract class SubscriptionUpdate
         foreach (var upgradeItemOptions in upgradeItemsOptions)
         {
             var upgradeQuantity = upgradeItemOptions.Quantity ?? 0;
-            var existingQuantity = FindSubscriptionItem(subscription, upgradeItemOptions.Plan)?.Quantity ?? 0;
+            var existingQuantity =
+                FindSubscriptionItem(subscription, upgradeItemOptions.Plan)?.Quantity ?? 0;
             if (upgradeQuantity != existingQuantity)
             {
                 return true;
@@ -34,20 +35,23 @@ public abstract class SubscriptionUpdate
 
         var data = subscription.Items.Data;
 
-        var subscriptionItem = data.FirstOrDefault(item => item.Plan?.Id == planId) ?? data.FirstOrDefault(item => item.Price?.Id == planId);
+        var subscriptionItem =
+            data.FirstOrDefault(item => item.Plan?.Id == planId)
+            ?? data.FirstOrDefault(item => item.Price?.Id == planId);
 
         return subscriptionItem;
     }
 
-    protected static string GetPasswordManagerPlanId(StaticStore.Plan plan)
-        => IsNonSeatBasedPlan(plan)
+    protected static string GetPasswordManagerPlanId(StaticStore.Plan plan) =>
+        IsNonSeatBasedPlan(plan)
             ? plan.PasswordManager.StripePlanId
             : plan.PasswordManager.StripeSeatPlanId;
 
-    protected static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
-        => plan.Type is
-            >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
-            or PlanType.FamiliesAnnually
-            or PlanType.TeamsStarter2023
-            or PlanType.TeamsStarter;
+    protected static bool IsNonSeatBasedPlan(StaticStore.Plan plan) =>
+        plan.Type
+            is >= PlanType.FamiliesAnnually2019
+                and <= PlanType.EnterpriseAnnually2019
+                or PlanType.FamiliesAnnually
+                or PlanType.TeamsStarter2023
+                or PlanType.TeamsStarter;
 }

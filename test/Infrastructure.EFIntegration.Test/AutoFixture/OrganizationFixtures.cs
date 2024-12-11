@@ -45,13 +45,12 @@ internal class EfOrganization : ICustomization
 
 internal class EfOrganizationAutoDataAttribute : CustomAutoDataAttribute
 {
-    public EfOrganizationAutoDataAttribute() : base(new SutProviderCustomization(), new EfOrganization())
-    { }
+    public EfOrganizationAutoDataAttribute()
+        : base(new SutProviderCustomization(), new EfOrganization()) { }
 }
 
 internal class InlineEfOrganizationAutoDataAttribute : InlineCustomAutoDataAttribute
 {
-    public InlineEfOrganizationAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfOrganization) }, values)
-    { }
+    public InlineEfOrganizationAutoDataAttribute(params object[] values)
+        : base(new[] { typeof(SutProviderCustomization), typeof(EfOrganization) }, values) { }
 }

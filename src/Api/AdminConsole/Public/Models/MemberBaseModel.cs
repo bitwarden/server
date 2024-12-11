@@ -14,10 +14,7 @@ public abstract class MemberBaseModel
 
     public MemberBaseModel(OrganizationUser user)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         Type = user.Type;
         ExternalId = user.ExternalId;
@@ -31,10 +28,7 @@ public abstract class MemberBaseModel
     [SetsRequiredMembers]
     public MemberBaseModel(OrganizationUserUserDetails user)
     {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
+        ArgumentNullException.ThrowIfNull(user);
 
         Type = user.Type;
         ExternalId = user.ExternalId;
@@ -51,12 +45,14 @@ public abstract class MemberBaseModel
     [Required]
     [EnumDataType(typeof(OrganizationUserType))]
     public required OrganizationUserType? Type { get; set; }
+
     /// <summary>
     /// External identifier for reference or linking this member to another system, such as a user directory.
     /// </summary>
     /// <example>external_id_123456</example>
     [StringLength(300)]
     public string? ExternalId { get; set; }
+
     /// <summary>
     /// The member's custom permissions if the member has a Custom role. If not supplied, all custom permissions will
     /// default to false.

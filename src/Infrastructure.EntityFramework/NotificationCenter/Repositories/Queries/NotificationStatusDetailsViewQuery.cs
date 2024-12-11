@@ -6,7 +6,8 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 namespace Bit.Infrastructure.EntityFramework.NotificationCenter.Repositories.Queries;
 
-public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientType) : IQuery<NotificationStatusDetails>
+public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientType)
+    : IQuery<NotificationStatusDetails>
 {
     public IQueryable<NotificationStatusDetails> Run(DatabaseContext dbContext)
     {
@@ -16,33 +17,24 @@ public class NotificationStatusDetailsViewQuery(Guid userId, ClientType clientTy
             clientTypes = [ClientType.All, clientType];
         }
 
-        var query = from n in dbContext.Notifications
-                    join ou in dbContext.OrganizationUsers.Where(ou => ou.UserId == userId)
-                        on n.OrganizationId equals ou.OrganizationId into groupingOrganizationUsers
-                    from ou in groupingOrganizationUsers.DefaultIfEmpty()
-                    join ns in dbContext.NotificationStatuses.Where(ns => ns.UserId == userId) on n.Id equals ns.NotificationId
-                        into groupingNotificationStatus
-                    from ns in groupingNotificationStatus.DefaultIfEmpty()
-                    where
-                        clientTypes.Contains(n.ClientType) &&
-                        (
-                            (
-                                n.Global &&
-                                n.UserId == null &&
-                                n.OrganizationId == null
-                            ) ||
-                            (
-                                !n.Global &&
-                                n.UserId == userId &&
-                                (n.OrganizationId == null || ou != null)
-                            ) ||
-                            (
-                                !n.Global &&
-                                n.UserId == null &&
-                                ou != null
-                            )
-                        )
-                    select new { n, ns };
+        var query =
+            from n in dbContext.Notifications
+            join ou in dbContext.OrganizationUsers.Where(ou => ou.UserId == userId)
+                on n.OrganizationId equals ou.OrganizationId
+                into groupingOrganizationUsers
+            from ou in groupingOrganizationUsers.DefaultIfEmpty()
+            join ns in dbContext.NotificationStatuses.Where(ns => ns.UserId == userId)
+                on n.Id equals ns.NotificationId
+                into groupingNotificationStatus
+            from ns in groupingNotificationStatus.DefaultIfEmpty()
+            where
+                clientTypes.Contains(n.ClientType)
+                && (
+                    (n.Global && n.UserId == null && n.OrganizationId == null)
+                    || (!n.Global && n.UserId == userId && (n.OrganizationId == null || ou != null))
+                    || (!n.Global && n.UserId == null && ou != null)
+                )
+            select new { n, ns };
 
         return query.Select(x => new NotificationStatusDetails
         {

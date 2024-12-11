@@ -12,13 +12,12 @@ public partial class PasswordlessAuthRequestAddApprovedColumn : Migration
             name: "Approved",
             table: "AuthRequest",
             type: "tinyint(1)",
-            nullable: true);
+            nullable: true
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "Approved",
-            table: "AuthRequest");
+        migrationBuilder.DropColumn(name: "Approved", table: "AuthRequest");
     }
 }

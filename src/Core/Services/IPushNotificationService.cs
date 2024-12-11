@@ -24,7 +24,18 @@ public interface IPushNotificationService
     Task PushSyncSendDeleteAsync(Send send);
     Task PushAuthRequestAsync(AuthRequest authRequest);
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
-    Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier, string deviceId = null);
-    Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null);
+    Task SendPayloadToUserAsync(
+        string userId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    );
+    Task SendPayloadToOrganizationAsync(
+        string orgId,
+        PushType type,
+        object payload,
+        string identifier,
+        string deviceId = null
+    );
 }

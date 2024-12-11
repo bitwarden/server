@@ -22,38 +22,68 @@ public class CloudGetOrganizationLicenseQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_InvalidInstallationId_Throws(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, int version)
+    public async Task GetLicenseAsync_InvalidInstallationId_Throws(
+        SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+        Organization organization,
+        Guid installationId,
+        int version
+    )
     {
-        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).ReturnsNull();
+        sutProvider
+            .GetDependency<IInstallationRepository>()
+            .GetByIdAsync(installationId)
+            .ReturnsNull();
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId, version));
+            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId, version)
+        );
         Assert.Contains("Invalid installation id", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_DisabledOrganization_Throws(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation)
+    public async Task GetLicenseAsync_DisabledOrganization_Throws(
+        SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+        Organization organization,
+        Guid installationId,
+        Installation installation
+    )
     {
         installation.Enabled = false;
-        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider
+            .GetDependency<IInstallationRepository>()
+            .GetByIdAsync(installationId)
+            .Returns(installation);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId));
+            async () => await sutProvider.Sut.GetLicenseAsync(organization, installationId)
+        );
         Assert.Contains("Invalid installation id", exception.Message);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task GetLicenseAsync_CreatesAndReturns(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
-        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
-        byte[] licenseSignature)
+    public async Task GetLicenseAsync_CreatesAndReturns(
+        SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+        Organization organization,
+        Guid installationId,
+        Installation installation,
+        SubscriptionInfo subInfo,
+        byte[] licenseSignature
+    )
     {
         installation.Enabled = true;
-        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
-        sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
-        sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
+        sutProvider
+            .GetDependency<IInstallationRepository>()
+            .GetByIdAsync(installationId)
+            .Returns(installation);
+        sutProvider
+            .GetDependency<IPaymentService>()
+            .GetSubscriptionAsync(organization)
+            .Returns(subInfo);
+        sutProvider
+            .GetDependency<ILicensingService>()
+            .SignLicense(Arg.Any<ILicense>())
+            .Returns(licenseSignature);
 
         var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
 

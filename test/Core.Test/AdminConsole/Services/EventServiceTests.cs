@@ -18,28 +18,49 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class EventServiceTests
 {
-    public static IEnumerable<object[]> InstallationIdTestCases => TestCaseHelper.GetCombinationsOfMultipleLists(
-        new object[] { Guid.NewGuid(), null },
-        Enum.GetValues<EventType>().Select(e => (object)e)
-    ).Select(p => p.ToArray());
+    public static IEnumerable<object[]> InstallationIdTestCases =>
+        TestCaseHelper
+            .GetCombinationsOfMultipleLists(
+                new object[] { Guid.NewGuid(), null },
+                Enum.GetValues<EventType>().Select(e => (object)e)
+            )
+            .Select(p => p.ToArray());
 
     [Theory, BitAutoData]
-    public async Task LogGroupEvent_LogsRequiredInfo(Group group, EventType eventType, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    public async Task LogGroupEvent_LogsRequiredInfo(
+        Group group,
+        EventType eventType,
+        DateTime date,
+        Guid actingUserId,
+        Guid providerId,
+        string ipAddress,
+        DeviceType deviceType,
+        SutProvider<EventService> sutProvider
+    )
     {
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>()
         {
-            { group.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
+            {
+                group.OrganizationId,
+                new OrganizationAbility() { UseEvents = true, Enabled = true }
+            },
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider
+            .GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
-        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderIdForOrg(Arg.Any<Guid>())
+            .Returns(providerId);
 
         await sutProvider.Sut.LogGroupEventAsync(group, eventType, date);
 
-        var expected = new List<IEvent>() {
+        var expected = new List<IEvent>()
+        {
             new EventMessage()
             {
                 IpAddress = ipAddress,
@@ -50,26 +71,51 @@ public class EventServiceTests
                 ActingUserId = actingUserId,
                 ProviderId = providerId,
                 Date = date,
-                SystemUser = null
-            }
+                SystemUser = null,
+            },
         };
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(
+                Arg.Is(
+                    AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })
+                )
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task LogGroupEvent_WithEventSystemUser_LogsRequiredInfo(Group group, EventType eventType, EventSystemUser eventSystemUser, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    public async Task LogGroupEvent_WithEventSystemUser_LogsRequiredInfo(
+        Group group,
+        EventType eventType,
+        EventSystemUser eventSystemUser,
+        DateTime date,
+        Guid actingUserId,
+        Guid providerId,
+        string ipAddress,
+        DeviceType deviceType,
+        SutProvider<EventService> sutProvider
+    )
     {
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>()
         {
-            { group.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
+            {
+                group.OrganizationId,
+                new OrganizationAbility() { UseEvents = true, Enabled = true }
+            },
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider
+            .GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
-        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderIdForOrg(Arg.Any<Guid>())
+            .Returns(providerId);
 
         await sutProvider.Sut.LogGroupEventAsync(group, eventType, eventSystemUser, date);
 
@@ -83,7 +129,7 @@ public class EventServiceTests
             ActingUserId = actingUserId,
             ProviderId = providerId,
             Date = date,
-            SystemUser = eventSystemUser
+            SystemUser = eventSystemUser,
         };
 
         if (eventSystemUser is EventSystemUser.SCIM)
@@ -91,17 +137,26 @@ public class EventServiceTests
             eventMessage.DeviceType = DeviceType.Server;
         }
 
-        var expected = new List<IEvent>() {
-            eventMessage
-        };
+        var expected = new List<IEvent>() { eventMessage };
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(
+                Arg.Is(
+                    AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })
+                )
+            );
     }
 
     [Theory]
     [BitMemberAutoData(nameof(InstallationIdTestCases))]
-    public async Task LogOrganizationEvent_ProvidesInstallationId(Guid? installationId, EventType eventType,
-        Organization organization, SutProvider<EventService> sutProvider)
+    public async Task LogOrganizationEvent_ProvidesInstallationId(
+        Guid? installationId,
+        EventType eventType,
+        Organization organization,
+        SutProvider<EventService> sutProvider
+    )
     {
         organization.Enabled = true;
         organization.UseEvents = true;
@@ -110,29 +165,53 @@ public class EventServiceTests
 
         await sutProvider.Sut.LogOrganizationEventAsync(organization, eventType);
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateAsync(Arg.Is<IEvent>(e =>
-            e.OrganizationId == organization.Id &&
-            e.Type == eventType &&
-            e.InstallationId == installationId));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateAsync(
+                Arg.Is<IEvent>(e =>
+                    e.OrganizationId == organization.Id
+                    && e.Type == eventType
+                    && e.InstallationId == installationId
+                )
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task LogOrganizationUserEvent_LogsRequiredInfo(OrganizationUser orgUser, EventType eventType, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    public async Task LogOrganizationUserEvent_LogsRequiredInfo(
+        OrganizationUser orgUser,
+        EventType eventType,
+        DateTime date,
+        Guid actingUserId,
+        Guid providerId,
+        string ipAddress,
+        DeviceType deviceType,
+        SutProvider<EventService> sutProvider
+    )
     {
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>()
         {
-            {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
+            {
+                orgUser.OrganizationId,
+                new OrganizationAbility() { UseEvents = true, Enabled = true }
+            },
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider
+            .GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
-        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderIdForOrg(Arg.Any<Guid>())
+            .Returns(providerId);
 
         await sutProvider.Sut.LogOrganizationUserEventAsync(orgUser, eventType, date);
 
-        var expected = new List<IEvent>() {
+        var expected = new List<IEvent>()
+        {
             new EventMessage()
             {
                 IpAddress = ipAddress,
@@ -143,29 +222,59 @@ public class EventServiceTests
                 ProviderId = providerId,
                 Type = eventType,
                 ActingUserId = actingUserId,
-                Date = date
-            }
+                Date = date,
+            },
         };
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(
+                Arg.Is(
+                    AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })
+                )
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task LogOrganizationUserEvent_WithEventSystemUser_LogsRequiredInfo(OrganizationUser orgUser, EventType eventType, EventSystemUser eventSystemUser, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, SutProvider<EventService> sutProvider)
+    public async Task LogOrganizationUserEvent_WithEventSystemUser_LogsRequiredInfo(
+        OrganizationUser orgUser,
+        EventType eventType,
+        EventSystemUser eventSystemUser,
+        DateTime date,
+        Guid actingUserId,
+        Guid providerId,
+        string ipAddress,
+        SutProvider<EventService> sutProvider
+    )
     {
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>()
         {
-            {orgUser.OrganizationId, new OrganizationAbility() { UseEvents = true, Enabled = true } }
+            {
+                orgUser.OrganizationId,
+                new OrganizationAbility() { UseEvents = true, Enabled = true }
+            },
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
+        sutProvider
+            .GetDependency<IApplicationCacheService>()
+            .GetOrganizationAbilitiesAsync()
+            .Returns(orgAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
-        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderIdForOrg(Arg.Any<Guid>())
+            .Returns(providerId);
 
-        await sutProvider.Sut.LogOrganizationUserEventAsync(orgUser, eventType, eventSystemUser, date);
+        await sutProvider.Sut.LogOrganizationUserEventAsync(
+            orgUser,
+            eventType,
+            eventSystemUser,
+            date
+        );
 
-        var expected = new List<IEvent>() {
+        var expected = new List<IEvent>()
+        {
             new EventMessage()
             {
                 IpAddress = ipAddress,
@@ -176,30 +285,55 @@ public class EventServiceTests
                 Type = eventType,
                 ActingUserId = actingUserId,
                 Date = date,
-                SystemUser = eventSystemUser
-            }
+                SystemUser = eventSystemUser,
+            },
         };
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(
+                Arg.Is(
+                    AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })
+                )
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task LogProviderUserEvent_LogsRequiredInfo(ProviderUser providerUser, EventType eventType, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    public async Task LogProviderUserEvent_LogsRequiredInfo(
+        ProviderUser providerUser,
+        EventType eventType,
+        DateTime date,
+        Guid actingUserId,
+        Guid providerId,
+        string ipAddress,
+        DeviceType deviceType,
+        SutProvider<EventService> sutProvider
+    )
     {
         var providerAbilities = new Dictionary<Guid, ProviderAbility>()
         {
-            {providerUser.ProviderId, new ProviderAbility() { UseEvents = true, Enabled = true } }
+            {
+                providerUser.ProviderId,
+                new ProviderAbility() { UseEvents = true, Enabled = true }
+            },
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync().Returns(providerAbilities);
+        sutProvider
+            .GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
-        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderIdForOrg(Arg.Any<Guid>())
+            .Returns(providerId);
 
         await sutProvider.Sut.LogProviderUserEventAsync(providerUser, eventType, date);
 
-        var expected = new List<IEvent>() {
+        var expected = new List<IEvent>()
+        {
             new EventMessage()
             {
                 IpAddress = ipAddress,
@@ -209,16 +343,32 @@ public class EventServiceTests
                 ProviderUserId = providerUser.Id,
                 Type = eventType,
                 ActingUserId = actingUserId,
-                Date = date
-            }
+                Date = date,
+            },
         };
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(
+                Arg.Is(
+                    AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })
+                )
+            );
     }
 
     [Theory, BitAutoData]
-    public async Task LogProviderOrganizationEventsAsync_LogsRequiredInfo(Provider provider, ICollection<ProviderOrganization> providerOrganizations, EventType eventType, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    public async Task LogProviderOrganizationEventsAsync_LogsRequiredInfo(
+        Provider provider,
+        ICollection<ProviderOrganization> providerOrganizations,
+        EventType eventType,
+        DateTime date,
+        Guid actingUserId,
+        Guid providerId,
+        string ipAddress,
+        DeviceType deviceType,
+        SutProvider<EventService> sutProvider
+    )
     {
         foreach (var providerOrganization in providerOrganizations)
         {
@@ -227,18 +377,29 @@ public class EventServiceTests
 
         var providerAbilities = new Dictionary<Guid, ProviderAbility>()
         {
-            { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
+            {
+                provider.Id,
+                new ProviderAbility() { UseEvents = true, Enabled = true }
+            },
         };
-        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync().Returns(providerAbilities);
+        sutProvider
+            .GetDependency<IApplicationCacheService>()
+            .GetProviderAbilitiesAsync()
+            .Returns(providerAbilities);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
-        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+        sutProvider
+            .GetDependency<ICurrentContext>()
+            .ProviderIdForOrg(Arg.Any<Guid>())
+            .Returns(providerId);
 
-        await sutProvider.Sut.LogProviderOrganizationEventsAsync(providerOrganizations.Select(po => (po, eventType, (DateTime?)date)));
+        await sutProvider.Sut.LogProviderOrganizationEventsAsync(
+            providerOrganizations.Select(po => (po, eventType, (DateTime?)date))
+        );
 
-        var expected = providerOrganizations.Select(po =>
-            new EventMessage()
+        var expected = providerOrganizations
+            .Select(po => new EventMessage()
             {
                 DeviceType = deviceType,
                 IpAddress = ipAddress,
@@ -246,9 +407,17 @@ public class EventServiceTests
                 ProviderOrganizationId = po.Id,
                 Type = eventType,
                 ActingUserId = actingUserId,
-                Date = date
-            }).ToList();
+                Date = date,
+            })
+            .ToList();
 
-        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+        await sutProvider
+            .GetDependency<IEventWriteService>()
+            .Received(1)
+            .CreateManyAsync(
+                Arg.Is(
+                    AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })
+                )
+            );
     }
 }

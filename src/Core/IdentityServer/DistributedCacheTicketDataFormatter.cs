@@ -15,7 +15,8 @@ public class DistributedCacheTicketDataFormatter : ISecureDataFormat<Authenticat
     public DistributedCacheTicketDataFormatter(
         IDistributedCache distributedCache,
         IDataProtectionProvider dataProtectionProvider,
-        string name)
+        string name
+    )
     {
         _distributedCache = distributedCache;
         _dataProtector = dataProtectionProvider.CreateProtector(CacheKeyPrefix, name);
@@ -23,13 +24,13 @@ public class DistributedCacheTicketDataFormatter : ISecureDataFormat<Authenticat
     }
 
     public string Protect(AuthenticationTicket data) => Protect(data, null);
+
     public string Protect(AuthenticationTicket data, string purpose)
     {
         var key = Guid.NewGuid().ToString();
         var cacheKey = $"{_prefix}-{purpose}-{key}";
 
-        var expiresUtc = data.Properties.ExpiresUtc ??
-            DateTimeOffset.UtcNow.AddMinutes(15);
+        var expiresUtc = data.Properties.ExpiresUtc ?? DateTimeOffset.UtcNow.AddMinutes(15);
 
         var options = new DistributedCacheEntryOptions();
         options.SetAbsoluteExpiration(expiresUtc);
@@ -41,6 +42,7 @@ public class DistributedCacheTicketDataFormatter : ISecureDataFormat<Authenticat
     }
 
     public AuthenticationTicket Unprotect(string protectedText) => Unprotect(protectedText, null);
+
     public AuthenticationTicket Unprotect(string protectedText, string purpose)
     {
         if (string.IsNullOrWhiteSpace(protectedText))

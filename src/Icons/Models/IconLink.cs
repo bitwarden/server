@@ -9,9 +9,34 @@ namespace Bit.Icons.Models;
 
 public class IconLink
 {
-    private static readonly HashSet<string> _iconRels = new(StringComparer.InvariantCultureIgnoreCase) { "icon", "apple-touch-icon", "shortcut icon" };
-    private static readonly HashSet<string> _blocklistedRels = new(StringComparer.InvariantCultureIgnoreCase) { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
-    private static readonly HashSet<string> _iconExtensions = new(StringComparer.InvariantCultureIgnoreCase) { ".ico", ".png", ".jpg", ".jpeg" };
+    private static readonly HashSet<string> _iconRels = new(
+        StringComparer.InvariantCultureIgnoreCase
+    )
+    {
+        "icon",
+        "apple-touch-icon",
+        "shortcut icon",
+    };
+    private static readonly HashSet<string> _blocklistedRels = new(
+        StringComparer.InvariantCultureIgnoreCase
+    )
+    {
+        "preload",
+        "image_src",
+        "preconnect",
+        "canonical",
+        "alternate",
+        "stylesheet",
+    };
+    private static readonly HashSet<string> _iconExtensions = new(
+        StringComparer.InvariantCultureIgnoreCase
+    )
+    {
+        ".ico",
+        ".png",
+        ".jpg",
+        ".jpeg",
+    };
     private const string _pngMediaType = "image/png";
     private static readonly byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
     private static readonly byte[] _webpHeader = Encoding.UTF8.GetBytes("RIFF");
@@ -25,7 +50,9 @@ public class IconLink
 
     private const string _svgXmlMediaType = "image/svg+xml";
 
-    private static readonly HashSet<string> _allowedMediaTypes = new(StringComparer.InvariantCultureIgnoreCase)
+    private static readonly HashSet<string> _allowedMediaTypes = new(
+        StringComparer.InvariantCultureIgnoreCase
+    )
     {
         _pngMediaType,
         _icoMediaType,
@@ -86,8 +113,11 @@ public class IconLink
         if (!string.IsNullOrWhiteSpace(Sizes?.Value))
         {
             var sizeParts = Sizes.Value.Split('x');
-            if (sizeParts.Length == 2 && int.TryParse(sizeParts[0].Trim(), out var width) &&
-                int.TryParse(sizeParts[1].Trim(), out var height))
+            if (
+                sizeParts.Length == 2
+                && int.TryParse(sizeParts[0].Trim(), out var width)
+                && int.TryParse(sizeParts[1].Trim(), out var height)
+            )
             {
                 _width = width;
                 _height = height;
@@ -124,7 +154,11 @@ public class IconLink
     /// <summary>
     /// Fetches the icon from the Href. Will always fail unless first validated with IsUsable().
     /// </summary>
-    public async Task<Icon?> FetchAsync(ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
+    public async Task<Icon?> FetchAsync(
+        ILogger<IIconFetchingService> logger,
+        IHttpClientFactory httpClientFactory,
+        IUriService uriService
+    )
     {
         if (!_validated)
         {
@@ -137,7 +171,12 @@ public class IconLink
             return null;
         }
 
-        using var response = await IconHttpRequest.FetchAsync(uri, logger, httpClientFactory, uriService);
+        using var response = await IconHttpRequest.FetchAsync(
+            uri,
+            logger,
+            httpClientFactory,
+            uriService
+        );
         if (!response.IsSuccessStatusCode)
         {
             return null;
@@ -171,7 +210,14 @@ public class IconLink
             return null;
         }
 
-        if (Href.Value.StartsWith("//") && Uri.TryCreate($"{ParentUri.Scheme}://{Href.Value[2..]}", UriKind.Absolute, out var uri))
+        if (
+            Href.Value.StartsWith("//")
+            && Uri.TryCreate(
+                $"{ParentUri.Scheme}://{Href.Value[2..]}",
+                UriKind.Absolute,
+                out var uri
+            )
+        )
         {
             return uri;
         }
@@ -195,7 +241,8 @@ public class IconLink
 
     private static bool HeaderMatch(byte[] imageBytes, byte[] header)
     {
-        return imageBytes.Length >= header.Length && header.SequenceEqual(imageBytes.Take(header.Length));
+        return imageBytes.Length >= header.Length
+            && header.SequenceEqual(imageBytes.Take(header.Length));
     }
 
     private static string DetermineImageFormatFromFile(byte[] imageBytes)

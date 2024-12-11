@@ -13,10 +13,6 @@ public class ProjectCreateRequestModel
 
     public Project ToProject(Guid organizationId)
     {
-        return new Project
-        {
-            OrganizationId = organizationId,
-            Name = Name,
-        };
+        return new Project { OrganizationId = organizationId, Name = Name };
     }
 }

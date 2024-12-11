@@ -17,8 +17,10 @@ public class CipherFieldModel
     }
 
     public FieldType Type { get; set; }
+
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
+
     [EncryptedStringLength(5000)]
     public string Value { get; set; }
     public int? LinkedId { get; set; }

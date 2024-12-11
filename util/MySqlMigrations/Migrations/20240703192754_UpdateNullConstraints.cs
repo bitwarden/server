@@ -15,18 +15,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Culture",
             keyValue: null,
             column: "Culture",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Culture",
-            table: "User",
-            type: "varchar(10)",
-            maxLength: 10,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(10)",
-            oldMaxLength: 10,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Culture",
+                table: "User",
+                type: "varchar(10)",
+                maxLength: 10,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(10)",
+                oldMaxLength: 10,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -35,18 +38,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "PostalCode",
             keyValue: null,
             column: "PostalCode",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "PostalCode",
-            table: "TaxRate",
-            type: "varchar(10)",
-            maxLength: 10,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(10)",
-            oldMaxLength: 10,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "PostalCode",
+                table: "TaxRate",
+                type: "varchar(10)",
+                maxLength: 10,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(10)",
+                oldMaxLength: 10,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -55,18 +61,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Country",
             keyValue: null,
             column: "Country",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Country",
-            table: "TaxRate",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Country",
+                table: "TaxRate",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -75,18 +84,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "PlanName",
             keyValue: null,
             column: "PlanName",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "PlanName",
-            table: "ProviderInvoiceItem",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "PlanName",
+                table: "ProviderInvoiceItem",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -95,18 +107,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "InvoiceId",
             keyValue: null,
             column: "InvoiceId",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "InvoiceId",
-            table: "ProviderInvoiceItem",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "InvoiceId",
+                table: "ProviderInvoiceItem",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -115,18 +130,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "ClientName",
             keyValue: null,
             column: "ClientName",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "ClientName",
-            table: "ProviderInvoiceItem",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "ClientName",
+                table: "ProviderInvoiceItem",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -135,16 +153,19 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Txt",
             keyValue: null,
             column: "Txt",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Txt",
-            table: "OrganizationDomain",
-            type: "longtext",
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "longtext",
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Txt",
+                table: "OrganizationDomain",
+                type: "longtext",
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "longtext",
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -153,18 +174,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "DomainName",
             keyValue: null,
             column: "DomainName",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "DomainName",
-            table: "OrganizationDomain",
-            type: "varchar(255)",
-            maxLength: 255,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(255)",
-            oldMaxLength: 255,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "DomainName",
+                table: "OrganizationDomain",
+                type: "varchar(255)",
+                maxLength: 255,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(255)",
+                oldMaxLength: 255,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -173,18 +197,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "ApiKey",
             keyValue: null,
             column: "ApiKey",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "ApiKey",
-            table: "OrganizationApiKey",
-            type: "varchar(30)",
-            maxLength: 30,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(30)",
-            oldMaxLength: 30,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "ApiKey",
+                table: "OrganizationApiKey",
+                type: "varchar(30)",
+                maxLength: 30,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(30)",
+                oldMaxLength: 30,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -193,18 +220,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Key",
             keyValue: null,
             column: "Key",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Key",
-            table: "Installation",
-            type: "varchar(150)",
-            maxLength: 150,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(150)",
-            oldMaxLength: 150,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Key",
+                table: "Installation",
+                type: "varchar(150)",
+                maxLength: 150,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(150)",
+                oldMaxLength: 150,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -213,18 +243,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Email",
             keyValue: null,
             column: "Email",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Email",
-            table: "Installation",
-            type: "varchar(256)",
-            maxLength: 256,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(256)",
-            oldMaxLength: 256,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Email",
+                table: "Installation",
+                type: "varchar(256)",
+                maxLength: 256,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(256)",
+                oldMaxLength: 256,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -233,18 +266,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Name",
             keyValue: null,
             column: "Name",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Name",
-            table: "Device",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Name",
+                table: "Device",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -253,18 +289,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Identifier",
             keyValue: null,
             column: "Identifier",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Identifier",
-            table: "Device",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Identifier",
+                table: "Device",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -273,16 +312,19 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Name",
             keyValue: null,
             column: "Name",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Name",
-            table: "Collection",
-            type: "longtext",
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "longtext",
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Name",
+                table: "Collection",
+                type: "longtext",
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "longtext",
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -291,18 +333,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Scope",
             keyValue: null,
             column: "Scope",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Scope",
-            table: "ApiKey",
-            type: "varchar(4000)",
-            maxLength: 4000,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(4000)",
-            oldMaxLength: 4000,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Scope",
+                table: "ApiKey",
+                type: "varchar(4000)",
+                maxLength: 4000,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(4000)",
+                oldMaxLength: 4000,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -311,18 +356,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Name",
             keyValue: null,
             column: "Name",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Name",
-            table: "ApiKey",
-            type: "varchar(200)",
-            maxLength: 200,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(200)",
-            oldMaxLength: 200,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Name",
+                table: "ApiKey",
+                type: "varchar(200)",
+                maxLength: 200,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(200)",
+                oldMaxLength: 200,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -331,16 +379,19 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "Key",
             keyValue: null,
             column: "Key",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Key",
-            table: "ApiKey",
-            type: "longtext",
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "longtext",
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Key",
+                table: "ApiKey",
+                type: "longtext",
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "longtext",
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
@@ -349,18 +400,21 @@ public partial class UpdateNullConstraints : Migration
             keyColumn: "EncryptedPayload",
             keyValue: null,
             column: "EncryptedPayload",
-            value: "");
+            value: ""
+        );
 
-        migrationBuilder.AlterColumn<string>(
-            name: "EncryptedPayload",
-            table: "ApiKey",
-            type: "varchar(4000)",
-            maxLength: 4000,
-            nullable: false,
-            oldClrType: typeof(string),
-            oldType: "varchar(4000)",
-            oldMaxLength: 4000,
-            oldNullable: true)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "EncryptedPayload",
+                table: "ApiKey",
+                type: "varchar(4000)",
+                maxLength: 4000,
+                nullable: false,
+                oldClrType: typeof(string),
+                oldType: "varchar(4000)",
+                oldMaxLength: 4000,
+                oldNullable: true
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
     }
@@ -368,213 +422,249 @@ public partial class UpdateNullConstraints : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AlterColumn<string>(
-            name: "Culture",
-            table: "User",
-            type: "varchar(10)",
-            maxLength: 10,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(10)",
-            oldMaxLength: 10)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Culture",
+                table: "User",
+                type: "varchar(10)",
+                maxLength: 10,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(10)",
+                oldMaxLength: 10
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "PostalCode",
-            table: "TaxRate",
-            type: "varchar(10)",
-            maxLength: 10,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(10)",
-            oldMaxLength: 10)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "PostalCode",
+                table: "TaxRate",
+                type: "varchar(10)",
+                maxLength: 10,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(10)",
+                oldMaxLength: 10
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Country",
-            table: "TaxRate",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Country",
+                table: "TaxRate",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "PlanName",
-            table: "ProviderInvoiceItem",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "PlanName",
+                table: "ProviderInvoiceItem",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "InvoiceId",
-            table: "ProviderInvoiceItem",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "InvoiceId",
+                table: "ProviderInvoiceItem",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "ClientName",
-            table: "ProviderInvoiceItem",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "ClientName",
+                table: "ProviderInvoiceItem",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Txt",
-            table: "OrganizationDomain",
-            type: "longtext",
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "longtext")
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Txt",
+                table: "OrganizationDomain",
+                type: "longtext",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "longtext"
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "DomainName",
-            table: "OrganizationDomain",
-            type: "varchar(255)",
-            maxLength: 255,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(255)",
-            oldMaxLength: 255)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "DomainName",
+                table: "OrganizationDomain",
+                type: "varchar(255)",
+                maxLength: 255,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(255)",
+                oldMaxLength: 255
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "ApiKey",
-            table: "OrganizationApiKey",
-            type: "varchar(30)",
-            maxLength: 30,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(30)",
-            oldMaxLength: 30)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "ApiKey",
+                table: "OrganizationApiKey",
+                type: "varchar(30)",
+                maxLength: 30,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(30)",
+                oldMaxLength: 30
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Key",
-            table: "Installation",
-            type: "varchar(150)",
-            maxLength: 150,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(150)",
-            oldMaxLength: 150)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Key",
+                table: "Installation",
+                type: "varchar(150)",
+                maxLength: 150,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(150)",
+                oldMaxLength: 150
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Email",
-            table: "Installation",
-            type: "varchar(256)",
-            maxLength: 256,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(256)",
-            oldMaxLength: 256)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Email",
+                table: "Installation",
+                type: "varchar(256)",
+                maxLength: 256,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(256)",
+                oldMaxLength: 256
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Name",
-            table: "Device",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Name",
+                table: "Device",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Identifier",
-            table: "Device",
-            type: "varchar(50)",
-            maxLength: 50,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(50)",
-            oldMaxLength: 50)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Identifier",
+                table: "Device",
+                type: "varchar(50)",
+                maxLength: 50,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(50)",
+                oldMaxLength: 50
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Name",
-            table: "Collection",
-            type: "longtext",
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "longtext")
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Name",
+                table: "Collection",
+                type: "longtext",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "longtext"
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Scope",
-            table: "ApiKey",
-            type: "varchar(4000)",
-            maxLength: 4000,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(4000)",
-            oldMaxLength: 4000)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Scope",
+                table: "ApiKey",
+                type: "varchar(4000)",
+                maxLength: 4000,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(4000)",
+                oldMaxLength: 4000
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Name",
-            table: "ApiKey",
-            type: "varchar(200)",
-            maxLength: 200,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(200)",
-            oldMaxLength: 200)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Name",
+                table: "ApiKey",
+                type: "varchar(200)",
+                maxLength: 200,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(200)",
+                oldMaxLength: 200
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "Key",
-            table: "ApiKey",
-            type: "longtext",
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "longtext")
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "Key",
+                table: "ApiKey",
+                type: "longtext",
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "longtext"
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
 
-        migrationBuilder.AlterColumn<string>(
-            name: "EncryptedPayload",
-            table: "ApiKey",
-            type: "varchar(4000)",
-            maxLength: 4000,
-            nullable: true,
-            oldClrType: typeof(string),
-            oldType: "varchar(4000)",
-            oldMaxLength: 4000)
+        migrationBuilder
+            .AlterColumn<string>(
+                name: "EncryptedPayload",
+                table: "ApiKey",
+                type: "varchar(4000)",
+                maxLength: 4000,
+                nullable: true,
+                oldClrType: typeof(string),
+                oldType: "varchar(4000)",
+                oldMaxLength: 4000
+            )
             .Annotation("MySql:CharSet", "utf8mb4")
             .OldAnnotation("MySql:CharSet", "utf8mb4");
     }

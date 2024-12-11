@@ -2,87 +2,87 @@
 
 ##############################
 # Builds the docker image from a pre-built build directory
-# Arguments: 
+# Arguments:
 #   1: Project Name
 #   2: Project Directory
 #   3: Docker Tag
 #   4: Docker push
-# Outputs: 
+# Outputs:
 #   Output to STDOUT or STDERR.
-# Returns: 
+# Returns:
 #   Returned values other than the default exit status of the last command run.
 ##############################
 docker_build() {
-  local project_name=$1
-  local project_dir=$2
-  local docker_tag=$3
-  local docker_push=$4
+        local project_name=$1
+        local project_dir=$2
+        local docker_tag=$3
+        local docker_push=$4
 
-  local project_name_lower=$(echo "$project_name" | awk '{print tolower($0)}')
+        local project_name_lower=$(echo "$project_name" | awk '{print tolower($0)}')
 
-  echo "Building docker image: bitwarden/$project_name_lower:$docker_tag"
-  echo "=============================="
-  docker build -t bitwarden/$project_name_lower:$docker_tag $project_dir
+        echo "Building docker image: bitwarden/$project_name_lower:$docker_tag"
+        echo "=============================="
+        docker build -t bitwarden/$project_name_lower:$docker_tag $project_dir
 
-  if [ "$docker_push" == "1" ]; then
-    docker push bitwarden/$project_name_lower:$docker_tag
-  fi
+        if [ "$docker_push" == "1" ]; then
+                docker push bitwarden/$project_name_lower:$docker_tag
+        fi
 }
 
 # Get Project
-PROJECT=$1; shift
+PROJECT=$1
+shift
 
 # Get Params
 TAG="latest"
 PUSH=0
 
 while [ ! $# -eq 0 ]; do
-  case "$1" in
-    -t | --tag)
-      if [[ $2 ]]; then
-        TAG="$2"
+        case "$1" in
+        -t | --tag)
+                if [[ $2 ]]; then
+                        TAG="$2"
+                        shift
+                else
+                        exp "--tag requires a value"
+                fi
+                ;;
+        --push) PUSH=1 ;;
+        -h | --help) usage && exit ;;
+        *) usage && exit ;;
+        esac
         shift
-      else
-        exp "--tag requires a value"
-      fi
-      ;;
-    --push) PUSH=1 ;;
-    -h | --help ) usage && exit ;;
-    *) usage && exit ;;
-  esac
-  shift
 done
 
-
 case "$PROJECT" in
-  "admin" | "Admin") docker_build Admin $PWD/src/Admin $TAG $PUSH ;;
-  "api" | "Api") docker_build Api $PWD/src/Api $TAG $PUSH ;;
-  "attachments" | "Attachments") docker_build Attachments $PWD/util/Attachments $TAG $PUSH ;;
-  #"billing" | "Billing") docker_build Billing $PWD/src/Billing $TAG $PUSH ;;
-  "events" | "Events") docker_build Events $PWD/src/Events $TAG $PUSH ;;
-  "eventsprocessor" | "EventsProcessor") docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH ;;
-  "icons" | "Icons") docker_build Icons $PWD/src/Icons $TAG $PUSH ;;
-  "identity" | "Identity") docker_build Identity $PWD/src/Identity $TAG $PUSH ;;
-  "mssql" | "MsSql" | "Mssql") docker_build MsSql $PWD/util/MsSql $TAG $PUSH ;;
-  "nginx" | "Nginx") docker_build Nginx $PWD/util/Nginx $TAG $PUSH ;;
-  "notifications" | "Notifications") docker_build Notifications $PWD/src/Notifications $TAG $PUSH ;;
-  "server" | "Server") docker_build Server $PWD/util/Server $TAG $PUSH ;;
-  "setup" | "Setup") docker_build Setup $PWD/util/Setup $TAG $PUSH ;;
-  "sso" | "Sso") docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH ;;
-  "")
-    docker_build Admin $PWD/src/Admin $TAG $PUSH
-    docker_build Api $PWD/src/Api $TAG $PUSH
-    docker_build Attachments $PWD/util/Attachments $TAG $PUSH
-    #docker_build Billing $PWD/src/Billing $TAG $PUSH
-    docker_build Events $PWD/src/Events $TAG $PUSH
-    docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH
-    docker_build Icons $PWD/src/Icons $TAG $PUSH
-    docker_build Identity $PWD/src/Identity $TAG $PUSH
-    docker_build MsSql $PWD/util/MsSql $TAG $PUSH
-    docker_build Nginx $PWD/util/Nginx $TAG $PUSH
-    docker_build Notifications $PWD/src/Notifications $TAG $PUSH
-    docker_build Server $PWD/util/Server $TAG $PUSH
-    docker_build Setup $PWD/util/Setup $TAG $PUSH
-    docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH
-  ;;
+"admin" | "Admin") docker_build Admin $PWD/src/Admin $TAG $PUSH ;;
+"api" | "Api") docker_build Api $PWD/src/Api $TAG $PUSH ;;
+"attachments" | "Attachments") docker_build Attachments $PWD/util/Attachments $TAG $PUSH ;;
+#"billing" | "Billing") docker_build Billing $PWD/src/Billing $TAG $PUSH ;;
+"events" | "Events") docker_build Events $PWD/src/Events $TAG $PUSH ;;
+"eventsprocessor" | "EventsProcessor") docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH ;;
+"icons" | "Icons") docker_build Icons $PWD/src/Icons $TAG $PUSH ;;
+"identity" | "Identity") docker_build Identity $PWD/src/Identity $TAG $PUSH ;;
+"mssql" | "MsSql" | "Mssql") docker_build MsSql $PWD/util/MsSql $TAG $PUSH ;;
+"nginx" | "Nginx") docker_build Nginx $PWD/util/Nginx $TAG $PUSH ;;
+"notifications" | "Notifications") docker_build Notifications $PWD/src/Notifications $TAG $PUSH ;;
+"server" | "Server") docker_build Server $PWD/util/Server $TAG $PUSH ;;
+"setup" | "Setup") docker_build Setup $PWD/util/Setup $TAG $PUSH ;;
+"sso" | "Sso") docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH ;;
+"")
+        docker_build Admin $PWD/src/Admin $TAG $PUSH
+        docker_build Api $PWD/src/Api $TAG $PUSH
+        docker_build Attachments $PWD/util/Attachments $TAG $PUSH
+        #docker_build Billing $PWD/src/Billing $TAG $PUSH
+        docker_build Events $PWD/src/Events $TAG $PUSH
+        docker_build EventsProcessor $PWD/src/EventsProcessor $TAG $PUSH
+        docker_build Icons $PWD/src/Icons $TAG $PUSH
+        docker_build Identity $PWD/src/Identity $TAG $PUSH
+        docker_build MsSql $PWD/util/MsSql $TAG $PUSH
+        docker_build Nginx $PWD/util/Nginx $TAG $PUSH
+        docker_build Notifications $PWD/src/Notifications $TAG $PUSH
+        docker_build Server $PWD/util/Server $TAG $PUSH
+        docker_build Setup $PWD/util/Setup $TAG $PUSH
+        docker_build Sso $PWD/bitwarden_license/src/Sso $TAG $PUSH
+        ;;
 esac

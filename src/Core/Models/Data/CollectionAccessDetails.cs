@@ -5,4 +5,3 @@ public class CollectionAccessDetails
     public IEnumerable<CollectionAccessSelection> Groups { get; set; }
     public IEnumerable<CollectionAccessSelection> Users { get; set; }
 }
-

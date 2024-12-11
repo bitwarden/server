@@ -12,7 +12,8 @@ public class TokenizedPaymentSourceRequestBody
         PaymentMethodType.BankAccount,
         PaymentMethodType.Card,
         PaymentMethodType.PayPal,
-        ErrorMessage = "'type' must be BankAccount, Card or PayPal")]
+        ErrorMessage = "'type' must be BankAccount, Card or PayPal"
+    )]
     public PaymentMethodType Type { get; set; }
 
     [Required]

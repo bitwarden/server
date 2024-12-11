@@ -20,10 +20,20 @@ public partial class NotificationCenter : Migration
                 ClientType = table.Column<byte>(type: "smallint", nullable: false),
                 UserId = table.Column<Guid>(type: "uuid", nullable: true),
                 OrganizationId = table.Column<Guid>(type: "uuid", nullable: true),
-                Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                Title = table.Column<string>(
+                    type: "character varying(256)",
+                    maxLength: 256,
+                    nullable: true
+                ),
                 Body = table.Column<string>(type: "text", nullable: true),
-                CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                RevisionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                CreationDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: false
+                ),
+                RevisionDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: false
+                ),
             },
             constraints: table =>
             {
@@ -32,13 +42,16 @@ public partial class NotificationCenter : Migration
                     name: "FK_Notification_Organization_OrganizationId",
                     column: x => x.OrganizationId,
                     principalTable: "Organization",
-                    principalColumn: "Id");
+                    principalColumn: "Id"
+                );
                 table.ForeignKey(
                     name: "FK_Notification_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
-                    principalColumn: "Id");
-            });
+                    principalColumn: "Id"
+                );
+            }
+        );
 
         migrationBuilder.CreateTable(
             name: "NotificationStatus",
@@ -47,7 +60,10 @@ public partial class NotificationCenter : Migration
                 NotificationId = table.Column<Guid>(type: "uuid", nullable: false),
                 UserId = table.Column<Guid>(type: "uuid", nullable: false),
                 ReadDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                DeletedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                DeletedDate = table.Column<DateTime>(
+                    type: "timestamp with time zone",
+                    nullable: true
+                ),
             },
             constraints: table =>
             {
@@ -57,44 +73,57 @@ public partial class NotificationCenter : Migration
                     column: x => x.NotificationId,
                     principalTable: "Notification",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
+                    onDelete: ReferentialAction.Cascade
+                );
                 table.ForeignKey(
                     name: "FK_NotificationStatus_User_UserId",
                     column: x => x.UserId,
                     principalTable: "User",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Cascade);
-            });
+                    onDelete: ReferentialAction.Cascade
+                );
+            }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Notification_ClientType_Global_UserId_OrganizationId_Priori~",
             table: "Notification",
-            columns: new[] { "ClientType", "Global", "UserId", "OrganizationId", "Priority", "CreationDate" },
-            descending: new[] { false, false, false, false, true, true });
+            columns: new[]
+            {
+                "ClientType",
+                "Global",
+                "UserId",
+                "OrganizationId",
+                "Priority",
+                "CreationDate",
+            },
+            descending: new[] { false, false, false, false, true, true }
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Notification_OrganizationId",
             table: "Notification",
-            column: "OrganizationId");
+            column: "OrganizationId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_Notification_UserId",
             table: "Notification",
-            column: "UserId");
+            column: "UserId"
+        );
 
         migrationBuilder.CreateIndex(
             name: "IX_NotificationStatus_NotificationId",
             table: "NotificationStatus",
-            column: "NotificationId");
+            column: "NotificationId"
+        );
     }
 
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropTable(
-            name: "NotificationStatus");
+        migrationBuilder.DropTable(name: "NotificationStatus");
 
-        migrationBuilder.DropTable(
-            name: "Notification");
+        migrationBuilder.DropTable(name: "Notification");
     }
 }

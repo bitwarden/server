@@ -71,16 +71,22 @@ public class DatabaseDataAttribute : DataAttribute
                 dapperSqlServerCollection.AddSingleton(globalSettings);
                 dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
                 dapperSqlServerCollection.AddSingleton(database);
-                dapperSqlServerCollection.AddDistributedSqlServerCache((o) =>
-                {
-                    o.ConnectionString = database.ConnectionString;
-                    o.SchemaName = "dbo";
-                    o.TableName = "Cache";
-                });
+                dapperSqlServerCollection.AddDistributedSqlServerCache(
+                    (o) =>
+                    {
+                        o.ConnectionString = database.ConnectionString;
+                        o.SchemaName = "dbo";
+                        o.TableName = "Cache";
+                    }
+                );
 
                 if (!string.IsNullOrEmpty(MigrationName))
                 {
-                    AddSqlMigrationTester(dapperSqlServerCollection, database.ConnectionString, MigrationName);
+                    AddSqlMigrationTester(
+                        dapperSqlServerCollection,
+                        database.ConnectionString,
+                        MigrationName
+                    );
                 }
 
                 yield return dapperSqlServerCollection.BuildServiceProvider();
@@ -104,7 +110,10 @@ public class DatabaseDataAttribute : DataAttribute
         }
     }
 
-    private void AddCommonServices(IServiceCollection services, Action<ILoggingBuilder> configureLogging)
+    private void AddCommonServices(
+        IServiceCollection services,
+        Action<ILoggingBuilder> configureLogging
+    )
     {
         services.AddLogging(configureLogging);
         services.AddDataProtection();
@@ -115,12 +124,22 @@ public class DatabaseDataAttribute : DataAttribute
         }
     }
 
-    private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
+    private void AddSqlMigrationTester(
+        IServiceCollection services,
+        string connectionString,
+        string migrationName
+    )
     {
-        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(sp => new SqlMigrationTesterService(connectionString, migrationName));
+        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(
+            sp => new SqlMigrationTesterService(connectionString, migrationName)
+        );
     }
 
-    private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
+    private void AddEfMigrationTester(
+        IServiceCollection services,
+        SupportedDatabaseProviders databaseType,
+        string migrationName
+    )
     {
         services.AddSingleton<IMigrationTesterService, EfMigrationTesterService>(sp =>
         {

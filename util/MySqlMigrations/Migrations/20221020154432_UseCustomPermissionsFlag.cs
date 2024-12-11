@@ -13,13 +13,12 @@ public partial class UseCustomPermissionsFlag : Migration
             table: "Organization",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "UseCustomPermissions",
-            table: "Organization");
+        migrationBuilder.DropColumn(name: "UseCustomPermissions", table: "Organization");
     }
 }

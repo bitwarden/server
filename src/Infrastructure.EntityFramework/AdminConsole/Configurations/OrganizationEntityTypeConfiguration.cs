@@ -8,17 +8,17 @@ public class OrganizationEntityTypeConfiguration : IEntityTypeConfiguration<Orga
 {
     public void Configure(EntityTypeBuilder<Organization> builder)
     {
-        builder
-            .Property(o => o.Id)
-            .ValueGeneratedNever();
+        builder.Property(o => o.Id).ValueGeneratedNever();
 
-        builder.Property(c => c.AllowAdminAccessToAllCollectionItems)
+        builder
+            .Property(c => c.AllowAdminAccessToAllCollectionItems)
             .ValueGeneratedNever()
             .HasDefaultValue(true);
 
         NpgsqlIndexBuilderExtensions.IncludeProperties(
             builder.HasIndex(o => new { o.Id, o.Enabled }),
-            o => o.UseTotp);
+            o => o.UseTotp
+        );
 
         builder.ToTable(nameof(Organization));
     }

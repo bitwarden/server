@@ -14,7 +14,5 @@ public class DisableFormValueModelBindingAttribute : Attribute, IResourceFilter
         factories.RemoveType<JQueryFormValueProviderFactory>();
     }
 
-    public void OnResourceExecuted(ResourceExecutedContext context)
-    {
-    }
+    public void OnResourceExecuted(ResourceExecutedContext context) { }
 }

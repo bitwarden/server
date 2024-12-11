@@ -22,8 +22,10 @@ public static class IPAddressExtension
         // IPv6
         if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
         {
-            return ipString.StartsWith("fc") || ipString.StartsWith("fd") ||
-                ipString.StartsWith("fe") || ipString.StartsWith("ff");
+            return ipString.StartsWith("fc")
+                || ipString.StartsWith("fd")
+                || ipString.StartsWith("fe")
+                || ipString.StartsWith("ff");
         }
 
         // IPv4

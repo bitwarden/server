@@ -27,7 +27,8 @@ public class ProviderMigrator(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderPlanRepository providerPlanRepository,
-    IStripeAdapter stripeAdapter) : IProviderMigrator
+    IStripeAdapter stripeAdapter
+) : IProviderMigrator
 {
     public async Task Migrate(Guid providerId)
     {
@@ -46,9 +47,15 @@ public class ProviderMigrator(
 
         if (organizations.Count == 0)
         {
-            logger.LogInformation("CB: Skipping migration for provider ({ProviderID}) with no clients", providerId);
+            logger.LogInformation(
+                "CB: Skipping migration for provider ({ProviderID}) with no clients",
+                providerId
+            );
 
-            await migrationTrackerCache.UpdateTrackingStatus(providerId, ProviderMigrationProgress.NoClients);
+            await migrationTrackerCache.UpdateTrackingStatus(
+                providerId,
+                ProviderMigrationProgress.NoClients
+            );
 
             return;
         }
@@ -83,19 +90,24 @@ public class ProviderMigrator(
             {
                 ProviderId = providerTracker.ProviderId,
                 ProviderName = providerTracker.ProviderName,
-                Result = providerTracker.Progress.ToString()
+                Result = providerTracker.Progress.ToString(),
             };
         }
 
-        var clientTrackers = await Task.WhenAll(providerTracker.OrganizationIds.Select(organizationId =>
-            migrationTrackerCache.GetTracker(providerId, organizationId)));
+        var clientTrackers = await Task.WhenAll(
+            providerTracker.OrganizationIds.Select(organizationId =>
+                migrationTrackerCache.GetTracker(providerId, organizationId)
+            )
+        );
 
         var migrationRecordLookup = new Dictionary<Guid, ClientOrganizationMigrationRecord>();
 
         foreach (var clientTracker in clientTrackers)
         {
             var migrationRecord =
-                await clientOrganizationMigrationRecordRepository.GetByOrganizationId(clientTracker.OrganizationId);
+                await clientOrganizationMigrationRecordRepository.GetByOrganizationId(
+                    clientTracker.OrganizationId
+                );
 
             migrationRecordLookup.Add(clientTracker.OrganizationId, migrationRecord);
         }
@@ -105,17 +117,24 @@ public class ProviderMigrator(
             ProviderId = providerTracker.ProviderId,
             ProviderName = providerTracker.ProviderName,
             Result = providerTracker.Progress.ToString(),
-            Clients = clientTrackers.Select(tracker =>
-            {
-                var foundMigrationRecord = migrationRecordLookup.TryGetValue(tracker.OrganizationId, out var migrationRecord);
-                return new ClientMigrationResult
+            Clients = clientTrackers
+                .Select(tracker =>
                 {
-                    OrganizationId = tracker.OrganizationId,
-                    OrganizationName = tracker.OrganizationName,
-                    Result = tracker.Progress.ToString(),
-                    PreviousState = foundMigrationRecord ? new ClientPreviousState(migrationRecord) : null
-                };
-            }).ToList(),
+                    var foundMigrationRecord = migrationRecordLookup.TryGetValue(
+                        tracker.OrganizationId,
+                        out var migrationRecord
+                    );
+                    return new ClientMigrationResult
+                    {
+                        OrganizationId = tracker.OrganizationId,
+                        OrganizationName = tracker.OrganizationName,
+                        Result = tracker.Progress.ToString(),
+                        PreviousState = foundMigrationRecord
+                            ? new ClientPreviousState(migrationRecord)
+                            : null,
+                    };
+                })
+                .ToList(),
         };
     }
 
@@ -141,8 +160,10 @@ public class ProviderMigrator(
 
         logger.LogInformation("CB: Migrated clients for provider ({ProviderID})", providerId);
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId,
-            ProviderMigrationProgress.ClientsMigrated);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            ProviderMigrationProgress.ClientsMigrated
+        );
     }
 
     private async Task ConfigureTeamsPlanAsync(Guid providerId)
@@ -151,84 +172,113 @@ public class ProviderMigrator(
 
         var organizations = await GetClientsAsync(providerId);
 
-        var teamsSeats = organizations
-            .Where(IsTeams)
-            .Sum(client => client.Seats) ?? 0;
+        var teamsSeats = organizations.Where(IsTeams).Sum(client => client.Seats) ?? 0;
 
-        var teamsProviderPlan = (await providerPlanRepository.GetByProviderId(providerId))
-            .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
+        var teamsProviderPlan = (
+            await providerPlanRepository.GetByProviderId(providerId)
+        ).FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
 
         if (teamsProviderPlan == null)
         {
-            await providerPlanRepository.CreateAsync(new ProviderPlan
-            {
-                ProviderId = providerId,
-                PlanType = PlanType.TeamsMonthly,
-                SeatMinimum = teamsSeats,
-                PurchasedSeats = 0,
-                AllocatedSeats = teamsSeats
-            });
+            await providerPlanRepository.CreateAsync(
+                new ProviderPlan
+                {
+                    ProviderId = providerId,
+                    PlanType = PlanType.TeamsMonthly,
+                    SeatMinimum = teamsSeats,
+                    PurchasedSeats = 0,
+                    AllocatedSeats = teamsSeats,
+                }
+            );
 
-            logger.LogInformation("CB: Created Teams plan for provider ({ProviderID}) with a seat minimum of {Seats}",
-                providerId, teamsSeats);
+            logger.LogInformation(
+                "CB: Created Teams plan for provider ({ProviderID}) with a seat minimum of {Seats}",
+                providerId,
+                teamsSeats
+            );
         }
         else
         {
-            logger.LogInformation("CB: Teams plan already exists for provider ({ProviderID}), updating seat minimum", providerId);
+            logger.LogInformation(
+                "CB: Teams plan already exists for provider ({ProviderID}), updating seat minimum",
+                providerId
+            );
 
             teamsProviderPlan.SeatMinimum = teamsSeats;
             teamsProviderPlan.AllocatedSeats = teamsSeats;
 
             await providerPlanRepository.ReplaceAsync(teamsProviderPlan);
 
-            logger.LogInformation("CB: Updated Teams plan for provider ({ProviderID}) to seat minimum of {Seats}",
-                providerId, teamsProviderPlan.SeatMinimum);
+            logger.LogInformation(
+                "CB: Updated Teams plan for provider ({ProviderID}) to seat minimum of {Seats}",
+                providerId,
+                teamsProviderPlan.SeatMinimum
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, ProviderMigrationProgress.TeamsPlanConfigured);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            ProviderMigrationProgress.TeamsPlanConfigured
+        );
     }
 
     private async Task ConfigureEnterprisePlanAsync(Guid providerId)
     {
-        logger.LogInformation("CB: Configuring Enterprise plan for provider ({ProviderID})", providerId);
+        logger.LogInformation(
+            "CB: Configuring Enterprise plan for provider ({ProviderID})",
+            providerId
+        );
 
         var organizations = await GetClientsAsync(providerId);
 
-        var enterpriseSeats = organizations
-            .Where(IsEnterprise)
-            .Sum(client => client.Seats) ?? 0;
+        var enterpriseSeats = organizations.Where(IsEnterprise).Sum(client => client.Seats) ?? 0;
 
-        var enterpriseProviderPlan = (await providerPlanRepository.GetByProviderId(providerId))
-            .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
+        var enterpriseProviderPlan = (
+            await providerPlanRepository.GetByProviderId(providerId)
+        ).FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
 
         if (enterpriseProviderPlan == null)
         {
-            await providerPlanRepository.CreateAsync(new ProviderPlan
-            {
-                ProviderId = providerId,
-                PlanType = PlanType.EnterpriseMonthly,
-                SeatMinimum = enterpriseSeats,
-                PurchasedSeats = 0,
-                AllocatedSeats = enterpriseSeats
-            });
+            await providerPlanRepository.CreateAsync(
+                new ProviderPlan
+                {
+                    ProviderId = providerId,
+                    PlanType = PlanType.EnterpriseMonthly,
+                    SeatMinimum = enterpriseSeats,
+                    PurchasedSeats = 0,
+                    AllocatedSeats = enterpriseSeats,
+                }
+            );
 
-            logger.LogInformation("CB: Created Enterprise plan for provider ({ProviderID}) with a seat minimum of {Seats}",
-                providerId, enterpriseSeats);
+            logger.LogInformation(
+                "CB: Created Enterprise plan for provider ({ProviderID}) with a seat minimum of {Seats}",
+                providerId,
+                enterpriseSeats
+            );
         }
         else
         {
-            logger.LogInformation("CB: Enterprise plan already exists for provider ({ProviderID}), updating seat minimum", providerId);
+            logger.LogInformation(
+                "CB: Enterprise plan already exists for provider ({ProviderID}), updating seat minimum",
+                providerId
+            );
 
             enterpriseProviderPlan.SeatMinimum = enterpriseSeats;
             enterpriseProviderPlan.AllocatedSeats = enterpriseSeats;
 
             await providerPlanRepository.ReplaceAsync(enterpriseProviderPlan);
 
-            logger.LogInformation("CB: Updated Enterprise plan for provider ({ProviderID}) to seat minimum of {Seats}",
-                providerId, enterpriseProviderPlan.SeatMinimum);
+            logger.LogInformation(
+                "CB: Updated Enterprise plan for provider ({ProviderID}) to seat minimum of {Seats}",
+                providerId,
+                enterpriseProviderPlan.SeatMinimum
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(providerId, ProviderMigrationProgress.EnterprisePlanConfigured);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            providerId,
+            ProviderMigrationProgress.EnterprisePlanConfigured
+        );
     }
 
     private async Task SetupCustomerAsync(Provider provider)
@@ -237,13 +287,16 @@ public class ProviderMigrator(
         {
             var organizations = await GetClientsAsync(provider.Id);
 
-            var sampleOrganization = organizations.FirstOrDefault(organization => !string.IsNullOrEmpty(organization.GatewayCustomerId));
+            var sampleOrganization = organizations.FirstOrDefault(organization =>
+                !string.IsNullOrEmpty(organization.GatewayCustomerId)
+            );
 
             if (sampleOrganization == null)
             {
                 logger.LogInformation(
                     "CB: Could not find sample organization for provider ({ProviderID}) that has a Stripe customer",
-                    provider.Id);
+                    provider.Id
+                );
 
                 return;
             }
@@ -252,23 +305,32 @@ public class ProviderMigrator(
 
             var customer = await providerBillingService.SetupCustomer(provider, taxInfo);
 
-            await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
-            {
-                Coupon = StripeConstants.CouponIDs.MSPDiscount35
-            });
+            await stripeAdapter.CustomerUpdateAsync(
+                customer.Id,
+                new CustomerUpdateOptions { Coupon = StripeConstants.CouponIDs.MSPDiscount35 }
+            );
 
             provider.GatewayCustomerId = customer.Id;
 
             await providerRepository.ReplaceAsync(provider);
 
-            logger.LogInformation("CB: Setup Stripe customer for provider ({ProviderID})", provider.Id);
+            logger.LogInformation(
+                "CB: Setup Stripe customer for provider ({ProviderID})",
+                provider.Id
+            );
         }
         else
         {
-            logger.LogInformation("CB: Stripe customer already exists for provider ({ProviderID})", provider.Id);
+            logger.LogInformation(
+                "CB: Stripe customer already exists for provider ({ProviderID})",
+                provider.Id
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.CustomerSetup);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            provider.Id,
+            ProviderMigrationProgress.CustomerSetup
+        );
     }
 
     private async Task SetupSubscriptionAsync(Provider provider)
@@ -283,91 +345,131 @@ public class ProviderMigrator(
 
                 await providerRepository.ReplaceAsync(provider);
 
-                logger.LogInformation("CB: Setup Stripe subscription for provider ({ProviderID})", provider.Id);
+                logger.LogInformation(
+                    "CB: Setup Stripe subscription for provider ({ProviderID})",
+                    provider.Id
+                );
             }
             else
             {
                 logger.LogInformation(
                     "CB: Could not set up Stripe subscription for provider ({ProviderID}) with no Stripe customer",
-                    provider.Id);
+                    provider.Id
+                );
 
                 return;
             }
         }
         else
         {
-            logger.LogInformation("CB: Stripe subscription already exists for provider ({ProviderID})", provider.Id);
+            logger.LogInformation(
+                "CB: Stripe subscription already exists for provider ({ProviderID})",
+                provider.Id
+            );
 
             var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
-            var enterpriseSeatMinimum = providerPlans
-                .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly)?
-                .SeatMinimum ?? 0;
+            var enterpriseSeatMinimum =
+                providerPlans
+                    .FirstOrDefault(providerPlan =>
+                        providerPlan.PlanType == PlanType.EnterpriseMonthly
+                    )
+                    ?.SeatMinimum ?? 0;
 
-            var teamsSeatMinimum = providerPlans
-                .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly)?
-                .SeatMinimum ?? 0;
+            var teamsSeatMinimum =
+                providerPlans
+                    .FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly)
+                    ?.SeatMinimum ?? 0;
 
             var updateSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
                 provider.Id,
                 provider.GatewaySubscriptionId,
                 [
                     (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: enterpriseSeatMinimum),
-                    (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum)
-                ]);
+                    (Plan: PlanType.TeamsMonthly, SeatsMinimum: teamsSeatMinimum),
+                ]
+            );
             await providerBillingService.UpdateSeatMinimums(updateSeatMinimumsCommand);
 
             logger.LogInformation(
-                "CB: Updated Stripe subscription for provider ({ProviderID}) with current seat minimums", provider.Id);
+                "CB: Updated Stripe subscription for provider ({ProviderID}) with current seat minimums",
+                provider.Id
+            );
         }
 
-        await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.SubscriptionSetup);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            provider.Id,
+            ProviderMigrationProgress.SubscriptionSetup
+        );
     }
 
     private async Task ApplyCreditAsync(Provider provider)
     {
         var organizations = await GetClientsAsync(provider.Id);
 
-        var organizationCustomers =
-            await Task.WhenAll(organizations.Select(organization => stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)));
+        var organizationCustomers = await Task.WhenAll(
+            organizations.Select(organization =>
+                stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId)
+            )
+        );
 
-        var organizationCancellationCredit = organizationCustomers.Sum(customer => customer.Balance);
+        var organizationCancellationCredit = organizationCustomers.Sum(customer =>
+            customer.Balance
+        );
 
         if (organizationCancellationCredit != 0)
         {
-            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            await stripeAdapter.CustomerBalanceTransactionCreate(
+                provider.GatewayCustomerId,
                 new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = organizationCancellationCredit,
                     Currency = "USD",
-                    Description = "Unused, prorated time for client organization subscriptions."
-                });
+                    Description = "Unused, prorated time for client organization subscriptions.",
+                }
+            );
         }
 
-        var migrationRecords = await Task.WhenAll(organizations.Select(organization =>
-            clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id)));
+        var migrationRecords = await Task.WhenAll(
+            organizations.Select(organization =>
+                clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id)
+            )
+        );
 
         var legacyOrganizationMigrationRecords = migrationRecords.Where(migrationRecord =>
-            migrationRecord.PlanType is
-                PlanType.EnterpriseAnnually2020 or
-                PlanType.TeamsAnnually2020);
+            migrationRecord.PlanType
+                is PlanType.EnterpriseAnnually2020
+                    or PlanType.TeamsAnnually2020
+        );
 
-        var legacyOrganizationCredit = legacyOrganizationMigrationRecords.Sum(migrationRecord => migrationRecord.Seats) * 12 * -100;
+        var legacyOrganizationCredit =
+            legacyOrganizationMigrationRecords.Sum(migrationRecord => migrationRecord.Seats)
+            * 12
+            * -100;
 
         if (legacyOrganizationCredit < 0)
         {
-            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+            await stripeAdapter.CustomerBalanceTransactionCreate(
+                provider.GatewayCustomerId,
                 new CustomerBalanceTransactionCreateOptions
                 {
                     Amount = legacyOrganizationCredit,
                     Currency = "USD",
-                    Description = "1 year rebate for legacy client organizations."
-                });
+                    Description = "1 year rebate for legacy client organizations.",
+                }
+            );
         }
 
-        logger.LogInformation("CB: Applied {Credit} credit to provider ({ProviderID})", organizationCancellationCredit + legacyOrganizationCredit, provider.Id);
+        logger.LogInformation(
+            "CB: Applied {Credit} credit to provider ({ProviderID})",
+            organizationCancellationCredit + legacyOrganizationCredit,
+            provider.Id
+        );
 
-        await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.CreditApplied);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            provider.Id,
+            ProviderMigrationProgress.CreditApplied
+        );
     }
 
     private async Task UpdateProviderAsync(Provider provider)
@@ -378,7 +480,10 @@ public class ProviderMigrator(
 
         logger.LogInformation("CB: Completed migration for provider ({ProviderID})", provider.Id);
 
-        await migrationTrackerCache.UpdateTrackingStatus(provider.Id, ProviderMigrationProgress.Completed);
+        await migrationTrackerCache.UpdateTrackingStatus(
+            provider.Id,
+            ProviderMigrationProgress.Completed
+        );
     }
 
     #endregion
@@ -387,11 +492,16 @@ public class ProviderMigrator(
 
     private async Task<List<Organization>> GetClientsAsync(Guid providerId)
     {
-        var providerOrganizations = await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
+        var providerOrganizations =
+            await providerOrganizationRepository.GetManyDetailsByProviderAsync(providerId);
 
-        return (await Task.WhenAll(providerOrganizations.Select(providerOrganization =>
-                organizationRepository.GetByIdAsync(providerOrganization.OrganizationId))))
-            .ToList();
+        return (
+            await Task.WhenAll(
+                providerOrganizations.Select(providerOrganization =>
+                    organizationRepository.GetByIdAsync(providerOrganization.OrganizationId)
+                )
+            )
+        ).ToList();
     }
 
     private async Task<Provider> GetProviderAsync(Guid providerId)
@@ -400,14 +510,20 @@ public class ProviderMigrator(
 
         if (provider == null)
         {
-            logger.LogWarning("CB: Cannot migrate provider ({ProviderID}) as it does not exist", providerId);
+            logger.LogWarning(
+                "CB: Cannot migrate provider ({ProviderID}) as it does not exist",
+                providerId
+            );
 
             return null;
         }
 
         if (provider.Type != ProviderType.Msp)
         {
-            logger.LogWarning("CB: Cannot migrate provider ({ProviderID}) as it is not an MSP", providerId);
+            logger.LogWarning(
+                "CB: Cannot migrate provider ({ProviderID}) as it is not an MSP",
+                providerId
+            );
 
             return null;
         }
@@ -417,12 +533,17 @@ public class ProviderMigrator(
             return provider;
         }
 
-        logger.LogWarning("CB: Cannot migrate provider ({ProviderID}) as it is not in the 'Created' state", providerId);
+        logger.LogWarning(
+            "CB: Cannot migrate provider ({ProviderID}) as it is not in the 'Created' state",
+            providerId
+        );
 
         return null;
     }
 
-    private static bool IsEnterprise(Organization organization) => organization.Plan.Contains("Enterprise");
+    private static bool IsEnterprise(Organization organization) =>
+        organization.Plan.Contains("Enterprise");
+
     private static bool IsTeams(Organization organization) => organization.Plan.Contains("Teams");
 
     #endregion

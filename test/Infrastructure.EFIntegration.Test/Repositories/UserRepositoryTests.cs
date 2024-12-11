@@ -16,10 +16,11 @@ public class UserRepositoryTests
 {
     [CiSkippedTheory, EfUserAutoData]
     public async Task CreateAsync_Works_DataMatches(
-        User user, UserCompare equalityComparer,
+        User user,
+        UserCompare equalityComparer,
         List<EfRepo.UserRepository> suts,
         SqlRepo.UserRepository sqlUserRepo
-        )
+    )
     {
         var savedUsers = new List<User>();
 
@@ -41,9 +42,13 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task ReplaceAsync_Works_DataMatches(User postUser, User replaceUser,
-        UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
-        SqlRepo.UserRepository sqlUserRepo)
+    public async Task ReplaceAsync_Works_DataMatches(
+        User postUser,
+        User replaceUser,
+        UserCompare equalityComparer,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var savedUsers = new List<User>();
         foreach (var sut in suts)
@@ -65,7 +70,11 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task DeleteAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+    public async Task DeleteAsync_Works_DataMatches(
+        User user,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         foreach (var sut in suts)
         {
@@ -93,8 +102,12 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task GetByEmailAsync_Works_DataMatches(User user, UserCompare equalityComparer,
-            List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+    public async Task GetByEmailAsync_Works_DataMatches(
+        User user,
+        UserCompare equalityComparer,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var savedUsers = new List<User>();
         foreach (var sut in suts)
@@ -113,16 +126,21 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task GetKdfInformationByEmailAsync_Works_DataMatches(User user,
-        UserKdfInformationCompare equalityComparer, List<EfRepo.UserRepository> suts,
-        SqlRepo.UserRepository sqlUserRepo)
+    public async Task GetKdfInformationByEmailAsync_Works_DataMatches(
+        User user,
+        UserKdfInformationCompare equalityComparer,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var savedKdfInformation = new List<UserKdfInformation>();
         foreach (var sut in suts)
         {
             var postEfUser = await sut.CreateAsync(user);
             sut.ClearChangeTracking();
-            var kdfInformation = await sut.GetKdfInformationByEmailAsync(postEfUser.Email.ToUpperInvariant());
+            var kdfInformation = await sut.GetKdfInformationByEmailAsync(
+                postEfUser.Email.ToUpperInvariant()
+            );
             savedKdfInformation.Add(kdfInformation);
         }
 
@@ -135,9 +153,14 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task SearchAsync_Works_DataMatches(User user, int skip, int take,
-        UserCompare equalityCompare, List<EfRepo.UserRepository> suts,
-        SqlRepo.UserRepository sqlUserRepo)
+    public async Task SearchAsync_Works_DataMatches(
+        User user,
+        int skip,
+        int take,
+        UserCompare equalityCompare,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var searchedEfUsers = new List<User>();
         foreach (var sut in suts)
@@ -145,20 +168,31 @@ public class UserRepositoryTests
             var postEfUser = await sut.CreateAsync(user);
             sut.ClearChangeTracking();
 
-            var searchedEfUsersCollection = await sut.SearchAsync(postEfUser.Email.ToUpperInvariant(), skip, take);
+            var searchedEfUsersCollection = await sut.SearchAsync(
+                postEfUser.Email.ToUpperInvariant(),
+                skip,
+                take
+            );
             searchedEfUsers.Concat(searchedEfUsersCollection.ToList());
         }
 
         var postSqlUser = await sqlUserRepo.CreateAsync(user);
-        var searchedSqlUsers = await sqlUserRepo.SearchAsync(postSqlUser.Email.ToUpperInvariant(), skip, take);
+        var searchedSqlUsers = await sqlUserRepo.SearchAsync(
+            postSqlUser.Email.ToUpperInvariant(),
+            skip,
+            take
+        );
 
         var distinctItems = searchedEfUsers.Concat(searchedSqlUsers).Distinct(equalityCompare);
         Assert.True(!distinctItems.Skip(1).Any());
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task GetManyByPremiumAsync_Works_DataMatches(User user,
-        List<EfRepo.UserRepository> suts, SqlRepo.UserRepository sqlUserRepo)
+    public async Task GetManyByPremiumAsync_Works_DataMatches(
+        User user,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var returnedUsers = new List<User>();
         foreach (var sut in suts)
@@ -178,8 +212,11 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task GetPublicKeyAsync_Works_DataMatches(User user, List<EfRepo.UserRepository> suts,
-        SqlRepo.UserRepository sqlUserRepo)
+    public async Task GetPublicKeyAsync_Works_DataMatches(
+        User user,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var returnedKeys = new List<string>();
         foreach (var sut in suts)
@@ -199,8 +236,11 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task GetAccountRevisionDateAsync(User user, List<EfRepo.UserRepository> suts,
-        SqlRepo.UserRepository sqlUserRepo)
+    public async Task GetAccountRevisionDateAsync(
+        User user,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var returnedKeys = new List<string>();
         foreach (var sut in suts)
@@ -220,9 +260,12 @@ public class UserRepositoryTests
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task UpdateRenewalReminderDateAsync_Works_DataMatches(User user,
-        DateTime updatedReminderDate, List<EfRepo.UserRepository> suts,
-        SqlRepo.UserRepository sqlUserRepo)
+    public async Task UpdateRenewalReminderDateAsync_Works_DataMatches(
+        User user,
+        DateTime updatedReminderDate,
+        List<EfRepo.UserRepository> suts,
+        SqlRepo.UserRepository sqlUserRepo
+    )
     {
         var savedDates = new List<DateTime?>();
         foreach (var sut in suts)
@@ -244,16 +287,25 @@ public class UserRepositoryTests
         savedDates.Add(replacedSqlUser.RenewalReminderDate);
 
         var distinctItems = savedDates.GroupBy(e => e.ToString());
-        Assert.True(!distinctItems.Skip(1).Any() &&
-                savedDates.All(e => e.ToString() == updatedReminderDate.ToString()));
+        Assert.True(
+            !distinctItems.Skip(1).Any()
+                && savedDates.All(e => e.ToString() == updatedReminderDate.ToString())
+        );
     }
 
     [CiSkippedTheory, EfUserAutoData]
-    public async Task GetBySsoUserAsync_Works_DataMatches(User user, Organization org,
-        SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
-        List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfRepo.OrganizationRepository> orgRepos,
-        SqlRepo.UserRepository sqlUserRepo, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+    public async Task GetBySsoUserAsync_Works_DataMatches(
+        User user,
+        Organization org,
+        SsoUser ssoUser,
+        UserCompare equalityComparer,
+        List<EfRepo.UserRepository> suts,
+        List<EfRepo.SsoUserRepository> ssoUserRepos,
+        List<EfRepo.OrganizationRepository> orgRepos,
+        SqlRepo.UserRepository sqlUserRepo,
+        SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
+        SqlRepo.OrganizationRepository sqlOrgRepo
+    )
     {
         var returnedList = new List<User>();
         foreach (var sut in suts)
@@ -271,7 +323,10 @@ public class UserRepositoryTests
             var postEfSsoUser = await ssoUserRepos[i].CreateAsync(ssoUser);
             sut.ClearChangeTracking();
 
-            var returnedUser = await sut.GetBySsoUserAsync(postEfSsoUser.ExternalId.ToUpperInvariant(), efOrg.Id);
+            var returnedUser = await sut.GetBySsoUserAsync(
+                postEfSsoUser.ExternalId.ToUpperInvariant(),
+                efOrg.Id
+            );
             returnedList.Add(returnedUser);
         }
 
@@ -282,8 +337,10 @@ public class UserRepositoryTests
         ssoUser.OrganizationId = sqlOrganization.Id;
         var postSqlSsoUser = await sqlSsoUserRepo.CreateAsync(ssoUser);
 
-        var returnedSqlUser = await sqlUserRepo
-            .GetBySsoUserAsync(postSqlSsoUser.ExternalId, sqlOrganization.Id);
+        var returnedSqlUser = await sqlUserRepo.GetBySsoUserAsync(
+            postSqlSsoUser.ExternalId,
+            sqlOrganization.Id
+        );
         returnedList.Add(returnedSqlUser);
 
         var distinctItems = returnedList.Distinct(equalityComparer);

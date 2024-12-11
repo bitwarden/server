@@ -11,13 +11,12 @@ public partial class KeyConnector : Migration
             table: "User",
             type: "tinyint(1)",
             nullable: false,
-            defaultValue: false);
+            defaultValue: false
+        );
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.DropColumn(
-            name: "UsesKeyConnector",
-            table: "User");
+        migrationBuilder.DropColumn(name: "UsesKeyConnector", table: "User");
     }
 }

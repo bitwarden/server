@@ -2,5 +2,4 @@
 
 #nullable enable
 
-public interface IStorableSubscriber : IStorable, ISubscriber
-{ }
+public interface IStorableSubscriber : IStorable, ISubscriber { }

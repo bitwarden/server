@@ -10,7 +10,7 @@ public enum StripeEventType
     InvoiceCreated,
     InvoiceFinalized,
     InvoiceUpcoming,
-    PaymentMethodAttached
+    PaymentMethodAttached,
 }
 
 public static class StripeTestEvents
@@ -25,7 +25,7 @@ public static class StripeTestEvents
             StripeEventType.InvoiceCreated => "invoice.created.json",
             StripeEventType.InvoiceFinalized => "invoice.finalized.json",
             StripeEventType.InvoiceUpcoming => "invoice.upcoming.json",
-            StripeEventType.PaymentMethodAttached => "payment_method.attached.json"
+            StripeEventType.PaymentMethodAttached => "payment_method.attached.json",
         };
 
         var resource = await EmbeddedResourceReader.ReadAsync("Events", fileName);

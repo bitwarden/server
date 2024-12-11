@@ -14,8 +14,7 @@ public class AzureQueueReferenceEventService : IReferenceEventService
     private readonly QueueClient _queueClient;
     private readonly GlobalSettings _globalSettings;
 
-    public AzureQueueReferenceEventService(
-        GlobalSettings globalSettings)
+    public AzureQueueReferenceEventService(GlobalSettings globalSettings)
     {
         _queueClient = new QueueClient(globalSettings.Events.ConnectionString, _queueName);
         _globalSettings = globalSettings;
@@ -35,7 +34,10 @@ public class AzureQueueReferenceEventService : IReferenceEventService
         }
         try
         {
-            var message = JsonSerializer.Serialize(referenceEvent, JsonHelpers.IgnoreWritingNullAndCamelCase);
+            var message = JsonSerializer.Serialize(
+                referenceEvent,
+                JsonHelpers.IgnoreWritingNullAndCamelCase
+            );
             // Messages need to be base64 encoded
             var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
             await _queueClient.SendMessageAsync(encodedMessage);

@@ -62,7 +62,7 @@ public class AzureEvent : ITableEntity
             SystemUser = SystemUser.HasValue ? (EventSystemUser)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
         };
     }
 }
@@ -149,7 +149,7 @@ public class EventTableEntity : IEvent
             SystemUser = SystemUser.HasValue ? (int)SystemUser.Value : null,
             DomainName = DomainName,
             SecretId = SecretId,
-            ServiceAccountId = ServiceAccountId
+            ServiceAccountId = ServiceAccountId,
         };
     }
 
@@ -166,53 +166,66 @@ public class EventTableEntity : IEvent
             new EventTableEntity(e)
             {
                 PartitionKey = pKey,
-                RowKey = $"Date={dateKey}__Uniquifier={uniquifier}"
-            }
+                RowKey = $"Date={dateKey}__Uniquifier={uniquifier}",
+            },
         };
 
         if (e.OrganizationId.HasValue && e.ActingUserId.HasValue)
         {
-            entities.Add(new EventTableEntity(e)
-            {
-                PartitionKey = pKey,
-                RowKey = $"ActingUserId={e.ActingUserId}__Date={dateKey}__Uniquifier={uniquifier}"
-            });
+            entities.Add(
+                new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey =
+                        $"ActingUserId={e.ActingUserId}__Date={dateKey}__Uniquifier={uniquifier}",
+                }
+            );
         }
 
         if (!e.OrganizationId.HasValue && e.ProviderId.HasValue && e.ActingUserId.HasValue)
         {
-            entities.Add(new EventTableEntity(e)
-            {
-                PartitionKey = pKey,
-                RowKey = $"ActingUserId={e.ActingUserId}__Date={dateKey}__Uniquifier={uniquifier}"
-            });
+            entities.Add(
+                new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey =
+                        $"ActingUserId={e.ActingUserId}__Date={dateKey}__Uniquifier={uniquifier}",
+                }
+            );
         }
 
         if (e.CipherId.HasValue)
         {
-            entities.Add(new EventTableEntity(e)
-            {
-                PartitionKey = pKey,
-                RowKey = $"CipherId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
-            });
+            entities.Add(
+                new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey = $"CipherId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}",
+                }
+            );
         }
 
         if (e.OrganizationId.HasValue && e.ServiceAccountId.HasValue)
         {
-            entities.Add(new EventTableEntity(e)
-            {
-                PartitionKey = pKey,
-                RowKey = $"ServiceAccountId={e.ServiceAccountId}__Date={dateKey}__Uniquifier={uniquifier}"
-            });
+            entities.Add(
+                new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey =
+                        $"ServiceAccountId={e.ServiceAccountId}__Date={dateKey}__Uniquifier={uniquifier}",
+                }
+            );
         }
 
         if (e.SecretId.HasValue)
         {
-            entities.Add(new EventTableEntity(e)
-            {
-                PartitionKey = pKey,
-                RowKey = $"SecretId={e.SecretId}__Date={dateKey}__Uniquifier={uniquifier}"
-            });
+            entities.Add(
+                new EventTableEntity(e)
+                {
+                    PartitionKey = pKey,
+                    RowKey = $"SecretId={e.SecretId}__Date={dateKey}__Uniquifier={uniquifier}",
+                }
+            );
         }
 
         return entities;

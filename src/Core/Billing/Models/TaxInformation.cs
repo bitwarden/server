@@ -10,16 +10,19 @@ public record TaxInformation(
     string Line1,
     string Line2,
     string City,
-    string State)
+    string State
+)
 {
-    public static TaxInformation From(TaxInfo taxInfo) => new(
-        taxInfo.BillingAddressCountry,
-        taxInfo.BillingAddressPostalCode,
-        taxInfo.TaxIdNumber,
-        taxInfo.BillingAddressLine1,
-        taxInfo.BillingAddressLine2,
-        taxInfo.BillingAddressCity,
-        taxInfo.BillingAddressState);
+    public static TaxInformation From(TaxInfo taxInfo) =>
+        new(
+            taxInfo.BillingAddressCountry,
+            taxInfo.BillingAddressPostalCode,
+            taxInfo.TaxIdNumber,
+            taxInfo.BillingAddressLine1,
+            taxInfo.BillingAddressLine2,
+            taxInfo.BillingAddressCity,
+            taxInfo.BillingAddressState
+        );
 
     public (AddressOptions, List<CustomerTaxIdDataOptions>) GetStripeOptions()
     {
@@ -30,11 +33,14 @@ public record TaxInformation(
             Line1 = Line1,
             Line2 = Line2,
             City = City,
-            State = State
+            State = State,
         };
 
         var customerTaxIdDataOptionsList = !string.IsNullOrEmpty(TaxId)
-            ? new List<CustomerTaxIdDataOptions> { new() { Type = GetTaxIdType(), Value = TaxId } }
+            ? new List<CustomerTaxIdDataOptions>
+            {
+                new() { Type = GetTaxIdType(), Value = TaxId },
+            }
             : null;
 
         return (address, customerTaxIdDataOptionsList);

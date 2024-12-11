@@ -25,5 +25,7 @@ public interface IRotateUserKeyCommand
 /// these during a key rotation.
 /// <para>Note: connection and transaction are only used for Dapper. They won't be available in EF</para>
 /// </summary>
-public delegate Task UpdateEncryptedDataForKeyRotation(SqlConnection connection = null,
-    SqlTransaction transaction = null);
+public delegate Task UpdateEncryptedDataForKeyRotation(
+    SqlConnection connection = null,
+    SqlTransaction transaction = null
+);

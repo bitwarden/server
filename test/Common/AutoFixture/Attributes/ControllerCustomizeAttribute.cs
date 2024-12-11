@@ -18,5 +18,6 @@ public class ControllerCustomizeAttribute : BitCustomizeAttribute
         _controllerType = controllerType;
     }
 
-    public override ICustomization GetCustomization() => new ControllerCustomization(_controllerType);
+    public override ICustomization GetCustomization() =>
+        new ControllerCustomization(_controllerType);
 }

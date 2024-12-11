@@ -10,7 +10,8 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
 
     public DatabaseMigrationHostedService(
         IDbMigrator dbMigrator,
-        ILogger<DatabaseMigrationHostedService> logger)
+        ILogger<DatabaseMigrationHostedService> logger
+    )
     {
         _logger = logger;
         _dbMigrator = dbMigrator;
@@ -19,7 +20,7 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
     public virtual async Task StartAsync(CancellationToken cancellationToken)
     {
         // Wait 20 seconds to allow database to come online
-        await Task.Delay(20000);
+        await Task.Delay(20000, cancellationToken);
 
         var maxMigrationAttempts = 10;
         for (var i = 1; i <= maxMigrationAttempts; i++)
@@ -39,9 +40,12 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
                 }
                 else
                 {
-                    _logger.LogError(e,
-                        "Database unavailable for migration. Trying again (attempt #{0})...", i + 1);
-                    await Task.Delay(20000);
+                    _logger.LogError(
+                        e,
+                        "Database unavailable for migration. Trying again (attempt #{0})...",
+                        i + 1
+                    );
+                    await Task.Delay(20000, cancellationToken);
                 }
             }
         }
@@ -52,6 +56,5 @@ public class DatabaseMigrationHostedService : IHostedService, IDisposable
         return Task.FromResult(0);
     }
 
-    public virtual void Dispose()
-    { }
+    public virtual void Dispose() { }
 }

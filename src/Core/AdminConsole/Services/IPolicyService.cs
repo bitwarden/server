@@ -12,6 +12,14 @@ public interface IPolicyService
     /// Get the combined master password policy options for the specified user.
     /// </summary>
     Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user);
-    Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted);
-    Task<bool> AnyPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted);
+    Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(
+        Guid userId,
+        PolicyType policyType,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted
+    );
+    Task<bool> AnyPoliciesApplicableToUserAsync(
+        Guid userId,
+        PolicyType policyType,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted
+    );
 }

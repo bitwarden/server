@@ -11,8 +11,7 @@ public class MetadataController : Controller
 {
     private readonly IAuthenticationSchemeProvider _schemeProvider;
 
-    public MetadataController(
-        IAuthenticationSchemeProvider schemeProvider)
+    public MetadataController(IAuthenticationSchemeProvider schemeProvider)
     {
         _schemeProvider = schemeProvider;
     }
@@ -26,9 +25,11 @@ public class MetadataController : Controller
         }
 
         var authScheme = await _schemeProvider.GetSchemeAsync(scheme);
-        if (authScheme == null ||
-            !(authScheme is DynamicAuthenticationScheme dynamicAuthScheme) ||
-            dynamicAuthScheme?.SsoType != SsoType.Saml2)
+        if (
+            authScheme == null
+            || !(authScheme is DynamicAuthenticationScheme dynamicAuthScheme)
+            || dynamicAuthScheme?.SsoType != SsoType.Saml2
+        )
         {
             return NotFound();
         }
@@ -39,11 +40,8 @@ public class MetadataController : Controller
         }
 
         var uri = new Uri(
-            Request.Scheme
-            + "://"
-            + Request.Host
-            + Request.Path
-            + Request.QueryString);
+            Request.Scheme + "://" + Request.Host + Request.Path + Request.QueryString
+        );
 
         var pathBase = Request.PathBase.Value;
         pathBase = string.IsNullOrEmpty(pathBase) ? "/" : pathBase;
@@ -54,16 +52,13 @@ public class MetadataController : Controller
             pathBase,
             null,
             Request.Cookies,
-            (data) => data);
+            (data) => data
+        );
 
         var metadataResult = CommandFactory
             .GetCommand(CommandFactory.MetadataCommand)
             .Run(requestdata, options);
         //Response.Headers.Add("Content-Disposition", $"filename= bitwarden-saml2-meta-{scheme}.xml");
-        return new ContentResult
-        {
-            Content = metadataResult.Content,
-            ContentType = "text/xml",
-        };
+        return new ContentResult { Content = metadataResult.Content, ContentType = "text/xml" };
     }
 }

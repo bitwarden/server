@@ -7,7 +7,8 @@ public class BulkDeleteResponseModel : ResponseModel
 {
     private const string _objectName = "BulkDeleteResponseModel";
 
-    public BulkDeleteResponseModel(Guid id, string error) : base(_objectName)
+    public BulkDeleteResponseModel(Guid id, string error)
+        : base(_objectName)
     {
         Id = id;
 
@@ -21,9 +22,8 @@ public class BulkDeleteResponseModel : ResponseModel
         }
     }
 
-    public BulkDeleteResponseModel() : base(_objectName)
-    {
-    }
+    public BulkDeleteResponseModel()
+        : base(_objectName) { }
 
     public Guid Id { get; set; }
 

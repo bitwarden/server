@@ -8,7 +8,8 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class OrganizationConnection<T> : OrganizationConnection where T : IConnectionConfig
+public class OrganizationConnection<T> : OrganizationConnection
+    where T : IConnectionConfig
 {
     [DisallowNull]
     public new T? Config
@@ -31,7 +32,8 @@ public class OrganizationConnection : ITableObject<Guid>
         Id = CoreHelpers.GenerateComb();
     }
 
-    public T? GetConfig<T>() where T : IConnectionConfig
+    public T? GetConfig<T>()
+        where T : IConnectionConfig
     {
         try
         {
@@ -48,12 +50,14 @@ public class OrganizationConnection : ITableObject<Guid>
         }
     }
 
-    public void SetConfig<T>(T config) where T : IConnectionConfig
+    public void SetConfig<T>(T config)
+        where T : IConnectionConfig
     {
         Config = JsonSerializer.Serialize(config);
     }
 
-    public bool Validate<T>(out string exception) where T : IConnectionConfig
+    public bool Validate<T>(out string exception)
+        where T : IConnectionConfig
     {
         if (!Enabled)
         {

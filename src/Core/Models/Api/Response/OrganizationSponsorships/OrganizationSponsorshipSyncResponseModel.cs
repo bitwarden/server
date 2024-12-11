@@ -14,16 +14,16 @@ public class OrganizationSponsorshipSyncResponseModel
         {
             return;
         }
-        SponsorshipsBatch = syncData.SponsorshipsBatch.Select(o => new OrganizationSponsorshipResponseModel(o));
-
+        SponsorshipsBatch = syncData.SponsorshipsBatch.Select(
+            o => new OrganizationSponsorshipResponseModel(o)
+        );
     }
 
     public OrganizationSponsorshipSyncData ToOrganizationSponsorshipSync()
     {
         return new OrganizationSponsorshipSyncData()
         {
-            SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship())
+            SponsorshipsBatch = SponsorshipsBatch.Select(o => o.ToOrganizationSponsorship()),
         };
     }
-
 }

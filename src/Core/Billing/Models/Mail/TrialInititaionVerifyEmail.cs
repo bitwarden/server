@@ -10,12 +10,13 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     /// </summary>
     public new string Url
     {
-        get => $"{WebVaultUrl}/{Route}" +
-               $"?token={Token}" +
-               $"&email={Email}" +
-               $"&fromEmail=true" +
-               $"&productTier={(int)ProductTier}" +
-               $"&product={string.Join(",", Product.Select(p => (int)p))}";
+        get =>
+            $"{WebVaultUrl}/{Route}"
+            + $"?token={Token}"
+            + $"&email={Email}"
+            + $"&fromEmail=true"
+            + $"&productTier={(int)ProductTier}"
+            + $"&product={string.Join(",", Product.Select(p => (int)p))}";
     }
 
     public ProductTierType ProductTier { get; set; }
