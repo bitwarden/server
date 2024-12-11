@@ -14,11 +14,9 @@ BEGIN
         WHERE
             [Id] = @CipherId
     )
-
-    -- Common CTE for available collections
-    ;WITH [AvailableCollectionsCTE] AS(
-        SELECT
+    SELECT
             C.[Id]
+            INTO #TempAvailableCollections
         FROM
             [dbo].[Collection] C
         INNER JOIN
@@ -44,7 +42,6 @@ BEGIN
                 CU.[HidePasswords] = 0
                 OR CG.[HidePasswords] = 0
             )
-    )
     -- Insert new collection assignments
     INSERT INTO [dbo].[CollectionCipher] (
         [CollectionId],
@@ -54,7 +51,7 @@ BEGIN
         [Id],
         @CipherId
     FROM @CollectionIds
-    WHERE [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
+    WHERE [Id] IN (SELECT [Id] FROM [#TempAvailableCollections])
     AND NOT EXISTS (
         SELECT 1 
         FROM [dbo].[CollectionCipher]
@@ -66,11 +63,12 @@ BEGIN
     DELETE CC
     FROM [dbo].[CollectionCipher] CC
     WHERE CC.[CipherId] = @CipherId
-    AND CC.[CollectionId] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
+    AND CC.[CollectionId] IN (SELECT [Id] FROM [#TempAvailableCollections])
     AND CC.[CollectionId] NOT IN (SELECT [Id] FROM @CollectionIds);
 
     IF @OrgId IS NOT NULL
     BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrgId
     END
+    DROP TABLE #TempAvailableCollections;
 END
