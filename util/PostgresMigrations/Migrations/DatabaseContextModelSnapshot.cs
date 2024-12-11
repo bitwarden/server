@@ -193,6 +193,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseResetPassword")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseRiskInsights")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UseScim")
                         .HasColumnType("boolean");
 

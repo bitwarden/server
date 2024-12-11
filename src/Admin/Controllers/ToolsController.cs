@@ -3,7 +3,9 @@ using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -28,6 +30,7 @@ public class ToolsController : Controller
     private readonly ITransactionRepository _transactionRepository;
     private readonly IInstallationRepository _installationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
@@ -41,6 +44,7 @@ public class ToolsController : Controller
         ITransactionRepository transactionRepository,
         IInstallationRepository installationRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IProviderUserRepository providerUserRepository,
         ITaxRateRepository taxRateRepository,
         IPaymentService paymentService,
         IStripeAdapter stripeAdapter,
@@ -53,6 +57,7 @@ public class ToolsController : Controller
         _transactionRepository = transactionRepository;
         _installationRepository = installationRepository;
         _organizationUserRepository = organizationUserRepository;
+        _providerUserRepository = providerUserRepository;
         _taxRateRepository = taxRateRepository;
         _paymentService = paymentService;
         _stripeAdapter = stripeAdapter;
@@ -218,6 +223,46 @@ public class ToolsController : Controller
         user.Type = Core.Enums.OrganizationUserType.Owner;
         await _organizationUserRepository.ReplaceAsync(user);
         return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId.Value });
+    }
+
+    [RequireFeature(FeatureFlagKeys.PromoteProviderServiceUserTool)]
+    [RequirePermission(Permission.Tools_PromoteProviderServiceUser)]
+    public IActionResult PromoteProviderServiceUser()
+    {
+        return View();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequireFeature(FeatureFlagKeys.PromoteProviderServiceUserTool)]
+    [RequirePermission(Permission.Tools_PromoteProviderServiceUser)]
+    public async Task<IActionResult> PromoteProviderServiceUser(PromoteProviderServiceUserModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var providerUsers = await _providerUserRepository.GetManyByProviderAsync(
+            model.ProviderId.Value, null);
+        var serviceUser = providerUsers.FirstOrDefault(u => u.UserId == model.UserId.Value);
+        if (serviceUser == null)
+        {
+            ModelState.AddModelError(nameof(model.UserId), "Service User Id not found in this provider.");
+        }
+        else if (serviceUser.Type != Core.AdminConsole.Enums.Provider.ProviderUserType.ServiceUser)
+        {
+            ModelState.AddModelError(nameof(model.UserId), "User is not a service user of this provider.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        serviceUser.Type = Core.AdminConsole.Enums.Provider.ProviderUserType.ProviderAdmin;
+        await _providerUserRepository.ReplaceAsync(serviceUser);
+        return RedirectToAction("Edit", "Providers", new { id = model.ProviderId.Value });
     }
 
     [RequirePermission(Permission.Tools_GenerateLicenseFile)]
