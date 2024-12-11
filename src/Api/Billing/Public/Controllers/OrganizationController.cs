@@ -36,6 +36,12 @@ public class OrganizationController : Controller
         _logger = logger;
     }
 
+    /// <summary>
+    /// Retrieves the subscription details for the current organization.
+    /// </summary>
+    /// <returns>
+    /// Returns an object containing the subscription details if successful.
+    /// </returns>
     [HttpGet("subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
     [ProducesResponseType(typeof(OrganizationSubscriptionDetailsResponseModel), (int)HttpStatusCode.OK)]
