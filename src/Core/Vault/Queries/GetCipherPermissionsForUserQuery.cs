@@ -12,14 +12,12 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
     private readonly ICurrentContext _currentContext;
     private readonly ICipherRepository _cipherRepository;
     private readonly IApplicationCacheService _applicationCacheService;
-    private readonly IFeatureService _featureService;
 
-    public GetCipherPermissionsForUserQuery(ICurrentContext currentContext, ICipherRepository cipherRepository, IApplicationCacheService applicationCacheService, IFeatureService featureService)
+    public GetCipherPermissionsForUserQuery(ICurrentContext currentContext, ICipherRepository cipherRepository, IApplicationCacheService applicationCacheService)
     {
         _currentContext = currentContext;
         _cipherRepository = cipherRepository;
         _applicationCacheService = applicationCacheService;
-        _featureService = featureService;
     }
 
     public async Task<IDictionary<Guid, OrganizationCipherPermission>> GetByOrganization(Guid organizationId)
@@ -38,16 +36,16 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
         {
             foreach (var cipher in cipherPermissions)
             {
+                cipher.Read = true;
                 cipher.Edit = true;
                 cipher.Manage = true;
                 cipher.ViewPassword = true;
             }
-        }
-
-        if (await CanAccessUnassignedCiphersAsync(org))
+        } else if (await CanAccessUnassignedCiphersAsync(org))
         {
             foreach (var unassignedCipher in cipherPermissions.Where(c => c.Unassigned))
             {
+                unassignedCipher.Read = true;
                 unassignedCipher.Edit = true;
                 unassignedCipher.Manage = true;
                 unassignedCipher.ViewPassword = true;
@@ -74,12 +72,6 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
             return true;
         }
 
-        // Provider users can edit all ciphers if RestrictProviderAccess is disabled
-        if (await _currentContext.ProviderUserForOrgAsync(org.Id))
-        {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
-        }
-
         return false;
     }
 
@@ -90,12 +82,6 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
         { Permissions.EditAnyCollection: true })
         {
             return true;
-        }
-
-        // Provider users can only access all ciphers if RestrictProviderAccess is disabled
-        if (await _currentContext.ProviderUserForOrgAsync(org.Id))
-        {
-            return !_featureService.IsEnabled(FeatureFlagKeys.RestrictProviderAccess);
         }
 
         return false;
