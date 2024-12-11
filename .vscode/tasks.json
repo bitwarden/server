@@ -259,9 +259,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/util/MsSqlMigratorUtility/MsSqlMigratorUtility.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
+                "${workspaceFolder}/util/MsSqlMigratorUtility/MsSqlMigratorUtility.csproj"
             ],
             "problemMatcher": "$msCompile",
             "group": {
