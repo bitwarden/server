@@ -667,6 +667,7 @@ public class AccountsController : Controller
             {
                 BillingAddressCountry = model.Country,
                 BillingAddressPostalCode = model.PostalCode,
+                TaxIdNumber = model.TaxId
             });
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);

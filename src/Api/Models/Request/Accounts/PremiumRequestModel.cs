@@ -14,6 +14,7 @@ public class PremiumRequestModel : IValidatableObject
     public IFormFile License { get; set; }
     public string Country { get; set; }
     public string PostalCode { get; set; }
+    public string TaxId { get; set; }
 
     public bool Validate(GlobalSettings globalSettings)
     {
