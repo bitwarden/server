@@ -181,11 +181,6 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
 
     public bool IsExpired() => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
 
-    /// <summary>
-    /// Used storage in gigabytes.
-    /// </summary>
-    public double StorageGb => Storage.HasValue ? Math.Round(Storage.Value / 1073741824D, 2) : 0;
-
     public long StorageBytesRemaining()
     {
         if (!MaxStorageGb.HasValue)
