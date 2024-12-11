@@ -81,7 +81,16 @@
                                     <i class="fa fa-smile-o fa-lg fa-fw text-body-secondary" title="Freeloader"></i>
                                 }
                             }
-                            <i class="fa fa-hdd-o fa-lg fa-fw" title="Used Storage, @Model.StorageGB(org) GB"></i>
+                            @if(org.MaxStorageGb.HasValue && org.MaxStorageGb > 1)
+                            {
+                                <i class="fa fa-plus-square fa-lg fa-fw"
+                                   title="Additional Storage, @(org.MaxStorageGb - 1) GB"></i>
+                            }
+                            else
+                            {
+                                <i class="fa fa-plus-square-o fa-lg fa-fw text-body-secondary"
+                                   title="No Additional Storage"></i>
+                            }
                             @if(org.Enabled)
                             {
                                 <i class="fa fa-check-circle fa-lg fa-fw"
