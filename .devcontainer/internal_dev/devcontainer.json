@@ -21,9 +21,14 @@
     }
   },
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
+  "forwardPorts": [1080, 1433],
   "portsAttributes": {
     "1080": {
       "label": "Mail Catcher",
+      "onAutoForward": "notify"
+    },
+    "1433": {
+      "label": "SQL Server",
       "onAutoForward": "notify"
     }
   }
