@@ -45,6 +45,7 @@ public static class RolePermissionMapping
                 Permission.Provider_ResendEmailInvite,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_PromoteAdmin,
+                Permission.Tools_PromoteProviderServiceUser,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_ManageStripeSubscriptions
@@ -91,6 +92,7 @@ public static class RolePermissionMapping
                 Permission.Provider_ResendEmailInvite,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_PromoteAdmin,
+                Permission.Tools_PromoteProviderServiceUser,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_ManageStripeSubscriptions,
