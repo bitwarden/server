@@ -15,11 +15,7 @@
 
 ## These are shared workflows ##
 .github/workflows/_move_finalization_db_scripts.yml
-.github/workflows/build.yml
-.github/workflows/cleanup-after-pr.yml
-.github/workflows/cleanup-rc-branch.yml
 .github/workflows/release.yml
-.github/workflows/repository-management.yml
 
 # Database Operations for database changes
 src/Sql/** @bitwarden/dept-dbops
@@ -67,6 +63,14 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 **/Billing @bitwarden/team-billing-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
+
+# Platform team
+.github/workflows/build.yml @bitwarden/team-platform-dev
+.github/workflows/cleanup-after-pr.yml @bitwarden/team-platform-dev
+.github/workflows/cleanup-rc-branch.yml @bitwarden/team-platform-dev
+.github/workflows/repository-management.yml @bitwarden/team-platform-dev
+.github/workflows/test-database.yml @bitwarden/team-platform-dev
+.github/workflows/test.yml @bitwarden/team-platform-dev
 
 # Multiple owners - DO NOT REMOVE (BRE)
 **/packages.lock.json
