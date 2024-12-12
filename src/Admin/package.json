@@ -18,8 +18,8 @@
     "expose-loader": "5.0.0",
     "mini-css-extract-plugin": "2.9.1",
     "sass": "1.79.5",
-    "sass-loader": "16.0.2",
-    "webpack": "5.95.0",
+    "sass-loader": "16.0.4",
+    "webpack": "5.97.1",
     "webpack-cli": "5.1.4"
   }
 }

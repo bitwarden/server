@@ -15,6 +15,7 @@ public static class VaultServiceCollectionExtensions
     private static void AddVaultQueries(this IServiceCollection services)
     {
         services.AddScoped<IOrganizationCiphersQuery, OrganizationCiphersQuery>();
+        services.AddScoped<IGetTaskDetailsForUserQuery, GetTaskDetailsForUserQuery>();
         services.AddScoped<IGetCipherPermissionsForUserQuery, GetCipherPermissionsForUserQuery>();
     }
 }
