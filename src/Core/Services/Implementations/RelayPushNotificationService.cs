@@ -261,6 +261,6 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             Enabled = organization.Enabled
         };
 
-        await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, true);
+        await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, false);
     }
 }

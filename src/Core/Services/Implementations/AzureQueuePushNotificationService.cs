@@ -225,20 +225,12 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 
     public async Task PushSyncOrganizationStatusAsync(Organization organization)
     {
-        await PushOrganizationStatusAsync(organization, PushType.SyncOrganizationStatusChanged);
-    }
-
-    private async Task PushOrganizationStatusAsync(Organization organization, PushType type)
-    {
-        if (organization is not null)
+        var message = new OrganizationStatusPushNotification
         {
-            var message = new OrganizationStatusPushNotification
-            {
-                OrganizationId = organization.Id,
-                Enabled = organization.Enabled
-            };
-
-            await SendMessageAsync(type, message, true);
-        }
+            OrganizationId = organization.Id,
+            Enabled = organization.Enabled
+        };
+        await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
     }
+
 }

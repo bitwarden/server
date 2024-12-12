@@ -235,7 +235,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             Enabled = organization.Enabled
         };
 
-        await SendPayloadToUserAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, true);
+        await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, false);
     }
 
     private string GetContextIdentifier(bool excludeCurrentContext)
