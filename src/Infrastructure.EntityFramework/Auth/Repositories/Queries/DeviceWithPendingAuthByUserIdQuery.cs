@@ -17,7 +17,7 @@ public class DeviceWithPendingAuthByUserIdQuery
         // 'Translating this query requires the SQL APPLY operation, which is not supported on SQLite.'
         if (dbContext.Database.IsSqlite())
         {
-            var query =
+            var devicesWithAuthQuery =
                 (from device in dbContext.Devices
                  where device.UserId == userId && device.Active
                  select new
@@ -41,7 +41,7 @@ public class DeviceWithPendingAuthByUserIdQuery
                         ? deviceWithAuthRequest.authRequest.CreationDate
                         : DateTime.MinValue));
 
-            return query;
+            return devicesWithAuthQuery;
         }
         else
         {

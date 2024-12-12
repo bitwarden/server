@@ -28,6 +28,5 @@
 
   <ItemGroup>
     <Folder Include="Auth\" />
-    <Folder Include="Auth\Controllers\" />
   </ItemGroup>
 </Project>

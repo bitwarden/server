@@ -7,6 +7,12 @@ namespace Bit.Core.Auth.Models.Api.Response;
 
 public class DeviceAuthRequestResponseModel : ResponseModel
 {
+    // public DeviceAuthRequestResponseModel()
+    //     : base("device")
+    // {
+    //
+    // }
+
     public DeviceAuthRequestResponseModel(
         Device device,
         Guid authRequestId,
@@ -56,12 +62,16 @@ public class DeviceAuthRequestResponseModel : ResponseModel
         Type = (DeviceType)type;
         Identifier = identifier;
         CreationDate = creationDate;
-        IsTrusted = !string.IsNullOrEmpty(encryptedUserKey) &&
-                    !string.IsNullOrEmpty(encryptedPublicKey) &&
-                    !string.IsNullOrEmpty(encryptedPrivateKey);
+        IsTrusted = new Device
+        {
+            EncryptedUserKey = encryptedUserKey,
+            EncryptedPublicKey = encryptedPublicKey,
+            EncryptedPrivateKey = encryptedPrivateKey,
+        }.IsTrusted();
+
         if (authRequestId != Guid.Empty && authRequestCreationDate != DateTime.MinValue)
         {
-            DevicePendingAuthRequest = new PendingAuthRequest()
+            DevicePendingAuthRequest = new PendingAuthRequest
             {
                 Id = authRequestId,
                 CreationDate = authRequestCreationDate,
