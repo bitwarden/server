@@ -5,7 +5,6 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
 
-
 namespace Bit.Core.Vault.Authorization.SecurityTasks;
 
 public class SecurityTaskAuthorizationHandler : AuthorizationHandler<SecurityTaskOperationRequirement, SecurityTask>
@@ -30,11 +29,19 @@ public class SecurityTaskAuthorizationHandler : AuthorizationHandler<SecurityTas
             return;
         }
 
+        var org = _currentContext.GetOrganization(task.OrganizationId);
+
+        if (org == null)
+        {
+            // User must be a member of the organization
+            return;
+        }
+
         var authorized = requirement switch
         {
-            not null when requirement == SecurityTaskOperations.Read => await CanReadAsync(task),
-            not null when requirement == SecurityTaskOperations.Create => await CanCreateAsync(task),
-            not null when requirement == SecurityTaskOperations.Update => await CanUpdateAsync(task),
+            not null when requirement == SecurityTaskOperations.Read => await CanReadAsync(task, org),
+            not null when requirement == SecurityTaskOperations.Create => await CanCreateAsync(task, org),
+            not null when requirement == SecurityTaskOperations.Update => await CanUpdateAsync(task, org),
             _ => throw new ArgumentOutOfRangeException(nameof(requirement), requirement, null)
         };
 
@@ -44,62 +51,50 @@ public class SecurityTaskAuthorizationHandler : AuthorizationHandler<SecurityTas
         }
     }
 
-    private async Task<bool> CanReadAsync(SecurityTask task)
+    private async Task<bool> CanReadAsync(SecurityTask task, CurrentContextOrganization org)
     {
-        var org = _currentContext.GetOrganization(task.OrganizationId);
-
-        if (org == null)
+        if (!task.CipherId.HasValue)
         {
-            // The user does not belong to the organization
+            // Tasks without cipher IDs are not possible currently
             return false;
         }
 
-        if (task.CipherId.HasValue)
+        if (HasAdminAccessToSecurityTasks(org))
         {
-            return await CanReadCipherForOrgAsync(org, task.CipherId.Value);
-        }
-
-        return true;
-    }
-
-    private async Task<bool> CanCreateAsync(SecurityTask task)
-    {
-        var org = _currentContext.GetOrganization(task.OrganizationId);
-
-        // User must be an Admin/Owner or have custom permissions for reporting
-        if (org is
-            not ({ Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
-            { Permissions.EditAnyCollection: true } or
-            { Permissions.AccessReports: true }))
-        {
-            return false;
-        }
-
-        if (task.CipherId.HasValue)
-        {
+            // Admins can read any task for ciphers in the organization
             return await CipherBelongsToOrgAsync(org, task.CipherId.Value);
         }
 
-        return true;
+        return await CanReadCipherForOrgAsync(org, task.CipherId.Value);
     }
 
-    private async Task<bool> CanUpdateAsync(SecurityTask task)
+    private async Task<bool> CanCreateAsync(SecurityTask task, CurrentContextOrganization org)
     {
-        var org = _currentContext.GetOrganization(task.OrganizationId);
-
-        if (org == null)
+        if (!task.CipherId.HasValue)
         {
-            // The user does not belong to the organization
+            // Tasks without cipher IDs are not possible currently
             return false;
         }
 
-        if (task.CipherId.HasValue)
+        if (!HasAdminAccessToSecurityTasks(org))
         {
-            // Updating a cipher task requires edit access to the cipher
-            return await CanEditCipherForOrgAsync(org, task.CipherId.Value);
+            // User must be an Admin/Owner or have custom permissions for reporting
+            return false;
         }
 
-        return true;
+        return await CipherBelongsToOrgAsync(org, task.CipherId.Value);
+    }
+
+    private async Task<bool> CanUpdateAsync(SecurityTask task, CurrentContextOrganization org)
+    {
+        if (!task.CipherId.HasValue)
+        {
+            // Tasks without cipher IDs are not possible currently
+            return false;
+        }
+
+        // Only users that can edit the cipher can update the task
+        return await CanEditCipherForOrgAsync(org, task.CipherId.Value);
     }
 
     private async Task<bool> CanEditCipherForOrgAsync(CurrentContextOrganization org, Guid cipherId)
@@ -121,6 +116,13 @@ public class SecurityTaskAuthorizationHandler : AuthorizationHandler<SecurityTas
         var ciphers = await GetCipherPermissionsForOrgAsync(org);
 
         return ciphers.ContainsKey(cipherId);
+    }
+
+    private bool HasAdminAccessToSecurityTasks(CurrentContextOrganization org)
+    {
+        return org is
+            { Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
+            { Type: OrganizationUserType.Custom, Permissions.AccessReports: true };
     }
 
     private async Task<IDictionary<Guid, OrganizationCipherPermission>> GetCipherPermissionsForOrgAsync(CurrentContextOrganization organization)
