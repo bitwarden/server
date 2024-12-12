@@ -292,17 +292,17 @@ jobs:
         if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
         uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
 
-      - name: Sign image with a key
+      - name: Sign images with Cosign
         if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
         env:
-          TAGS: ${{ steps.image-tags.outputs.tags }}
           DIGEST: ${{ steps.build-docker.outputs.digest }}
+          TAGS: ${{ steps.image-tags.outputs.tags }}
         run: |
           images=""
           for tag in ${TAGS}; do
             images+="${tag}@${DIGEST} "
           done
-          cosign sign ${images}
+          cosign sign --yes ${images}
 
       - name: Scan Docker image
         id: container-scan
