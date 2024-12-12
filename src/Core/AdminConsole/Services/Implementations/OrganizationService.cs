@@ -14,6 +14,7 @@ using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Services;
@@ -1322,6 +1323,12 @@ public class OrganizationService : IOrganizationService
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
             return (false, $"Seat limit has been reached.");
+        }
+
+        var subscription = await _paymentService.GetSubscriptionAsync(organization);
+        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
+        {
+            return (false, "Cannot autoscale with a canceled subscription.");
         }
 
         return (true, failureReason);
