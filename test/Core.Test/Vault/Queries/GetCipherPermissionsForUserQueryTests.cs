@@ -1,6 +1,4 @@
-﻿using AutoFixture;
-using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Services;
@@ -24,7 +22,7 @@ public class GetCipherPermissionsForUserQueryTests
     private static Guid _readExceptPasswordCipherId = Guid.NewGuid();
     private static Guid _unassignedCipherId = Guid.NewGuid();
 
-    private static List<Guid> _cipherIds = new []
+    private static List<Guid> _cipherIds = new[]
     {
         _noAccessCipherId,
         _readOnlyCipherId,
@@ -53,16 +51,16 @@ public class GetCipherPermissionsForUserQueryTests
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
         Assert.Equal(6, result.Count);
-        Assert.All(result, x => Assert.True(_cipherIds.Contains(x.Key)));
-        Assert.Equal(false, result[_noAccessCipherId].Read);
-        Assert.Equal(true, result[_readOnlyCipherId].Read);
-        Assert.Equal(false, result[_readOnlyCipherId].Edit);
-        Assert.Equal(true, result[_editCipherId].Edit);
-        Assert.Equal(true, result[_manageCipherId].Manage);
-        Assert.Equal(true, result[_readExceptPasswordCipherId].Read);
-        Assert.Equal(false, result[_readExceptPasswordCipherId].ViewPassword);
-        Assert.Equal(true, result[_unassignedCipherId].Unassigned);
-        Assert.Equal(false, result[_unassignedCipherId].Read);
+        Assert.All(result, x => Assert.Contains(x.Key, _cipherIds));
+        Assert.False(result[_noAccessCipherId].Read);
+        Assert.True(result[_readOnlyCipherId].Read);
+        Assert.False(result[_readOnlyCipherId].Edit);
+        Assert.True(result[_editCipherId].Edit);
+        Assert.True(result[_manageCipherId].Manage);
+        Assert.True(result[_readExceptPasswordCipherId].Read);
+        Assert.False(result[_readExceptPasswordCipherId].ViewPassword);
+        Assert.True(result[_unassignedCipherId].Unassigned);
+        Assert.False(result[_unassignedCipherId].Read);
     }
 
     [Theory, BitAutoData]
@@ -83,7 +81,7 @@ public class GetCipherPermissionsForUserQueryTests
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
         Assert.Equal(6, result.Count);
-        Assert.All(result, x => Assert.True(_cipherIds.Contains(x.Key)));
+        Assert.All(result, x => Assert.Contains(x.Key, _cipherIds));
         Assert.All(result, x => Assert.True(x.Value.Read && x.Value.Edit && x.Value.Manage && x.Value.ViewPassword));
     }
 
@@ -110,7 +108,7 @@ public class GetCipherPermissionsForUserQueryTests
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
         Assert.Equal(6, result.Count);
-        Assert.All(result, x => Assert.True(_cipherIds.Contains(x.Key)));
+        Assert.All(result, x => Assert.Contains(x.Key, _cipherIds));
         Assert.All(result, x => Assert.True(x.Value.Read && x.Value.Edit && x.Value.Manage && x.Value.ViewPassword));
     }
 
@@ -132,20 +130,20 @@ public class GetCipherPermissionsForUserQueryTests
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
         Assert.Equal(6, result.Count);
-        Assert.All(result, x => Assert.True(_cipherIds.Contains(x.Key)));
-        Assert.Equal(false, result[_noAccessCipherId].Read);
-        Assert.Equal(true, result[_readOnlyCipherId].Read);
-        Assert.Equal(false, result[_readOnlyCipherId].Edit);
-        Assert.Equal(true, result[_editCipherId].Edit);
-        Assert.Equal(true, result[_manageCipherId].Manage);
-        Assert.Equal(true, result[_readExceptPasswordCipherId].Read);
-        Assert.Equal(false, result[_readExceptPasswordCipherId].ViewPassword);
+        Assert.All(result, x => Assert.Contains(x.Key, _cipherIds));
+        Assert.False(result[_noAccessCipherId].Read);
+        Assert.True(result[_readOnlyCipherId].Read);
+        Assert.False(result[_readOnlyCipherId].Edit);
+        Assert.True(result[_editCipherId].Edit);
+        Assert.True(result[_manageCipherId].Manage);
+        Assert.True(result[_readExceptPasswordCipherId].Read);
+        Assert.False(result[_readExceptPasswordCipherId].ViewPassword);
 
-        Assert.Equal(true, result[_unassignedCipherId].Unassigned);
-        Assert.Equal(true, result[_unassignedCipherId].Read);
-        Assert.Equal(true, result[_unassignedCipherId].Edit);
-        Assert.Equal(true, result[_unassignedCipherId].ViewPassword);
-        Assert.Equal(true, result[_unassignedCipherId].Manage);
+        Assert.True(result[_unassignedCipherId].Unassigned);
+        Assert.True(result[_unassignedCipherId].Read);
+        Assert.True(result[_unassignedCipherId].Edit);
+        Assert.True(result[_unassignedCipherId].ViewPassword);
+        Assert.True(result[_unassignedCipherId].Manage);
     }
 
     private List<OrganizationCipherPermission> CreateCipherPermissions()

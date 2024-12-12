@@ -121,8 +121,8 @@ public class SecurityTaskAuthorizationHandler : AuthorizationHandler<SecurityTas
     private bool HasAdminAccessToSecurityTasks(CurrentContextOrganization org)
     {
         return org is
-            { Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
-            { Type: OrganizationUserType.Custom, Permissions.AccessReports: true };
+        { Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
+        { Type: OrganizationUserType.Custom, Permissions.AccessReports: true };
     }
 
     private async Task<IDictionary<Guid, OrganizationCipherPermission>> GetCipherPermissionsForOrgAsync(CurrentContextOrganization organization)

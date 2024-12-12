@@ -41,7 +41,8 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
                 cipher.Manage = true;
                 cipher.ViewPassword = true;
             }
-        } else if (await CanAccessUnassignedCiphersAsync(org))
+        }
+        else if (await CanAccessUnassignedCiphersAsync(org))
         {
             foreach (var unassignedCipher in cipherPermissions.Where(c => c.Unassigned))
             {

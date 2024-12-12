@@ -298,10 +298,10 @@ public class SecurityTaskAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
-        [Theory, CurrentContextOrganizationCustomize(Type = OrganizationUserType.User), BitAutoData]
+    [Theory, CurrentContextOrganizationCustomize(Type = OrganizationUserType.User), BitAutoData]
     public async Task Update_User_CanEditCipher_Success(
-        CurrentContextOrganization organization,
-        SutProvider<SecurityTaskAuthorizationHandler> sutProvider)
+    CurrentContextOrganization organization,
+    SutProvider<SecurityTaskAuthorizationHandler> sutProvider)
     {
         var userId = Guid.NewGuid();
         var task = new SecurityTask

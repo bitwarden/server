@@ -3,7 +3,6 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Vault.Authorization.SecurityTasks;
-using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
