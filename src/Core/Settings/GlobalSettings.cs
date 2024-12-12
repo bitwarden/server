@@ -41,6 +41,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
+    public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
@@ -433,18 +434,18 @@ public class GlobalSettings : IGlobalSettings
         public bool EnableSendTracing { get; set; } = false;
         /// <summary>
         /// The date and time at which registration will be enabled.
-        /// 
+        ///
         /// **This value should not be updated once set, as it is used to determine installation location of devices.**
-        /// 
+        ///
         /// If null, registration is disabled.
-        /// 
+        ///
         /// </summary>
         public DateTime? RegistrationStartDate { get; set; }
         /// <summary>
         /// The date and time at which registration will be disabled.
-        /// 
+        ///
         /// **This value should not be updated once set, as it is used to determine installation location of devices.**
-        /// 
+        ///
         /// If null, hub registration has no yet known expiry.
         /// </summary>
         public DateTime? RegistrationEndDate { get; set; }
@@ -454,7 +455,7 @@ public class GlobalSettings : IGlobalSettings
     {
         /// <summary>
         /// List of Notification Hub settings to use for sending push notifications.
-        /// 
+        ///
         /// Note that hubs on the same namespace share active device limits, so multiple namespaces should be used to increase capacity.
         /// </summary>
         public List<NotificationHubSettings> NotificationHubs { get; set; } = new();
