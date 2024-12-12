@@ -57,7 +57,7 @@ public class OrganizationLicense : ILicense
         SmServiceAccounts = org.SmServiceAccounts;
 
         // Deprecated. Left for backwards compatibility with old license versions.
-        LimitCollectionCreationDeletion = org.LimitCollectionCreationDeletion;
+        LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
         //
 
