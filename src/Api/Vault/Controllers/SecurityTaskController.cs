@@ -1,6 +1,8 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +12,7 @@ namespace Bit.Api.Vault.Controllers;
 
 [Route("tasks")]
 [Authorize("Application")]
+[RequireFeature(FeatureFlagKeys.SecurityTasks)]
 public class SecurityTaskController : Controller
 {
     private readonly IUserService _userService;
