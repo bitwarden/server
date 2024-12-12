@@ -1419,6 +1419,20 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return isVerified;
     }
 
+    public async Task ResendNewDeviceVerificationEmail(string email, string secret)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null)
+        {
+            return;
+        }
+
+        if (await VerifySecretAsync(user, secret))
+        {
+            await SendOTPAsync(user);
+        }
+    }
+
     private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)
     {
         var isFromMarketingWebsite = initiationPath.Contains("Secrets Manager trial");

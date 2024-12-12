@@ -349,6 +349,21 @@ public class UserServiceTests
         Assert.False(result);
     }
 
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_UserNull_SendOTPAsyncNotCalled(
+        SutProvider<UserService> sutProvider, string email, string secret)
+    {
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .Returns(null as User);
+
+        await sutProvider.Sut.ResendNewDeviceVerificationEmail(email, secret);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
