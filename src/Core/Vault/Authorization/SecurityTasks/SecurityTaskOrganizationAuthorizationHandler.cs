@@ -42,6 +42,6 @@ public class
     {
         return org is
         { Type: OrganizationUserType.Admin or OrganizationUserType.Owner } or
-        { Permissions.AccessReports: true };
+        { Type: OrganizationUserType.Custom, Permissions.AccessReports: true };
     }
 }
