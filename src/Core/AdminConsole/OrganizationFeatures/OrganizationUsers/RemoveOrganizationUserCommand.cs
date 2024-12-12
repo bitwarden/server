@@ -114,6 +114,16 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
         return result.Select(r => (r.OrganizationUser.Id, r.ErrorMessage));
     }
 
+    public async Task UserLeaveAsync(Guid organizationId, Guid userId)
+    {
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        ValidateRemoveUser(organizationId, organizationUser);
+
+        await RepositoryRemoveUserAsync(organizationUser, deletingUserId: null, eventSystemUser: null);
+
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Left);
+    }
+
     private void ValidateRemoveUser(Guid organizationId, OrganizationUser orgUser)
     {
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -234,7 +244,7 @@ public class RemoveOrganizationUserCommand : IRemoveOrganizationUserCommand
             await _organizationUserRepository.DeleteManyAsync(organizationUsersToRemove.Select(ou => ou.Id));
             foreach (var orgUser in organizationUsersToRemove.Where(ou => ou.UserId.HasValue))
             {
-                await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId.Value);
+                await DeleteAndPushUserRegistrationAsync(organizationId, orgUser.UserId!.Value);
             }
         }
 

@@ -259,7 +259,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
         }
 
-        await _removeOrganizationUserCommand.RemoveUserAsync(id, user.Id);
+        await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
     }
 
     [HttpDelete("{id}")]
@@ -539,5 +539,18 @@ public class OrganizationsController : Controller
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
+    }
+
+    [HttpGet("{id}/plan-type")]
+    public async Task<PlanType> GetPlanType(string id)
+    {
+        var orgIdGuid = new Guid(id);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return organization.PlanType;
     }
 }
