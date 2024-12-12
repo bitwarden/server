@@ -53,7 +53,6 @@ public class AuthRequestPushNotification
 
 public class OrganizationStatusPushNotification
 {
-    public Guid UserId { get; set; }
     public Guid OrganizationId { get; set; }
     public bool Enabled { get; set; }
 }

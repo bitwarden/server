@@ -2,8 +2,6 @@
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -28,7 +26,6 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
     private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IPushNotificationService _pushNotificationService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public PaymentSucceededHandler(
         ILogger<PaymentSucceededHandler> logger,
@@ -42,8 +39,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         IStripeEventUtilityService stripeEventUtilityService,
         IUserService userService,
         IOrganizationService organizationService,
-        IPushNotificationService pushNotificationService,
-        IOrganizationUserRepository organizationUserRepository)
+        IPushNotificationService pushNotificationService)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -57,7 +53,6 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         _userService = userService;
         _organizationService = organizationService;
         _pushNotificationService = pushNotificationService;
-        _organizationUserRepository = organizationUserRepository;
     }
 
     /// <summary>
@@ -148,22 +143,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
 
             await _organizationService.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-
-            var users = await _organizationUserRepository.GetManyByOrganizationAsync(organizationId.Value,
-                OrganizationUserType.Owner);
-            foreach (var user in users)
-            {
-                var payload = new OrganizationStatusPushNotification
-                {
-                    UserId = user.UserId.Value,
-                    OrganizationId = organizationId.Value,
-                    Enabled = true
-                };
-
-                await _pushNotificationService.SendPayloadToUserAsync(payload.UserId.ToString(),
-                    PushType.SyncOrganizationStatusChanged
-                    , payload, null);
-            }
+            await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -226,5 +227,24 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
     {
         // Noop
         return Task.FromResult(0);
+    }
+
+    public async Task PushSyncOrganizationStatusAsync(Organization organization)
+    {
+        await PushOrganizationStatusAsync(organization, PushType.SyncOrganizationStatusChanged);
+    }
+
+    private async Task PushOrganizationStatusAsync(Organization organization, PushType type)
+    {
+        if (organization is not null)
+        {
+            var message = new OrganizationStatusPushNotification
+            {
+                OrganizationId = organization.Id,
+                Enabled = organization.Enabled
+            };
+
+            await SendMessageAsync(type, message, true);
+        }
     }
 }
