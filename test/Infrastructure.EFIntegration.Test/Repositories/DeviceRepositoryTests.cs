@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAuthRepo = Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
@@ -51,81 +53,80 @@ public class DeviceRepositoryTests
     }
 
     // Test Cases:
-
-    // Just works
     [CiSkippedTheory, EfDeviceAutoData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
         Device device,
         User user,
         AuthRequest authRequest,
-        // List<EfRepo.DeviceRepository> suts,
-        // List<EfRepo.UserRepository> efUserRepos,
-        // List<EfAuthRepo.AuthRequestRepository> efAuthRequestRepos,
-        SqlRepo.DeviceRepository sqlDeviceRepo,
+        List<EfRepo.DeviceRepository> efSuts,
+        List<EfRepo.UserRepository> efUserRepos,
+        List<EfAuthRepo.AuthRequestRepository> efAuthRequestRepos,
+        SqlRepo.DeviceRepository sqlSut,
         SqlRepo.UserRepository sqlUserRepo,
         SqlAuthRepo.AuthRequestRepository sqlAuthRequestRepository
         )
     {
         // Arrange
+        var allResponses = new List<ICollection<DeviceAuthRequestResponseModel>>();
+
+        device.Active = true;
+
+        authRequest.ResponseDeviceId = null;
+        authRequest.Type = AuthRequestType.Unlock;
+        authRequest.CreationDate = DateTime.Now;
+        authRequest.Approved = null;
+        authRequest.OrganizationId = null;
+
+        // Entity Framework Repo
+        foreach (var efSut in efSuts)
+        {
+            var i = efSuts.IndexOf(efSut);
+
+            // Create user
+            var efUser = await efUserRepos[i].CreateAsync(user);
+            efSut.ClearChangeTracking();
+
+            // Create device
+            device.UserId = efUser.Id;
+            device.Name = "test-ef-chrome";
+
+            var efDevice = await efSuts[i].CreateAsync(device);
+            efSut.ClearChangeTracking();
+
+            // Create auth request
+            authRequest.UserId = efUser.Id;
+            authRequest.RequestDeviceIdentifier = efDevice.Identifier;
+
+            await efAuthRequestRepos[i].CreateAsync(authRequest);
+        }
+
+        // Dapper Repo
         // Create user
         var sqlUser = await sqlUserRepo.CreateAsync(user);
 
         // Create device
-        device.UserId = user.Id;
-        device.Active = true;
-        device.Name = "chrome";
-        var sqlDevice = await sqlDeviceRepo.CreateAsync(device);
+        device.UserId = sqlUser.Id;
+        device.Name = "test-sql-chrome";
+        var sqlDevice = await sqlSut.CreateAsync(device);
 
         // Create auth request
-        authRequest.UserId = user.Id;
-        authRequest.RequestDeviceIdentifier = device.Identifier;
-        authRequest.ResponseDeviceId = null;
-        authRequest.Type = AuthRequestType.Unlock;
-        authRequest.CreationDate = DateTime.UtcNow;
-        authRequest.Approved = null;
-        authRequest.OrganizationId = null;
-        var sqlAuthRequest = await sqlAuthRequestRepository.CreateAsync(authRequest);
+        authRequest.UserId = sqlUser.Id;
+        authRequest.RequestDeviceIdentifier = sqlDevice.Identifier;
+        await sqlAuthRequestRepository.CreateAsync(authRequest);
 
         // Act
-        var response = await sqlDeviceRepo.GetManyByUserIdWithDeviceAuth(user.Id, 15);
+
+        // Sql Responses
+        allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(user.Id, 15));
+
+        // Entity Framework Responses
+        foreach (var efSut in efSuts)
+        {
+            allResponses.Add(await efSut.GetManyByUserIdWithDeviceAuth(user.Id, 15));
+        }
 
         // Assert
-        Assert.True(response.Count == 1);
-
-        // var savedDevices = new List<Device>();
-        // foreach (var sut in suts)
-        // {
-        //     var i = suts.IndexOf(sut);
-        //
-        //     var efUser = await efUserRepos[i].CreateAsync(user);
-        //     device.UserId = efUser.Id;
-        //     sut.ClearChangeTracking();
-        //
-        //     var postEfDevice = await sut.CreateAsync(device);
-        //     sut.ClearChangeTracking();
-        //
-        //     var savedDevice = await sut.GetByIdAsync(postEfDevice.Id);
-        //     savedDevices.Add(savedDevice);
-        //
-        //     var efAuthRequest = await efAuthRequestRepos[i].CreateAsync(authRequest);
-        //     authRequest.Id = postEfDevice.Id;
-        // }
-        //
-        // var sqlUser = await sqlUserRepo.CreateAsync(user);
-        // device.UserId = sqlUser.Id;
-        //
-        // var sqlDevice = await sqlDeviceRepo.CreateAsync(device);
-        // var savedSqlDevice = await sqlDeviceRepo.GetByIdAsync(sqlDevice.Id);
-        // savedDevices.Add(savedSqlDevice);
-        //
-        // var sqlAuthRequest = await sqlAuthRequestRepository.CreateAsync(authRequest);
-        // authRequest.Id = sqlDevice.Id;
-        //
-        // var devicesWithAuth = await sqlDeviceRepo.GetManyByUserIdWithDeviceAuth(user.Id, 30);
-        // Assert.NotEmpty(devicesWithAuth);
-        // Assert.All(devicesWithAuth, d => Assert.Equal(user.Id, d.Id));
+        var totalExpectedSuccessfulQueries = efSuts.Count + 1;
+        Assert.True(allResponses.Count == totalExpectedSuccessfulQueries);
     }
-    // Most recent auth request is provided.
-
-    // Change the conditions using [InlineData]
 }
