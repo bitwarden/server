@@ -235,4 +235,27 @@ public class CloudICloudOrganizationSignUpCommandTests
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("You can't subtract Machine Accounts!", exception.Message);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_Free_ExistingFreeOrgAdmin_ThrowsBadRequest(
+        SutProvider<CloudOrganizationSignUpCommand> sutProvider)
+    {
+        // Arrange
+        var signup = new OrganizationSignup
+        {
+            Plan = PlanType.Free,
+            IsFromProvider = false,
+            Owner = new User { Id = Guid.NewGuid() }
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)
+            .Returns(1);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
+        Assert.Contains("You can only be an admin of one free organization.", exception.Message);
+    }
 }
