@@ -329,7 +329,7 @@ public class RegisterUserCommand : IRegisterUserCommand
     {
         // We validate open registration on send of initial email and here b/c a user could technically start the
         // account creation process while open registration is enabled and then finish it after it has been
-        // disabled by the self hosted admin.Ï
+        // disabled by the self hosted admin.
         if (_globalSettings.DisableUserRegistration)
         {
             throw new BadRequestException(_disabledUserRegistrationExceptionMsg);
