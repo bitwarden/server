@@ -12,5 +12,5 @@ public interface IGetTasksForOrganizationQuery
     /// <param name="organizationId">The Id of the organization</param>
     /// <param name="status">Optional filter for task status. If not provided, returns tasks of all statuses</param>
     /// <returns>A collection of security tasks</returns>
-    Task<Collection<SecurityTask>> GetTasksAsync(Guid organizationId, SecurityTaskStatus? status = null);
+    Task<ICollection<SecurityTask>> GetTasksAsync(Guid organizationId, SecurityTaskStatus? status = null);
 }

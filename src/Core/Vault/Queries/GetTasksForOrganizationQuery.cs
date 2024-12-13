@@ -27,7 +27,7 @@ public class GetTasksForOrganizationQuery : IGetTasksForOrganizationQuery
         _currentContext = currentContext;
     }
 
-    public async Task<Collection<SecurityTask>> GetTasksAsync(Guid organizationId,
+    public async Task<ICollection<SecurityTask>> GetTasksAsync(Guid organizationId,
         SecurityTaskStatus? status = null)
     {
         var organization = _currentContext.GetOrganization(organizationId);
@@ -40,8 +40,6 @@ public class GetTasksForOrganizationQuery : IGetTasksForOrganizationQuery
 
         await _authorizationService.AuthorizeOrThrowAsync(_currentContext.HttpContext.User, organization, SecurityTaskOperations.ListAllForOrganization);
 
-        return new Collection<SecurityTask>(
-            (await _securityTaskRepository.GetManyByOrganizationIdStatusAsync(organizationId, status)).ToList()
-        );
+        return (await _securityTaskRepository.GetManyByOrganizationIdStatusAsync(organizationId, status)).ToList();
     }
 }
