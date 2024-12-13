@@ -247,10 +247,10 @@ public class CipherRepositoryTests
             Data = ""
         });
 
-        collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher.Id, organization.Id,
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher.Id, organization.Id,
             new List<Guid> { manageCollection.Id });
 
-        collectionRepository.UpdateUsersAsync(manageCollection.Id, new List<CollectionAccessSelection>
+        await collectionRepository.UpdateUsersAsync(manageCollection.Id, new List<CollectionAccessSelection>
         {
             new()
             {
@@ -276,10 +276,10 @@ public class CipherRepositoryTests
             Data = ""
         });
 
-        collectionCipherRepository.UpdateCollectionsForAdminAsync(editCipher.Id, organization.Id,
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(editCipher.Id, organization.Id,
             new List<Guid> { editCollection.Id });
 
-        collectionRepository.UpdateUsersAsync(editCollection.Id,
+        await collectionRepository.UpdateUsersAsync(editCollection.Id,
             new List<CollectionAccessSelection>
             {
                 new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = false }
@@ -300,10 +300,10 @@ public class CipherRepositoryTests
             Data = ""
         });
 
-        collectionCipherRepository.UpdateCollectionsForAdminAsync(editExceptPasswordCipher.Id, organization.Id,
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(editExceptPasswordCipher.Id, organization.Id,
             new List<Guid> { editExceptPasswordCollection.Id });
 
-        collectionRepository.UpdateUsersAsync(editExceptPasswordCollection.Id, new List<CollectionAccessSelection>
+        await collectionRepository.UpdateUsersAsync(editExceptPasswordCollection.Id, new List<CollectionAccessSelection>
         {
             new() { Id = orgUser.Id, HidePasswords = true, ReadOnly = false, Manage = false }
         });
@@ -323,10 +323,10 @@ public class CipherRepositoryTests
             Data = ""
         });
 
-        collectionCipherRepository.UpdateCollectionsForAdminAsync(viewOnlyCipher.Id, organization.Id,
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(viewOnlyCipher.Id, organization.Id,
             new List<Guid> { viewOnlyCollection.Id });
 
-        collectionRepository.UpdateUsersAsync(viewOnlyCollection.Id,
+        await collectionRepository.UpdateUsersAsync(viewOnlyCollection.Id,
             new List<CollectionAccessSelection>
             {
                 new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = true, Manage = false }
@@ -347,10 +347,10 @@ public class CipherRepositoryTests
             Data = ""
         });
 
-        collectionCipherRepository.UpdateCollectionsForAdminAsync(viewExceptPasswordCipher.Id, organization.Id,
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(viewExceptPasswordCipher.Id, organization.Id,
             new List<Guid> { viewExceptPasswordCollection.Id });
 
-        collectionRepository.UpdateUsersAsync(viewExceptPasswordCollection.Id,
+        await collectionRepository.UpdateUsersAsync(viewExceptPasswordCollection.Id,
             new List<CollectionAccessSelection>
             {
                 new() { Id = orgUser.Id, HidePasswords = true, ReadOnly = true, Manage = false }
