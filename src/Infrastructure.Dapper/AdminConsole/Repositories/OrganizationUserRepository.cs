@@ -557,4 +557,14 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.ToList();
         }
     }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_SetStatusForUsersById]",
+            new { OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds), Status = OrganizationUserStatusType.Revoked },
+            commandType: CommandType.StoredProcedure);
+    }
 }

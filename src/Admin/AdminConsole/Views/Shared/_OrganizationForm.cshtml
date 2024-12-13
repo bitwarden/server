@@ -94,7 +94,7 @@
             </div>
         </div>
         <h2>Features</h2>
-        <div class="row mb-3">
+        <div class="row mb-4">
             <div class="col-4">
                 <h3>General</h3>
                 <div class="form-check mb-2">
@@ -146,7 +146,7 @@
                     <label class="form-check-label" asp-for="UseCustomPermissions"></label>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-3">
                 <h3>Password Manager</h3>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
@@ -157,11 +157,18 @@
                     <label class="form-check-label" asp-for="UsersGetPremium"></label>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-3">
                 <h3>Secrets Manager</h3>
                 <div class="form-check">
                     <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
                     <label class="form-check-label" asp-for="UseSecretsManager"></label>
+                </div>
+            </div>
+            <div class="col-2">
+                <h3>Access Insights</h3>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseRiskInsights" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseRiskInsights"></label>
                 </div>
             </div>
         </div>
