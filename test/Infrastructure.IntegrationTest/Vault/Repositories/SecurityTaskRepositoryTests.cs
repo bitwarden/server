@@ -1,9 +1,13 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.IntegrationTest.Comparers;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Vault.Repositories;
@@ -119,5 +123,104 @@ public class SecurityTaskRepositoryTests
         Assert.NotNull(updatedTask);
         Assert.Equal(task.Id, updatedTask.Id);
         Assert.Equal(SecurityTaskStatus.Completed, updatedTask.Status);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_ReturnsExpectedTasks(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        ICipherRepository cipherRepository,
+        ISecurityTaskRepository securityTaskRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = "billing@email.com"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed
+        });
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Test Collection 1",
+        });
+
+        var collection2 = await collectionRepository.CreateAsync(new Collection
+        {
+            OrganizationId = organization.Id,
+            Name = "Test Collection 2",
+        });
+
+        var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher1, [collection.Id, collection2.Id]);
+
+        var cipher2 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher2, [collection.Id]);
+
+        var task1 = await securityTaskRepository.CreateAsync(new SecurityTask
+        {
+            OrganizationId = organization.Id,
+            CipherId = cipher1.Id,
+            Status = SecurityTaskStatus.Pending,
+            Type = SecurityTaskType.UpdateAtRiskCredential,
+        });
+
+        var task2 = await securityTaskRepository.CreateAsync(new SecurityTask
+        {
+            OrganizationId = organization.Id,
+            CipherId = cipher2.Id,
+            Status = SecurityTaskStatus.Completed,
+            Type = SecurityTaskType.UpdateAtRiskCredential,
+        });
+
+        var task3 = await securityTaskRepository.CreateAsync(new SecurityTask
+        {
+            OrganizationId = organization.Id,
+            CipherId = cipher2.Id,
+            Status = SecurityTaskStatus.Pending,
+            Type = SecurityTaskType.UpdateAtRiskCredential,
+        });
+
+        await collectionRepository.UpdateUsersAsync(collection.Id,
+            new List<CollectionAccessSelection>
+            {
+                new() {Id = orgUser.Id, ReadOnly = false, HidePasswords = false, Manage = true}
+            });
+
+        var allTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id);
+        Assert.Equal(3, allTasks.Count);
+        Assert.Contains(task1, allTasks, new SecurityTaskComparer());
+        Assert.Contains(task2, allTasks, new SecurityTaskComparer());
+        Assert.Contains(task3, allTasks, new SecurityTaskComparer());
+
+        var pendingTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id, SecurityTaskStatus.Pending);
+        Assert.Equal(2, pendingTasks.Count);
+        Assert.Contains(task1, pendingTasks, new SecurityTaskComparer());
+        Assert.Contains(task3, pendingTasks, new SecurityTaskComparer());
+        Assert.DoesNotContain(task2, pendingTasks, new SecurityTaskComparer());
+
+        var completedTasks = await securityTaskRepository.GetManyByUserIdStatusAsync(user.Id, SecurityTaskStatus.Completed);
+        Assert.Single(completedTasks);
+        Assert.Contains(task2, completedTasks, new SecurityTaskComparer());
+        Assert.DoesNotContain(task1, completedTasks, new SecurityTaskComparer());
+        Assert.DoesNotContain(task3, completedTasks, new SecurityTaskComparer());
     }
 }
