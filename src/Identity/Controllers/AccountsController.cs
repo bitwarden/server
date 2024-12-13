@@ -114,20 +114,6 @@ public class AccountsController : Controller
         }
     }
 
-    static AccountsController()
-    {
-        // Add some random defaults as well
-        var random = new Random();
-        for (var i = 0; i < 2; i++)
-        {
-            _defaultKdfResults.Add(new()
-            {
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = random.Next(100_000, 1_000_000),
-            });
-        }
-    }
-
     [HttpPost("register")]
     [CaptchaProtected]
     public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
