@@ -32,4 +32,18 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
 
         return results.ToList();
     }
+
+    /// <inheritdoc />
+    public async Task<ICollection<SecurityTask>> GetManyByOrganizationIdStatusAsync(Guid organizationId,
+        SecurityTaskStatus? status = null)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.QueryAsync<SecurityTask>(
+            $"[{Schema}].[SecurityTask_ReadByOrganizationIdStatus]",
+            new { OrganizationId = organizationId, Status = status },
+            commandType: CommandType.StoredProcedure);
+
+        return results.ToList();
+    }
 }
