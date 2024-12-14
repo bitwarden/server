@@ -1407,7 +1407,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task SendOTPAsync(User user)
     {
-        if (user.Email == null)
+        if (string.IsNullOrEmpty(user.Email))
         {
             throw new BadRequestException("No user email.");
         }
