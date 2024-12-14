@@ -2,6 +2,7 @@
 using Azure.Storage.Queues;
 using Bit.Core;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
@@ -54,12 +55,15 @@ public class AzureQueueHostedService : IHostedService, IDisposable
     private async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         var storageConnectionString = _configuration["azureStorageConnectionString"];
+        var cosmosConnectionString = _configuration["cosmosConnectionString"];
         if (string.IsNullOrWhiteSpace(storageConnectionString))
         {
             return;
         }
 
-        var repo = new Core.Repositories.TableStorage.EventRepository(storageConnectionString);
+        IEventRepository repo = string.IsNullOrWhiteSpace(cosmosConnectionString) ?
+            new Core.Repositories.TableStorage.EventRepository(storageConnectionString) :
+            new Core.Repositories.Cosmos.EventRepository(cosmosConnectionString);
         _eventWriteService = new RepositoryEventWriteService(repo);
         _queueClient = new QueueClient(storageConnectionString, "event");
 
