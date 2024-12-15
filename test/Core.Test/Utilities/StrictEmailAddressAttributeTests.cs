@@ -6,12 +6,14 @@ namespace Bit.Core.Test.Utilities;
 public class StrictEmailAttributeTests
 {
     [Theory]
-    [InlineData("hello@world.com")]         // regular email address
-    [InlineData("hello@world.planet.com")]  // subdomain
-    [InlineData("hello+1@world.com")]       // alias
-    [InlineData("hello.there@world.com")]   // period in local-part
-    [InlineData("hello@wörldé.com")]        // unicode domain
-    [InlineData("hello@world.cömé")]        // unicode top-level domain
+    [InlineData("hello@world.com")]          // regular email address
+    [InlineData("hello@world.planet.com")]   // subdomain
+    [InlineData("hello+1@world.com")]        // alias
+    [InlineData("hello.there@world.com")]    // period in local-part
+    [InlineData("hello@wörldé.com")]         // unicode domain
+    [InlineData("hello@xn--wrld-epa8e.com")] // punycoded domain
+    [InlineData("hello@world.cömé")]         // unicode top-level domain
+    [InlineData("hello@world.xn--cm-cja4c")] // punycoded top-level domain
     public void IsValid_ReturnsTrueWhenValid(string email)
     {
         var sut = new StrictEmailAddressAttribute();
@@ -47,6 +49,7 @@ public class StrictEmailAttributeTests
     [InlineData("hellothere@world.com-")]               // domain ending in hyphen
     [InlineData("hellö@world.com")]                     // unicode at end of local-part
     [InlineData("héllo@world.com")]                     // unicode in middle of local-part
+    [InlineData("héllo@xn--a-zz.com")]                  // invalid punycode domain
     public void IsValid_ReturnsFalseWhenInvalid(string email)
     {
         var sut = new StrictEmailAddressAttribute();
