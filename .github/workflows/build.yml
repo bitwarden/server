@@ -131,6 +131,7 @@ jobs:
     runs-on: ubuntu-22.04
     permissions:
       security-events: write
+      id-token: write
     needs:
       - build-artifacts
     strategy:
@@ -276,6 +277,7 @@ jobs:
             -d ${{ matrix.base_path }}/${{ matrix.project_name }}/obj/build-output/publish
 
       - name: Build Docker image
+        id: build-docker
         uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
@@ -285,6 +287,23 @@ jobs:
           tags: ${{ steps.image-tags.outputs.tags }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+
+      - name: Install Cosign
+        if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
+
+      - name: Sign image with Cosign
+        if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
+        env:
+          DIGEST: ${{ steps.build-docker.outputs.digest }}
+          TAGS: ${{ steps.image-tags.outputs.tags }}
+        run: |
+          IFS="," read -a tags <<< "${TAGS}"
+          images=""
+          for tag in "${tags[@]}"; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes ${images}
 
       - name: Scan Docker image
         id: container-scan
