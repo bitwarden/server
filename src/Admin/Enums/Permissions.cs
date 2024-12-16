@@ -44,6 +44,7 @@ public enum Permission
 
     Tools_ChargeBrainTreeCustomer,
     Tools_PromoteAdmin,
+    Tools_PromoteProviderServiceUser,
     Tools_GenerateLicenseFile,
     Tools_ManageTaxRates,
     Tools_ManageStripeSubscriptions,
