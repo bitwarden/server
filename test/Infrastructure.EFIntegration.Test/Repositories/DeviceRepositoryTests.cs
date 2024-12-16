@@ -52,7 +52,6 @@ public class DeviceRepositoryTests
         Assert.False(distinctItems.Skip(1).Any());
     }
 
-    // Test Cases:
     [CiSkippedTheory, EfDeviceAutoData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
         Device device,
@@ -76,8 +75,8 @@ public class DeviceRepositoryTests
         device.Active = true;
 
         authRequest.ResponseDeviceId = null;
-        authRequest.Type = AuthRequestType.Unlock;
         authRequest.Approved = null;
+        authRequest.Type = AuthRequestType.AuthenticateAndUnlock;
         authRequest.OrganizationId = null;
 
         // Entity Framework Repo
@@ -124,9 +123,10 @@ public class DeviceRepositoryTests
 
         // Create auth request
         authRequest.UserId = sqlUser.Id;
+        authRequest.Type = AuthRequestType.Unlock;
         authRequest.RequestDeviceIdentifier = sqlDevice.Identifier;
 
-        // Old auth reqeust
+        // Old auth request
         authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
         await sqlAuthRequestRepository.CreateAsync(authRequest);
 
@@ -147,13 +147,12 @@ public class DeviceRepositoryTests
         allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn.Last(), expirationTime));
 
         // Assert
-        var totalExpectedSuccessfulQueries = efSuts.Count + 1; // EF repos and the SQL repo.
-        Assert.True(allResponses.Count == totalExpectedSuccessfulQueries);
 
-        // Test all responses to have a device pending auth request
+        // Test all responses to not have a device pending auth request.
+        // All but n-1 are EF responses. n is the stored procedure.
         foreach (var response in allResponses)
         {
-            Assert.True(response.First().DevicePendingAuthRequest != null);
+            Assert.NotNull(response.First().DevicePendingAuthRequest);
 
             // Remove auth request id from the correct auth request pool.
             correctAuthRequestsToRetrieve.Remove(response.First().DevicePendingAuthRequest.Id);
@@ -162,5 +161,192 @@ public class DeviceRepositoryTests
         // After we iterate through all our devices with auth requests and remove them from the expected list, there
         // should be none left.
         Assert.True(correctAuthRequestsToRetrieve.Count == 0);
+    }
+
+    [CiSkippedTheory, EfDeviceAutoData]
+    public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequest_ReturnsExpectedResults(
+        Device device,
+        User user,
+        List<EfRepo.DeviceRepository> efSuts,
+        List<EfRepo.UserRepository> efUserRepos,
+        SqlRepo.DeviceRepository sqlSut,
+        SqlRepo.UserRepository sqlUserRepo)
+    {
+        // Arrange
+        var allResponses = new List<ICollection<DeviceAuthRequestResponseModel>>();
+        var userIdsToSearchOn = new List<Guid>();
+        var expirationTime = 15;
+
+        // Configure data for successful responses.
+        device.Active = true;
+
+        // Entity Framework Repo
+        foreach (var efSut in efSuts)
+        {
+            var i = efSuts.IndexOf(efSut);
+
+            // Create user
+            var efUser = await efUserRepos[i].CreateAsync(user);
+            efSut.ClearChangeTracking();
+
+            userIdsToSearchOn.Add(efUser.Id);
+
+            // Create device
+            device.UserId = efUser.Id;
+            device.Name = "test-ef-chrome";
+
+            await efSuts[i].CreateAsync(device);
+            efSut.ClearChangeTracking();
+        }
+
+        // Dapper Repo
+        // Create user
+        var sqlUser = await sqlUserRepo.CreateAsync(user);
+
+        userIdsToSearchOn.Add(sqlUser.Id);
+
+        // Create device
+        device.UserId = sqlUser.Id;
+        device.Name = "test-sql-chrome";
+        await sqlSut.CreateAsync(device);
+
+        // Act
+
+        // Entity Framework Responses
+        foreach (var efSut in efSuts)
+        {
+            var i = efSuts.IndexOf(efSut);
+            allResponses.Add(await efSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn[i], expirationTime));
+        }
+
+        // Sql Responses
+        allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn.Last(), expirationTime));
+
+        // Assert
+
+        // Test all responses to not have a device pending auth request.
+        // All but n-1 are EF responses. n is the stored procedure.
+        foreach (var response in allResponses)
+        {
+            Assert.NotNull(response.First());
+            Assert.Null(response.First().DevicePendingAuthRequest);
+        }
+    }
+
+    [CiSkippedTheory, EfDeviceAutoData]
+    public async Task GetManyByUserIdWithDeviceAuth_Fails_ReturnsExpectedResults(
+        Device device,
+        User user,
+        AuthRequest authRequest,
+        List<EfRepo.DeviceRepository> efSuts,
+        List<EfRepo.UserRepository> efUserRepos,
+        List<EfAuthRepo.AuthRequestRepository> efAuthRequestRepos,
+        SqlRepo.DeviceRepository sqlSut,
+        SqlRepo.UserRepository sqlUserRepo,
+        SqlAuthRepo.AuthRequestRepository sqlAuthRequestRepository
+        )
+    {
+        var testCases = new[]
+        {
+            new
+            {
+                authRequestType = AuthRequestType.AdminApproval, // Device typing is wrong
+                authRequestApproved = (bool?)null,
+                expirey = DateTime.UtcNow.AddMinutes(0),
+            },
+            new
+            {
+                authRequestType = AuthRequestType.AuthenticateAndUnlock,
+                authRequestApproved = (bool?)true, // Auth request is already approved
+                expirey = DateTime.UtcNow.AddMinutes(0),
+            },
+            new
+            {
+                authRequestType = AuthRequestType.AuthenticateAndUnlock,
+                authRequestApproved = (bool?)null,
+                expirey = DateTime.UtcNow.AddMinutes(-30), // Past the point of expiring
+            }
+        };
+
+        foreach (var testCase in testCases)
+        {
+            // Arrange
+            var allResponses = new List<ICollection<DeviceAuthRequestResponseModel>>();
+            var userIdsToSearchOn = new List<Guid>();
+            var expirationTime = 15;
+
+            // Configure data for successful responses.
+            user.Email = $"{user.Id.ToString().Substring(0, 5)}@test.com";
+
+            device.Active = true;
+
+            authRequest.ResponseDeviceId = null;
+            authRequest.Type = testCase.authRequestType;
+            authRequest.Approved = testCase.authRequestApproved;
+            authRequest.OrganizationId = null;
+
+            // Entity Framework Repo
+            foreach (var efSut in efSuts)
+            {
+                var i = efSuts.IndexOf(efSut);
+
+                // Create user
+                var efUser = await efUserRepos[i].CreateAsync(user);
+                efSut.ClearChangeTracking();
+
+                userIdsToSearchOn.Add(efUser.Id);
+
+                // Create device
+                device.UserId = efUser.Id;
+                device.Name = "test-ef-chrome";
+
+                var efDevice = await efSuts[i].CreateAsync(device);
+                efSut.ClearChangeTracking();
+
+                // Create auth request
+                authRequest.UserId = efUser.Id;
+                authRequest.RequestDeviceIdentifier = efDevice.Identifier;
+                authRequest.CreationDate = testCase.expirey;
+                await efAuthRequestRepos[i].CreateAsync(authRequest);
+            }
+
+            // Dapper Repo
+            // Create user
+            var sqlUser = await sqlUserRepo.CreateAsync(user);
+
+            userIdsToSearchOn.Add(sqlUser.Id);
+
+            // Create device
+            device.UserId = sqlUser.Id;
+            device.Name = "test-sql-chrome";
+            var sqlDevice = await sqlSut.CreateAsync(device);
+
+            // Create auth request
+            authRequest.UserId = sqlUser.Id;
+            authRequest.RequestDeviceIdentifier = sqlDevice.Identifier;
+            authRequest.CreationDate = testCase.expirey;
+            await sqlAuthRequestRepository.CreateAsync(authRequest);
+
+            // Act
+
+            // Entity Framework Responses
+            foreach (var efSut in efSuts)
+            {
+                var i = efSuts.IndexOf(efSut);
+                allResponses.Add(await efSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn[i], expirationTime));
+            }
+
+            // Sql Responses
+            allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn.Last(), expirationTime));
+
+            // Assert
+
+            // Test all responses to not have a device pending auth request.
+            // All but n-1 are EF responses. n is the stored procedure.
+            foreach (var response in allResponses)
+            {
+                Assert.Null(response.First().DevicePendingAuthRequest);
+            }
+        }
     }
 }
