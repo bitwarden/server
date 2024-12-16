@@ -161,6 +161,8 @@ public static class FeatureFlagKeys
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
+    public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
+    public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
 
     public static List<string> GetAllKeys()
     {
