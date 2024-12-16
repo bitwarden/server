@@ -1154,6 +1154,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("LastActivityDate")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Installation", (string)null);
