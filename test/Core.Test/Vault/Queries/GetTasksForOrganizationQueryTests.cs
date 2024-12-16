@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Authorization.SecurityTasks;

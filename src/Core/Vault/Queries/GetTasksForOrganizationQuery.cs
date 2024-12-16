@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
