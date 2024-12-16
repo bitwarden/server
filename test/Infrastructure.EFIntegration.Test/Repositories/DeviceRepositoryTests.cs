@@ -68,12 +68,15 @@ public class DeviceRepositoryTests
     {
         // Arrange
         var allResponses = new List<ICollection<DeviceAuthRequestResponseModel>>();
+        var userIdsToSearchOn = new List<Guid>();
+        var expirationTime = 15;
 
+        // Configure data for successful responses.
         device.Active = true;
 
         authRequest.ResponseDeviceId = null;
         authRequest.Type = AuthRequestType.Unlock;
-        authRequest.CreationDate = DateTime.Now;
+        authRequest.CreationDate = DateTime.UtcNow;
         authRequest.Approved = null;
         authRequest.OrganizationId = null;
 
@@ -85,6 +88,8 @@ public class DeviceRepositoryTests
             // Create user
             var efUser = await efUserRepos[i].CreateAsync(user);
             efSut.ClearChangeTracking();
+
+            userIdsToSearchOn.Add(efUser.Id);
 
             // Create device
             device.UserId = efUser.Id;
@@ -104,6 +109,8 @@ public class DeviceRepositoryTests
         // Create user
         var sqlUser = await sqlUserRepo.CreateAsync(user);
 
+        userIdsToSearchOn.Add(sqlUser.Id);
+
         // Create device
         device.UserId = sqlUser.Id;
         device.Name = "test-sql-chrome";
@@ -116,17 +123,24 @@ public class DeviceRepositoryTests
 
         // Act
 
-        // Sql Responses
-        allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(user.Id, 15));
-
         // Entity Framework Responses
         foreach (var efSut in efSuts)
         {
-            allResponses.Add(await efSut.GetManyByUserIdWithDeviceAuth(user.Id, 15));
+            var i = efSuts.IndexOf(efSut);
+            allResponses.Add(await efSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn[i], expirationTime));
         }
+
+        // Sql Responses
+        allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn.Last(), expirationTime));
 
         // Assert
         var totalExpectedSuccessfulQueries = efSuts.Count + 1;
         Assert.True(allResponses.Count == totalExpectedSuccessfulQueries);
+
+        // Test all responses to have a device pending auth request
+        foreach (var response in allResponses)
+        {
+            Assert.True(response.First().DevicePendingAuthRequest != null);
+        }
     }
 }
