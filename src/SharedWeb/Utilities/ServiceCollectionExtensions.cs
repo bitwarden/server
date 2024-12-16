@@ -26,6 +26,7 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.KeyManagement;
 using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
@@ -120,6 +121,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
         services.AddReportingServices();
+        services.AddKeyManagementServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)

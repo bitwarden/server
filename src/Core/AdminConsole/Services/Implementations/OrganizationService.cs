@@ -519,17 +519,29 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
+        if (license.LicenseType != LicenseType.Organization)
+        {
+            throw new BadRequestException("Premium licenses cannot be applied to an organization. " +
+                "Upload this license from your personal account settings page.");
+        }
+
         var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
         var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception);
+
         if (!canUse)
         {
             throw new BadRequestException(exception);
         }
 
-        if (license.PlanType != PlanType.Custom &&
-            StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType && !p.Disabled) == null)
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType);
+        if (plan is null)
         {
-            throw new BadRequestException("Plan not found.");
+            throw new BadRequestException($"Server must be updated to support {license.Plan}.");
+        }
+
+        if (license.PlanType != PlanType.Custom && plan.Disabled)
+        {
+            throw new BadRequestException($"Plan {plan.Name} is disabled.");
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
