@@ -70,13 +70,13 @@ public class DeviceRepositoryTests
         var allResponses = new List<ICollection<DeviceAuthRequestResponseModel>>();
         var userIdsToSearchOn = new List<Guid>();
         var expirationTime = 15;
+        var correctAuthRequestsToRetrieve = new List<Guid>();
 
         // Configure data for successful responses.
         device.Active = true;
 
         authRequest.ResponseDeviceId = null;
         authRequest.Type = AuthRequestType.Unlock;
-        authRequest.CreationDate = DateTime.UtcNow;
         authRequest.Approved = null;
         authRequest.OrganizationId = null;
 
@@ -102,7 +102,13 @@ public class DeviceRepositoryTests
             authRequest.UserId = efUser.Id;
             authRequest.RequestDeviceIdentifier = efDevice.Identifier;
 
+            // Old auth request
+            authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
             await efAuthRequestRepos[i].CreateAsync(authRequest);
+
+            // Fresher auth request
+            authRequest.CreationDate = DateTime.UtcNow;
+            correctAuthRequestsToRetrieve.Add((await efAuthRequestRepos[i].CreateAsync(authRequest)).Id);
         }
 
         // Dapper Repo
@@ -119,7 +125,14 @@ public class DeviceRepositoryTests
         // Create auth request
         authRequest.UserId = sqlUser.Id;
         authRequest.RequestDeviceIdentifier = sqlDevice.Identifier;
+
+        // Old auth reqeust
+        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
         await sqlAuthRequestRepository.CreateAsync(authRequest);
+
+        // Fresher auth request
+        authRequest.CreationDate = DateTime.UtcNow;
+        correctAuthRequestsToRetrieve.Add((await sqlAuthRequestRepository.CreateAsync(authRequest)).Id);
 
         // Act
 
@@ -134,13 +147,20 @@ public class DeviceRepositoryTests
         allResponses.Add(await sqlSut.GetManyByUserIdWithDeviceAuth(userIdsToSearchOn.Last(), expirationTime));
 
         // Assert
-        var totalExpectedSuccessfulQueries = efSuts.Count + 1;
+        var totalExpectedSuccessfulQueries = efSuts.Count + 1; // EF repos and the SQL repo.
         Assert.True(allResponses.Count == totalExpectedSuccessfulQueries);
 
         // Test all responses to have a device pending auth request
         foreach (var response in allResponses)
         {
             Assert.True(response.First().DevicePendingAuthRequest != null);
+
+            // Remove auth request id from the correct auth request pool.
+            correctAuthRequestsToRetrieve.Remove(response.First().DevicePendingAuthRequest.Id);
         }
+
+        // After we iterate through all our devices with auth requests and remove them from the expected list, there
+        // should be none left.
+        Assert.True(correctAuthRequestsToRetrieve.Count == 0);
     }
 }
