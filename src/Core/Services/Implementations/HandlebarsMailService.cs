@@ -472,7 +472,7 @@ public class HandlebarsMailService : IMailService
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Hey {emailAddress}, here is a heads up on your claimed account:",
+                    TitleFirst = $"Hey {emailAddress}, your account is owned by {org.DisplayName()}",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
                 });
     }
@@ -1065,6 +1065,19 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "OrganizationDomainUnverified", model);
         message.Category = "UnverifiedOrganizationDomain";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
+    {
+        var message = CreateDefaultMessage("Domain not claimed", adminEmails);
+        var model = new OrganizationDomainUnverifiedViewModel
+        {
+            Url = $"{_globalSettings.BaseServiceUri.VaultWithHash}/organizations/{organizationId}/settings/domain-verification",
+            DomainName = domainName
+        };
+        await AddMessageContentAsync(message, "OrganizationDomainUnclaimed", model);
+        message.Category = "UnclaimedOrganizationDomain";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
