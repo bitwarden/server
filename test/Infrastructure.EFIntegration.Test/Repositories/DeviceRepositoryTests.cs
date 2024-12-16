@@ -164,7 +164,7 @@ public class DeviceRepositoryTests
     }
 
     [CiSkippedTheory, EfDeviceAutoData]
-    public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequest_ReturnsExpectedResults(
+    public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequestAndMultipleDevices_ReturnsExpectedResults(
         Device device,
         User user,
         List<EfRepo.DeviceRepository> efSuts,
@@ -193,10 +193,14 @@ public class DeviceRepositoryTests
 
             // Create device
             device.UserId = efUser.Id;
-            device.Name = "test-ef-chrome";
 
+            device.Identifier = Guid.NewGuid().ToString();
+            device.Name = "test-ef-chrome";
             await efSuts[i].CreateAsync(device);
-            efSut.ClearChangeTracking();
+
+            device.Identifier = Guid.NewGuid().ToString();
+            device.Name = "test-ef-chrome-2";
+            await efSuts[i].CreateAsync(device);
         }
 
         // Dapper Repo
@@ -207,7 +211,13 @@ public class DeviceRepositoryTests
 
         // Create device
         device.UserId = sqlUser.Id;
+
+        device.Identifier = Guid.NewGuid().ToString();
         device.Name = "test-sql-chrome";
+        await sqlSut.CreateAsync(device);
+
+        device.Identifier = Guid.NewGuid().ToString();
+        device.Name = "test-ef-chrome-2";
         await sqlSut.CreateAsync(device);
 
         // Act
@@ -230,6 +240,7 @@ public class DeviceRepositoryTests
         {
             Assert.NotNull(response.First());
             Assert.Null(response.First().DevicePendingAuthRequest);
+            Assert.True(response.Count == 2);
         }
     }
 
@@ -246,7 +257,7 @@ public class DeviceRepositoryTests
         SqlAuthRepo.AuthRequestRepository sqlAuthRequestRepository
         )
     {
-        var testCases = new[]
+        var casesThatCauseNoAuthDataInResponse = new[]
         {
             new
             {
@@ -268,12 +279,12 @@ public class DeviceRepositoryTests
             }
         };
 
-        foreach (var testCase in testCases)
+        foreach (var testCase in casesThatCauseNoAuthDataInResponse)
         {
             // Arrange
             var allResponses = new List<ICollection<DeviceAuthRequestResponseModel>>();
             var userIdsToSearchOn = new List<Guid>();
-            var expirationTime = 15;
+            const int expirationTime = 15;
 
             // Configure data for successful responses.
             user.Email = $"{user.Id.ToString().Substring(0, 5)}@test.com";
