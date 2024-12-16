@@ -580,7 +580,7 @@ jobs:
               ref: 'main',
               inputs: {
                 server_branch: process.env.GITHUB_REF
-                is_workflow_call: 'true'
+                is_workflow_call: true
               }
             });
 
