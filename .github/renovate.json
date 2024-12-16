@@ -63,6 +63,7 @@
         "BitPay.Light",
         "Braintree",
         "coverlet.collector",
+        "CsvHelper",
         "FluentAssertions",
         "Kralizek.AutoFixture.Extensions.MockHttp",
         "Microsoft.AspNetCore.Mvc.Testing",
