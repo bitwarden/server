@@ -7,12 +7,6 @@ namespace Bit.Core.Auth.Models.Api.Response;
 
 public class DeviceAuthRequestResponseModel : ResponseModel
 {
-    // public DeviceAuthRequestResponseModel()
-    //     : base("device")
-    // {
-    //
-    // }
-
     public DeviceAuthRequestResponseModel(
         Device device,
         Guid authRequestId,
