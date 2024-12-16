@@ -961,6 +961,7 @@ public class AccountsController : Controller
         }
     }
 
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [AllowAnonymous]
     [HttpPost("resend-new-device-otp")]
     public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificatioRequestModel request)
