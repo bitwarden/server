@@ -1,5 +1,4 @@
-﻿using System.Collections.ObjectModel;
-using Bit.Core.Vault.Entities;
+﻿using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 
 namespace Bit.Core.Vault.Queries;
