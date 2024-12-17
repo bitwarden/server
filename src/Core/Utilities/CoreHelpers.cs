@@ -656,9 +656,9 @@ public static class CoreHelpers
     {
         if (globalSettings.SelfHosted &&
             SettingHasValue(globalSettings.IdentityServer.CertificatePassword)
-            && File.Exists("identity.pfx"))
+            && File.Exists(globalSettings.IdentityServer.CertificateLocation))
         {
-            return GetCertificate("identity.pfx",
+            return GetCertificate(globalSettings.IdentityServer.CertificateLocation,
                 globalSettings.IdentityServer.CertificatePassword);
         }
         else if (SettingHasValue(globalSettings.IdentityServer.CertificateThumbprint))
