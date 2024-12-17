@@ -97,15 +97,22 @@ public class SingleOrgPolicyValidator : IPolicyValidator
             return;
         }
 
+        var allRevocableUserOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
+            currentActiveRevocableOrganizationUsers.Select(ou => ou.UserId!.Value));
+        var usersToRevoke = currentActiveRevocableOrganizationUsers.Where(ou =>
+            allRevocableUserOrgs.Any(uo => uo.UserId == ou.UserId &&
+                uo.OrganizationId != organizationId &&
+                uo.Status != OrganizationUserStatusType.Invited)).ToList();
+
         var commandResult = await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
-            new RevokeOrganizationUsersRequest(organizationId, currentActiveRevocableOrganizationUsers, performedBy));
+            new RevokeOrganizationUsersRequest(organizationId, usersToRevoke, performedBy));
 
         if (commandResult.HasErrors)
         {
             throw new BadRequestException(string.Join(", ", commandResult.ErrorMessages));
         }
 
-        await Task.WhenAll(currentActiveRevocableOrganizationUsers.Select(x =>
+        await Task.WhenAll(usersToRevoke.Select(x =>
             _mailService.SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(), x.Email)));
     }
 
