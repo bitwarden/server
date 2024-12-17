@@ -30,6 +30,7 @@ using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using File = System.IO.File;
@@ -71,6 +72,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
+    private readonly IDistributedCache _distributedCache;
 
     public UserService(
         IUserRepository userRepository,
@@ -106,7 +108,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IFeatureService featureService,
         IPremiumUserBillingService premiumUserBillingService,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
+        IDistributedCache distributedCache)
         : base(
               store,
               optionsAccessor,
@@ -148,6 +151,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _premiumUserBillingService = premiumUserBillingService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
+        _distributedCache = distributedCache;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1448,6 +1452,30 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
+    }
+
+    public async Task<bool> ActiveNewDeviceVerificationException(Guid userId)
+    {
+        var cacheKey = string.Format(AuthConstants.NewDeviceVerificationExceptionCacheKeyFormat, userId.ToString());
+        var cacheValue = await _distributedCache.GetAsync(cacheKey);
+        return cacheValue != null;
+    }
+
+    public async Task ToggleNewDeviceVerificationException(Guid userId)
+    {
+        var cacheKey = string.Format(AuthConstants.NewDeviceVerificationExceptionCacheKeyFormat, userId.ToString());
+        var cacheValue = await _distributedCache.GetAsync(cacheKey);
+        if (cacheValue != null)
+        {
+            await _distributedCache.RemoveAsync(cacheKey);
+        }
+        else
+        {
+            await _distributedCache.SetAsync(cacheKey, new byte[1], new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+            });
+        }
     }
 
     private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)

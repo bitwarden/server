@@ -30,6 +30,7 @@ using Bit.Test.Common.Helpers;
 using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -274,7 +275,8 @@ public class UserServiceTests
             sutProvider.GetDependency<IFeatureService>(),
             sutProvider.GetDependency<IPremiumUserBillingService>(),
             sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
-            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
+            sutProvider.GetDependency<IDistributedCache>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
@@ -520,6 +522,68 @@ public class UserServiceTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization2.DisplayName(), user.Email);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActiveNewDeviceVerificationException_UserNotInCache_ReturnsFalseAsync(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns(null as byte[]);
+
+        var result = await sutProvider.Sut.ActiveNewDeviceVerificationException(Guid.NewGuid());
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActiveNewDeviceVerificationException_UserInCache_ReturnsTrueAsync(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns([1]);
+
+        var result = await sutProvider.Sut.ActiveNewDeviceVerificationException(Guid.NewGuid());
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ToggleNewDeviceVerificationException_UserInCache_RemovesUserFromCache(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns([1]);
+
+        await sutProvider.Sut.ToggleNewDeviceVerificationException(Guid.NewGuid());
+
+        await sutProvider.GetDependency<IDistributedCache>()
+                .DidNotReceive()
+                .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+        await sutProvider.GetDependency<IDistributedCache>()
+                .Received(1)
+                .RemoveAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ToggleNewDeviceVerificationException_UserNotInCache_AddsUserToCache(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns(null as byte[]);
+
+        await sutProvider.Sut.ToggleNewDeviceVerificationException(Guid.NewGuid());
+
+        await sutProvider.GetDependency<IDistributedCache>()
+                .Received(1)
+                .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+        await sutProvider.GetDependency<IDistributedCache>()
+                .DidNotReceive()
+                .RemoveAsync(Arg.Any<string>());
     }
 
     private static void SetupUserAndDevice(User user,

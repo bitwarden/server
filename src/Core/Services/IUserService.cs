@@ -77,6 +77,17 @@ public interface IUserService
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
 
+    /// <summary>
+    /// We use this method to check if the user has an active new device verification bypass
+    /// </summary>
+    /// <param name="userId">self</param>
+    /// <returns>returns true if the value is found in the cache</returns>
+    Task<bool> ActiveNewDeviceVerificationException(Guid userId);
+    /// <summary>
+    /// We use this method to toggle the new device verification bypass
+    /// </summary>
+    /// <param name="userId">Id of user bypassing new device verification</param>
+    Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
