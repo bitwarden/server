@@ -77,37 +77,51 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
+        // 1. we need to check if the user is a bot and if their master password hash is correct
         var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
-        if (isBot)
-        {
-            _logger.LogInformation(Constants.BypassFiltersEventId,
-                "Login attempt for {0} detected as a captcha bot with score {1}.",
-                request.UserName, validatorContext.CaptchaResponse.Score);
-        }
-
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
-        if (!valid)
-        {
-            await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
-        }
-
         if (!valid || isBot)
         {
+            if (isBot)
+            {
+                _logger.LogInformation(Constants.BypassFiltersEventId,
+                    "Login attempt for {UserName} detected as a captcha bot with score {CaptchaScore}.",
+                    request.UserName, validatorContext.CaptchaResponse.Score);
+            }
+
+            if (!valid)
+            {
+                await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
+            }
+
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
         }
 
-        var (isTwoFactorRequired, twoFactorOrganization) = await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
-        var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
-        var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
-        var twoFactorRemember = request.Raw["TwoFactorRemember"]?.ToString() == "1";
-        var validTwoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
-                                    !string.IsNullOrWhiteSpace(twoFactorProvider);
-
-        if (isTwoFactorRequired)
+        // 2. Does this user belong to an organization that requires SSO
+        validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
+        if (validatorContext.SsoRequired)
         {
-            // 2FA required and not provided response
+            SetSsoResult(context,
+                new Dictionary<string, object>
+                {
+                    { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
+                });
+            return;
+        }
+
+        // 3. Check if 2FA is required
+        (validatorContext.TwoFactorRequired, var twoFactorOrganization) = await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
+        // This flag is used to determine if the user wants a rememberMe token sent when authentication is successful
+        var returnRememberMeToken = false;
+        if (validatorContext.TwoFactorRequired)
+        {
+            var twoFactorToken = request.Raw["TwoFactorToken"]?.ToString();
+            var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
+            var validTwoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
+                                        !string.IsNullOrWhiteSpace(twoFactorProvider);
+            // response for 2FA required and not provided state
             if (!validTwoFactorRequest ||
                 !Enum.TryParse(twoFactorProvider, out TwoFactorProviderType twoFactorProviderType))
             {
@@ -125,18 +139,14 @@ public abstract class BaseRequestValidator<T> where T : class
                 return;
             }
 
-            var verified = await _twoFactorAuthenticationValidator
+            var twoFactorTokenValid = await _twoFactorAuthenticationValidator
                                     .VerifyTwoFactor(user, twoFactorOrganization, twoFactorProviderType, twoFactorToken);
 
-            // 2FA required but request not valid or remember token expired response
-            if (!verified || isBot)
+            // response for 2FA required but request is not valid or remember token expired state
+            if (!twoFactorTokenValid)
             {
-                if (twoFactorProviderType != TwoFactorProviderType.Remember)
-                {
-                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
-                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
-                }
-                else if (twoFactorProviderType == TwoFactorProviderType.Remember)
+                // The remember me token has expired
+                if (twoFactorProviderType == TwoFactorProviderType.Remember)
                 {
                     var resultDict = await _twoFactorAuthenticationValidator
                                             .BuildTwoFactorResultAsync(user, twoFactorOrganization);
@@ -145,16 +155,34 @@ public abstract class BaseRequestValidator<T> where T : class
                     resultDict.Add("MasterPasswordPolicy", await GetMasterPasswordPolicy(user));
                     SetTwoFactorResult(context, resultDict);
                 }
+                else
+                {
+                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                }
                 return;
             }
-        }
-        else
-        {
-            validTwoFactorRequest = false;
-            twoFactorRemember = false;
+
+            // When the two factor authentication is successful, we can check if the user wants a rememberMe token
+            var twoFactorRemember = request.Raw["TwoFactorRemember"]?.ToString() == "1";
+            if (twoFactorRemember // Check if the user wants a rememberMe token
+                && twoFactorTokenValid // Make sure two factor authentication was successful
+                && twoFactorProviderType != TwoFactorProviderType.Remember) // if the two factor auth was rememberMe do not send another token
+            {
+                returnRememberMeToken = true;
+            }
         }
 
-        // Force legacy users to the web for migration
+        // 4. Check if the user is logging in from a new device
+        var deviceValid = await _deviceValidator.ValidateRequestDeviceAsync(request, validatorContext);
+        if (!deviceValid)
+        {
+            SetValidationErrorResult(context, validatorContext);
+            await LogFailedLoginEvent(validatorContext.User, EventType.User_FailedLogIn);
+            return;
+        }
+
+        // 5. Force legacy users to the web for migration
         if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
         {
             if (UserService.IsLegacyUser(user) && request.ClientId != "web")
@@ -164,24 +192,7 @@ public abstract class BaseRequestValidator<T> where T : class
             }
         }
 
-        if (await IsValidAuthTypeAsync(user, request.GrantType))
-        {
-            var device = await _deviceValidator.SaveDeviceAsync(user, request);
-            if (device == null)
-            {
-                await BuildErrorResultAsync("No device information provided.", false, context, user);
-                return;
-            }
-            await BuildSuccessResultAsync(user, context, device, validTwoFactorRequest && twoFactorRemember);
-        }
-        else
-        {
-            SetSsoResult(context,
-                new Dictionary<string, object>
-                {
-                    { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
-                });
-        }
+        await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
@@ -235,6 +246,17 @@ public abstract class BaseRequestValidator<T> where T : class
         await SetSuccessResult(context, user, claims, customResponse);
     }
 
+    /// <summary>
+    /// This does two things, it sets the error result for the current ValidatorContext _and_ it logs error.
+    /// These two things should be seperated to maintain single concerns.
+    /// </summary>
+    /// <param name="message">Error message for the error result</param>
+    /// <param name="twoFactorRequest">bool that controls how the error is logged</param>
+    /// <param name="context">used to set the error result in the current validator</param>
+    /// <param name="user">used to associate the failed login with a user</param>
+    /// <returns>void</returns>
+    [Obsolete("Consider using SetValidationErrorResult to set the validation result, and LogFailedLoginEvent " +
+        "to log the failure.")]
     protected async Task BuildErrorResultAsync(string message, bool twoFactorRequest, T context, User user)
     {
         if (user != null)
@@ -255,41 +277,80 @@ public abstract class BaseRequestValidator<T> where T : class
             new Dictionary<string, object> { { "ErrorModel", new ErrorResponseModel(message) } });
     }
 
+    protected async Task LogFailedLoginEvent(User user, EventType eventType)
+    {
+        if (user != null)
+        {
+            await _eventService.LogUserEventAsync(user.Id, eventType);
+        }
+
+        if (_globalSettings.SelfHosted)
+        {
+            string formattedMessage;
+            switch (eventType)
+            {
+                case EventType.User_FailedLogIn:
+                    formattedMessage = string.Format("Failed login attempt. {0}", $" {CurrentContext.IpAddress}");
+                    break;
+                case EventType.User_FailedLogIn2fa:
+                    formattedMessage = string.Format("Failed login attempt, 2FA invalid.{0}", $" {CurrentContext.IpAddress}");
+                    break;
+                default:
+                    formattedMessage = "Failed login attempt.";
+                    break;
+            }
+            _logger.LogWarning(Constants.BypassFiltersEventId, formattedMessage);
+        }
+        await Task.Delay(2000); // Delay for brute force.
+    }
+
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
-
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected abstract void SetSsoResult(T context, Dictionary<string, object> customResponse);
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
+    protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
 
+    /// <summary>
+    /// This consumes the ValidationErrorResult property in the CustomValidatorRequestContext and sets
+    /// it appropriately in the response object for the token and grant validators.
+    /// </summary>
+    /// <param name="context">The current grant or token context</param>
+    /// <param name="requestContext">The modified request context containing material used to build the response object</param>
+    protected abstract void SetValidationErrorResult(T context, CustomValidatorRequestContext requestContext);
     protected abstract Task SetSuccessResult(T context, User user, List<Claim> claims,
         Dictionary<string, object> customResponse);
 
-    protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
     protected abstract ClaimsPrincipal GetSubject(T context);
 
     /// <summary>
     /// Check if the user is required to authenticate via SSO. If the user requires SSO, but they are
     /// logging in using an API Key (client_credentials) then they are allowed to bypass the SSO requirement.
+    /// If the GrantType is authorization_code or client_credentials we know the user is trying to login
+    /// using the SSO flow so they are allowed to continue.
     /// </summary>
     /// <param name="user">user trying to login</param>
     /// <param name="grantType">magic string identifying the grant type requested</param>
-    /// <returns></returns>
-    private async Task<bool> IsValidAuthTypeAsync(User user, string grantType)
+    /// <returns>true if sso required; false if not required or already in process</returns>
+    private async Task<bool> RequireSsoLoginAsync(User user, string grantType)
     {
         if (grantType == "authorization_code" || grantType == "client_credentials")
         {
-            // Already using SSO to authorize, finish successfully
-            // Or login via api key, skip SSO requirement
-            return true;
-        }
-
-        // Check if user belongs to any organization with an active SSO policy
-        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
-        if (anySsoPoliciesApplicableToUser)
-        {
+            // Already using SSO to authenticate, or logging-in via api key to skip SSO requirement
+            // allow to authenticate successfully
             return false;
         }
 
-        // Default - continue validation process
-        return true;
+        // Check if user belongs to any organization with an active SSO policy
+        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(
+                                                user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        if (anySsoPoliciesApplicableToUser)
+        {
+            return true;
+        }
+
+        // Default - SSO is not required
+        return false;
     }
 
     private async Task ResetFailedAuthDetailsAsync(User user)
@@ -350,7 +411,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
             .ToList();
 
-        if (!orgs.Any())
+        if (orgs.Count == 0)
         {
             return null;
         }

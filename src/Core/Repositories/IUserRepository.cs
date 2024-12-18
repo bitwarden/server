@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 
 #nullable enable
@@ -32,4 +32,5 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
+    Task DeleteManyAsync(IEnumerable<User> users);
 }
