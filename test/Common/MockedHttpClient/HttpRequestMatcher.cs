@@ -74,11 +74,16 @@ public class HttpRequestMatcher : IHttpRequestMatcher
     /// Note, after specifying a response, you can no longer further specify match criteria.
     /// </summary>
     /// <param name="statusCode"></param>
+    /// <param name="content"></param>
     /// <returns></returns>
-    public MockedHttpResponse RespondWith(HttpStatusCode statusCode)
+    public MockedHttpResponse RespondWith(HttpStatusCode statusCode, HttpContent? content = null)
     {
         _responseSpecified = true;
         _mockedResponse = new MockedHttpResponse(statusCode);
+        if (content != null)
+        {
+            _mockedResponse.WithContent(content);
+        }
         return _mockedResponse;
     }
 

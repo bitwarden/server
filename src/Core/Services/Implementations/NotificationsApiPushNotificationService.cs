@@ -210,6 +210,11 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await SendAsync(HttpMethod.Post, "send", request);
     }
 
+    internal virtual async Task SendAsync(HttpMethod method, string path, object payload)
+    {
+        await base.SendAsync(method, path, payload);
+    }
+
     private string GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)

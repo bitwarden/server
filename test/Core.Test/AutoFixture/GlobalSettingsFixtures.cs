@@ -1,10 +1,12 @@
-﻿using System.Reflection;
+﻿#nullable enable
+using System.Reflection;
 using System.Text;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoFixture.Xunit2;
 using Bit.Core;
+using Bit.Core.Settings;
 using Bit.Core.Test.Helpers.Factories;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 
@@ -14,43 +16,47 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
 {
     public object Create(object request, ISpecimenContext context)
     {
-        if (context == null)
+        if (request is ParameterInfo pi)
         {
-            throw new ArgumentNullException(nameof(context));
+            if (pi.ParameterType == typeof(GlobalSettings))
+            {
+                return GlobalSettingsFactory.Create();
+            }
+
+            if (pi.ParameterType == typeof(IDataProtectionProvider))
+            {
+                var dataProtector = Substitute.For<IDataProtector>();
+                dataProtector.Unprotect(Arg.Any<byte[]>())
+                    .Returns(data =>
+                        Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
+                                               Encoding.UTF8.GetString((byte[])data[0])));
+
+                var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
+                dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
+                    .Returns(dataProtector);
+
+                return dataProtectionProvider;
+            }
         }
 
-        var fixture = new Fixture();
-
-        if (request is not ParameterInfo pi)
+        if (request is Type type && type == typeof(GlobalSettings))
         {
-            return new NoSpecimen();
-        }
-
-        if (pi.ParameterType == typeof(Bit.Core.Settings.GlobalSettings))
-        {
-            return GlobalSettingsFactory.GlobalSettings;
-        }
-
-        if (pi.ParameterType == typeof(IDataProtectionProvider))
-        {
-            var dataProtector = Substitute.For<IDataProtector>();
-            dataProtector.Unprotect(Arg.Any<byte[]>())
-                .Returns(data =>
-                    Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix +
-                                           Encoding.UTF8.GetString((byte[])data[0])));
-
-            var dataProtectionProvider = Substitute.For<IDataProtectionProvider>();
-            dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose)
-                .Returns(dataProtector);
-
-            return dataProtectionProvider;
+            return GlobalSettingsFactory.Create();
         }
 
         return new NoSpecimen();
     }
 }
 
-public class GlobalSettingsCustomizeAttribute : CustomizeAttribute
+public class GlobalSettingsFromConfigurationCustomization : ICustomization
 {
-    public override ICustomization GetCustomization(ParameterInfo parameter) => new GlobalSettings();
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+    }
+}
+
+public class GlobalSettingsCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() => new GlobalSettingsFromConfigurationCustomization();
 }
