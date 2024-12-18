@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -17,25 +18,25 @@ public class SsoConfigService : ISsoConfigService
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IPolicyRepository _policyRepository;
-    private readonly IPolicyService _policyService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
+    private readonly ISavePolicyCommand _savePolicyCommand;
 
     public SsoConfigService(
         ISsoConfigRepository ssoConfigRepository,
         IPolicyRepository policyRepository,
-        IPolicyService policyService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IEventService eventService)
+        IEventService eventService,
+        ISavePolicyCommand savePolicyCommand)
     {
         _ssoConfigRepository = ssoConfigRepository;
         _policyRepository = policyRepository;
-        _policyService = policyService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
+        _savePolicyCommand = savePolicyCommand;
     }
 
     public async Task SaveAsync(SsoConfig config, Organization organization)
@@ -63,25 +64,29 @@ public class SsoConfigService : ISsoConfigService
         // Automatically enable account recovery, SSO required, and single org policies if trusted device encryption is selected
         if (config.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
-            var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg) ??
-                                  new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.SingleOrg };
 
-            singleOrgPolicy.Enabled = true;
+            await _savePolicyCommand.SaveAsync(new()
+            {
+                OrganizationId = config.OrganizationId,
+                Type = PolicyType.SingleOrg,
+                Enabled = true
+            });
 
-            await _policyService.SaveAsync(singleOrgPolicy, null);
+            var resetPasswordPolicy = new PolicyUpdate
+            {
+                OrganizationId = config.OrganizationId,
+                Type = PolicyType.ResetPassword,
+                Enabled = true,
+            };
+            resetPasswordPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+            await _savePolicyCommand.SaveAsync(resetPasswordPolicy);
 
-            var resetPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.ResetPassword) ??
-                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.ResetPassword, };
-
-            resetPolicy.Enabled = true;
-            resetPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-            await _policyService.SaveAsync(resetPolicy, null);
-
-            var ssoRequiredPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso) ??
-                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.RequireSso, };
-
-            ssoRequiredPolicy.Enabled = true;
-            await _policyService.SaveAsync(ssoRequiredPolicy, null);
+            await _savePolicyCommand.SaveAsync(new()
+            {
+                OrganizationId = config.OrganizationId,
+                Type = PolicyType.RequireSso,
+                Enabled = true
+            });
         }
 
         await LogEventsAsync(config, oldConfig);

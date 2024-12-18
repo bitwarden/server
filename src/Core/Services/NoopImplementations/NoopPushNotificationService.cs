@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
@@ -86,6 +87,11 @@ public class NoopPushNotificationService : IPushNotificationService
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task PushSyncOrganizationStatusAsync(Organization organization)
     {
         return Task.FromResult(0);
     }

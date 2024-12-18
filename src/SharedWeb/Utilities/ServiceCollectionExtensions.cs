@@ -27,6 +27,8 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.KeyManagement;
+using Bit.Core.NotificationCenter;
 using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
@@ -121,6 +123,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
         services.AddReportingServices();
+        services.AddKeyManagementServices();
+        services.AddNotificationCenterServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -231,7 +235,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
-        services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddScoped<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
             var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15), UseTcpOnly = true };
