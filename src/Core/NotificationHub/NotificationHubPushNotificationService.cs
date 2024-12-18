@@ -45,6 +45,11 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         _notificationHubPool = notificationHubPool;
         _logger = logger;
         _globalSettings = globalSettings;
+
+        if (globalSettings.Installation.Id == default)
+        {
+            logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
+        }
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)

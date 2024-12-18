@@ -13,6 +13,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
@@ -25,11 +26,17 @@ public class AzureQueuePushNotificationService : IPushNotificationService
     public AzureQueuePushNotificationService(
         [FromKeyedServices("notifications")] QueueClient queueClient,
         IHttpContextAccessor httpContextAccessor,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ILogger<AzureQueuePushNotificationService> logger)
     {
         _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;
         _globalSettings = globalSettings;
+
+        if (globalSettings.Installation.Id == default)
+        {
+            logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
+        }
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
