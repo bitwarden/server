@@ -49,7 +49,8 @@ SELECT
     O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
-    O.[AllowAdminAccessToAllCollectionItems]
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
