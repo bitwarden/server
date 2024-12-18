@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using Bit.Admin.Models;
+﻿using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -116,30 +114,26 @@ public class UserViewModelTests
 
         var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
 
-        Assert.True(actual.DomainVerified);
+        Assert.True(actual.ClaimedAccount);
     }
 
     [Theory]
     [BitAutoData]
     public void MapUserViewModel_WithoutVerifiedDomain_ReturnsUserViewModel(User user)
     {
-
         var verifiedDomain = false;
 
         var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
 
-        Assert.False(actual.DomainVerified);
+        Assert.False(actual.ClaimedAccount);
     }
 
     [Theory]
     [BitAutoData]
     public void MapUserViewModel_WithNullVerifiedDomain_ReturnsUserViewModel(User user)
     {
-
         var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null);
 
-        Assert.Null(actual.DomainVerified);
+        Assert.Null(actual.ClaimedAccount);
     }
-
-
 }

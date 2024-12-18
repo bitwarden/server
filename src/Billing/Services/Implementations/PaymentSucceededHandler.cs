@@ -25,6 +25,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
     private readonly ICurrentContext _currentContext;
     private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public PaymentSucceededHandler(
         ILogger<PaymentSucceededHandler> logger,
@@ -37,7 +38,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         IUserRepository userRepository,
         IStripeEventUtilityService stripeEventUtilityService,
         IUserService userService,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IPushNotificationService pushNotificationService)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -50,6 +52,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         _stripeEventUtilityService = stripeEventUtilityService;
         _userService = userService;
         _organizationService = organizationService;
+        _pushNotificationService = pushNotificationService;
     }
 
     /// <summary>
@@ -140,6 +143,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
 
             await _organizationService.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+            await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
