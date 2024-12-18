@@ -20,10 +20,10 @@ public class NotificationHubPushNotificationServiceTests
     [Theory]
     [BitAutoData]
     [NotificationCustomize]
-    public async void PushSyncNotificationAsync_Global_NotSent(
+    public async void PushNotificationAsync_Global_NotSent(
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
         await sutProvider.GetDependency<INotificationHubPool>()
             .Received(0)
@@ -39,7 +39,7 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(false)]
     [BitAutoData(true)]
     [NotificationCustomize(false)]
-    public async void PushSyncNotificationAsync_UserIdProvidedClientTypeAll_SentToUser(
+    public async void PushNotificationAsync_UserIdProvidedClientTypeAll_SentToUser(
         bool organizationIdNull, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification)
     {
@@ -51,7 +51,7 @@ public class NotificationHubPushNotificationServiceTests
         notification.ClientType = ClientType.All;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification);
 
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification, expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId})");
@@ -70,7 +70,7 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(true, ClientType.Web)]
     [BitAutoData(true, ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async void PushSyncNotificationAsync_UserIdProvidedClientTypeNotAll_SentToUser(bool organizationIdNull,
+    public async void PushNotificationAsync_UserIdProvidedClientTypeNotAll_SentToUser(bool organizationIdNull,
         ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification)
     {
@@ -82,7 +82,7 @@ public class NotificationHubPushNotificationServiceTests
         notification.ClientType = clientType;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification);
 
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification, expectedSyncNotification,
             $"(template:payload_userId:{notification.UserId} && clientType:{clientType})");
@@ -94,14 +94,14 @@ public class NotificationHubPushNotificationServiceTests
     [Theory]
     [BitAutoData]
     [NotificationCustomize(false)]
-    public async void PushSyncNotificationAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
+    public async void PushNotificationAsync_UserIdNullOrganizationIdProvidedClientTypeAll_SentToOrganization(
         SutProvider<NotificationHubPushNotificationService> sutProvider, Notification notification)
     {
         notification.UserId = null;
         notification.ClientType = ClientType.All;
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification);
 
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification, expectedSyncNotification,
             $"(template:payload && organizationId:{notification.OrganizationId})");
@@ -116,7 +116,7 @@ public class NotificationHubPushNotificationServiceTests
     [BitAutoData(ClientType.Web)]
     [BitAutoData(ClientType.Mobile)]
     [NotificationCustomize(false)]
-    public async void PushSyncNotificationAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
+    public async void PushNotificationAsync_UserIdNullOrganizationIdProvidedClientTypeNotAll_SentToOrganization(
         ClientType clientType, SutProvider<NotificationHubPushNotificationService> sutProvider,
         Notification notification)
     {
@@ -125,7 +125,7 @@ public class NotificationHubPushNotificationServiceTests
 
         var expectedSyncNotification = ToSyncNotificationPushNotification(notification);
 
-        await sutProvider.Sut.PushSyncNotificationAsync(notification);
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
         await AssertSendTemplateNotificationAsync(sutProvider, PushType.SyncNotification, expectedSyncNotification,
             $"(template:payload && organizationId:{notification.OrganizationId} && clientType:{clientType})");
@@ -206,13 +206,18 @@ public class NotificationHubPushNotificationServiceTests
             .UpsertAsync(Arg.Any<InstallationDeviceEntity>());
     }
 
-    private static SyncNotificationPushNotification ToSyncNotificationPushNotification(Notification notification) =>
+    private static NotificationPushNotification ToSyncNotificationPushNotification(Notification notification) =>
         new()
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 

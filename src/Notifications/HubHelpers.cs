@@ -91,7 +91,7 @@ public static class HubHelpers
                 break;
             case PushType.SyncNotification:
                 var syncNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<SyncNotificationPushNotification>>(
+                    JsonSerializer.Deserialize<PushNotificationData<NotificationPushNotification>>(
                         notificationJson, _deserializerOptions);
                 if (syncNotification.Payload.UserId.HasValue)
                 {
