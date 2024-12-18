@@ -18,7 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		TRADEMARK_GUIDELINES.md = TRADEMARK_GUIDELINES.md
 		SECURITY.md = SECURITY.md
-		NuGet.Config = NuGet.Config
 		LICENSE_FAQ.md = LICENSE_FAQ.md
 		LICENSE_BITWARDEN.txt = LICENSE_BITWARDEN.txt
 		LICENSE_AGPL.txt = LICENSE_AGPL.txt

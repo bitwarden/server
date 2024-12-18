@@ -1,4 +1,5 @@
-﻿#nullable enable
+#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -258,5 +259,16 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
     {
         // Noop
         return Task.FromResult(0);
+    }
+
+    public async Task PushSyncOrganizationStatusAsync(Organization organization)
+    {
+        var message = new OrganizationStatusPushNotification
+        {
+            OrganizationId = organization.Id,
+            Enabled = organization.Enabled
+        };
+
+        await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
     }
 }

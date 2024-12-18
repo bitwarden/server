@@ -206,6 +206,11 @@ public class OrganizationBillingController(
             return Error.Unauthorized();
         }
 
+        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
+        {
+            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
+        }
+
         var organization = await organizationRepository.GetByIdAsync(organizationId);
 
         if (organization == null)
@@ -213,7 +218,7 @@ public class OrganizationBillingController(
             return Error.NotFound();
         }
 
-        await subscriberService.VerifyBankAccount(organization, (requestBody.Amount1, requestBody.Amount2));
+        await subscriberService.VerifyBankAccount(organization, requestBody.DescriptorCode);
 
         return TypedResults.Ok();
     }

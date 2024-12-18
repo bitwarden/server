@@ -91,15 +91,9 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         }
 
         var (user, credential) = await _assertWebAuthnLoginCredentialCommand.AssertWebAuthnLoginCredential(token.Options, deviceResponse);
-        var validatorContext = new CustomValidatorRequestContext
-        {
-            User = user,
-            KnownDevice = await _deviceValidator.KnownDeviceAsync(user, context.Request)
-        };
-
         UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
 
-        await ValidateAsync(context, context.Request, validatorContext);
+        await ValidateAsync(context, context.Request, new CustomValidatorRequestContext { User = user });
     }
 
     protected override Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
@@ -128,6 +122,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         return context.Result.Subject;
     }
 
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -135,6 +130,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             customResponse);
     }
 
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
     protected override void SetSsoResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -142,9 +138,21 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             customResponse);
     }
 
-    protected override void SetErrorResult(ExtensionGrantValidationContext context,
-        Dictionary<string, object> customResponse)
+    [Obsolete("Consider using SetValidationErrorResult instead.")]
+    protected override void SetErrorResult(ExtensionGrantValidationContext context, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
+    protected override void SetValidationErrorResult(
+        ExtensionGrantValidationContext context, CustomValidatorRequestContext requestContext)
+    {
+        context.Result = new GrantValidationResult
+        {
+            Error = requestContext.ValidationErrorResult.Error,
+            ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription,
+            IsError = true,
+            CustomResponse = requestContext.CustomResponse
+        };
     }
 }

@@ -1,4 +1,5 @@
-﻿#nullable enable
+#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
@@ -143,6 +144,12 @@ public class MultiServicePushNotificationService : IPushNotificationService
         string? deviceId = null, ClientType? clientType = null)
     {
         PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId, clientType));
+        return Task.FromResult(0);
+    }
+
+    public Task PushSyncOrganizationStatusAsync(Organization organization)
+    {
+        PushToServices((s) => s.PushSyncOrganizationStatusAsync(organization));
         return Task.FromResult(0);
     }
 
