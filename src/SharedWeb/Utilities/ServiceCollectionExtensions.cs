@@ -27,6 +27,7 @@ using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.KeyManagement;
+using Bit.Core.NotificationCenter;
 using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
@@ -122,6 +123,7 @@ public static class ServiceCollectionExtensions
         services.AddVaultServices();
         services.AddReportingServices();
         services.AddKeyManagementServices();
+        services.AddNotificationCenterServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
