@@ -56,6 +56,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Extensions.Caching.Cosmos;
@@ -615,11 +616,18 @@ public static class ServiceCollectionExtensions
 
     public static IApplicationBuilder UseCoreLocalization(this IApplicationBuilder app)
     {
-        var supportedCultures = new[] { "en" };
-        return app.UseRequestLocalization(options => options
-            .SetDefaultCulture(supportedCultures[0])
-            .AddSupportedCultures(supportedCultures)
-            .AddSupportedUICultures(supportedCultures));
+        var supportedCultures = new[]
+        {
+             "en",
+             "pt"
+        };
+        return app.UseRequestLocalization(options =>
+        {
+            options.RequestCultureProviders = [new AcceptLanguageHeaderRequestCultureProvider()];
+            options.SetDefaultCulture(supportedCultures[0])
+                .AddSupportedCultures(supportedCultures)
+                .AddSupportedUICultures(supportedCultures);
+        });
     }
 
     public static IMvcBuilder AddViewAndDataAnnotationLocalization(this IMvcBuilder mvc)
