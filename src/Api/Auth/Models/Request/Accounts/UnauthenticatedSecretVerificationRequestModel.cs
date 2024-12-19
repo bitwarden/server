@@ -3,7 +3,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
-public class UnauthenticatedSecretVerificatioRequestModel : SecretVerificationRequestModel
+public class UnauthenticatedSecretVerificationRequestModel : SecretVerificationRequestModel
 {
     [Required]
     [StrictEmailAddress]

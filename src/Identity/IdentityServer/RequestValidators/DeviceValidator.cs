@@ -125,6 +125,12 @@ public class DeviceValidator(
             return DeviceValidationResultType.InvalidUser;
         }
 
+        // Has the User opted out of new device verification
+        if (!user.VerifyDevices)
+        {
+            return DeviceValidationResultType.Success;
+        }
+
         // CS exception flow
         // Check cache for user information
         var cacheKey = string.Format(AuthConstants.NewDeviceVerificationExceptionCacheKeyFormat, user.Id.ToString());

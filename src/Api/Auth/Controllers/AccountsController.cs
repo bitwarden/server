@@ -964,9 +964,27 @@ public class AccountsController : Controller
     [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [AllowAnonymous]
     [HttpPost("resend-new-device-otp")]
-    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificatioRequestModel request)
+    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
         await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+    }
+
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
+    [AllowAnonymous]
+    [HttpPost("verify-devices")]
+    [HttpPut("verify-devices")]
+    public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+        user.VerifyDevices = request.VerifyDevices;
+
+        await _userService.SaveUserAsync(user);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
