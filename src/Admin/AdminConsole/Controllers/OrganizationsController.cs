@@ -3,7 +3,6 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -476,14 +475,6 @@ public class OrganizationsController : Controller
         Organization organization,
         OrganizationEditModel update)
     {
-        var scaleMSPOnClientOrganizationUpdate =
-            _featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate);
-
-        if (!scaleMSPOnClientOrganizationUpdate)
-        {
-            return;
-        }
-
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
         // No scaling required
