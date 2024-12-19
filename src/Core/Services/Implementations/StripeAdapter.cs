@@ -15,6 +15,7 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.RefundService _refundService;
     private readonly Stripe.CardService _cardService;
     private readonly Stripe.BankAccountService _bankAccountService;
+    private readonly Stripe.PlanService _planService;
     private readonly Stripe.PriceService _priceService;
     private readonly Stripe.SetupIntentService _setupIntentService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
@@ -33,6 +34,7 @@ public class StripeAdapter : IStripeAdapter
         _cardService = new Stripe.CardService();
         _bankAccountService = new Stripe.BankAccountService();
         _priceService = new Stripe.PriceService();
+        _planService = new Stripe.PlanService();
         _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
@@ -133,6 +135,11 @@ public class StripeAdapter : IStripeAdapter
         return invoices;
     }
 
+    public Task<Invoice> InvoiceCreatePreviewAsync(InvoiceCreatePreviewOptions options)
+    {
+        return _invoiceService.CreatePreviewAsync(options);
+    }
+
     public async Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options)
         => (await _invoiceService.SearchAsync(options)).Data;
 
@@ -182,6 +189,11 @@ public class StripeAdapter : IStripeAdapter
     public Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null)
     {
         return _paymentMethodService.DetachAsync(id, options);
+    }
+
+    public Task<Stripe.Plan> PlanGetAsync(string id, Stripe.PlanGetOptions options = null)
+    {
+        return _planService.GetAsync(id, options);
     }
 
     public Task<Stripe.TaxRate> TaxRateCreateAsync(Stripe.TaxRateCreateOptions options)
