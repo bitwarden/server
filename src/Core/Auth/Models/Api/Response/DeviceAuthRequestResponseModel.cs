@@ -30,10 +30,6 @@ public class DeviceAuthRequestResponseModel : ResponseModel
         }
     }
 
-    /**
-     * Is there a better way to do this for Dapper so that I don't need to explicitly
-     * enumerate all the properties in the constructor for mapping?
-     */
     public DeviceAuthRequestResponseModel(
         Guid id,
         Guid userId,
@@ -72,7 +68,6 @@ public class DeviceAuthRequestResponseModel : ResponseModel
             };
         }
     }
-
 
     public Guid Id { get; set; }
     public string Name { get; set; }
