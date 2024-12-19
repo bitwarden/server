@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Security.Claims;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
@@ -561,6 +562,49 @@ public class AccountsControllerTests : IDisposable
         await _sut.Delete(new SecretVerificationRequestModel());
 
         await _userService.Received(1).DeleteAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+        SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.SetUserVerifyDevicesAsync(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenInvalidSecret_ShouldFail(
+        User user, SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((user)));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.SetUserVerifyDevicesAsync(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenRequestValid_ShouldSucceed(
+        User user, SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        user.VerifyDevices = false;
+        model.VerifyDevices = true;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((user)));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.SetUserVerifyDevicesAsync(model);
+
+        await _userService.Received(1).SaveUserAsync(user);
+        Assert.Equal(model.VerifyDevices, user.VerifyDevices);
     }
 
     // Below are helper functions that currently belong to this

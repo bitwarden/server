@@ -970,12 +970,11 @@ public class AccountsController : Controller
     }
 
     [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
-    [AllowAnonymous]
     [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
 
         if (!await _userService.VerifySecretAsync(user, request.Secret))
         {
