@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AlterUser_AddVerifyDevice : Migration
 {
     /// <inheritdoc />
-    public partial class AlterUser_AddVerifyDevice : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<bool>(
-                name: "VerifyDevices",
-                table: "User",
-                type: "boolean",
-                nullable: false,
-                defaultValue: true);
-        }
+        migrationBuilder.AddColumn<bool>(
+            name: "VerifyDevices",
+            table: "User",
+            type: "boolean",
+            nullable: false,
+            defaultValue: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "VerifyDevices",
-                table: "User");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "VerifyDevices",
+            table: "User");
     }
 }
