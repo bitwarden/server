@@ -37,7 +37,7 @@ jobs:
 
       - name: Collect
         id: collect
-        uses: launchdarkly/find-code-references-in-pull-request@d008aa4f321d8cd35314d9cb095388dcfde84439 # v2.0.0
+        uses: launchdarkly/find-code-references-in-pull-request@b2d44bb453e13c11fd1a6ada7b1e5f9fb0ace629 # v2.0.1
         with:
           project-key: default
           environment-key: dev
