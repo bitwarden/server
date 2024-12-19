@@ -45,6 +45,12 @@ namespace Bit.Core.Resources {
             }
         }
         
+        internal static string ERR000 {
+            get {
+                return ResourceManager.GetString("ERR000", resourceCulture);
+            }
+        }
+        
         internal static string ERR001 {
             get {
                 return ResourceManager.GetString("ERR001", resourceCulture);
@@ -60,12 +66,6 @@ namespace Bit.Core.Resources {
         internal static string ERR003 {
             get {
                 return ResourceManager.GetString("ERR003", resourceCulture);
-            }
-        }
-        
-        internal static string ERR000 {
-            get {
-                return ResourceManager.GetString("ERR000", resourceCulture);
             }
         }
         
@@ -96,6 +96,12 @@ namespace Bit.Core.Resources {
         internal static string ERR007 {
             get {
                 return ResourceManager.GetString("ERR007", resourceCulture);
+            }
+        }
+        
+        internal static string ERR008 {
+            get {
+                return ResourceManager.GetString("ERR008", resourceCulture);
             }
         }
     }

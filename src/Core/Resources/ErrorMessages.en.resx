@@ -18,6 +18,9 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="ERR000" xml:space="preserve">
+    <value>An error has occurred.</value>
+  </data>
   <data name="ERR001" xml:space="preserve">
     <value>Organization not found.</value>
   </data>
@@ -26,9 +29,6 @@
   </data>
   <data name="ERR003" xml:space="preserve">
     <value>User not found.</value>
-  </data>
-  <data name="ERR000" xml:space="preserve">
-    <value>An error has occurred.</value>
   </data>
   <data name="ERR004" xml:space="preserve">
     <value>Resource not found.</value>
@@ -44,5 +44,8 @@
   </data>
   <data name="ERR007" xml:space="preserve">
     <value>Trusted device encryption is on and requires this policy.</value>
+  </data>
+  <data name="ERR008" xml:space="preserve">
+    <value>Username or password is incorrect. Try again.</value>
   </data>
 </root>
