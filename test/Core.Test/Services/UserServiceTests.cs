@@ -13,6 +13,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -240,42 +241,7 @@ public class UserServiceTests
             });
 
         // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
-        var sut = new UserService(
-            sutProvider.GetDependency<IUserRepository>(),
-            sutProvider.GetDependency<ICipherRepository>(),
-            sutProvider.GetDependency<IOrganizationUserRepository>(),
-            sutProvider.GetDependency<IOrganizationRepository>(),
-            sutProvider.GetDependency<IMailService>(),
-            sutProvider.GetDependency<IPushNotificationService>(),
-            sutProvider.GetDependency<IUserStore<User>>(),
-            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
-            sutProvider.GetDependency<IPasswordHasher<User>>(),
-            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
-            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
-            sutProvider.GetDependency<ILookupNormalizer>(),
-            sutProvider.GetDependency<IdentityErrorDescriber>(),
-            sutProvider.GetDependency<IServiceProvider>(),
-            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
-            sutProvider.GetDependency<ILicensingService>(),
-            sutProvider.GetDependency<IEventService>(),
-            sutProvider.GetDependency<IApplicationCacheService>(),
-            sutProvider.GetDependency<IDataProtectionProvider>(),
-            sutProvider.GetDependency<IPaymentService>(),
-            sutProvider.GetDependency<IPolicyRepository>(),
-            sutProvider.GetDependency<IPolicyService>(),
-            sutProvider.GetDependency<IReferenceEventService>(),
-            sutProvider.GetDependency<IFido2>(),
-            sutProvider.GetDependency<ICurrentContext>(),
-            sutProvider.GetDependency<IGlobalSettings>(),
-            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
-            sutProvider.GetDependency<IProviderUserRepository>(),
-            sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IFeatureService>(),
-            sutProvider.GetDependency<IPremiumUserBillingService>(),
-            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
-            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
-            );
+        var sut = RebuildSut(sutProvider);
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
 
@@ -522,6 +488,99 @@ public class UserServiceTests
             .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization2.DisplayName(), user.Email);
     }
 
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_UserNull_SendOTPAsyncNotCalled(
+        SutProvider<UserService> sutProvider, string email, string secret)
+    {
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .Returns(null as User);
+
+        await sutProvider.Sut.ResendNewDeviceVerificationEmail(email, secret);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_SecretNotValid_SendOTPAsyncNotCalled(
+    SutProvider<UserService> sutProvider, string email, string secret)
+    {
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(email)
+            .Returns(null as User);
+
+        await sutProvider.Sut.ResendNewDeviceVerificationEmail(email, secret);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceive()
+            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResendNewDeviceVerificationEmail_SendsToken_Success(
+        SutProvider<UserService> sutProvider, User user)
+    {
+        // Arrange
+        var testPassword = "test_password";
+        var tokenProvider = SetupFakeTokenProvider(sutProvider, user);
+        SetupUserAndDevice(user, true);
+
+        // Setup the fake password verification
+        var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
+        substitutedUserPasswordStore
+            .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
+            .Returns((ci) =>
+            {
+                return Task.FromResult("hashed_test_password");
+            });
+
+        sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore, "store");
+
+        sutProvider.GetDependency<IPasswordHasher<User>>("passwordHasher")
+            .VerifyHashedPassword(user, "hashed_test_password", testPassword)
+            .Returns((ci) =>
+            {
+                return PasswordVerificationResult.Success;
+            });
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
+        var sut = RebuildSut(sutProvider);
+
+        await sut.ResendNewDeviceVerificationEmail(user.Email, testPassword);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendOTPEmailAsync(user.Email, Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData("")]
+    [BitAutoData("null")]
+    public async Task SendOTPAsync_UserEmailNull_ThrowsBadRequest(
+        string email,
+        SutProvider<UserService> sutProvider, User user)
+    {
+        user.Email = email == "null" ? null : "";
+        var expectedMessage = "No user email.";
+        try
+        {
+            await sutProvider.Sut.SendOTPAsync(user);
+        }
+        catch (BadRequestException ex)
+        {
+            Assert.Equal(ex.Message, expectedMessage);
+            await sutProvider.GetDependency<IMailService>()
+                .DidNotReceive()
+                .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+        }
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
@@ -572,5 +631,45 @@ public class UserServiceTests
         sutProvider.Create();
 
         return fakeUserTwoFactorProvider;
+    }
+
+    private IUserService RebuildSut(SutProvider<UserService> sutProvider)
+    {
+        return new UserService(
+            sutProvider.GetDependency<IUserRepository>(),
+            sutProvider.GetDependency<ICipherRepository>(),
+            sutProvider.GetDependency<IOrganizationUserRepository>(),
+            sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IMailService>(),
+            sutProvider.GetDependency<IPushNotificationService>(),
+            sutProvider.GetDependency<IUserStore<User>>(),
+            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
+            sutProvider.GetDependency<IPasswordHasher<User>>(),
+            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
+            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
+            sutProvider.GetDependency<ILookupNormalizer>(),
+            sutProvider.GetDependency<IdentityErrorDescriber>(),
+            sutProvider.GetDependency<IServiceProvider>(),
+            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
+            sutProvider.GetDependency<ILicensingService>(),
+            sutProvider.GetDependency<IEventService>(),
+            sutProvider.GetDependency<IApplicationCacheService>(),
+            sutProvider.GetDependency<IDataProtectionProvider>(),
+            sutProvider.GetDependency<IPaymentService>(),
+            sutProvider.GetDependency<IPolicyRepository>(),
+            sutProvider.GetDependency<IPolicyService>(),
+            sutProvider.GetDependency<IReferenceEventService>(),
+            sutProvider.GetDependency<IFido2>(),
+            sutProvider.GetDependency<ICurrentContext>(),
+            sutProvider.GetDependency<IGlobalSettings>(),
+            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
+            sutProvider.GetDependency<IProviderUserRepository>(),
+            sutProvider.GetDependency<IStripeSyncService>(),
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
+            sutProvider.GetDependency<IFeatureService>(),
+            sutProvider.GetDependency<IPremiumUserBillingService>(),
+            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
+            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            );
     }
 }

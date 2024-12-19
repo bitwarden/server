@@ -24,6 +24,6 @@ BEGIN
     SET [Status] = @Status
     WHERE [Id] IN (SELECT Id from @ParsedIds)
 
-    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @OrganizationUserIds
+    EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIdsJson] @OrganizationUserIds
 END
 
