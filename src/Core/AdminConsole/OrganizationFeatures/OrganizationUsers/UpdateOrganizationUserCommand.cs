@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -72,6 +73,22 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
 
+        var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (organization.PlanType == PlanType.Free && user.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+        {
+            // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+            var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+            if (adminCount > 0)
+            {
+                throw new BadRequestException("User can only be an admin of one free organization.");
+            }
+        }
+
         if (collectionAccess?.Any() == true)
         {
             await ValidateCollectionAccessAsync(originalUser, collectionAccess.ToList());
@@ -111,9 +128,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 var update = new SecretsManagerSubscriptionUpdate(organization, true)
-                    .AdjustSeats(additionalSmSeatsRequired);
+                   .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
