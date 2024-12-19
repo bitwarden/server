@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,6 +69,16 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
             var query = dbContext.Devices.Where(d => d.UserId == userId);
             var devices = await query.ToListAsync();
             return Mapper.Map<List<Core.Entities.Device>>(devices);
+        }
+    }
+
+    public async Task<ICollection<DeviceAuthRequestResponseModel>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new DeviceWithPendingAuthByUserIdQuery();
+            return await query.GetQuery(dbContext, userId, expirationMinutes).ToListAsync();
         }
     }
 }

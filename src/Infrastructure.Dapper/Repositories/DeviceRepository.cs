@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -70,6 +71,23 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
             var results = await connection.QueryAsync<Device>(
                 $"[{Schema}].[{Table}_ReadByUserId]",
                 new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<DeviceAuthRequestResponseModel>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<DeviceAuthRequestResponseModel>(
+                $"[{Schema}].[{Table}_ReadActiveWithPendingAuthRequestsByUserId]",
+                new
+                {
+                    UserId = userId,
+                    ExpirationMinutes = expirationMinutes
+                },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Entities;
 
 #nullable enable
 
@@ -10,5 +11,6 @@ public interface IDeviceRepository : IRepository<Device, Guid>
     Task<Device?> GetByIdentifierAsync(string identifier);
     Task<Device?> GetByIdentifierAsync(string identifier, Guid userId);
     Task<ICollection<Device>> GetManyByUserIdAsync(Guid userId);
+    Task<ICollection<DeviceAuthRequestResponseModel>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes);
     Task ClearPushTokenAsync(Guid id);
 }
