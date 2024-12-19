@@ -1,8 +1,7 @@
 ﻿using System.Reflection;
+using System.Text;
 using Bit.Api.Models.Public.Response;
 using Bit.Core;
-﻿using System.Text;
-using Bit.Api.Models.Public.Response;
 using Bit.Core.Billing;
 using Bit.Core.Exceptions;
 using Bit.Core.Resources;
@@ -176,14 +175,14 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
     {
         var localizerFactory = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>();
 
-        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
+        var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
         var localizer = localizerFactory.Create("ErrorMessages", assemblyName.Name);
 
         var errorCode = alternativeErrorCode ?? context.Exception.Message;
         var errorMessage = localizer[errorCode];
 
         // Get localized error message for the exception message
-        if (errorMessage.ResourceNotFound is false)
+        if (!errorMessage.ResourceNotFound)
         {
             return $"({errorCode}) {localizer[errorCode]}";
         }
