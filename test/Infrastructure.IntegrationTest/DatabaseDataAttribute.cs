@@ -71,7 +71,7 @@ public class DatabaseDataAttribute : DataAttribute
                 dapperSqlServerCollection.AddSingleton(globalSettings);
                 dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
                 dapperSqlServerCollection.AddSingleton(database);
-                dapperSqlServerCollection.AddDistributedSqlServerCache((o) =>
+                dapperSqlServerCollection.AddDistributedSqlServerCache(o =>
                 {
                     o.ConnectionString = database.ConnectionString;
                     o.SchemaName = "dbo";
@@ -117,7 +117,7 @@ public class DatabaseDataAttribute : DataAttribute
 
     private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
     {
-        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(sp => new SqlMigrationTesterService(connectionString, migrationName));
+        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(_ => new SqlMigrationTesterService(connectionString, migrationName));
     }
 
     private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)
