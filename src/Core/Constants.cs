@@ -192,5 +192,6 @@ public static class ErrorCodes
     public const string InvalidToken = "ERR005";
     public const string Unauthorized = "ERR006";
     public const string PolicyRequiredByTrustedDeviceEncryption = "ERR007";
+    public const string LoginInvalid = "ERR008";
     public const string UnhandledError = "ERR500";
 }
