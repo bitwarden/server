@@ -28,6 +28,22 @@ public class MultiServicePushNotificationServiceTests
     }
 
     [Theory]
+    [BitAutoData]
+    [NotificationCustomize]
+    [NotificationStatusCustomize]
+    public async Task PushNotificationStatusAsync_Notification_Sent(
+        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification,
+        NotificationStatus notificationStatus)
+    {
+        await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
+
+        await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
+            .First()
+            .Received(1)
+            .PushNotificationStatusAsync(notification, notificationStatus);
+    }
+
+    [Theory]
     [BitAutoData([null, null])]
     [BitAutoData(ClientType.All, null)]
     [BitAutoData([null, "test device id"])]

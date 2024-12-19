@@ -25,7 +25,7 @@ public class AzureQueuePushNotificationServiceTests
     [BitAutoData]
     [NotificationCustomize]
     [CurrentContextCustomize]
-    public async void PushNotificationAsync_Notification_Sent(
+    public async Task PushNotificationAsync_Notification_Sent(
         SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
         ICurrentContext currentContext)
     {
@@ -37,7 +37,30 @@ public class AzureQueuePushNotificationServiceTests
 
         await sutProvider.GetDependency<QueueClient>().Received(1)
             .SendMessageAsync(Arg.Is<string>(message =>
-                MatchMessage(PushType.SyncNotification, message, new SyncNotificationEquals(notification),
+                MatchMessage(PushType.SyncNotification, message,
+                    new NotificationPushNotificationEquals(notification, null),
+                    deviceIdentifier.ToString())));
+    }
+
+    [Theory]
+    [BitAutoData]
+    [NotificationCustomize]
+    [NotificationStatusCustomize]
+    [CurrentContextCustomize]
+    public async Task PushNotificationStatusAsync_Notification_Sent(
+        SutProvider<AzureQueuePushNotificationService> sutProvider, Notification notification, Guid deviceIdentifier,
+        ICurrentContext currentContext, NotificationStatus notificationStatus)
+    {
+        currentContext.DeviceIdentifier.Returns(deviceIdentifier.ToString());
+        sutProvider.GetDependency<IHttpContextAccessor>().HttpContext!.RequestServices
+            .GetService(Arg.Any<Type>()).Returns(currentContext);
+
+        await sutProvider.Sut.PushNotificationStatusAsync(notification, notificationStatus);
+
+        await sutProvider.GetDependency<QueueClient>().Received(1)
+            .SendMessageAsync(Arg.Is<string>(message =>
+                MatchMessage(PushType.SyncNotificationStatus, message,
+                    new NotificationPushNotificationEquals(notification, notificationStatus),
                     deviceIdentifier.ToString())));
     }
 
@@ -51,7 +74,8 @@ public class AzureQueuePushNotificationServiceTests
                pushNotificationData.ContextId == contextId;
     }
 
-    private class SyncNotificationEquals(Notification notification) : IEquatable<NotificationPushNotification>
+    private class NotificationPushNotificationEquals(Notification notification, NotificationStatus? notificationStatus)
+        : IEquatable<NotificationPushNotification>
     {
         public bool Equals(NotificationPushNotification? other)
         {
@@ -67,7 +91,9 @@ public class AzureQueuePushNotificationServiceTests
                    other.Title == notification.Title &&
                    other.Body == notification.Body &&
                    other.CreationDate == notification.CreationDate &&
-                   other.RevisionDate == notification.RevisionDate;
+                   other.RevisionDate == notification.RevisionDate &&
+                   other.ReadDate == notificationStatus?.ReadDate &&
+                   other.DeletedDate == notificationStatus?.DeletedDate;
         }
     }
 }
