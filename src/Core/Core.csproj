@@ -41,8 +41,8 @@
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
     <PackageReference Include="Microsoft.Extensions.Caching.Cosmos" Version="1.6.1" />
     <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="8.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.10" />
     <PackageReference Include="Quartz" Version="3.13.1" />
     <PackageReference Include="SendGrid" Version="9.29.3" />
