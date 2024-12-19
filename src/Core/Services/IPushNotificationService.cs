@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
