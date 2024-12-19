@@ -14,6 +14,7 @@ using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
 using IdentityModel;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 
 #nullable enable
 
@@ -39,8 +40,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
-        )
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IStringLocalizerFactory stringLocalizerFactory)
         : base(
             userManager,
             userService,
@@ -56,7 +57,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            stringLocalizerFactory)
     {
         _userManager = userManager;
     }

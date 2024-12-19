@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
@@ -13,11 +14,13 @@ using Bit.Core.Identity;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
+using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -32,6 +35,8 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
+    private readonly IStringLocalizer<ErrorMessages> _errorMessagesLocalizer;
+    private readonly IStringLocalizer _stringLocalizer;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -55,7 +60,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IStringLocalizerFactory stringLocalizerFactory)
     {
         _userManager = userManager;
         _userService = userService;
@@ -72,6 +78,9 @@ public abstract class BaseRequestValidator<T> where T : class
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
+
+        var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
+        _stringLocalizer = stringLocalizerFactory.Create("ErrorMessages", assemblyName.Name);
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -95,7 +104,8 @@ public abstract class BaseRequestValidator<T> where T : class
                 await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
             }
 
-            await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
+            var sss = _stringLocalizer[ErrorCodes.LoginInvalid];
+            await BuildErrorResultAsync(sss, false, context, user);
             return;
         }
 
