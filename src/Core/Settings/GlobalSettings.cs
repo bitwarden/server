@@ -337,6 +337,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class IdentityServerSettings
     {
+        public string CertificateLocation { get; set; } = "identity.pfx";
         public string CertificateThumbprint { get; set; }
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }
