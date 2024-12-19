@@ -1165,6 +1165,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("varchar(150)");
 
+                    b.Property<DateTime?>("LastActivityDate")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Installation", (string)null);

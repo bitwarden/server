@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -14,6 +16,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -67,6 +70,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IFeatureService _featureService;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
     public UserService(
         IUserRepository userRepository,
@@ -101,7 +105,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPremiumUserBillingService premiumUserBillingService,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
         : base(
               store,
               optionsAccessor,
@@ -142,6 +147,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _featureService = featureService;
         _premiumUserBillingService = premiumUserBillingService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1358,13 +1364,27 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+        var organizationsManagingUser = await GetOrganizationsManagingUserAsync(user.Id);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.DisplayName(), user.Email);
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && organizationsManagingUser.Any(o => o.Id == p.OrganizationId))
+            {
+                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        p.OrganizationId,
+                        [new OrganizationUserUserDetails { UserId = user.Id, OrganizationId = p.OrganizationId }],
+                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                await _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(), user.Email);
+            }
+            else
+            {
+                await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
+                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                    organization.DisplayName(), user.Email);
+            }
+
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);
