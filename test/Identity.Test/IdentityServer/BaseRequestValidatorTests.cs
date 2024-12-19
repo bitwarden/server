@@ -16,6 +16,7 @@ using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -41,6 +42,7 @@ public class BaseRequestValidatorTests
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
+    private readonly IStringLocalizerFactory _stringLocalizerFactory;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -61,6 +63,7 @@ public class BaseRequestValidatorTests
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
+        _stringLocalizerFactory = Substitute.For<IStringLocalizerFactory>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -77,7 +80,8 @@ public class BaseRequestValidatorTests
             _policyService,
             _featureService,
             _ssoConfigRepository,
-            _userDecryptionOptionsBuilder);
+            _userDecryptionOptionsBuilder,
+            _stringLocalizerFactory);
     }
 
     /* Logic path

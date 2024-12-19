@@ -12,6 +12,7 @@ using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -40,7 +41,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IStringLocalizerFactory stringLocalizerFactory)
         : base(
             userManager,
             userService,
@@ -56,7 +58,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            stringLocalizerFactory)
     {
         _userManager = userManager;
         _currentContext = currentContext;
