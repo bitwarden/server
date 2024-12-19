@@ -48,7 +48,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
 
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1).AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
     }
 
     [Theory]
@@ -63,7 +63,7 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.PutResetPasswordEnrollment(orgId, userId, model);
 
-        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0).AcceptOrgUserByOrgIdAsync(orgId, user, sutProvider.GetDependency<IUserService>());
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(0).AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
     }
 
     [Theory]
