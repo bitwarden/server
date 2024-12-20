@@ -1,0 +1,9 @@
+CREATE TYPE [dbo].[SecurityTaskType] AS TABLE(
+    [Id] UNIQUEIDENTIFIER NOT NULL,
+    [OrganizationId] UNIQUEIDENTIFIER NOT NULL,
+    [CipherId] UNIQUEIDENTIFIER NOT NULL,
+    [Type] TINYINT NOT NULL,
+    [Status] TINYINT NOT NULL,
+    [CreationDate] DATETIME2(7) NOT NULL,
+    [RevisionDate] DATETIME2(7) NOT NULL,
+);
