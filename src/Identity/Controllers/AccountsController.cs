@@ -88,6 +88,9 @@ public class AccountsController : Controller
     {
         var token = await _sendVerificationEmailForRegistrationCommand.Run(model.Email, model.Name,
             model.ReceiveMarketingEmails);
+        // a really cool comment
+        // another really cool comment
+
 
         var refEvent = new ReferenceEvent
         {
