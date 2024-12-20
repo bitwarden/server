@@ -635,6 +635,15 @@ jobs:
               }
             })
 
+      - name: Trigger Ephemeral Environment sync
+        uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
+        with:
+          ephemeral_env_branch: process.env.GITHUB_HEAD_REF
+          project: server
+          sync_environment: true
+          pull_request_number: process.env.GITHUB_EVENT_NUMBER
+
+
   check-failures:
     name: Check for failures
     if: always()
