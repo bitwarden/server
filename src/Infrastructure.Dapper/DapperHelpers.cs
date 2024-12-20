@@ -5,6 +5,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Dapper;
 
 #nullable enable
@@ -81,7 +83,7 @@ public class DataTableBuilder<T>
             return true;
         }
 
-        // Value type properties will implicitly box into the object so 
+        // Value type properties will implicitly box into the object so
         // we need to look past the Convert expression
         // i => (System.Object?)i.Id
         if (
@@ -153,6 +155,18 @@ public static class DapperHelpers
         ]
     );
 
+    private static readonly DataTableBuilder<SecurityTask> _securityTaskTypeTableBuilder = new(
+        [
+            st => st.Id,
+            st => st.OrganizationId,
+            st => st.CipherId,
+            st => st.Type,
+            st => st.Status,
+            st => st.CreationDate,
+            st => st.RevisionDate,
+        ]
+    );
+
     public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
     {
         return ids.ToArrayTVP("GuidId");
@@ -209,6 +223,13 @@ public static class DapperHelpers
     {
         var table = _organizationSponsorshipTableBuilder.Build(organizationSponsorships ?? []);
         table.SetTypeName("[dbo].[OrganizationSponsorshipType]");
+        return table;
+    }
+
+    public static DataTable ToTvp(this IEnumerable<SecurityTask> securityTasks)
+    {
+        var table = _securityTaskTypeTableBuilder.Build(securityTasks ?? []);
+        table.SetTypeName("[dbo].[SecurityTaskType]");
         return table;
     }
 

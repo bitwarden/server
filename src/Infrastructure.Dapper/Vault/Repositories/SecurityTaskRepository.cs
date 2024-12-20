@@ -32,4 +32,29 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
 
         return results.ToList();
     }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<SecurityTask> tasks)
+    {
+        if (tasks?.Any() != true)
+        {
+            return Array.Empty<Guid>();
+        }
+
+        var tasksList = tasks.ToList();
+        foreach (var task in tasksList)
+        {
+            task.SetNewId();
+        }
+
+        var securityTasksTvp = tasksList.ToTvp();
+        await using var connection = new SqlConnection(ConnectionString);
+
+        var results = await connection.ExecuteAsync(
+            $"[{Schema}].[SecurityTask_CreateMany]",
+            new { SecurityTasksInput = securityTasksTvp },
+            commandType: CommandType.StoredProcedure);
+
+        return tasksList.Select(t => t.Id).ToList();
+    }
 }
