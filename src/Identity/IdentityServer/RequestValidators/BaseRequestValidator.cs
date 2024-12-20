@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
@@ -102,7 +101,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
             }
 
-            await BuildErrorResultAsync(_errorStringLocalizer[ErrorCodes.LoginInvalid], false, context, user);
+            await BuildErrorResultAsync(_errorStringLocalizer[ErrorCodes.IDENTITY_INVALID_USERNAME_OR_PASSWORD], false, context, user);
             return;
         }
 
@@ -113,7 +112,7 @@ public abstract class BaseRequestValidator<T> where T : class
             SetSsoResult(context,
                 new Dictionary<string, object>
                 {
-                    { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
+                    { "ErrorModel", new ErrorResponseModel(_errorStringLocalizer[ErrorCodes.IDENTITY_SSO_REQUIRED]) }
                 });
             return;
         }
@@ -205,7 +204,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
     {
         await BuildErrorResultAsync(
-            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            $"{_errorStringLocalizer[ErrorCodes.IDENTITY_ENCRYPTION_KEY_MIGRATION_REQUIRED]} {_globalSettings.BaseServiceUri.VaultWithHash}",
             false, context, user);
     }
 

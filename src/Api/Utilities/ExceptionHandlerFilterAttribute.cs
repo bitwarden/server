@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Text;
+﻿using System.Text;
 using Bit.Api.Models.Public.Response;
 using Bit.Core;
 using Bit.Core.Billing;
@@ -114,17 +113,17 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is NotFoundException)
         {
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.ResourceNotFound);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_RESOURCE_NOT_FOUND);
             context.HttpContext.Response.StatusCode = 404;
         }
         else if (exception is SecurityTokenValidationException)
         {
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.InvalidToken);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_INVALID_TOKEN);
             context.HttpContext.Response.StatusCode = 403;
         }
         else if (exception is UnauthorizedAccessException)
         {
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.Unauthorized);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_UNAUTHORIZED);
             context.HttpContext.Response.StatusCode = 401;
         }
         else if (exception is ConflictException)
@@ -149,7 +148,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
             logger.LogError(0, exception, exception.Message);
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.UnhandledError);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_UNHANDLED_ERROR);
             context.HttpContext.Response.StatusCode = 500;
         }
 
@@ -186,6 +185,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             return $"({errorCode}) {errorStringLocalizer[errorCode]}";
         }
 
-        return context.Exception.Message;
+        return !string.IsNullOrWhiteSpace(context.Exception.Message) ?
+            context.Exception.Message : errorStringLocalizer[ErrorCodes.COMMON_ERROR];
     }
 }

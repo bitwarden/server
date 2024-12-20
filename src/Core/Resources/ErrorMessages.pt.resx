@@ -3,7 +3,7 @@
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:element name="root" msdata:IsDataSet="true">
-      
+
     </xsd:element>
   </xsd:schema>
   <resheader name="resmimetype">
@@ -18,34 +18,31 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="ERR000" xml:space="preserve">
+  <data name="0000" xml:space="preserve">
     <value>Ocorreu um erro.</value>
   </data>
-  <data name="ERR001" xml:space="preserve">
+  <data name="0002" xml:space="preserve">
     <value>Organização não encontrada.</value>
   </data>
-  <data name="ERR002" xml:space="preserve">
-    <value>Esta organização não pode usar políticas empresariais.</value>
-  </data>
-  <data name="ERR003" xml:space="preserve">
+  <data name="0001" xml:space="preserve">
     <value>Utilizador não encontrado.</value>
   </data>
-  <data name="ERR004" xml:space="preserve">
+  <data name="0404" xml:space="preserve">
     <value>Recurso não encontrado.</value>
   </data>
-  <data name="ERR005" xml:space="preserve">
+  <data name="0403" xml:space="preserve">
     <value>Token inválido.</value>
   </data>
-  <data name="ERR006" xml:space="preserve">
+  <data name="0401" xml:space="preserve">
     <value>Não autorizado.</value>
   </data>
-  <data name="ERR500" xml:space="preserve">
+  <data name="0500" xml:space="preserve">
     <value>Ocorreu um erro não tratado no servidor.</value>
   </data>
-  <data name="ERR007" xml:space="preserve">
-    <value>A criptografia do dispositivo confiável está ativada e requer esta política.</value>
-  </data>
-  <data name="ERR008" xml:space="preserve">
+  <data name="1001" xml:space="preserve">
     <value>Nome de utilizador ou palavra-passe incorretos. Tente novamente.</value>
+  </data>
+  <data name="1003" xml:space="preserve">
+    <value>Encryption key migration is required. Please log in to the web vault at</value>
   </data>
 </root>

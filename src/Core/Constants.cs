@@ -183,14 +183,15 @@ public static class FeatureFlagKeys
 
 public static class ErrorCodes
 {
-    public const string Error = "ERR000";
-    public const string OrganizationNotFound = "ERR001";
-    public const string OrganizationCannotUsePolicies = "ERR002";
-    public const string UserNotFound = "ERR003";
-    public const string ResourceNotFound = "ERR004";
-    public const string InvalidToken = "ERR005";
-    public const string Unauthorized = "ERR006";
-    public const string PolicyRequiredByTrustedDeviceEncryption = "ERR007";
-    public const string LoginInvalid = "ERR008";
-    public const string UnhandledError = "ERR500";
+    public const string COMMON_ERROR = "0000";
+    public const string COMMON_USER_NOT_FOUND = "0001";
+    public const string COMMON_ORGANIZATION_NOT_FOUND = "0002";
+    public const string COMMON_UNAUTHORIZED = "0401";
+    public const string COMMON_INVALID_TOKEN = "0403";
+    public const string COMMON_RESOURCE_NOT_FOUND = "0404";
+    public const string COMMON_UNHANDLED_ERROR = "0500";
+
+    public const string IDENTITY_INVALID_USERNAME_OR_PASSWORD = "1001";
+    public const string IDENTITY_SSO_REQUIRED = "1002";
+    public const string IDENTITY_ENCRYPTION_KEY_MIGRATION_REQUIRED = "1003";
 }

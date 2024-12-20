@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
@@ -118,7 +117,7 @@ public class BaseRequestValidatorTests
                            .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
                                              Core.Enums.EventType.User_FailedLogIn);
         Assert.True(context.GrantResult.IsError);
-        Assert.Equal(_errorStringLocalizer[ErrorCodes.LoginInvalid], errorResponse.Message);
+        Assert.Equal(_errorStringLocalizer[ErrorCodes.IDENTITY_INVALID_USERNAME_OR_PASSWORD], errorResponse.Message);
     }
 
     /* Logic path
@@ -146,7 +145,7 @@ public class BaseRequestValidatorTests
         // Assert
         _logger.Received(1).LogWarning(Constants.BypassFiltersEventId, "Failed login attempt. ");
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+        Assert.Equal(_errorStringLocalizer[ErrorCodes.IDENTITY_INVALID_USERNAME_OR_PASSWORD], errorResponse.Message);
     }
 
     /* Logic path
@@ -184,7 +183,7 @@ public class BaseRequestValidatorTests
                             Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+        Assert.Equal(_errorStringLocalizer[ErrorCodes.IDENTITY_INVALID_USERNAME_OR_PASSWORD], errorResponse.Message);
     }
 
     [Theory, BitAutoData]
@@ -284,7 +283,7 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("SSO authentication is required.", errorResponse.Message);
+        Assert.Equal(_errorStringLocalizer[ErrorCodes.IDENTITY_SSO_REQUIRED], errorResponse.Message);
     }
 
     // Test grantTypes where SSO would be required but the user is not in an
@@ -393,8 +392,8 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        var expectedMessage = $"Encryption key migration is required. Please log in to the web " +
-                              $"vault at {_globalSettings.BaseServiceUri.VaultWithHash}";
+        var expectedMessage = $"{_errorStringLocalizer[ErrorCodes.IDENTITY_ENCRYPTION_KEY_MIGRATION_REQUIRED]} " +
+                              $"{_globalSettings.BaseServiceUri.VaultWithHash}";
         Assert.Equal(expectedMessage, errorResponse.Message);
     }
 
