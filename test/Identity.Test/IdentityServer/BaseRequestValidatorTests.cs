@@ -63,7 +63,9 @@ public class BaseRequestValidatorTests
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
-        _stringLocalizerFactory = Substitute.For<IStringLocalizerFactory>();
+        _stringLocalizerFactory = new ResourceManagerStringLocalizerFactory(
+            Options.Create(new LocalizationOptions()),
+            Substitute.For<ILoggerFactory>());
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
