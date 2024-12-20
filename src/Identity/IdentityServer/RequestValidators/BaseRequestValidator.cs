@@ -78,8 +78,7 @@ public abstract class BaseRequestValidator<T> where T : class
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
 
-        var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
-        _errorStringLocalizer = stringLocalizerFactory.Create(nameof(ErrorMessages), assemblyName.Name);
+        _errorStringLocalizer = stringLocalizerFactory.CreateLocalizer<ErrorMessages>();
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,

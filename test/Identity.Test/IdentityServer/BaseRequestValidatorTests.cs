@@ -12,6 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Test.Wrappers;
@@ -69,9 +70,7 @@ public class BaseRequestValidatorTests
         _stringLocalizerFactory = new ResourceManagerStringLocalizerFactory(
             Options.Create(new LocalizationOptions()),
             Substitute.For<ILoggerFactory>());
-
-        var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
-        _errorStringLocalizer = _stringLocalizerFactory.Create(nameof(ErrorMessages), assemblyName.Name);
+        _errorStringLocalizer = _stringLocalizerFactory.CreateLocalizer<ErrorMessages>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,

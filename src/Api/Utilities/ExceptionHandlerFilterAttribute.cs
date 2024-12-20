@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.Billing;
 using Bit.Core.Exceptions;
 using Bit.Core.Resources;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Localization;
@@ -174,17 +175,15 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
     private string GetFormattedMessageFromErrorCode(ExceptionContext context, string alternativeErrorCode = null)
     {
         var localizerFactory = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>();
-
-        var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
-        var localizer = localizerFactory.Create("ErrorMessages", assemblyName.Name);
+        var errorStringLocalizer = localizerFactory.CreateLocalizer<ErrorMessages>();
 
         var errorCode = alternativeErrorCode ?? context.Exception.Message;
-        var errorMessage = localizer[errorCode];
+        var errorMessage = errorStringLocalizer[errorCode];
 
         // Get localized error message for the exception message
         if (!errorMessage.ResourceNotFound)
         {
-            return $"({errorCode}) {localizer[errorCode]}";
+            return $"({errorCode}) {errorStringLocalizer[errorCode]}";
         }
 
         return context.Exception.Message;
