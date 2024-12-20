@@ -28,7 +28,6 @@ public class PaymentHistoryService(
         var invoices = await stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
         {
             Customer = subscriber.GatewayCustomerId,
-            Subscription = subscriber.GatewaySubscriptionId,
             Limit = pageSize,
             Status = status,
             StartingAfter = startAfter
