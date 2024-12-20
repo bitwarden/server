@@ -28,7 +28,7 @@ namespace Bit.Identity.IntegrationTest.Endpoints;
 
 public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFactory>
 {
-    const string _organizationTwoFactor = """{"6":{"Enabled":true,"MetaData":{"IKey":"DIEFB13LB49IEB3459N2","SKey":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
+    const string _organizationTwoFactor = """{"6":{"Enabled":true,"MetaData":{"ClientId":"DIEFB13LB49IEB3459N2","ClientSecret":"0ZnsZHav0KcNPBZTS6EOUwqLPoB0sfMd5aJeWExQ","Host":"api-example.duosecurity.com"}}}""";
     const string _testEmail = "test+2farequired@email.com";
     const string _testPassword = "master_password_hash";
     const string _userEmailTwoFactor = """{"1": { "Enabled": true, "MetaData": { "Email": "test+2farequired@email.com"}}}""";
@@ -140,7 +140,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "password", _testPassword },
         }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
-        // Assert 
+        // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
@@ -168,7 +168,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
     [Theory, BitAutoData]
     public async Task TokenEndpoint_GrantTypeClientCredential_OrgTwoFactorRequired_Success(Organization organization, OrganizationApiKey organizationApiKey)
     {
-        // Arrange        
+        // Arrange
         organization.Enabled = true;
         organization.UseApi = true;
         organization.Use2fa = true;
@@ -258,7 +258,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
-        // Assert 
+        // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
@@ -320,7 +320,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
 
-        // Assert 
+        // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(twoFactorProvidedContext);
         var root = body.RootElement;
 
@@ -338,6 +338,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         };
+
         await CreateSsoOrganizationAndUserAsync(
             localFactory, ssoConfigData, challenge, _testEmail, orgTwoFactor: _organizationTwoFactor);
 
@@ -355,7 +356,7 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }), context => context.Request.Headers.Append("Auth-Email", CoreHelpers.Base64UrlEncodeString(_testEmail)));
 
-        // Assert 
+        // Assert
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();

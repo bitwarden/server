@@ -70,6 +70,22 @@ Press <Enter> to continue."
         sleep 5 # wait for DB container to start
         dotnet run --project ./util/MsSqlMigratorUtility "$SQL_CONNECTION_STRING"
     fi
+    read -r -p "Would you like to install the Stripe CLI? [y/N] " stripe_response
+    if [[ "$stripe_response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
+        install_stripe_cli
+    fi
+}
+
+# Install Stripe CLI
+install_stripe_cli() {
+    echo "Installing Stripe CLI..."
+    # Add Stripe CLI GPG key so that apt can verify the packages authenticity.
+    # If Stripe ever changes the key, we'll need to update this. Visit https://docs.stripe.com/stripe-cli?install-method=apt if so
+    curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public | gpg --dearmor | sudo tee /usr/share/keyrings/stripe.gpg >/dev/null
+    # Add Stripe CLI repository to apt sources
+    echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" | sudo tee -a /etc/apt/sources.list.d/stripe.list >/dev/null
+    sudo apt update
+    sudo apt install -y stripe
 }
 
 # main

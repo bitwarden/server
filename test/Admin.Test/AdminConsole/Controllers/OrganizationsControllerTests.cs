@@ -68,7 +68,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Created };
@@ -104,7 +103,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Billable };
@@ -147,7 +145,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Billable };
@@ -190,7 +187,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Billable };
@@ -233,7 +229,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Billable };
@@ -278,7 +273,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Billable };
@@ -322,7 +316,6 @@ public class OrganizationsControllerTests
 
         var featureService = sutProvider.GetDependency<IFeatureService>();
 
-        featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
         featureService.IsEnabled(FeatureFlagKeys.PM14401_ScaleMSPOnClientOrganizationUpdate).Returns(true);
 
         var provider = new Provider { Type = ProviderType.Msp, Status = ProviderStatusType.Billable };
