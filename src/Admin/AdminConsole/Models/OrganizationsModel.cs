@@ -10,4 +10,6 @@ public class OrganizationsModel : PagedModel<Organization>
     public bool? Paid { get; set; }
     public string Action { get; set; }
     public bool SelfHosted { get; set; }
+
+    public double StorageGB(Organization org) => org.Storage.HasValue ? Math.Round(org.Storage.Value / 1073741824D, 2) : 0;
 }
