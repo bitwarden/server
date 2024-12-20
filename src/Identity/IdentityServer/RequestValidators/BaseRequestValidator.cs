@@ -35,8 +35,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
-    private readonly IStringLocalizer<ErrorMessages> _errorMessagesLocalizer;
-    private readonly IStringLocalizer _stringLocalizer;
+    private readonly IStringLocalizer _errorStringLocalizer;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -80,7 +79,7 @@ public abstract class BaseRequestValidator<T> where T : class
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
 
         var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
-        _stringLocalizer = stringLocalizerFactory.Create("ErrorMessages", assemblyName.Name);
+        _errorStringLocalizer = stringLocalizerFactory.Create(nameof(ErrorMessages), assemblyName.Name);
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -104,8 +103,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
             }
 
-            var sss = _stringLocalizer[ErrorCodes.LoginInvalid];
-            await BuildErrorResultAsync(sss, false, context, user);
+            await BuildErrorResultAsync(_errorStringLocalizer[ErrorCodes.LoginInvalid], false, context, user);
             return;
         }
 

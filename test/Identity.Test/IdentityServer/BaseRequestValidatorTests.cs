@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using System.Reflection;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
@@ -8,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
+using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
@@ -43,6 +45,7 @@ public class BaseRequestValidatorTests
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
     private readonly IStringLocalizerFactory _stringLocalizerFactory;
+    private readonly IStringLocalizer _errorStringLocalizer;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -66,6 +69,9 @@ public class BaseRequestValidatorTests
         _stringLocalizerFactory = new ResourceManagerStringLocalizerFactory(
             Options.Create(new LocalizationOptions()),
             Substitute.For<ILoggerFactory>());
+
+        var assemblyName = new AssemblyName(typeof(ErrorMessages).GetTypeInfo().Assembly.FullName);
+        _errorStringLocalizer = _stringLocalizerFactory.Create(nameof(ErrorMessages), assemblyName.Name);
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -113,7 +119,7 @@ public class BaseRequestValidatorTests
                            .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
                                              Core.Enums.EventType.User_FailedLogIn);
         Assert.True(context.GrantResult.IsError);
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+        Assert.Equal(_errorStringLocalizer[ErrorCodes.LoginInvalid], errorResponse.Message);
     }
 
     /* Logic path
