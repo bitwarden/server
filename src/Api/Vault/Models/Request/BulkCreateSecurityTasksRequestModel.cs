@@ -4,6 +4,5 @@ namespace Bit.Api.Models.Request;
 
 public class BulkCreateSecurityTasksRequestModel
 {
-    public SecurityTaskType Type { get; set; }
-    public Guid CipherId { get; set; }
+    public IEnumerable<SecurityTaskCreateRequest> Tasks { get; set; }
 }

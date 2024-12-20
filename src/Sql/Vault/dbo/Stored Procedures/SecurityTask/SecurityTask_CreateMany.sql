@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[SecurityTask_CreateMany]
-    @Tasks AS [dbo].[SecurityTaskType] READONLY
+    @SecurityTasksInput AS [dbo].[SecurityTaskType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -23,5 +23,5 @@ BEGIN
         ST.[CreationDate],
         ST.[RevisionDate]
     FROM
-        @Tasks ST
+        @SecurityTasksInput ST
 END
