@@ -1004,7 +1004,7 @@ public class CipherService : ICipherService
         if ((cipher.RevisionDate - lastKnownRevisionDate.Value).Duration() > TimeSpan.FromSeconds(1))
         {
             throw new BadRequestException(
-                "The cipher you are updating is out of date. Please save your work, sync your vault, and try again."
+                "The item cannot be saved because it is out of date. To edit this item, first sync your vault, or log out and back in."
             );
         }
     }
