@@ -21,7 +21,7 @@ public class StrictEmailAddressAttribute : ValidationAttribute
         try
         {
             var parsedEmailAddress = MailboxAddress.Parse(emailAddress).Address;
-            if (parsedEmailAddress != emailAddress)
+            if (string.IsNullOrEmpty(parsedEmailAddress))
             {
                 return false;
             }
