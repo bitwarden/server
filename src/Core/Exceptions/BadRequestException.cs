@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+﻿using Bit.Core.Enums;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bit.Core.Exceptions;
 
@@ -9,6 +10,10 @@ public class BadRequestException : Exception
 
     public BadRequestException(string message)
         : base(message)
+    { }
+
+    public BadRequestException(ErrorCode errorCode)
+        : base(errorCode.ToErrorCodeString())
     { }
 
     public BadRequestException(string key, string errorMessage)

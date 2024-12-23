@@ -1,7 +1,9 @@
 ﻿using System.Text;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Billing;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.IdentityModel.Tokens;
@@ -21,7 +23,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
 
     public override void OnException(ExceptionContext context)
     {
-        var errorMessage = "An error has occurred.";
+        var errorMessage = GetFormattedMessageFromErrorCode(context);
 
         var exception = context.Exception;
         if (exception == null)
@@ -46,10 +48,6 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                     internalErrorModel = new InternalApi.ErrorResponseModel(badRequestException.ModelState);
                 }
             }
-            else
-            {
-                errorMessage = badRequestException.Message;
-            }
         }
         else if (exception is StripeException { StripeError.Type: "card_error" } stripeCardErrorException)
         {
@@ -67,7 +65,6 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is GatewayException)
         {
-            errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
         }
         else if (exception is BillingException billingException)
@@ -106,7 +103,6 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
         {
-            errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
         }
         else if (exception is ApplicationException)
@@ -115,17 +111,17 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is NotFoundException)
         {
-            errorMessage = "Resource not found.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonResourceNotFound);
             context.HttpContext.Response.StatusCode = 404;
         }
         else if (exception is SecurityTokenValidationException)
         {
-            errorMessage = "Invalid token.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonInvalidToken);
             context.HttpContext.Response.StatusCode = 403;
         }
         else if (exception is UnauthorizedAccessException)
         {
-            errorMessage = "Unauthorized.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonUnauthorized);
             context.HttpContext.Response.StatusCode = 401;
         }
         else if (exception is ConflictException)
@@ -150,7 +146,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
             logger.LogError(0, exception, exception.Message);
-            errorMessage = "An unhandled server error has occurred.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonUnhandledError);
             context.HttpContext.Response.StatusCode = 500;
         }
 
@@ -171,5 +167,12 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             }
             context.Result = new ObjectResult(errorModel);
         }
+    }
+
+    private string GetFormattedMessageFromErrorCode(ExceptionContext context, ErrorCode? alternativeErrorCode = null)
+    {
+        var errorMessageService = context.HttpContext.RequestServices.GetRequiredService<IErrorMessageService>();
+
+        return errorMessageService.GetErrorMessage(context.Exception, alternativeErrorCode);
     }
 }

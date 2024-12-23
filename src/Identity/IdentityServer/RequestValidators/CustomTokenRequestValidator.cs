@@ -39,8 +39,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
-        )
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IErrorMessageService errorMessageService)
         : base(
             userManager,
             userService,
@@ -56,7 +56,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            errorMessageService)
     {
         _userManager = userManager;
     }

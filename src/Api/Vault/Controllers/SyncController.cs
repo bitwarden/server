@@ -71,7 +71,7 @@ public class SyncController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
-            throw new BadRequestException("User not found.");
+            throw new BadRequestException(ErrorCode.CommonUserNotFound);
         }
 
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
