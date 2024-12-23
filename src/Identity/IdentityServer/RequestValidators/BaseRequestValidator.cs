@@ -13,13 +13,11 @@ using Bit.Core.Identity;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
-using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Localization;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -34,7 +32,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
-    private readonly IStringLocalizer _errorStringLocalizer;
+    private readonly IErrorMessageService _errorMessageService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -59,7 +57,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IStringLocalizerFactory stringLocalizerFactory)
+        IErrorMessageService errorMessageService)
     {
         _userManager = userManager;
         _userService = userService;
@@ -77,7 +75,7 @@ public abstract class BaseRequestValidator<T> where T : class
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
 
-        _errorStringLocalizer = stringLocalizerFactory.CreateLocalizer<ErrorMessages>();
+        _errorMessageService = errorMessageService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -101,7 +99,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
             }
 
-            await BuildErrorResultAsync(_errorStringLocalizer[ErrorCodes.IDENTITY_INVALID_USERNAME_OR_PASSWORD], false, context, user);
+            await BuildErrorResultAsync(_errorMessageService.GetErrorMessage(ErrorCode.IdentityInvalidUsernameOrPassword), false, context, user);
             return;
         }
 
@@ -112,7 +110,7 @@ public abstract class BaseRequestValidator<T> where T : class
             SetSsoResult(context,
                 new Dictionary<string, object>
                 {
-                    { "ErrorModel", new ErrorResponseModel(_errorStringLocalizer[ErrorCodes.IDENTITY_SSO_REQUIRED]) }
+                    { "ErrorModel", new ErrorResponseModel(_errorMessageService.GetErrorMessage(ErrorCode.IdentitySsoRequired)) }
                 });
             return;
         }
@@ -204,7 +202,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
     {
         await BuildErrorResultAsync(
-            $"{_errorStringLocalizer[ErrorCodes.IDENTITY_ENCRYPTION_KEY_MIGRATION_REQUIRED]} {_globalSettings.BaseServiceUri.VaultWithHash}",
+            $"{_errorMessageService.GetErrorMessage(ErrorCode.IdentityEncryptionKeyMigrationRequired)} {_globalSettings.BaseServiceUri.VaultWithHash}",
             false, context, user);
     }
 

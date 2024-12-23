@@ -1,13 +1,11 @@
 ﻿using System.Text;
 using Bit.Api.Models.Public.Response;
-using Bit.Core;
 using Bit.Core.Billing;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Resources;
-using Bit.Core.Utilities;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using InternalApi = Bit.Core.Models.Api;
@@ -113,17 +111,17 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is NotFoundException)
         {
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_RESOURCE_NOT_FOUND);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonResourceNotFound);
             context.HttpContext.Response.StatusCode = 404;
         }
         else if (exception is SecurityTokenValidationException)
         {
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_INVALID_TOKEN);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonInvalidToken);
             context.HttpContext.Response.StatusCode = 403;
         }
         else if (exception is UnauthorizedAccessException)
         {
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_UNAUTHORIZED);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonUnauthorized);
             context.HttpContext.Response.StatusCode = 401;
         }
         else if (exception is ConflictException)
@@ -148,7 +146,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
             logger.LogError(0, exception, exception.Message);
-            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.COMMON_UNHANDLED_ERROR);
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCode.CommonUnhandledError);
             context.HttpContext.Response.StatusCode = 500;
         }
 
@@ -171,21 +169,10 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
     }
 
-    private string GetFormattedMessageFromErrorCode(ExceptionContext context, string alternativeErrorCode = null)
+    private string GetFormattedMessageFromErrorCode(ExceptionContext context, ErrorCode? alternativeErrorCode = null)
     {
-        var localizerFactory = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>();
-        var errorStringLocalizer = localizerFactory.CreateLocalizer<ErrorMessages>();
+        var errorMessageService = context.HttpContext.RequestServices.GetRequiredService<IErrorMessageService>();
 
-        var errorCode = alternativeErrorCode ?? context.Exception.Message;
-        var errorMessage = errorStringLocalizer[errorCode];
-
-        // Get localized error message for the exception message
-        if (!errorMessage.ResourceNotFound)
-        {
-            return $"({errorCode}) {errorStringLocalizer[errorCode]}";
-        }
-
-        return !string.IsNullOrWhiteSpace(context.Exception.Message) ?
-            context.Exception.Message : errorStringLocalizer[ErrorCodes.COMMON_ERROR];
+        return errorMessageService.GetErrorMessage(context.Exception, alternativeErrorCode);
     }
 }

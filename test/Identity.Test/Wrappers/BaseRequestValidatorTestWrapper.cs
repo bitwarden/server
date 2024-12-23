@@ -11,7 +11,6 @@ using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Identity.Test.Wrappers;
@@ -63,7 +62,7 @@ IBaseRequestValidatorTestWrapper
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IStringLocalizerFactory stringLocalizerFactory) :
+        IErrorMessageService errorMessageService) :
          base(
             userManager,
             userService,
@@ -80,7 +79,7 @@ IBaseRequestValidatorTestWrapper
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            stringLocalizerFactory)
+            errorMessageService)
     {
     }
 

@@ -16,7 +16,6 @@ using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Localization;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -46,7 +45,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand,
-        IStringLocalizerFactory stringLocalizerFactory)
+        IErrorMessageService errorMessageService)
         : base(
             userManager,
             userService,
@@ -63,7 +62,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder,
-            stringLocalizerFactory)
+            errorMessageService)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _assertWebAuthnLoginCredentialCommand = assertWebAuthnLoginCredentialCommand;
