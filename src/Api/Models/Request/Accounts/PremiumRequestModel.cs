@@ -17,8 +17,7 @@ public class PremiumRequestModel : IValidatableObject
 
     public bool Validate(GlobalSettings globalSettings)
     {
-        if (!(License == null && !globalSettings.SelfHosted) ||
-            (License != null && globalSettings.SelfHosted))
+        if (!(License == null && !globalSettings.SelfHosted))
         {
             return false;
         }
