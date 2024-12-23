@@ -21,7 +21,7 @@
     }
   },
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh",
-  "forwardPorts": [1080, 1433],
+  "forwardPorts": [1080, 1433, 3306, 5432, 10000, 10001, 10002],
   "portsAttributes": {
     "1080": {
       "label": "Mail Catcher",
@@ -29,6 +29,26 @@
     },
     "1433": {
       "label": "SQL Server",
+      "onAutoForward": "notify"
+    },
+    "3306": {
+      "label": "MySQL",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "notify"
+    },
+    "10000": {
+      "label": "Azurite Storage Blob",
+      "onAutoForward": "notify"
+    },
+    "10001": {
+      "label": "Azurite Storage Queue ",
+      "onAutoForward": "notify"
+    },
+    "10002": {
+      "label": "Azurite Storage Table",
       "onAutoForward": "notify"
     }
   }

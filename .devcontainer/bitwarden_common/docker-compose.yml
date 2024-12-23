@@ -7,6 +7,17 @@ services:
       - ../../:/workspace:cached
     # Overrides default command so things don't shut down after the process ends.
     command: sleep infinity
+    environment:
+      # Add environment variable to prevent interactive prompts during installation
+      DEBIAN_FRONTEND: noninteractive
+    # Add init script to install Node.js and npm
+    init: true
+    # Install specific Node.js and npm versions
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_MAJOR_VERSION: "16"
 
   bitwarden_mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
