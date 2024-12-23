@@ -25,4 +25,28 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
         var data = await query.Run(dbContext).ToListAsync();
         return data;
     }
+
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Vault.Entities.SecurityTask>> CreateManyAsync(
+        IEnumerable<Core.Vault.Entities.SecurityTask> tasks)
+    {
+        var tasksList = tasks?.ToList();
+        if (tasksList is null || tasksList.Count == 0)
+        {
+            return Array.Empty<SecurityTask>();
+        }
+
+        foreach (var task in tasksList)
+        {
+            task.SetNewId();
+        }
+
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entities = Mapper.Map<List<SecurityTask>>(tasksList);
+        await dbContext.AddRangeAsync(entities);
+        await dbContext.SaveChangesAsync();
+
+        return tasksList;
+    }
 }
