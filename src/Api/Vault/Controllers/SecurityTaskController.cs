@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.Services;
@@ -52,6 +53,13 @@ public class SecurityTaskController : Controller
     public async Task<IActionResult> Complete(Guid taskId)
     {
         await _markTaskAsCompleteCommand.CompleteAsync(taskId);
+        return NoContent();
+    }
+
+    [HttpPost("{orgId:guid}/bulk-create")]
+    public async Task<IActionResult> BulkCreateTasks(Guid orgId, [FromBody] BulkCreateSecurityTasksRequestModel model)
+    {
+
         return NoContent();
     }
 }
