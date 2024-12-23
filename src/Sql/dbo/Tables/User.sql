@@ -36,11 +36,12 @@
     [UsesKeyConnector]                 BIT              NOT NULL,
     [FailedLoginCount]                 INT              CONSTRAINT [D_User_FailedLoginCount] DEFAULT ((0)) NOT NULL,
     [LastFailedLoginDate]              DATETIME2 (7)    NULL,
-    [AvatarColor]                      VARCHAR(7)       NULL, 
+    [AvatarColor]                      VARCHAR(7)       NULL,
     [LastPasswordChangeDate]           DATETIME2 (7)    NULL,
     [LastKdfChangeDate]                DATETIME2 (7)    NULL,
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
     [LastEmailChangeDate]              DATETIME2 (7)    NULL,
+    [VerifyDevices]                    BIT              DEFAULT ((1)) NOT NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

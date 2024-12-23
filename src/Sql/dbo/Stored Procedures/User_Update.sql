@@ -40,7 +40,8 @@
     @LastPasswordChangeDate DATETIME2(7) = NULL,
     @LastKdfChangeDate DATETIME2(7) = NULL,
     @LastKeyRotationDate DATETIME2(7) = NULL,
-    @LastEmailChangeDate DATETIME2(7) = NULL
+    @LastEmailChangeDate DATETIME2(7) = NULL,
+    @VerifyDevices BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -88,7 +89,8 @@ BEGIN
         [LastPasswordChangeDate] = @LastPasswordChangeDate,
         [LastKdfChangeDate] = @LastKdfChangeDate,
         [LastKeyRotationDate] = @LastKeyRotationDate,
-        [LastEmailChangeDate] = @LastEmailChangeDate
+        [LastEmailChangeDate] = @LastEmailChangeDate,
+        [VerifyDevices] = @VerifyDevices
     WHERE
         [Id] = @Id
 END
