@@ -104,33 +104,9 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return organizationUser;
     }
 
-    private bool ValidateOrgUserInviteToken(string orgUserInviteToken, OrganizationUser orgUser)
-    {
-        return _orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUser);
-    }
-
     public async Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(string orgSsoIdentifier, User user, IUserService userService)
     {
         var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
-        if (org == null)
-        {
-            throw new BadRequestException("Organization invalid.");
-        }
-
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User not found within organization.");
-        }
-
-        return await AcceptOrgUserAsync(orgUser, user, userService);
-    }
-
-    public async Task<OrganizationUser> AcceptOrgUserByOrgIdAsync(Guid organizationId, User user, IUserService userService)
-    {
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization invalid.");
