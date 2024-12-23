@@ -38,9 +38,6 @@ BEGIN
             AND (
                 CU.[ReadOnly] = 0
                 OR CG.[ReadOnly] = 0
-            ) AND (
-                CU.[HidePasswords] = 0
-                OR CG.[HidePasswords] = 0
             )
     -- Insert new collection assignments
     INSERT INTO [dbo].[CollectionCipher] (
