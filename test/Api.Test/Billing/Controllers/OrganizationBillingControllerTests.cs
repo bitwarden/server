@@ -52,7 +52,7 @@ public class OrganizationBillingControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true, true, true, true, true));
+            .Returns(new OrganizationMetadata(true, true, true, true, true, true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
