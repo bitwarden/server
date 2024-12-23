@@ -51,7 +51,7 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
         await using var connection = new SqlConnection(ConnectionString);
 
         var results = await connection.ExecuteAsync(
-            $"[{Schema}].[SecurityTask_CreateMany]",
+            $"[{Schema}].[{Table}_CreateMany]",
             new { SecurityTasksInput = securityTasksTvp },
             commandType: CommandType.StoredProcedure);
 
