@@ -21,14 +21,11 @@
   <data name="0000" xml:space="preserve">
     <value>An error has occurred.</value>
   </data>
-  <data name="0002" xml:space="preserve">
-    <value>Organization not found.</value>
-  </data>
   <data name="0001" xml:space="preserve">
     <value>User not found.</value>
   </data>
-  <data name="0404" xml:space="preserve">
-    <value>Resource not found.</value>
+  <data name="0002" xml:space="preserve">
+    <value>Organization not found.</value>
   </data>
   <data name="0403" xml:space="preserve">
     <value>Invalid token.</value>
@@ -36,13 +33,16 @@
   <data name="0401" xml:space="preserve">
     <value>Unauthorized.</value>
   </data>
+  <data name="0404" xml:space="preserve">
+    <value>Resource not found.</value>
+  </data>
   <data name="0500" xml:space="preserve">
     <value>An unhandled server error has occurred.</value>
   </data>
-  <data name="1001" xml:space="preserve">
-    <value>Username or password is incorrect. Try again.</value>
-  </data>
   <data name="1003" xml:space="preserve">
     <value>Encryption key migration is required. Please log in to the web vault at</value>
+  </data>
+  <data name="1001" xml:space="preserve">
+    <value>Username or password is incorrect. Try again.</value>
   </data>
 </root>
