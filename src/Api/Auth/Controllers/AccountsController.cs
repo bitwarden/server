@@ -966,6 +966,14 @@ public class AccountsController : Controller
         }
     }
 
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
+    [AllowAnonymous]
+    [HttpPost("resend-new-device-otp")]
+    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificatioRequestModel request)
+    {
+        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+    }
+
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
     {
         var organizationManagingUser = await _userService.GetOrganizationsManagingUserAsync(userId);
