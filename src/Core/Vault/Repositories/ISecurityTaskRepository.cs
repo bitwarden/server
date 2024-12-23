@@ -17,7 +17,7 @@ public interface ISecurityTaskRepository : IRepository<SecurityTask, Guid>
     /// <summary>
     ///  Creates bulk security tasks for an organization.
     /// </summary>
-    /// <param name="tasks"></param>
-    /// <returns></returns>
+    /// <param name="tasks">Collection of tasks to create</param>
+    /// <returns>Collection of created security task IDs</returns>
     Task<ICollection<Guid>> CreateManyAsync(IEnumerable<SecurityTask> tasks);
 }
