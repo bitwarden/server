@@ -1,6 +1,6 @@
-﻿using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Vault.Models.Api;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.Vault.Models.Request;
 
 public class BulkCreateSecurityTasksRequestModel
 {
