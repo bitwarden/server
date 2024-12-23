@@ -107,6 +107,7 @@ public class OrganizationDomainRepositoryTests
         // Act
         var domains = await organizationDomainRepository.GetExpiredOrganizationDomainsAsync();
 
+        // Assert
         var expectedDomain2 = domains.FirstOrDefault(domain => domain.DomainName == organizationDomain.DomainName);
         Assert.Null(expectedDomain2);
     }
