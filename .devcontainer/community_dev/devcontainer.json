@@ -13,7 +13,11 @@
   "customizations": {
     "vscode": {
       "settings": {},
-      "features": {},
+      "features": {
+        "ghcr.io/devcontainers/features/node:1": {
+          "version": "16"
+        }
+      },
       "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
