@@ -1,11 +1,14 @@
 ﻿@using Bit.Admin.Enums;
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject Bit.Core.Services.IFeatureService FeatureService
 @inject IWebHostEnvironment HostingEnvironment
 @model UserEditModel
 @{
     ViewData["Title"] = "User: " + Model.User.Email;
 
     var canViewUserInformation = AccessControlService.UserHasPermission(Permission.User_UserInformation_View);
+    var canViewNewDeviceException = AccessControlService.UserHasPermission(Permission.User_UserInformation_View) &&
+                                    FeatureService.IsEnabled(Bit.Core.FeatureFlagKeys.NewDeviceVerification);
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.User_BillingInformation_View);
     var canViewGeneral = AccessControlService.UserHasPermission(Permission.User_GeneralDetails_View);
     var canViewPremium = AccessControlService.UserHasPermission(Permission.User_Premium_View);
@@ -32,7 +35,11 @@
                 // Premium
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
                 document.getElementById('@(nameof(Model.Premium))').checked = true;
+    using Stripe.Entitlements;
                 // Licensing
+    using Bit.Core;
+    using Stripe.Entitlements;
+                using Microsoft.Identity.Client.Extensibility;
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.PremiumExpirationDate))').value =
                     '@Model.OneYearExpirationDate';
@@ -47,13 +54,13 @@
 
                 if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
                     const url = '@(HostingEnvironment.IsDevelopment()
-                                     ? "https://dashboard.stripe.com/test"
-                                     : "https://dashboard.stripe.com")';
+                ? "https://dashboard.stripe.com/test"
+                    : "https://dashboard.stripe.com")';
                     window.open(`${url}/customers/${customerId.value}/`, '_blank');
                 } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
                     const url = '@(HostingEnvironment.IsDevelopment()
-                                     ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
-                                     : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
+                ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
+                    : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
                     window.open(`${url}/${customerId.value}`, '_blank');
                 }
             });
@@ -67,13 +74,13 @@
 
                 if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
                     const url = '@(HostingEnvironment.IsDevelopment() || HostingEnvironment.IsEnvironment("QA")
-                                     ? "https://dashboard.stripe.com/test"
-                                     : "https://dashboard.stripe.com")'
+                ? "https://dashboard.stripe.com/test"
+                    : "https://dashboard.stripe.com")'
                     window.open(`${url}/subscriptions/${subId.value}`, '_blank');
                 } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
                     const url = '@(HostingEnvironment.IsDevelopment() || HostingEnvironment.IsEnvironment("QA")
-                                     ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
-                                     : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
+                ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
+                    : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
                     window.open(`${url}/subscriptions/${subId.value}`, '_blank');
                 }
             });
@@ -88,11 +95,40 @@
     <h2>User Information</h2>
     @await Html.PartialAsync("_ViewInformation", Model.User)
 }
+@if (canViewNewDeviceException)
+{
+    <h2>New Device Verification </h2>
+    <dl class="row">
+        <dt class="col d-flex">
+            <form asp-action="ToggleNewDeviceVerification" asp-route-id="@Model.User.Id" method="post">
+                @if (Model.ActiveNewDeviceVerificationException)
+                {
+                    <p>Status: Bypassed</p>
+                    <button type="submit" class="btn btn-success" id="new-device-verification-exception">Require New
+                        Device Verification</button>
+                }
+                else
+                {
+                    <p>Status: Required</p>
+                    <button type="submit" class="btn btn-outline-danger" id="new-device-verification-exception">Bypass New
+                        Device Verification</button>
+                }
+            </form>
+
+        </dt>
+    </dl>
+}
 @if (canViewBillingInformation)
 {
     <h2>Billing Information</h2>
     @await Html.PartialAsync("_BillingInformation",
-        new BillingInformationModel { BillingInfo = Model.BillingInfo, BillingHistoryInfo = Model.BillingHistoryInfo, UserId = Model.User.Id, Entity = "User" })
+        new BillingInformationModel
+{
+    BillingInfo = Model.BillingInfo,
+    BillingHistoryInfo = Model.BillingHistoryInfo,
+    UserId = Model.User.Id,
+    Entity = "User"
+})
 }
 @if (canViewGeneral)
 {
@@ -109,7 +145,7 @@
         <label class="form-check-label" asp-for="EmailVerified"></label>
     </div>
 }
-    <form method="post" id="edit-form">
+<form method="post" id="edit-form">
     @if (canViewPremium)
     {
         <h2>Premium</h2>
@@ -139,54 +175,56 @@
             <div class="col-sm">
                 <div class="mb-3">
                     <label asp-for="PremiumExpirationDate" class="form-label"></label>
-                    <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate" readonly='@(!canEditLicensing)'>
+                    <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate"
+                        readonly='@(!canEditLicensing)'>
                 </div>
             </div>
         </div>
     }
-@if (canViewBilling)
-{
-    <h2>Billing</h2>
-    <div class="row">
-        <div class="col-md">
-            <div class="mb-3">
-                <label asp-for="Gateway" class="form-label"></label>
-                <select class="form-select" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
+    @if (canViewBilling)
+    {
+        <h2>Billing</h2>
+        <div class="row">
+            <div class="col-md">
+                <div class="mb-3">
+                    <label asp-for="Gateway" class="form-label"></label>
+                    <select class="form-select" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
                         asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                    <option value="">--</option>
-                </select>
+                        <option value="">--</option>
+                    </select>
+                </div>
             </div>
-        </div>
-        <div class="col-md">
-            <div class="mb-3">
-                <label asp-for="GatewayCustomerId" class="form-label"></label>
-                <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
-                    @if (canLaunchGateway)
-                    {
-                        <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                            <i class="fa fa-external-link"></i>
-                        </button>
-                    }
+            <div class="col-md">
+                <div class="mb-3">
+                    <label asp-for="GatewayCustomerId" class="form-label"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
+                        @if (canLaunchGateway)
+                        {
+                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="mb-3">
+                    <label asp-for="GatewaySubscriptionId" class="form-label"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId"
+                            readonly='@(!canEditBilling)'>
+                        @if (canLaunchGateway)
+                        {
+                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="col-md">
-            <div class="mb-3">
-                <label asp-for="GatewaySubscriptionId" class="form-label"></label>
-                <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
-                    @if (canLaunchGateway)
-                    {
-                        <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                            <i class="fa fa-external-link"></i>
-                        </button>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
-}
+    }
 </form>
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
