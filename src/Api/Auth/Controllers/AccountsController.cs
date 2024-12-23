@@ -666,8 +666,7 @@ public class AccountsController : Controller
             new TaxInfo
             {
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-                TaxIdNumber = model.TaxId
+                BillingAddressPostalCode = model.PostalCode
             });
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);

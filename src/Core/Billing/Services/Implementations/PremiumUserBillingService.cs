@@ -24,8 +24,7 @@ public class PremiumUserBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository,
-    ITaxService taxService) : IPremiumUserBillingService
+    IUserRepository userRepository) : IPremiumUserBillingService
 {
     public async Task Finalize(PremiumUserSale sale)
     {
@@ -122,25 +121,6 @@ public class PremiumUserBillingService(
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             }
         };
-
-        if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
-        {
-            var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
-                customerSetup.TaxInformation.TaxId);
-
-            if (taxIdType == null)
-            {
-                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
-                    customerSetup.TaxInformation.Country,
-                    customerSetup.TaxInformation.TaxId);
-                throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
-            }
-
-            customerCreateOptions.TaxIdData =
-            [
-                new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
-            ];
-        }
 
         var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
 
