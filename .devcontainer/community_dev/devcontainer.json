@@ -3,6 +3,11 @@
   "dockerComposeFile": "../../.devcontainer/bitwarden_common/docker-compose.yml",
   "service": "bitwarden_server",
   "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "16"
+    }
+  },
   "mounts": [
     {
       "source": "../../dev/.data/keys",
@@ -13,11 +18,6 @@
   "customizations": {
     "vscode": {
       "settings": {},
-      "features": {
-        "ghcr.io/devcontainers/features/node:1": {
-          "version": "16"
-        }
-      },
       "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
