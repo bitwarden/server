@@ -611,6 +611,7 @@ public static class ServiceCollectionExtensions
     public static void AddCoreLocalizationServices(this IServiceCollection services)
     {
         services.AddTransient<II18nService, I18nService>();
+        services.AddTransient<IErrorMessageService, ErrorMessageService>();
         services.AddLocalization(options => options.ResourcesPath = "Resources");
     }
 
