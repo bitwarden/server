@@ -97,6 +97,9 @@ public class Configuration
     [Description("Enable SCIM")]
     public bool EnableScim { get; set; } = false;
 
+    [Description("Disable random sleep when renewing a Let's Encrypt SSL certificate.")]
+    public bool LetsEncryptNoRandomSleepOnRenew { get; set; } = false;
+
     [YamlIgnore]
     public string Domain
     {
