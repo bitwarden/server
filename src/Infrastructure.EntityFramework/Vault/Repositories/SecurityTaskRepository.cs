@@ -42,7 +42,8 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        await dbContext.AddRangeAsync(tasksList);
+        var entities = Mapper.Map<List<SecurityTask>>(tasksList);
+        await dbContext.AddRangeAsync(entities);
         await dbContext.SaveChangesAsync();
 
         return tasksList.Select(t => t.Id).ToList();
