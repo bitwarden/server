@@ -12,6 +12,6 @@ public interface ICreateManyTasksCommand
     /// </summary>
     /// <param name="organizationId">The </param>
     /// <param name="tasks"></param>
-    /// <returns>Collection of created security task IDs</returns>
-    Task<ICollection<Guid>> CreateAsync(Guid organizationId, IEnumerable<SecurityTaskCreateRequest> tasks);
+    /// <returns>Collection of created security tasks</returns>
+    Task<ICollection<SecurityTask>> CreateAsync(Guid organizationId, IEnumerable<SecurityTaskCreateRequest> tasks);
 }

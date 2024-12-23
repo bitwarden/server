@@ -34,14 +34,14 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<SecurityTask> tasks)
+    public async Task<ICollection<SecurityTask>> CreateManyAsync(IEnumerable<SecurityTask> tasks)
     {
-        if (tasks?.Any() != true)
+        var tasksList = tasks?.ToList();
+        if (tasksList is null || tasksList.Count == 0)
         {
-            return Array.Empty<Guid>();
+            return Array.Empty<SecurityTask>();
         }
 
-        var tasksList = tasks.ToList();
         foreach (var task in tasksList)
         {
             task.SetNewId();
@@ -55,6 +55,6 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
             new { SecurityTasksInput = securityTasksTvp },
             commandType: CommandType.StoredProcedure);
 
-        return tasksList.Select(t => t.Id).ToList();
+        return tasksList;
     }
 }

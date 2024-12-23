@@ -28,7 +28,8 @@ public class CreateManyTasksCommand : ICreateManyTasksCommand
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Guid>> CreateAsync(Guid organizationId, IEnumerable<SecurityTaskCreateRequest> tasks)
+    public async Task<ICollection<SecurityTask>> CreateAsync(Guid organizationId,
+        IEnumerable<SecurityTaskCreateRequest> tasks)
     {
         if (!_currentContext.UserId.HasValue)
         {

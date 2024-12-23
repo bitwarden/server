@@ -27,14 +27,15 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
     }
 
     /// <inheritdoc />
-    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Vault.Entities.SecurityTask> tasks)
+    public async Task<ICollection<Core.Vault.Entities.SecurityTask>> CreateManyAsync(
+        IEnumerable<Core.Vault.Entities.SecurityTask> tasks)
     {
-        if (tasks?.Any() != true)
+        var tasksList = tasks?.ToList();
+        if (tasksList is null || tasksList.Count == 0)
         {
-            return Array.Empty<Guid>();
+            return Array.Empty<SecurityTask>();
         }
 
-        var tasksList = tasks.ToList();
         foreach (var task in tasksList)
         {
             task.SetNewId();
@@ -46,6 +47,6 @@ public class SecurityTaskRepository : Repository<Core.Vault.Entities.SecurityTas
         await dbContext.AddRangeAsync(entities);
         await dbContext.SaveChangesAsync();
 
-        return tasksList.Select(t => t.Id).ToList();
+        return tasksList;
     }
 }
