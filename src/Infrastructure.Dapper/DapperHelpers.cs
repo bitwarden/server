@@ -6,7 +6,6 @@ using System.Reflection;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Vault.Enums;
 using Dapper;
 
 #nullable enable
