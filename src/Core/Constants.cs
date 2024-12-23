@@ -180,18 +180,3 @@ public static class FeatureFlagKeys
         };
     }
 }
-
-public static class ErrorCodes
-{
-    public const string COMMON_ERROR = "0000";
-    public const string COMMON_USER_NOT_FOUND = "0001";
-    public const string COMMON_ORGANIZATION_NOT_FOUND = "0002";
-    public const string COMMON_UNAUTHORIZED = "0401";
-    public const string COMMON_INVALID_TOKEN = "0403";
-    public const string COMMON_RESOURCE_NOT_FOUND = "0404";
-    public const string COMMON_UNHANDLED_ERROR = "0500";
-
-    public const string IDENTITY_INVALID_USERNAME_OR_PASSWORD = "1001";
-    public const string IDENTITY_SSO_REQUIRED = "1002";
-    public const string IDENTITY_ENCRYPTION_KEY_MIGRATION_REQUIRED = "1003";
-}
