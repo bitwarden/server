@@ -302,6 +302,54 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<ICollection<OrganizationCipherPermission>>
+        GetCipherPermissionsForOrganizationAsync(Guid organizationId, Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherOrganizationPermissionsQuery(organizationId, userId).Run(dbContext);
+
+            ICollection<OrganizationCipherPermission> permissions;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                permissions = (await query.ToListAsync())
+                    .GroupBy(c => new { c.Id, c.OrganizationId })
+                    .Select(g => new OrganizationCipherPermission
+                    {
+                        Id = g.Key.Id,
+                        OrganizationId = g.Key.OrganizationId,
+                        Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                        Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.Id, p.OrganizationId }
+                    into g
+                                   select new OrganizationCipherPermission
+                                   {
+                                       Id = g.Key.Id,
+                                       OrganizationId = g.Key.OrganizationId,
+                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                                       ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                                       Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                                       Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                                       Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
+                                   };
+                permissions = await groupByQuery.ToListAsync();
+            }
+
+            return permissions;
+        }
+    }
+
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
