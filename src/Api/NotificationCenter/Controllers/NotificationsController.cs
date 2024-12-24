@@ -6,6 +6,8 @@ using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
+using Bit.Core.NotificationCenter.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,15 +20,24 @@ public class NotificationsController : Controller
     private readonly IGetNotificationStatusDetailsForUserQuery _getNotificationStatusDetailsForUserQuery;
     private readonly IMarkNotificationDeletedCommand _markNotificationDeletedCommand;
     private readonly IMarkNotificationReadCommand _markNotificationReadCommand;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly INotificationRepository _notificationRepository;
+    private readonly INotificationStatusRepository _notificationStatusRepository;
 
     public NotificationsController(
         IGetNotificationStatusDetailsForUserQuery getNotificationStatusDetailsForUserQuery,
         IMarkNotificationDeletedCommand markNotificationDeletedCommand,
-        IMarkNotificationReadCommand markNotificationReadCommand)
+        IMarkNotificationReadCommand markNotificationReadCommand,
+        IPushNotificationService pushNotificationService,
+        INotificationRepository notificationRepository,
+        INotificationStatusRepository notificationStatusRepository)
     {
         _getNotificationStatusDetailsForUserQuery = getNotificationStatusDetailsForUserQuery;
         _markNotificationDeletedCommand = markNotificationDeletedCommand;
         _markNotificationReadCommand = markNotificationReadCommand;
+        _pushNotificationService = pushNotificationService;
+        _notificationRepository = notificationRepository;
+        _notificationStatusRepository = notificationStatusRepository;
     }
 
     [HttpGet("")]
@@ -67,5 +78,22 @@ public class NotificationsController : Controller
     public async Task MarkAsReadAsync([FromRoute] Guid id)
     {
         await _markNotificationReadCommand.MarkReadAsync(id);
+    }
+
+    [HttpPatch("testing-push/{id}")]
+    public async Task TestingPush([FromRoute] Guid id)
+    {
+        var notification = await _notificationRepository.GetByIdAsync(id);
+
+        await _pushNotificationService.PushNotificationAsync(notification!);
+    }
+
+    [HttpPatch("testing-push/{id}/{userId}")]
+    public async Task TestingStatusPush([FromRoute] Guid id, [FromRoute] Guid userId)
+    {
+        var notification = await _notificationRepository.GetByIdAsync(id);
+        var notificationStatus = await _notificationStatusRepository.GetByNotificationIdAndUserIdAsync(id, userId);
+
+        await _pushNotificationService.PushNotificationStatusAsync(notification!, notificationStatus!);
     }
 }
