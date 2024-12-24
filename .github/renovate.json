@@ -105,6 +105,7 @@
         "Microsoft.EntityFrameworkCore.Relational",
         "Microsoft.EntityFrameworkCore.Sqlite",
         "Microsoft.EntityFrameworkCore.SqlServer",
+        "Microsoft.Extensions.Caching.Cosmos",
         "Microsoft.Extensions.Caching.SqlServer",
         "Microsoft.Extensions.Caching.StackExchangeRedis",
         "Npgsql.EntityFrameworkCore.PostgreSQL",
