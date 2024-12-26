@@ -37,7 +37,7 @@ public class AuthRequestRepositoryTests
         var adminApprovedExpiredAuthRequest = await authRequestRepository.CreateAsync(
             CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddDays(-6), true, CreateExpiredDate(_afterAdminApprovalExpiration)));
 
-        // An AdminApproval request that was rejected within it's allowed lifetime but has not gone past its expiration time, should be deleted.
+        // An AdminApproval request that was rejected within its allowed lifetime but has not gone past its expiration time, should be deleted.
         var adminRejectedExpiredAuthRequest = await authRequestRepository.CreateAsync(
             CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, CreateExpiredDate(_adminRequestExpiration), false, DateTime.UtcNow.AddHours(-1)));
 

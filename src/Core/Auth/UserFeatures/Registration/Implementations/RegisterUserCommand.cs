@@ -23,7 +23,6 @@ namespace Bit.Core.Auth.UserFeatures.Registration.Implementations;
 
 public class RegisterUserCommand : IRegisterUserCommand
 {
-
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;

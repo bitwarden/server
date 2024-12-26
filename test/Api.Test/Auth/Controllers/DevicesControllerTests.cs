@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -53,7 +54,7 @@ public class DevicesControllerTest
         var expirationTimeSpan = TimeSpan.FromMinutes(expirationMinutes);
 
         var authDateTimeResponse = new DateTime(2024, 12, 9, 12, 0, 0);
-        var devicesWithPendingAuthData = new List<DeviceAuthRequestResponseModel>
+        var devicesWithPendingAuthData = new List<DeviceAuthDetails>
         {
             new (
                 new Device
@@ -70,7 +71,7 @@ public class DevicesControllerTest
 
         _userServiceMock.GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns(userId);
         _globalSettingsMock.PasswordlessAuth.UserRequestExpiration.Returns(expirationTimeSpan);
-        _deviceRepositoryMock.GetManyByUserIdWithDeviceAuth(userId, expirationMinutes).Returns(devicesWithPendingAuthData);
+        _deviceRepositoryMock.GetManyByUserIdWithDeviceAuth(userId).Returns(devicesWithPendingAuthData);
 
         // Act
         var result = await _sut.Get();

@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.Utilities;
-using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
@@ -7,66 +7,31 @@ namespace Bit.Core.Auth.Models.Api.Response;
 
 public class DeviceAuthRequestResponseModel : ResponseModel
 {
-    public DeviceAuthRequestResponseModel(
-        Device device,
-        Guid authRequestId,
-        DateTime authRequestCreationDate)
-        : base("device")
+    public DeviceAuthRequestResponseModel()
+        : base("device") { }
+
+    public static DeviceAuthRequestResponseModel From(DeviceAuthDetails deviceAuthDetails)
     {
-        if (device == null)
+        var converted = new DeviceAuthRequestResponseModel
         {
-            throw new ArgumentNullException(nameof(device));
-        }
+            Id = deviceAuthDetails.Id,
+            Name = deviceAuthDetails.Name,
+            Type = deviceAuthDetails.Type,
+            Identifier = deviceAuthDetails.Identifier,
+            CreationDate = deviceAuthDetails.CreationDate,
+            IsTrusted = deviceAuthDetails.IsTrusted()
+        };
 
-        Id = device.Id;
-        Name = device.Name;
-        Type = device.Type;
-        Identifier = device.Identifier;
-        CreationDate = device.CreationDate;
-        IsTrusted = device.IsTrusted();
-        if (authRequestId != Guid.Empty && authRequestCreationDate != DateTime.MinValue)
+        if (deviceAuthDetails.AuthRequestId != null && deviceAuthDetails.AuthRequestCreatedAt != null)
         {
-            DevicePendingAuthRequest = new PendingAuthRequest { Id = authRequestId, CreationDate = authRequestCreationDate };
-        }
-    }
-
-    public DeviceAuthRequestResponseModel(
-        Guid id,
-        Guid userId,
-        string name,
-        short type,
-        string identifier,
-        string pushToken,
-        DateTime creationDate,
-        DateTime revisionDate,
-        string encryptedUserKey,
-        string encryptedPublicKey,
-        string encryptedPrivateKey,
-        bool active,
-        Guid authRequestId,
-        DateTime authRequestCreationDate)
-        : base("device")
-    {
-        Id = id;
-        Name = name;
-        Type = (DeviceType)type;
-        Identifier = identifier;
-        CreationDate = creationDate;
-        IsTrusted = new Device
-        {
-            EncryptedUserKey = encryptedUserKey,
-            EncryptedPublicKey = encryptedPublicKey,
-            EncryptedPrivateKey = encryptedPrivateKey,
-        }.IsTrusted();
-
-        if (authRequestId != Guid.Empty && authRequestCreationDate != DateTime.MinValue)
-        {
-            DevicePendingAuthRequest = new PendingAuthRequest
+            converted.DevicePendingAuthRequest = new PendingAuthRequest
             {
-                Id = authRequestId,
-                CreationDate = authRequestCreationDate,
+                Id = (Guid)deviceAuthDetails.AuthRequestId,
+                CreationDate = (DateTime)deviceAuthDetails.AuthRequestCreatedAt
             };
         }
+
+        return converted;
     }
 
     public Guid Id { get; set; }

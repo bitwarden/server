@@ -12,12 +12,10 @@ public class DeviceRepositoryTests
     [DatabaseTheory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_Works_ReturnsExpectedResults(
-        IDeviceRepository deviceRepository,
+        IDeviceRepository sutRepository,
         IUserRepository userRepository,
         IAuthRequestRepository authRequestRepository)
     {
-        const int expirationMinutes = 15;
-
         // Arrange
         var user = await userRepository.CreateAsync(new User
         {
@@ -27,7 +25,7 @@ public class DeviceRepositoryTests
             SecurityStamp = "stamp",
         });
 
-        var device = await deviceRepository.CreateAsync(new Device
+        var device = await sutRepository.CreateAsync(new Device
         {
             Active = true,
             Name = "chrome-test",
@@ -67,21 +65,20 @@ public class DeviceRepositoryTests
         });
 
         // Act
-        var response = await deviceRepository.GetManyByUserIdWithDeviceAuth(user.Id, expirationMinutes);
+        var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
 
         // Assert
-        Assert.NotNull(response.First().DevicePendingAuthRequest);
-        Assert.Equal(response.First().DevicePendingAuthRequest.Id, freshAuthRequest.Id);
+        Assert.NotNull(response.First().AuthRequestId);
+        Assert.NotNull(response.First().AuthRequestCreatedAt);
+        Assert.Equal(response.First().AuthRequestId, freshAuthRequest.Id);
     }
 
     [DatabaseTheory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequestAndMultipleDevices_ReturnsExpectedResults(
-        IDeviceRepository deviceRepository,
+        IDeviceRepository sutRepository,
         IUserRepository userRepository)
     {
-        const int expirationMinutes = 15;
-
         // Arrange
         var user = await userRepository.CreateAsync(new User
         {
@@ -91,7 +88,7 @@ public class DeviceRepositoryTests
             SecurityStamp = "stamp",
         });
 
-        await deviceRepository.CreateAsync(new Device
+        await sutRepository.CreateAsync(new Device
         {
             Active = true,
             Name = "chrome-test",
@@ -100,7 +97,7 @@ public class DeviceRepositoryTests
             Identifier = Guid.NewGuid().ToString(),
         });
 
-        await deviceRepository.CreateAsync(new Device
+        await sutRepository.CreateAsync(new Device
         {
             Active = true,
             Name = "macos-test",
@@ -110,18 +107,18 @@ public class DeviceRepositoryTests
         });
 
         // Act
-        var response = await deviceRepository.GetManyByUserIdWithDeviceAuth(user.Id, expirationMinutes);
+        var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
 
         // Assert
         Assert.NotNull(response.First());
-        Assert.Null(response.First().DevicePendingAuthRequest);
+        Assert.Null(response.First().AuthRequestId);
         Assert.True(response.Count == 2);
     }
 
     [DatabaseTheory]
     [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_FailsToRespondWithAnyAuthData_ReturnsExpectedResults(
-        IDeviceRepository deviceRepository,
+        IDeviceRepository sutRepository,
         IUserRepository userRepository,
         IAuthRequestRepository authRequestRepository)
     {
@@ -150,8 +147,6 @@ public class DeviceRepositoryTests
         foreach (var testCase in casesThatCauseNoAuthDataInResponse)
         {
             // Arrange
-            const int expirationMinutes = 15;
-
             var user = await userRepository.CreateAsync(new User
             {
                 Name = "Test User",
@@ -160,7 +155,7 @@ public class DeviceRepositoryTests
                 SecurityStamp = "stamp",
             });
 
-            var device = await deviceRepository.CreateAsync(new Device
+            var device = await sutRepository.CreateAsync(new Device
             {
                 Active = true,
                 Name = "chrome-test",
@@ -182,14 +177,15 @@ public class DeviceRepositoryTests
                 PublicKey = "PublicKey_1234"
             });
 
-            authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-30);
+            authRequest.CreationDate = testCase.expirey;
             await authRequestRepository.ReplaceAsync(authRequest);
 
             // Act
-            var response = await deviceRepository.GetManyByUserIdWithDeviceAuth(user.Id, expirationMinutes);
+            var response = await sutRepository.GetManyByUserIdWithDeviceAuth(user.Id);
 
             // Assert
-            Assert.Null(response.First().DevicePendingAuthRequest);
+            Assert.Null(response.First().AuthRequestId);
+            Assert.Null(response.First().AuthRequestCreatedAt);
         }
     }
 }

@@ -75,9 +75,14 @@ public class DevicesController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<DeviceAuthRequestResponseModel>> Get()
     {
-        var expirationMinutes = _globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
-        var devicesWithPendingAuthData = await _deviceRepository.GetManyByUserIdWithDeviceAuth(_userService.GetProperUserId(User).Value, (int)expirationMinutes);
-        var response = new ListResponseModel<DeviceAuthRequestResponseModel>(devicesWithPendingAuthData);
+        var devicesWithPendingAuthData = await _deviceRepository.GetManyByUserIdWithDeviceAuth(_userService.GetProperUserId(User).Value);
+
+        // Convert from DeviceAuthDetails to DeviceAuthRequestResponseModel
+        var deviceAuthRequestResponseList = devicesWithPendingAuthData
+            .Select(DeviceAuthRequestResponseModel.From)
+            .ToList();
+
+        var response = new ListResponseModel<DeviceAuthRequestResponseModel>(deviceAuthRequestResponseList);
         return response;
     }
 

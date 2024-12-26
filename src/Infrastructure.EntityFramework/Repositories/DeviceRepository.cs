@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
-using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -12,9 +13,17 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, IDeviceRepository
 {
-    public DeviceRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+    private readonly IGlobalSettings _globalSettings;
+
+    public DeviceRepository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        IGlobalSettings globalSettings
+        )
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Devices)
-    { }
+    {
+        _globalSettings = globalSettings;
+    }
 
     public async Task ClearPushTokenAsync(Guid id)
     {
@@ -72,8 +81,9 @@ public class DeviceRepository : Repository<Core.Entities.Device, Device, Guid>, 
         }
     }
 
-    public async Task<ICollection<DeviceAuthRequestResponseModel>> GetManyByUserIdWithDeviceAuth(Guid userId, int expirationMinutes)
+    public async Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId)
     {
+        var expirationMinutes = (int)_globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);

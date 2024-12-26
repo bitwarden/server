@@ -1,12 +1,12 @@
 ﻿using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.Models.Data;
 using Bit.Infrastructure.EntityFramework.Repositories;
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 
 public class DeviceWithPendingAuthByUserIdQuery
 {
-    public IQueryable<DeviceAuthRequestResponseModel> GetQuery(
+    public IQueryable<DeviceAuthDetails> GetQuery(
         DatabaseContext dbContext,
         Guid userId,
         int expirationMinutes)
@@ -28,14 +28,10 @@ public class DeviceWithPendingAuthByUserIdQuery
                     orderby authRequest.CreationDate descending
                     select authRequest
                 ).First()
-            }).Select(deviceWithAuthRequest => new DeviceAuthRequestResponseModel(
+            }).Select(deviceWithAuthRequest => new DeviceAuthDetails(
                 deviceWithAuthRequest.device,
-                deviceWithAuthRequest.authRequest != null
-                    ? deviceWithAuthRequest.authRequest.Id
-                    : Guid.Empty,
-                deviceWithAuthRequest.authRequest != null
-                    ? deviceWithAuthRequest.authRequest.CreationDate
-                    : DateTime.MinValue));
+                deviceWithAuthRequest.authRequest.Id,
+                deviceWithAuthRequest.authRequest.CreationDate));
 
         return devicesWithAuthQuery;
     }
