@@ -9,10 +9,7 @@ namespace Bit.Admin.Models;
 
 public class UserEditModel
 {
-    public UserEditModel()
-    {
-
-    }
+    public UserEditModel() { }
 
     public UserEditModel(
         User user,
@@ -20,9 +17,10 @@ public class UserEditModel
         IEnumerable<Cipher> ciphers,
         BillingInfo billingInfo,
         BillingHistoryInfo billingHistoryInfo,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        bool? claimedAccount)
     {
-        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers);
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount);
 
         BillingInfo = billingInfo;
         BillingHistoryInfo = billingHistoryInfo;

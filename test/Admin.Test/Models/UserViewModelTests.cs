@@ -1,7 +1,6 @@
-﻿#nullable enable
-
-using Bit.Admin.Models;
+﻿using Bit.Admin.Models;
 using Bit.Core.Entities;
+using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Admin.Test.Models;
@@ -79,7 +78,7 @@ public class UserViewModelTests
     {
         var lookup = new List<(Guid, bool)> { (user.Id, true) };
 
-        var actual = UserViewModel.MapViewModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup, false);
 
         Assert.True(actual.TwoFactorEnabled);
     }
@@ -90,7 +89,7 @@ public class UserViewModelTests
     {
         var lookup = new List<(Guid, bool)> { (user.Id, false) };
 
-        var actual = UserViewModel.MapViewModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup, false);
 
         Assert.False(actual.TwoFactorEnabled);
     }
@@ -101,8 +100,40 @@ public class UserViewModelTests
     {
         var lookup = new List<(Guid, bool)> { (Guid.NewGuid(), true) };
 
-        var actual = UserViewModel.MapViewModel(user, lookup);
+        var actual = UserViewModel.MapViewModel(user, lookup, false);
 
         Assert.False(actual.TwoFactorEnabled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_WithVerifiedDomain_ReturnsUserViewModel(User user)
+    {
+
+        var verifiedDomain = true;
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
+
+        Assert.True(actual.ClaimedAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_WithoutVerifiedDomain_ReturnsUserViewModel(User user)
+    {
+        var verifiedDomain = false;
+
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), verifiedDomain);
+
+        Assert.False(actual.ClaimedAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void MapUserViewModel_WithNullVerifiedDomain_ReturnsUserViewModel(User user)
+    {
+        var actual = UserViewModel.MapViewModel(user, true, Array.Empty<Cipher>(), null);
+
+        Assert.Null(actual.ClaimedAccount);
     }
 }

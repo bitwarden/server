@@ -1,4 +1,4 @@
-﻿@model UserViewModel
+@model UserViewModel
 <dl class="row">
     <dt class="col-sm-4 col-lg-3">Id</dt>
     <dd class="col-sm-8 col-lg-9"><code>@Model.Id</code></dd>
@@ -11,6 +11,12 @@
 
     <dt class="col-sm-4 col-lg-3">Email Verified</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.EmailVerified ? "Yes" : "No")</dd>
+
+    @if(Model.ClaimedAccount.HasValue)
+    {
+        <dt class="col-sm-4 col-lg-3">Claimed Account</dt>
+        <dd class="col-sm-8 col-lg-9">@(Model.ClaimedAccount.Value ? "Yes" : "No")</dd>
+    }
 
     <dt class="col-sm-4 col-lg-3">Using 2FA</dt>
     <dd class="col-sm-8 col-lg-9">@(Model.TwoFactorEnabled ? "Yes" : "No")</dd>

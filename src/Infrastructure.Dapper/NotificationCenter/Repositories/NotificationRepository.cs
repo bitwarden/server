@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System.Data;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
@@ -24,16 +25,35 @@ public class NotificationRepository : Repository<Notification, Guid>, INotificat
     {
     }
 
-    public async Task<IEnumerable<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId,
-        ClientType clientType, NotificationStatusFilter? statusFilter)
+    public async Task<PagedResult<NotificationStatusDetails>> GetByUserIdAndStatusAsync(Guid userId,
+        ClientType clientType, NotificationStatusFilter? statusFilter, PageOptions pageOptions)
     {
         await using var connection = new SqlConnection(ConnectionString);
 
+        if (!int.TryParse(pageOptions.ContinuationToken, out var pageNumber))
+        {
+            pageNumber = 1;
+        }
+
         var results = await connection.QueryAsync<NotificationStatusDetails>(
             "[dbo].[Notification_ReadByUserIdAndStatus]",
-            new { UserId = userId, ClientType = clientType, statusFilter?.Read, statusFilter?.Deleted },
+            new
+            {
+                UserId = userId,
+                ClientType = clientType,
+                statusFilter?.Read,
+                statusFilter?.Deleted,
+                PageNumber = pageNumber,
+                pageOptions.PageSize
+            },
             commandType: CommandType.StoredProcedure);
 
-        return results.ToList();
+        var data = results.ToList();
+
+        return new PagedResult<NotificationStatusDetails>
+        {
+            Data = data,
+            ContinuationToken = data.Count < pageOptions.PageSize ? null : (pageNumber + 1).ToString()
+        };
     }
 }

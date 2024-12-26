@@ -14,6 +14,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -281,34 +282,46 @@ public class ProvidersController : Controller
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
         }
 
         var providerPlans = await _providerPlanRepository.GetByProviderId(id);
 
-        if (providerPlans.Count == 0)
+        switch (provider.Type)
         {
-            var newProviderPlans = new List<ProviderPlan>
-            {
-                new () { ProviderId = provider.Id, PlanType = PlanType.TeamsMonthly, SeatMinimum = model.TeamsMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 },
-                new () { ProviderId = provider.Id, PlanType = PlanType.EnterpriseMonthly, SeatMinimum = model.EnterpriseMonthlySeatMinimum, PurchasedSeats = 0, AllocatedSeats = 0 }
-            };
+            case ProviderType.Msp:
+                var updateMspSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                    provider.Id,
+                    provider.GatewaySubscriptionId,
+                    [
+                        (Plan: PlanType.TeamsMonthly, SeatsMinimum: model.TeamsMonthlySeatMinimum),
+                        (Plan: PlanType.EnterpriseMonthly, SeatsMinimum: model.EnterpriseMonthlySeatMinimum)
+                    ]);
+                await _providerBillingService.UpdateSeatMinimums(updateMspSeatMinimumsCommand);
+                break;
+            case ProviderType.MultiOrganizationEnterprise:
+                {
+                    var existingMoePlan = providerPlans.Single();
 
-            foreach (var newProviderPlan in newProviderPlans)
-            {
-                await _providerPlanRepository.CreateAsync(newProviderPlan);
-            }
-        }
-        else
-        {
-            await _providerBillingService.UpdateSeatMinimums(
-                provider,
-                model.EnterpriseMonthlySeatMinimum,
-                model.TeamsMonthlySeatMinimum);
+                    // 1. Change the plan and take over any old values.
+                    var changeMoePlanCommand = new ChangeProviderPlanCommand(
+                        existingMoePlan.Id,
+                        model.Plan!.Value,
+                        provider.GatewaySubscriptionId);
+                    await _providerBillingService.ChangePlan(changeMoePlanCommand);
+
+                    // 2. Update the seat minimums.
+                    var updateMoeSeatMinimumsCommand = new UpdateProviderSeatMinimumsCommand(
+                        provider.Id,
+                        provider.GatewaySubscriptionId,
+                        [
+                            (Plan: model.Plan!.Value, SeatsMinimum: model.EnterpriseMinimumSeats!.Value)
+                        ]);
+                    await _providerBillingService.UpdateSeatMinimums(updateMoeSeatMinimumsCommand);
+                    break;
+                }
         }
 
         return RedirectToAction("Edit", new { id });
@@ -325,10 +338,7 @@ public class ProvidersController : Controller
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        if (!provider.IsBillable())
         {
             return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
         }

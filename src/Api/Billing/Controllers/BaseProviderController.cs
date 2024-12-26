@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
@@ -9,7 +8,6 @@ namespace Bit.Api.Billing.Controllers;
 
 public abstract class BaseProviderController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IProviderRepository providerRepository,
     IUserService userService) : BaseBillingController
@@ -26,15 +24,6 @@ public abstract class BaseProviderController(
         Guid providerId,
         Func<Guid, bool> checkAuthorization)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
-            logger.LogError(
-                "Cannot run Consolidated Billing operation for provider ({ProviderID}) while feature flag is disabled",
-                providerId);
-
-            return (null, Error.NotFound());
-        }
-
         var provider = await providerRepository.GetByIdAsync(providerId);
 
         if (provider == null)

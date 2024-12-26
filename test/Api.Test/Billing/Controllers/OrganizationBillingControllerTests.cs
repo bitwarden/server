@@ -37,7 +37,7 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId).Returns((OrganizationMetadata)null);
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
@@ -50,18 +50,21 @@ public class OrganizationBillingControllerTests
         Guid organizationId,
         SutProvider<OrganizationBillingController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessMembersTab(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(organizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationBillingService>().GetMetadata(organizationId)
-            .Returns(new OrganizationMetadata(true, true));
+            .Returns(new OrganizationMetadata(true, true, true, true, true));
 
         var result = await sutProvider.Sut.GetMetadataAsync(organizationId);
 
         Assert.IsType<Ok<OrganizationMetadataResponse>>(result);
 
-        var organizationMetadataResponse = ((Ok<OrganizationMetadataResponse>)result).Value;
+        var response = ((Ok<OrganizationMetadataResponse>)result).Value;
 
-        Assert.True(organizationMetadataResponse.IsEligibleForSelfHost);
-        Assert.True(organizationMetadataResponse.IsOnSecretsManagerStandalone);
+        Assert.True(response.IsEligibleForSelfHost);
+        Assert.True(response.IsManaged);
+        Assert.True(response.IsOnSecretsManagerStandalone);
+        Assert.True(response.IsSubscriptionUnpaid);
+        Assert.True(response.HasSubscription);
     }
 
     [Theory, BitAutoData]

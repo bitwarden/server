@@ -6,18 +6,18 @@
 
 <h1>Create Reseller Provider</h1>
 <div>
-    <form class="form-group" method="post" asp-action="CreateReseller">
+    <form class="mb-3" method="post" asp-action="CreateReseller">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
-        <div class="form-group">
-            <label asp-for="Name"></label>
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label"></label>
             <input type="text" class="form-control" asp-for="Name">
         </div>
-        <div class="form-group">
-            <label asp-for="BusinessName"></label>
+        <div class="mb-3">
+            <label asp-for="BusinessName" class="form-label"></label>
             <input type="text" class="form-control" asp-for="BusinessName">
         </div>
-        <div class="form-group">
-            <label asp-for="BillingEmail"></label>
+        <div class="mb-3">
+            <label asp-for="BillingEmail" class="form-label"></label>
             <input type="text" class="form-control" asp-for="BillingEmail">
         </div>
         <button type="submit" class="btn btn-primary mb-2">Create Provider</button>

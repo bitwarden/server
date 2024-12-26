@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
@@ -54,5 +55,20 @@ public class NoopLicensingService : ILicensingService
     public Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Guid organizationId)
     {
         return Task.FromResult<OrganizationLicense?>(null);
+    }
+
+    public ClaimsPrincipal GetClaimsPrincipalFromLicense(ILicense license)
+    {
+        return null;
+    }
+
+    public Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    {
+        return Task.FromResult<string>(null);
+    }
+
+    public Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo)
+    {
+        return Task.FromResult<string>(null);
     }
 }
