@@ -9,7 +9,6 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +24,6 @@ public class DevicesController : Controller
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IGlobalSettings _globalSettings;
     private readonly ILogger<DevicesController> _logger;
 
     public DevicesController(
@@ -34,7 +32,6 @@ public class DevicesController : Controller
         IUserService userService,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        IGlobalSettings globalSettings,
         ILogger<DevicesController> logger)
     {
         _deviceRepository = deviceRepository;
@@ -42,7 +39,6 @@ public class DevicesController : Controller
         _userService = userService;
         _userRepository = userRepository;
         _currentContext = currentContext;
-        _globalSettings = globalSettings;
         _logger = logger;
     }
 
