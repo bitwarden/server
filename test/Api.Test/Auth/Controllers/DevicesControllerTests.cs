@@ -32,7 +32,6 @@ public class DevicesControllerTest
         _userServiceMock = Substitute.For<IUserService>();
         _userRepositoryMock = Substitute.For<IUserRepository>();
         _currentContextMock = Substitute.For<ICurrentContext>();
-        _globalSettingsMock = Substitute.For<IGlobalSettings>();
         _loggerMock = Substitute.For<ILogger<DevicesController>>();
 
         _sut = new DevicesController(
@@ -41,7 +40,6 @@ public class DevicesControllerTest
             _userServiceMock,
             _userRepositoryMock,
             _currentContextMock,
-            _globalSettingsMock,
             _loggerMock);
     }
 
@@ -50,8 +48,6 @@ public class DevicesControllerTest
     {
         // Arrange
         var userId = Guid.Parse("AD89E6F8-4E84-4CFE-A978-256CC0DBF974");
-        int expirationMinutes = 30;
-        var expirationTimeSpan = TimeSpan.FromMinutes(expirationMinutes);
 
         var authDateTimeResponse = new DateTime(2024, 12, 9, 12, 0, 0);
         var devicesWithPendingAuthData = new List<DeviceAuthDetails>
@@ -70,7 +66,6 @@ public class DevicesControllerTest
         };
 
         _userServiceMock.GetProperUserId(Arg.Any<System.Security.Claims.ClaimsPrincipal>()).Returns(userId);
-        _globalSettingsMock.PasswordlessAuth.UserRequestExpiration.Returns(expirationTimeSpan);
         _deviceRepositoryMock.GetManyByUserIdWithDeviceAuth(userId).Returns(devicesWithPendingAuthData);
 
         // Act
