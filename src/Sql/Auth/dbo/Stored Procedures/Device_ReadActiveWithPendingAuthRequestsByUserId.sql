@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[Device_ReadActiveWithPendingAuthRequestsByUserId]
+CREATE PROCEDURE [dbo].[Device_ReadActiveWithPendingAuthRequestsByUserId]
     @UserId UNIQUEIDENTIFIER,
     @ExpirationMinutes INT
 AS
