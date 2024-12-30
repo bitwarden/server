@@ -637,6 +637,9 @@ jobs:
 
   trigger-ephemeral-environment-sync:
     needs: trigger-ee-updates
+    if: |
+      github.event_name == 'pull_request_target'
+      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
     with:
       ephemeral_env_branch: process.env.GITHUB_HEAD_REF
