@@ -150,7 +150,7 @@ public class OrganizationsController(
 
     [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -168,6 +168,10 @@ public class OrganizationsController(
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
 
         await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+
+        var userId = userService.GetProperUserId(User)!.Value;
+
+        return await GetProfileOrganizationResponseModelAsync(id, userId);
     }
 
     [HttpPost("{id:guid}/subscription")]
