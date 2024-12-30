@@ -928,18 +928,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         else
         {
-            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
-
-            if (deprecateStripeSourcesAPI)
-            {
-                var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
-                await _premiumUserBillingService.Finalize(sale);
-            }
-            else
-            {
-                paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
-                    paymentToken, additionalStorageGb, taxInfo);
-            }
+            var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
+            await _premiumUserBillingService.Finalize(sale);
         }
 
         user.Premium = true;
