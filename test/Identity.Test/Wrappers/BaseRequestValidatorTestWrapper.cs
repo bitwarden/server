@@ -123,6 +123,11 @@ IBaseRequestValidatorTestWrapper
         Dictionary<string, object> customResponse)
     { }
 
+    protected override void SetValidationErrorResult(
+        BaseRequestValidationContextFake context,
+        CustomValidatorRequestContext requestContext)
+    { }
+
     protected override Task<bool> ValidateContextAsync(
         BaseRequestValidationContextFake context,
         CustomValidatorRequestContext validatorContext)
