@@ -1,5 +1,6 @@
 ﻿using AspNetCoreRateLimit;
 using Bit.Core.Auth.Services;
+using Bit.Core.Billing.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Services;
@@ -245,6 +246,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             var stripePaymentService = services.First(sd => sd.ServiceType == typeof(IPaymentService));
             services.Remove(stripePaymentService);
             services.AddSingleton(Substitute.For<IPaymentService>());
+
+            var organizationBillingService =
+                services.First(sd => sd.ServiceType == typeof(IOrganizationBillingService));
+            services.Remove(organizationBillingService);
+            services.AddSingleton(Substitute.For<IOrganizationBillingService>());
         });
 
         foreach (var configureTestService in _configureTestServices)

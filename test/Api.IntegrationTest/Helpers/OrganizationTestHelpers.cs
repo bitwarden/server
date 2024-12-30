@@ -36,7 +36,13 @@ public static class OrganizationTestHelpers
             OwnerKey = ownerKey,
             Owner = owner,
             AdditionalSeats = passwordManagerSeats,
-            PaymentMethodType = paymentMethod
+            PaymentMethodType = paymentMethod,
+            PaymentToken = "TOKEN",
+            TaxInfo = new TaxInfo
+            {
+                BillingAddressCountry = "US",
+                BillingAddressPostalCode = "12345"
+            }
         });
 
         Debug.Assert(signUpResult.OrganizationUser is not null);
