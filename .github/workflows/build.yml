@@ -641,7 +641,7 @@ jobs:
       ephemeral_env_branch: process.env.GITHUB_HEAD_REF
       project: server
       sync_environment: true
-      pull_request_number: process.env.GITHUB_EVENT_NUMBER
+      pull_request_number: ${{ github.event.number }}
 
 
   check-failures:
