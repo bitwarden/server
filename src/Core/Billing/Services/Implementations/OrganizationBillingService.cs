@@ -83,7 +83,7 @@ public class OrganizationBillingService(
         var hasOpenInvoice = openInvoice.HasOpenInvoice;
         var invoiceDueDate = openInvoice.DueDate;
         var invoiceCreatedDate = openInvoice.CreatedDate;
-        var subPeriodEndDate = subscription.CurrentPeriodEnd;
+        var subPeriodEndDate = subscription?.CurrentPeriodEnd;
 
         return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
             isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
