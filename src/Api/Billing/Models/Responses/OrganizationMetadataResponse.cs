@@ -7,7 +7,8 @@ public record OrganizationMetadataResponse(
     bool IsManaged,
     bool IsOnSecretsManagerStandalone,
     bool IsSubscriptionUnpaid,
-    bool HasSubscription)
+    bool HasSubscription,
+    bool IsSubscriptionCanceled)
 {
     public static OrganizationMetadataResponse From(OrganizationMetadata metadata)
         => new(
@@ -15,5 +16,6 @@ public record OrganizationMetadataResponse(
             metadata.IsManaged,
             metadata.IsOnSecretsManagerStandalone,
             metadata.IsSubscriptionUnpaid,
-            metadata.HasSubscription);
+            metadata.HasSubscription,
+            metadata.IsSubscriptionCanceled);
 }

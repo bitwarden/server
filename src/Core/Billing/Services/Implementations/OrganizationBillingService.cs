@@ -28,7 +28,9 @@ public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IOrganizationBillingService
+    ISubscriberService subscriberService,
+    IPaymentService paymentService,
+    IFeatureService featureService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -68,7 +70,7 @@ public class OrganizationBillingService(
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
-                false, false);
+                false, false, false);
         }
 
         var customer = await subscriberService.GetCustomer(organization,
@@ -77,10 +79,11 @@ public class OrganizationBillingService(
         var subscription = await subscriberService.GetSubscription(organization);
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
         var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
+        var isSubscriptionCanceled = IsSubscriptionCanceled(subscription);
         var hasSubscription = true;
 
         return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid, hasSubscription);
+            isSubscriptionUnpaid, hasSubscription, isSubscriptionCanceled);
     }
 
     public async Task UpdatePaymentMethod(
@@ -391,6 +394,16 @@ public class OrganizationBillingService(
         }
 
         return subscription.Status == "unpaid";
+    }
+
+    private static bool IsSubscriptionCanceled(Subscription subscription)
+    {
+        if (subscription == null)
+        {
+            return false;
+        }
+
+        return subscription.Status == "canceled";
     }
 
 
