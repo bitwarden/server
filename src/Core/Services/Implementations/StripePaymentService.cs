@@ -159,11 +159,7 @@ public class StripePaymentService : IPaymentService
             customer = await _stripeAdapter.CustomerCreateAsync(customerCreateOptions);
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
-
-            if (CustomerHasTaxLocationVerified(customer))
-            {
-                subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-            }
+            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
 
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
@@ -344,13 +340,10 @@ public class StripePaymentService : IPaymentService
             customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
-
-        if (CustomerHasTaxLocationVerified(customer))
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade)
         {
-            subCreateOptions.DefaultTaxRates = [];
-            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
-        }
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+        };
 
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
@@ -509,6 +502,10 @@ public class StripePaymentService : IPaymentService
 
             var customerCreateOptions = new CustomerCreateOptions
             {
+                Tax = new CustomerTaxOptions
+                {
+                    ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+                },
                 Description = user.Name,
                 Email = user.Email,
                 Metadata = stripeCustomerMetadata,
@@ -546,6 +543,7 @@ public class StripePaymentService : IPaymentService
 
         var subCreateOptions = new SubscriptionCreateOptions
         {
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
             Customer = customer.Id,
             Items = [],
             Metadata = new Dictionary<string, string>
@@ -565,14 +563,8 @@ public class StripePaymentService : IPaymentService
             subCreateOptions.Items.Add(new SubscriptionItemOptions
             {
                 Plan = StoragePlanId,
-                Quantity = additionalStorageGb
+                Quantity = additionalStorageGb,
             });
-        }
-
-        if (CustomerHasTaxLocationVerified(customer))
-        {
-            subCreateOptions.DefaultTaxRates = [];
-            subCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
         var subscription = await ChargeForNewSubscriptionAsync(user, customer, createdStripeCustomer,
@@ -612,10 +604,7 @@ public class StripePaymentService : IPaymentService
                     SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items)
                 });
 
-                if (CustomerHasTaxLocationVerified(customer))
-                {
-                    previewInvoice.AutomaticTax = new InvoiceAutomaticTax { Enabled = true };
-                }
+                previewInvoice.AutomaticTax = new InvoiceAutomaticTax { Enabled = true };
 
                 if (previewInvoice.AmountDue > 0)
                 {
@@ -673,13 +662,11 @@ public class StripePaymentService : IPaymentService
                     Customer = customer.Id,
                     SubscriptionItems = ToInvoiceSubscriptionItemOptions(subCreateOptions.Items),
                     SubscriptionDefaultTaxRates = subCreateOptions.DefaultTaxRates,
+                    AutomaticTax = new InvoiceAutomaticTaxOptions
+                    {
+                        Enabled = true
+                    }
                 };
-
-                if (CustomerHasTaxLocationVerified(customer))
-                {
-                    upcomingInvoiceOptions.AutomaticTax = new InvoiceAutomaticTaxOptions { Enabled = true };
-                    upcomingInvoiceOptions.SubscriptionDefaultTaxRates = [];
-                }
 
                 var previewInvoice = await _stripeAdapter.InvoiceUpcomingAsync(upcomingInvoiceOptions);
 
@@ -799,19 +786,16 @@ public class StripePaymentService : IPaymentService
             Items = updatedItemOptions,
             ProrationBehavior = invoiceNow ? Constants.AlwaysInvoice : Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
-            CollectionMethod = "send_invoice"
+            CollectionMethod = "send_invoice",
+            AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled = true
+            }
         };
         if (!invoiceNow && isAnnualPlan && sub.Status.Trim() != "trialing")
         {
             subUpdateOptions.PendingInvoiceItemInterval =
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
-        }
-
-        if (sub.AutomaticTax.Enabled != true &&
-            CustomerHasTaxLocationVerified(sub.Customer))
-        {
-            subUpdateOptions.DefaultTaxRates = [];
-            subUpdateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
         }
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
@@ -1490,13 +1474,11 @@ public class StripePaymentService : IPaymentService
             if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId) &&
                 customer.Subscriptions.Any(sub =>
                     sub.Id == subscriber.GatewaySubscriptionId &&
-                    !sub.AutomaticTax.Enabled) &&
-                CustomerHasTaxLocationVerified(customer))
+                    !sub.AutomaticTax.Enabled))
             {
                 var subscriptionUpdateOptions = new SubscriptionUpdateOptions
                 {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                 };
 
                 _ = await _stripeAdapter.SubscriptionUpdateAsync(
@@ -1977,14 +1959,6 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Failed to retrieve current invoices", exception);
         }
     }
-
-    /// <summary>
-    /// Determines if a Stripe customer supports automatic tax
-    /// </summary>
-    /// <param name="customer"></param>
-    /// <returns></returns>
-    private static bool CustomerHasTaxLocationVerified(Customer customer) =>
-        customer?.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
     // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
