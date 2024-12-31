@@ -16,6 +16,7 @@ using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -41,6 +42,7 @@ public class BaseRequestValidatorTests
     private readonly IFeatureService _featureService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
+    private readonly IErrorMessageService _errorMessageService;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -61,6 +63,10 @@ public class BaseRequestValidatorTests
         _featureService = Substitute.For<IFeatureService>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _userDecryptionOptionsBuilder = Substitute.For<IUserDecryptionOptionsBuilder>();
+        var stringLocalizerFactory = new ResourceManagerStringLocalizerFactory(
+            Options.Create(new LocalizationOptions()),
+            Substitute.For<ILoggerFactory>());
+        _errorMessageService = new ErrorMessageService(stringLocalizerFactory);
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -77,7 +83,8 @@ public class BaseRequestValidatorTests
             _policyService,
             _featureService,
             _ssoConfigRepository,
-            _userDecryptionOptionsBuilder);
+            _userDecryptionOptionsBuilder,
+            _errorMessageService);
     }
 
     /* Logic path
@@ -107,7 +114,7 @@ public class BaseRequestValidatorTests
                            .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
                                              Core.Enums.EventType.User_FailedLogIn);
         Assert.True(context.GrantResult.IsError);
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+        Assert.Equal(_errorMessageService.GetErrorMessage(ErrorCode.IdentityInvalidUsernameOrPassword), errorResponse.Message);
     }
 
     /* Logic path
@@ -135,7 +142,7 @@ public class BaseRequestValidatorTests
         // Assert
         _logger.Received(1).LogWarning(Constants.BypassFiltersEventId, "Failed login attempt. ");
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+        Assert.Equal(_errorMessageService.GetErrorMessage(ErrorCode.IdentityInvalidUsernameOrPassword), errorResponse.Message);
     }
 
     /* Logic path
@@ -173,7 +180,7 @@ public class BaseRequestValidatorTests
                             Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
+        Assert.Equal(_errorMessageService.GetErrorMessage(ErrorCode.IdentityInvalidUsernameOrPassword), errorResponse.Message);
     }
 
     [Theory, BitAutoData]
@@ -273,7 +280,7 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        Assert.Equal("SSO authentication is required.", errorResponse.Message);
+        Assert.Equal(_errorMessageService.GetErrorMessage(ErrorCode.IdentitySsoRequired), errorResponse.Message);
     }
 
     // Test grantTypes where SSO would be required but the user is not in an
@@ -382,8 +389,8 @@ public class BaseRequestValidatorTests
         // Assert
         Assert.True(context.GrantResult.IsError);
         var errorResponse = (ErrorResponseModel)context.GrantResult.CustomResponse["ErrorModel"];
-        var expectedMessage = $"Encryption key migration is required. Please log in to the web " +
-                              $"vault at {_globalSettings.BaseServiceUri.VaultWithHash}";
+        var expectedMessage = $"{_errorMessageService.GetErrorMessage(ErrorCode.IdentityEncryptionKeyMigrationRequired)} " +
+                              $"{_globalSettings.BaseServiceUri.VaultWithHash}";
         Assert.Equal(expectedMessage, errorResponse.Message);
     }
 

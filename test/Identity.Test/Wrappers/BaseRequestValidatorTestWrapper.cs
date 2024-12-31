@@ -61,7 +61,8 @@ IBaseRequestValidatorTestWrapper
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder) :
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IErrorMessageService errorMessageService) :
          base(
             userManager,
             userService,
@@ -77,7 +78,8 @@ IBaseRequestValidatorTestWrapper
             policyService,
             featureService,
             ssoConfigRepository,
-            userDecryptionOptionsBuilder)
+            userDecryptionOptionsBuilder,
+            errorMessageService)
     {
     }
 

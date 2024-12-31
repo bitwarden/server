@@ -32,6 +32,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
+    private readonly IErrorMessageService _errorMessageService;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -55,7 +56,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IErrorMessageService errorMessageService)
     {
         _userManager = userManager;
         _userService = userService;
@@ -72,6 +74,8 @@ public abstract class BaseRequestValidator<T> where T : class
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
+
+        _errorMessageService = errorMessageService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -95,7 +99,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
             }
 
-            await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
+            await BuildErrorResultAsync(_errorMessageService.GetErrorMessage(ErrorCode.IdentityInvalidUsernameOrPassword), false, context, user);
             return;
         }
 
@@ -106,7 +110,7 @@ public abstract class BaseRequestValidator<T> where T : class
             SetSsoResult(context,
                 new Dictionary<string, object>
                 {
-                    { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
+                    { "ErrorModel", new ErrorResponseModel(_errorMessageService.GetErrorMessage(ErrorCode.IdentitySsoRequired)) }
                 });
             return;
         }
@@ -198,7 +202,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
     {
         await BuildErrorResultAsync(
-            $"Encryption key migration is required. Please log in to the web vault at {_globalSettings.BaseServiceUri.VaultWithHash}",
+            $"{_errorMessageService.GetErrorMessage(ErrorCode.IdentityEncryptionKeyMigrationRequired)} {_globalSettings.BaseServiceUri.VaultWithHash}",
             false, context, user);
     }
 
