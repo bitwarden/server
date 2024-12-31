@@ -1,2 +1,2 @@
 featureFlags:
-  generator-tools-modernization: false
+  generator-tools-modernization: true
