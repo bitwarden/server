@@ -38,7 +38,7 @@ public record Families2019Plan : Plan
             HasPremiumAccessOption = true;
 
             StripePlanId = "personal-org-annually";
-            StripeStoragePlanId = "storage-gb-annually";
+            StripeStoragePlanId = "storage-gb-for-personal-use-annually";
             StripePremiumAccessPlanId = "personal-org-premium-access-annually";
             BasePrice = 12;
             AdditionalStoragePricePerGb = 4;
