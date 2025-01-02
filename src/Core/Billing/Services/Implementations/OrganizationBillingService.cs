@@ -68,19 +68,25 @@ public class OrganizationBillingService(
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
-                false, false);
+                false, false, false, null, null, null);
         }
 
         var customer = await subscriberService.GetCustomer(organization,
             new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
 
         var subscription = await subscriberService.GetSubscription(organization);
+
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
         var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
         var hasSubscription = true;
+        var openInvoice = await HasOpenInvoiceAsync(subscription);
+        var hasOpenInvoice = openInvoice.HasOpenInvoice;
+        var invoiceDueDate = openInvoice.DueDate;
+        var invoiceCreatedDate = openInvoice.CreatedDate;
+        var subPeriodEndDate = subscription?.CurrentPeriodEnd;
 
         return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid, hasSubscription);
+            isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
     }
 
     public async Task UpdatePaymentMethod(
@@ -393,6 +399,18 @@ public class OrganizationBillingService(
         return subscription.Status == "unpaid";
     }
 
+    private async Task<(bool HasOpenInvoice, DateTime? CreatedDate, DateTime? DueDate)> HasOpenInvoiceAsync(Subscription subscription)
+    {
+        if (subscription?.LatestInvoiceId == null)
+        {
+            return (false, null, null);
+        }
 
+        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+
+        return invoice?.Status == "open"
+            ? (true, invoice.Created, invoice.DueDate)
+            : (false, null, null);
+    }
     #endregion
 }
