@@ -36,12 +36,23 @@ public class SubscriptionCancellationJob(
         var options = new InvoiceListOptions
         {
             Status = "open",
-            Subscription = subscriptionId
+            Subscription = subscriptionId,
+            Limit = 100
         };
         var invoices = await stripeFacade.ListInvoices(options);
         foreach (var invoice in invoices)
         {
             await stripeFacade.VoidInvoice(invoice.Id);
+        }
+
+        while (invoices.HasMore)
+        {
+            options.StartingAfter = invoices.Data.Last().Id;
+            invoices = await stripeFacade.ListInvoices(options);
+            foreach (var invoice in invoices)
+            {
+                await stripeFacade.VoidInvoice(invoice.Id);
+            }
         }
     }
 }
