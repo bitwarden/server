@@ -9,6 +9,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 using Stripe;
 
 namespace Bit.Billing;
@@ -100,6 +101,13 @@ public class Startup
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
         services.AddScoped<IProviderEventService, ProviderEventService>();
+
+        // Add Quartz services first
+        services.AddQuartz(q =>
+        {
+            q.UseMicrosoftDependencyInjectionJobFactory();
+        });
+        services.AddQuartzHostedService();
 
         // Jobs service
         Jobs.JobsHostedService.AddJobsServices(services);
