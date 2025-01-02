@@ -37,7 +37,7 @@ public record FamiliesPlan : Plan
             HasAdditionalStorageOption = true;
 
             StripePlanId = "2020-families-org-annually";
-            StripeStoragePlanId = "storage-gb-for-personal-use-annually";
+            StripeStoragePlanId = "personal-storage-gb-annually";
             BasePrice = 40;
             AdditionalStoragePricePerGb = 4;
 
