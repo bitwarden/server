@@ -290,7 +290,7 @@ public class ProviderBillingControllerTests
                 options.Expand.Contains("customer.tax_ids") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
-        var lastMonth = thisMonth - 1;
+        var lastMonth = DateTime.UtcNow.AddMonths(-1).Month;
         var daysInLastMonth = DateTime.DaysInMonth(thisYear, lastMonth);
 
         var overdueInvoice = new Invoice
