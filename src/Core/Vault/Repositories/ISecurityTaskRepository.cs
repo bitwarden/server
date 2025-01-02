@@ -13,4 +13,11 @@ public interface ISecurityTaskRepository : IRepository<SecurityTask, Guid>
     /// <param name="status">Optional filter for task status. If not provided, returns tasks of all statuses</param>
     /// <returns></returns>
     Task<ICollection<SecurityTask>> GetManyByUserIdStatusAsync(Guid userId, SecurityTaskStatus? status = null);
+
+    /// <summary>
+    ///  Creates bulk security tasks for an organization.
+    /// </summary>
+    /// <param name="tasks">Collection of tasks to create</param>
+    /// <returns>Collection of created security tasks</returns>
+    Task<ICollection<SecurityTask>> CreateManyAsync(IEnumerable<SecurityTask> tasks);
 }

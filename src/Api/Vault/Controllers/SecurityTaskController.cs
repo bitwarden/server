@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.Services;
@@ -19,15 +20,18 @@ public class SecurityTaskController : Controller
     private readonly IUserService _userService;
     private readonly IGetTaskDetailsForUserQuery _getTaskDetailsForUserQuery;
     private readonly IMarkTaskAsCompleteCommand _markTaskAsCompleteCommand;
+    private readonly ICreateManyTasksCommand _createManyTasksCommand;
 
     public SecurityTaskController(
         IUserService userService,
         IGetTaskDetailsForUserQuery getTaskDetailsForUserQuery,
-        IMarkTaskAsCompleteCommand markTaskAsCompleteCommand)
+        IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
+        ICreateManyTasksCommand createManyTasksCommand)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
         _markTaskAsCompleteCommand = markTaskAsCompleteCommand;
+        _createManyTasksCommand = createManyTasksCommand;
     }
 
     /// <summary>
@@ -53,5 +57,20 @@ public class SecurityTaskController : Controller
     {
         await _markTaskAsCompleteCommand.CompleteAsync(taskId);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Bulk create security tasks for an organization.
+    /// </summary>
+    /// <param name="orgId"></param>
+    /// <param name="model"></param>
+    /// <returns>A list response model containing the security tasks created for the organization.</returns>
+    [HttpPost("{orgId:guid}/bulk-create")]
+    public async Task<ListResponseModel<SecurityTasksResponseModel>> BulkCreateTasks(Guid orgId,
+        [FromBody] BulkCreateSecurityTasksRequestModel model)
+    {
+        var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
+        var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
+        return new ListResponseModel<SecurityTasksResponseModel>(response);
     }
 }
