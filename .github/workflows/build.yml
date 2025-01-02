@@ -636,6 +636,7 @@ jobs:
             })
 
   trigger-ephemeral-environment-sync:
+    name: Trigger Ephemeral Environment Sync
     needs: trigger-ee-updates
     if: |
       github.event_name == 'pull_request_target'
