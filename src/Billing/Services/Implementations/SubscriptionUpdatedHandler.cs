@@ -1,5 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
+using Bit.Core;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,6 +22,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IFeatureService _featureService;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -31,7 +33,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IUserService userService,
         IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
-        ISchedulerFactory schedulerFactory)
+        ISchedulerFactory schedulerFactory,
+        IFeatureService featureService)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -42,6 +45,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _pushNotificationService = pushNotificationService;
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -59,7 +63,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 when organizationId.HasValue:
                 {
                     await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
-                    if (subscription.Status == StripeSubscriptionStatus.Unpaid)
+                    var isResellerManagedOrgAlertEnabled =
+                        _featureService.IsEnabled(FeatureFlagKeys.ResellerManagedOrgAlert);
+                    if (subscription.Status == StripeSubscriptionStatus.Unpaid && isResellerManagedOrgAlertEnabled)
                     {
                         await ScheduleCancellationJobAsync(subscription.Id, organizationId.Value);
                     }
