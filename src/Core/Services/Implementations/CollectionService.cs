@@ -7,6 +7,8 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class CollectionService : ICollectionService
@@ -34,8 +36,8 @@ public class CollectionService : ICollectionService
         _currentContext = currentContext;
     }
 
-    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
-        IEnumerable<CollectionAccessSelection> users = null)
+    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection>? groups = null,
+        IEnumerable<CollectionAccessSelection>? users = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -116,7 +118,7 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value);
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 

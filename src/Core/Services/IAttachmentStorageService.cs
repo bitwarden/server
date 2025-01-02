@@ -2,6 +2,7 @@
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
+#nullable enable
 
 namespace Bit.Core.Services;
 

@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Exceptions;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class StripeSyncService : IStripeSyncService

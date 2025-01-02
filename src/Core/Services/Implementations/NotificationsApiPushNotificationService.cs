@@ -9,6 +9,8 @@ using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
@@ -49,7 +51,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -203,7 +205,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await SendAsync(HttpMethod.Post, "send", request);
     }
 
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
@@ -216,14 +218,14 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         // Noop
         return Task.FromResult(0);

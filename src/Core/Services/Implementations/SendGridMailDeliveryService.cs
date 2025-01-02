@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using SendGrid;
 using SendGrid.Helpers.Mail;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class SendGridMailDeliveryService : IMailDeliveryService, IDisposable

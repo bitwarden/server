@@ -513,8 +513,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups,
-        IEnumerable<CollectionAccessSelection> users)
+    public async Task ReplaceAsync(Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection>? groups,
+        IEnumerable<CollectionAccessSelection>? users)
     {
         await UpsertAsync(collection);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -690,8 +690,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
+    private static async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection>? groups)
     {
+        if (groups is null)
+        {
+            return;
+        }
+
         var existingCollectionGroups = await dbContext.CollectionGroups
             .Where(cg => cg.CollectionId == collection.Id)
             .ToDictionaryAsync(cg => cg.GroupId);
@@ -726,8 +731,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         // SaveChangesAsync is expected to be called outside this method
     }
 
-    private static async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> users)
+    private static async Task ReplaceCollectionUsersAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection>? users)
     {
+        if (users is null)
+        {
+            return;
+        }
+
         var existingCollectionUsers = await dbContext.CollectionUsers
             .Where(cu => cu.CollectionId == collection.Id)
             .ToDictionaryAsync(cu => cu.OrganizationUserId);

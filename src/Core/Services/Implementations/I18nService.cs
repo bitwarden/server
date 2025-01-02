@@ -2,6 +2,8 @@
 using Bit.Core.Resources;
 using Microsoft.Extensions.Localization;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class I18nService : II18nService
@@ -10,8 +12,8 @@ public class I18nService : II18nService
 
     public I18nService(IStringLocalizerFactory factory)
     {
-        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
-        _localizer = factory.Create("SharedResources", assemblyName.Name);
+        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName!);
+        _localizer = factory.Create("SharedResources", assemblyName.Name!);
     }
 
     public LocalizedString GetLocalizedHtmlString(string key)

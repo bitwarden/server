@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Services;
+﻿#nullable enable
+
+namespace Bit.Core.Services;
 
 public interface IStripeSyncService
 {

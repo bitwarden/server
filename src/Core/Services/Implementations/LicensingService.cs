@@ -18,6 +18,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class LicensingService : ILicensingService
@@ -141,7 +143,7 @@ public class LicensingService : ILicensingService
         }
     }
 
-    private async Task DisableOrganizationAsync(Organization org, ILicense license, string reason)
+    private async Task DisableOrganizationAsync(Organization org, ILicense? license, string reason)
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, null,
             "Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
@@ -232,7 +234,7 @@ public class LicensingService : ILicensingService
         return true;
     }
 
-    private async Task DisablePremiumAsync(User user, ILicense license, string reason)
+    private async Task DisablePremiumAsync(User user, ILicense? license, string reason)
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, null,
             "User {0}({1}) has an invalid license and premium is being disabled. Reason: {2}",
@@ -275,7 +277,7 @@ public class LicensingService : ILicensingService
         return license.Sign(_certificate);
     }
 
-    private UserLicense ReadUserLicense(User user)
+    private UserLicense? ReadUserLicense(User user)
     {
         var filePath = $"{_globalSettings.LicenseDirectory}/user/{user.Id}.json";
         if (!File.Exists(filePath))
@@ -287,9 +289,9 @@ public class LicensingService : ILicensingService
         return JsonSerializer.Deserialize<UserLicense>(data);
     }
 
-    public Task<OrganizationLicense> ReadOrganizationLicenseAsync(Organization organization) =>
+    public Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Organization organization) =>
         ReadOrganizationLicenseAsync(organization.Id);
-    public async Task<OrganizationLicense> ReadOrganizationLicenseAsync(Guid organizationId)
+    public async Task<OrganizationLicense?> ReadOrganizationLicenseAsync(Guid organizationId)
     {
         var filePath = Path.Combine(_globalSettings.LicenseDirectory, "organization", $"{organizationId}.json");
         if (!File.Exists(filePath))

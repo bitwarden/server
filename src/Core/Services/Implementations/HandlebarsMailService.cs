@@ -16,6 +16,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using HandlebarsDotNet;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class HandlebarsMailService : IMailService
@@ -204,7 +206,7 @@ public class HandlebarsMailService : IMailService
         {
             OrganizationId = organization.Id,
             InitialSeatCount = initialSeatCount,
-            CurrentSeatCount = organization.Seats.Value,
+            CurrentSeatCount = organization.Seats!.Value,
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
@@ -275,7 +277,7 @@ public class HandlebarsMailService : IMailService
 
             var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
                 orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
-            return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
+            return CreateMessage(orgUserTokenPair.OrgUser.Email!, orgUserInviteViewModel);
         });
 
         await EnqueueMailAsync(messageModels);
@@ -434,7 +436,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
+    public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null)
     {
         var message = CreateDefaultMessage("License Expired", emails);
         var model = new LicenseExpiredViewModel();
@@ -584,12 +586,14 @@ public class HandlebarsMailService : IMailService
     }
 
     private async Task AddMessageContentAsync<T>(MailMessage message, string templateName, T model)
+        where T : notnull
     {
         message.HtmlContent = await RenderAsync($"{templateName}.html", model);
         message.TextContent = await RenderAsync($"{templateName}.text", model);
     }
 
-    private async Task<string> RenderAsync<T>(string templateName, T model)
+    private async Task<string?> RenderAsync<T>(string templateName, T model)
+        where T : notnull
     {
         await RegisterHelpersAndPartialsAsync();
         if (!_templateCache.TryGetValue(templateName, out var template))
@@ -604,7 +608,7 @@ public class HandlebarsMailService : IMailService
         return template != null ? template(model) : null;
     }
 
-    private async Task<string> ReadSourceAsync(string templateName)
+    private async Task<string?> ReadSourceAsync(string templateName)
     {
         var assembly = typeof(HandlebarsMailService).GetTypeInfo().Assembly;
         var fullTemplateName = $"{Namespace}.{templateName}.hbs";
@@ -613,7 +617,7 @@ public class HandlebarsMailService : IMailService
             return null;
         }
         using (var s = assembly.GetManifestResourceStream(fullTemplateName))
-        using (var sr = new StreamReader(s))
+        using (var sr = new StreamReader(s!))
         {
             return await sr.ReadToEndAsync();
         }
@@ -1173,4 +1177,3 @@ public class HandlebarsMailService : IMailService
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
 }
-

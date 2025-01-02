@@ -16,6 +16,8 @@ using PaymentMethod = Stripe.PaymentMethod;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class StripePaymentService : IPaymentService
@@ -51,14 +53,14 @@ public class StripePaymentService : IPaymentService
         _featureService = featureService;
     }
 
-    public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
+    public async Task<string?> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
         int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
         int additionalSmSeats = 0, int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false)
     {
-        Braintree.Customer braintreeCustomer = null;
-        string stipeCustomerSourceToken = null;
-        string stipeCustomerPaymentMethodId = null;
+        Braintree.Customer? braintreeCustomer = null;
+        string? stipeCustomerSourceToken = null;
+        string? stipeCustomerPaymentMethodId = null;
         var stripeCustomerMetadata = new Dictionary<string, string>
         {
             { "region", _globalSettings.BaseServiceUri.CloudRegion }
@@ -108,7 +110,7 @@ public class StripePaymentService : IPaymentService
         var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
         , additionalSmSeats, additionalServiceAccount);
 
-        Customer customer = null;
+        Customer? customer = null;
         Subscription subscription;
         try
         {
@@ -291,7 +293,7 @@ public class StripePaymentService : IPaymentService
 
         await FinalizeSubscriptionChangeAsync(org, subscriptionUpdate, true);
 
-        var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+        var sub = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId!);
         org.ExpirationDate = sub.CurrentPeriodEnd;
 
         if (sponsorship is not null)
@@ -306,7 +308,7 @@ public class StripePaymentService : IPaymentService
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
-    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
+    public async Task<string?> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
         OrganizationUpgrade upgrade)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
@@ -318,7 +320,7 @@ public class StripePaymentService : IPaymentService
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
         customerOptions.AddExpand("tax");
-        var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId, customerOptions);
+        var customer = await _stripeAdapter.CustomerGetAsync(org.GatewayCustomerId!, customerOptions);
         if (customer == null)
         {
             throw new GatewayException("Could not find customer payment profile.");
@@ -341,7 +343,7 @@ public class StripePaymentService : IPaymentService
             customerUpdateOptions.AddExpand("default_source");
             customerUpdateOptions.AddExpand("invoice_settings.default_payment_method");
             customerUpdateOptions.AddExpand("tax");
-            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId, customerUpdateOptions);
+            customer = await _stripeAdapter.CustomerUpdateAsync(org.GatewayCustomerId!, customerUpdateOptions);
         }
 
         var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
@@ -416,7 +418,7 @@ public class StripePaymentService : IPaymentService
         return (stripePaymentMethod, paymentMethodType);
     }
 
-    public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
+    public async Task<string?> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
         string paymentToken, short additionalStorageGb, TaxInfo taxInfo)
     {
         if (paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
@@ -434,13 +436,13 @@ public class StripePaymentService : IPaymentService
         }
 
         var createdStripeCustomer = false;
-        Customer customer = null;
-        Braintree.Customer braintreeCustomer = null;
+        Customer? customer = null;
+        Braintree.Customer? braintreeCustomer = null;
         var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount
             or PaymentMethodType.Credit;
 
-        string stipeCustomerPaymentMethodId = null;
-        string stipeCustomerSourceToken = null;
+        string? stipeCustomerPaymentMethodId = null;
+        string? stipeCustomerSourceToken = null;
         if (stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
         {
             if (paymentToken.StartsWith("pm_"))
@@ -595,13 +597,13 @@ public class StripePaymentService : IPaymentService
 
     private async Task<Subscription> ChargeForNewSubscriptionAsync(ISubscriber subscriber, Customer customer,
         bool createdStripeCustomer, bool stripePaymentMethod, PaymentMethodType paymentMethodType,
-        SubscriptionCreateOptions subCreateOptions, Braintree.Customer braintreeCustomer)
+        SubscriptionCreateOptions subCreateOptions, Braintree.Customer? braintreeCustomer)
     {
         var addedCreditToStripeCustomer = false;
-        Braintree.Transaction braintreeTransaction = null;
+        Braintree.Transaction? braintreeTransaction = null;
 
         var subInvoiceMetadata = new Dictionary<string, string>();
-        Subscription subscription = null;
+        Subscription? subscription = null;
         try
         {
             if (!stripePaymentMethod)
@@ -770,14 +772,14 @@ public class StripePaymentService : IPaymentService
         }).ToList();
     }
 
-    private async Task<string> FinalizeSubscriptionChangeAsync(ISubscriber subscriber,
+    private async Task<string?> FinalizeSubscriptionChangeAsync(ISubscriber subscriber,
         SubscriptionUpdate subscriptionUpdate, bool invoiceNow = false)
     {
         // remember, when in doubt, throw
         var subGetOptions = new SubscriptionGetOptions();
         // subGetOptions.AddExpand("customer");
         subGetOptions.AddExpand("customer.tax");
-        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId, subGetOptions);
+        var sub = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId!, subGetOptions);
         if (sub == null)
         {
             throw new GatewayException("Subscription not found.");
@@ -792,7 +794,7 @@ public class StripePaymentService : IPaymentService
         var daysUntilDue = sub.DaysUntilDue;
         var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
-        var isAnnualPlan = sub?.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
+        var isAnnualPlan = sub.Items?.Data.FirstOrDefault()?.Plan?.Interval == "year";
 
         var subUpdateOptions = new SubscriptionUpdateOptions
         {
@@ -820,12 +822,12 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        string paymentIntentClientSecret = null;
+        string? paymentIntentClientSecret = null;
         try
         {
             var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
 
-            var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new InvoiceGetOptions());
+            var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId!, new InvoiceGetOptions());
             if (invoice == null)
             {
                 throw new BadRequestException("Unable to locate draft invoice for subscription update.");
@@ -844,7 +846,7 @@ public class StripePaymentService : IPaymentService
                         }
                         else
                         {
-                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId,
+                            invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse!.LatestInvoiceId,
                                 new InvoiceFinalizeOptions { AutoAdvance = false, });
                             await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new InvoiceSendOptions());
                             paymentIntentClientSecret = null;
@@ -869,7 +871,7 @@ public class StripePaymentService : IPaymentService
             else if (!invoice.Paid)
             {
                 // Pay invoice with no charge to customer this completes the invoice immediately without waiting the scheduled 1h
-                invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
+                invoice = await _stripeAdapter.InvoicePayAsync(subResponse!.LatestInvoiceId);
                 paymentIntentClientSecret = null;
             }
 
@@ -890,7 +892,7 @@ public class StripePaymentService : IPaymentService
         return paymentIntentClientSecret;
     }
 
-    public Task<string> AdjustSubscription(
+    public Task<string?> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
         int newlyPurchasedPasswordManagerSeats,
@@ -913,10 +915,10 @@ public class StripePaymentService : IPaymentService
                     PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
                 }), true);
 
-    public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+    public Task<string?> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
 
-    public Task<string> AdjustSeats(
+    public Task<string?> AdjustSeats(
         Provider provider,
         StaticStore.Plan plan,
         int currentlySubscribedSeats,
@@ -928,12 +930,12 @@ public class StripePaymentService : IPaymentService
                 currentlySubscribedSeats,
                 newlySubscribedSeats));
 
-    public Task<string> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
+    public Task<string?> AdjustSmSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(
             organization,
             new SmSeatSubscriptionUpdate(organization, plan, additionalSeats));
 
-    public Task<string> AdjustServiceAccountsAsync(
+    public Task<string?> AdjustServiceAccountsAsync(
         Organization organization,
         StaticStore.Plan plan,
         int additionalServiceAccounts) =>
@@ -941,7 +943,7 @@ public class StripePaymentService : IPaymentService
             organization,
             new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts));
 
-    public Task<string> AdjustStorageAsync(
+    public Task<string?> AdjustStorageAsync(
         IStorableSubscriber storableSubscriber,
         int additionalStorage,
         string storagePlanId)
@@ -978,7 +980,7 @@ public class StripePaymentService : IPaymentService
 
             if ((transactions?.MaximumCount ?? 0) > 0)
             {
-                var txs = transactions.Cast<Braintree.Transaction>().Where(c => c.RefundedTransactionId == null);
+                var txs = transactions!.Cast<Braintree.Transaction>().Where(c => c.RefundedTransactionId == null);
                 foreach (var transaction in txs)
                 {
                     await _btGateway.Transaction.RefundAsync(transaction.Id);
@@ -1006,18 +1008,18 @@ public class StripePaymentService : IPaymentService
         await _stripeAdapter.CustomerDeleteAsync(subscriber.GatewayCustomerId);
     }
 
-    public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, Invoice invoice)
+    public async Task<string?> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, Invoice invoice)
     {
         var customerOptions = new CustomerGetOptions();
         customerOptions.AddExpand("default_source");
         customerOptions.AddExpand("invoice_settings.default_payment_method");
-        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId!, customerOptions);
 
-        string paymentIntentClientSecret = null;
+        string? paymentIntentClientSecret = null;
 
         // Invoice them and pay now instead of waiting until Stripe does this automatically.
 
-        string cardPaymentMethodId = null;
+        string? cardPaymentMethodId = null;
         if (!customer.Metadata.ContainsKey("btCustomerId"))
         {
             var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
@@ -1046,7 +1048,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        Braintree.Transaction braintreeTransaction = null;
+        Braintree.Transaction? braintreeTransaction = null;
         try
         {
             // Finalize the invoice (from Draft) w/o auto-advance so we
@@ -1144,7 +1146,7 @@ public class StripePaymentService : IPaymentService
                     // Customer had a balance applied to this invoice. Since we can't fully trust Stripe to
                     //  credit it back to the customer (even though their docs claim they will), we need to
                     //  check that balance against the current customer balance and determine if it needs to be re-applied
-                    customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+                    customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId!, customerOptions);
 
                     // Assumption: Customer balance should now be $0, otherwise payment would not have failed.
                     if (customer.Balance == 0)
@@ -1247,7 +1249,7 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
-        string paymentToken, TaxInfo taxInfo = null)
+        string paymentToken, TaxInfo? taxInfo = null)
     {
         if (subscriber == null)
         {
@@ -1261,16 +1263,16 @@ public class StripePaymentService : IPaymentService
         }
 
         var createdCustomer = false;
-        Braintree.Customer braintreeCustomer = null;
-        string stipeCustomerSourceToken = null;
-        string stipeCustomerPaymentMethodId = null;
-        var stripeCustomerMetadata = new Dictionary<string, string>
+        Braintree.Customer? braintreeCustomer = null;
+        string? stipeCustomerSourceToken = null;
+        string? stipeCustomerPaymentMethodId = null;
+        var stripeCustomerMetadata = new Dictionary<string, string?>
         {
             { "region", _globalSettings.BaseServiceUri.CloudRegion }
         };
         var stripePaymentMethod = paymentMethodType is PaymentMethodType.Card or PaymentMethodType.BankAccount;
 
-        Customer customer = null;
+        Customer? customer = null;
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
@@ -1413,8 +1415,8 @@ public class StripePaymentService : IPaymentService
 
             if (!createdCustomer)
             {
-                string defaultSourceId = null;
-                string defaultPaymentMethodId = null;
+                string? defaultSourceId = null;
+                string? defaultPaymentMethodId = null;
                 if (stripePaymentMethod)
                 {
                     if (!string.IsNullOrWhiteSpace(stipeCustomerSourceToken) && paymentToken.StartsWith("btok_"))
@@ -1518,12 +1520,12 @@ public class StripePaymentService : IPaymentService
 
     public async Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount)
     {
-        Customer customer = null;
+        Customer? customer = null;
         var customerExists = subscriber.Gateway == GatewayType.Stripe &&
             !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId);
         if (customerExists)
         {
-            customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
+            customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId!);
         }
         else
         {
@@ -1631,7 +1633,7 @@ public class StripePaymentService : IPaymentService
         return subscriptionInfo;
     }
 
-    public async Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber)
+    public async Task<TaxInfo?> GetTaxInfoAsync(ISubscriber subscriber)
     {
         if (subscriber == null || string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
@@ -1751,7 +1753,7 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    public async Task<string> AddSecretsManagerToSubscription(
+    public async Task<string?> AddSecretsManagerToSubscription(
         Organization org,
         StaticStore.Plan plan,
         int additionalSmSeats,
@@ -1835,19 +1837,19 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    private PaymentMethod GetLatestCardPaymentMethod(string customerId)
+    private PaymentMethod? GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
             new PaymentMethodListOptions { Customer = customerId, Type = "card" });
         return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
     }
 
-    private decimal GetBillingBalance(Customer customer)
+    private decimal GetBillingBalance(Customer? customer)
     {
         return customer != null ? customer.Balance / 100M : default;
     }
 
-    private async Task<BillingInfo.BillingSource> GetBillingPaymentSourceAsync(Customer customer)
+    private async Task<BillingInfo.BillingSource?> GetBillingPaymentSourceAsync(Customer? customer)
     {
         if (customer == null)
         {
@@ -1893,14 +1895,14 @@ public class StripePaymentService : IPaymentService
         return customerOptions;
     }
 
-    private async Task<Customer> GetCustomerAsync(string gatewayCustomerId, CustomerGetOptions options = null)
+    private async Task<Customer?> GetCustomerAsync(string? gatewayCustomerId, CustomerGetOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
             return null;
         }
 
-        Customer customer = null;
+        Customer? customer = null;
         try
         {
             customer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId, options);
@@ -1910,7 +1912,7 @@ public class StripePaymentService : IPaymentService
         return customer;
     }
 
-    private async Task<IEnumerable<BillingHistoryInfo.BillingTransaction>> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
+    private async Task<IEnumerable<BillingHistoryInfo.BillingTransaction>?> GetBillingTransactionsAsync(ISubscriber subscriber, int? limit = null)
     {
         var transactions = subscriber switch
         {
@@ -1923,7 +1925,7 @@ public class StripePaymentService : IPaymentService
             .Select(t => new BillingHistoryInfo.BillingTransaction(t));
     }
 
-    private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>> GetBillingInvoicesAsync(Customer customer,
+    private async Task<IEnumerable<BillingHistoryInfo.BillingInvoice>?> GetBillingInvoicesAsync(Customer? customer,
         int? limit = null)
     {
         if (customer == null)
@@ -1988,7 +1990,7 @@ public class StripePaymentService : IPaymentService
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
     // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
-    private static string GetFirstThirtyCharacters(string subscriberName)
+    private static string GetFirstThirtyCharacters(string? subscriberName)
     {
         if (string.IsNullOrWhiteSpace(subscriberName))
         {

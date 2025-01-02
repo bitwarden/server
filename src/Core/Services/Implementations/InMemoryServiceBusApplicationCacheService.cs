@@ -6,6 +6,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService, IApplicationCacheService

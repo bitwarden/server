@@ -12,6 +12,8 @@ using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class RelayPushNotificationService : BaseIdentityClientService, IPushNotificationService
@@ -53,7 +55,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -242,13 +244,13 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     }
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         throw new NotImplementedException();
     }
 
     public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
+        string? deviceId = null)
     {
         throw new NotImplementedException();
     }

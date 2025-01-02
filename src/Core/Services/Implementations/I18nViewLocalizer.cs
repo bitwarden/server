@@ -3,6 +3,8 @@ using Bit.Core.Resources;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class I18nViewLocalizer : IViewLocalizer
@@ -13,9 +15,9 @@ public class I18nViewLocalizer : IViewLocalizer
     public I18nViewLocalizer(IStringLocalizerFactory stringFactory,
         IHtmlLocalizerFactory htmlFactory)
     {
-        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
-        _stringLocalizer = stringFactory.Create("SharedResources", assemblyName.Name);
-        _htmlLocalizer = htmlFactory.Create("SharedResources", assemblyName.Name);
+        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName!);
+        _stringLocalizer = stringFactory.Create("SharedResources", assemblyName.Name!);
+        _htmlLocalizer = htmlFactory.Create("SharedResources", assemblyName.Name!);
     }
 
     public LocalizedHtmlString this[string name] => _htmlLocalizer[name];

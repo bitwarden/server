@@ -4,6 +4,8 @@ using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegistrationService
@@ -24,7 +26,7 @@ public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegi
     {
     }
 
-    public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
+    public async Task CreateOrUpdateRegistrationAsync(string? pushToken, string deviceId, string userId,
         string identifier, DeviceType type)
     {
         var requestModel = new PushRegistrationRequestModel

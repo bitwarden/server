@@ -8,6 +8,8 @@ using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Integrations;
 using LaunchDarkly.Sdk.Server.Interfaces;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class LaunchDarklyFeatureService : IFeatureService
@@ -102,7 +104,7 @@ public class LaunchDarklyFeatureService : IFeatureService
         return _client.IntVariation(key, BuildContext(), defaultValue);
     }
 
-    public string GetStringVariation(string key, string defaultValue = null)
+    public string GetStringVariation(string key, string? defaultValue = null)
     {
         return _client.StringVariation(key, BuildContext(), defaultValue);
     }

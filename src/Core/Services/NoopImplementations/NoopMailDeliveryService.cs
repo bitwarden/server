@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Models.Mail;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public class NoopMailDeliveryService : IMailDeliveryService

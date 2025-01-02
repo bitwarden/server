@@ -6,6 +6,8 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 
+#nullable enable
+
 namespace Bit.Core.Services;
 
 public interface IMailService
@@ -53,7 +55,7 @@ public interface IMailService
         bool mentionInvoices);
     Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
     Task SendAddedCreditAsync(string email, decimal amount);
-    Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null);
+    Task SendLicenseExpiredAsync(IEnumerable<string> emails, string? organizationName = null);
     Task SendNewDeviceLoggedInEmail(string email, string deviceType, DateTime timestamp, string ip);
     Task SendRecoverTwoFactorEmail(string email, DateTime timestamp, string ip);
     Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email);
@@ -97,4 +99,3 @@ public interface IMailService
         string organizationName);
     Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
 }
-
