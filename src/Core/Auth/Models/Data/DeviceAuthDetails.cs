@@ -33,7 +33,6 @@ public class DeviceAuthDetails : Device
         AuthRequestCreatedAt = authRequestCreationDate;
     }
 
-
     /**
      * Constructor for dapper response.
      * Note: if the authRequestId or authRequestCreationDate is null it comes back as

@@ -8,7 +8,7 @@ BEGIN
     SELECT
         D.*,
         AR.Id as AuthRequestId,
-        AR.CreationDate as AuthRequestCreationDa
+        AR.CreationDate as AuthRequestCreationDate
     FROM dbo.DeviceView D
              LEFT JOIN (
         SELECT TOP 1 -- Take only the top record sorted by auth request creation date
