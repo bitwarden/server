@@ -1,4 +1,50 @@
-﻿CREATE PROCEDURE [dbo].[CollectionCipher_UpdateCollections]
+CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_ReadByIdUserId]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    [Id],
+    [UserId],
+    [OrganizationId],
+    [Type],
+    [Data],
+    [Attachments],
+    [CreationDate],
+    [RevisionDate],
+    [Favorite],
+    [FolderId],
+    [DeletedDate],
+    [Reprompt],
+    [Key],
+    [OrganizationUseTotp],
+    MAX ([Edit]) AS [Edit],
+    MAX ([ViewPassword]) AS [ViewPassword]
+FROM
+    [dbo].[UserCipherDetails](@UserId)
+WHERE
+    [Id] = @Id
+GROUP BY
+    [Id],
+    [UserId],
+    [OrganizationId],
+    [Type],
+    [Data],
+    [Attachments],
+    [CreationDate],
+    [RevisionDate],
+    [Favorite],
+    [FolderId],
+    [DeletedDate],
+    [Reprompt],
+    [Key],
+    [OrganizationUseTotp]
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[CollectionCipher_UpdateCollections]
     @CipherId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
@@ -38,6 +84,9 @@ BEGIN
             AND (
                 CU.[ReadOnly] = 0
                 OR CG.[ReadOnly] = 0
+            ) AND (
+                CU.[HidePasswords] = 0
+                OR CG.[HidePasswords] = 0
             )
     -- Insert new collection assignments
     INSERT INTO [dbo].[CollectionCipher] (
@@ -69,3 +118,4 @@ BEGIN
     END
     DROP TABLE #TempAvailableCollections;
 END
+GO
