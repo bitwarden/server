@@ -34,6 +34,9 @@ public static class ServiceCollectionExtensions
                     Url = new Uri("https://github.com/bitwarden/server/blob/master/LICENSE.txt")
                 }
             });
+
+            config.CustomSchemaIds(type => type.FullName);
+
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
             config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme
