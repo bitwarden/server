@@ -32,7 +32,8 @@ public class ProviderBillingService(
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IProviderBillingService
+    ISubscriberService subscriberService,
+    ITaxService taxService) : IProviderBillingService
 {
     public async Task ChangePlan(ChangeProviderPlanCommand command)
     {
@@ -335,13 +336,29 @@ public class ProviderBillingService(
             Metadata = new Dictionary<string, string>
             {
                 { "region", globalSettings.BaseServiceUri.CloudRegion }
-            },
-            TaxIdData = taxInfo.HasTaxId ?
-                [
-                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
-                ]
-                : null
+            }
         };
+
+        if (!string.IsNullOrEmpty(taxInfo.TaxIdNumber))
+        {
+            var taxIdType = taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
+                taxInfo.TaxIdNumber);
+
+            if (taxIdType == null)
+            {
+                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                    taxInfo.BillingAddressCountry,
+                    taxInfo.TaxIdNumber);
+                throw new BadRequestException("billingTaxIdTypeInferenceError");
+            }
+
+            customerCreateOptions.TaxIdData = taxInfo.HasTaxId
+                ?
+                [
+                    new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
+                ]
+                : null;
+        }
 
         try
         {
