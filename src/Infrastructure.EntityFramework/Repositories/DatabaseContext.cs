@@ -6,6 +6,7 @@ using Bit.Infrastructure.EntityFramework.Billing.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
+using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;

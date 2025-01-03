@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Platform;
 
 namespace Bit.Infrastructure.EntityFramework.Billing.Models;
 

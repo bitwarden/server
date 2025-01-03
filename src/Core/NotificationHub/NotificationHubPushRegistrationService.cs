@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
