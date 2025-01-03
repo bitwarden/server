@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
-        services.AddSingleton<IPricingClient, PricingClient>();
+        // services.AddSingleton<IPricingClient, PricingClient>();
         services.AddLicenseServices();
     }
 }
