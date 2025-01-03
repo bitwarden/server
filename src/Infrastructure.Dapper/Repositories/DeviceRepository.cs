@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -11,9 +12,13 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
 {
+    private readonly IGlobalSettings _globalSettings;
+
     public DeviceRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+        _globalSettings = globalSettings;
+    }
 
     public DeviceRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
@@ -70,6 +75,24 @@ public class DeviceRepository : Repository<Device, Guid>, IDeviceRepository
             var results = await connection.QueryAsync<Device>(
                 $"[{Schema}].[{Table}_ReadByUserId]",
                 new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<DeviceAuthDetails>> GetManyByUserIdWithDeviceAuth(Guid userId)
+    {
+        var expirationMinutes = _globalSettings.PasswordlessAuth.UserRequestExpiration.TotalMinutes;
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<DeviceAuthDetails>(
+                $"[{Schema}].[{Table}_ReadActiveWithPendingAuthRequestsByUserId]",
+                new
+                {
+                    UserId = userId,
+                    ExpirationMinutes = expirationMinutes
+                },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();

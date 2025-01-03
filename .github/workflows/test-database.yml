@@ -107,7 +107,7 @@ jobs:
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
         env:
           CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
-      
+
       - name: Migrate MariaDB
         working-directory: "util/MySqlMigrations"
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
@@ -237,7 +237,7 @@ jobs:
         run: |
           if grep -q "<Operations>" "report.xml"; then
              echo
-             echo "Migrations are out of sync with sqlproj!"
+             echo "Migration files are not in sync with the files in the Sql project. Review to make sure that any stored procedures / other db changes match with the stored procedures in the Sql project."
              exit 1
            else
              echo "Report looks good"

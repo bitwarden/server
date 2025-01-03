@@ -6,7 +6,6 @@ using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -70,11 +69,17 @@ public class DevicesController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<DeviceResponseModel>> Get()
+    public async Task<ListResponseModel<DeviceAuthRequestResponseModel>> Get()
     {
-        ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
-        var responses = devices.Select(d => new DeviceResponseModel(d));
-        return new ListResponseModel<DeviceResponseModel>(responses);
+        var devicesWithPendingAuthData = await _deviceRepository.GetManyByUserIdWithDeviceAuth(_userService.GetProperUserId(User).Value);
+
+        // Convert from DeviceAuthDetails to DeviceAuthRequestResponseModel
+        var deviceAuthRequestResponseList = devicesWithPendingAuthData
+            .Select(DeviceAuthRequestResponseModel.From)
+            .ToList();
+
+        var response = new ListResponseModel<DeviceAuthRequestResponseModel>(deviceAuthRequestResponseList);
+        return response;
     }
 
     [HttpPost("")]
