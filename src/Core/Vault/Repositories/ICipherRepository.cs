@@ -40,6 +40,16 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
 
     /// <summary>
+    /// Low-level query to get all cipher permissions for a user in an organization. DOES NOT consider the user's
+    /// organization role, any collection management settings on the organization, or special unassigned cipher
+    /// permissions.
+    ///
+    /// Recommended to use <see cref="IGetCipherPermissionsForUserQuery"/> instead to handle those cases.
+    /// </summary>
+    Task<ICollection<OrganizationCipherPermission>> GetCipherPermissionsForOrganizationAsync(Guid organizationId,
+        Guid userId);
+
+    /// <summary>
     /// Updates encrypted data for ciphers during a key rotation
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>
