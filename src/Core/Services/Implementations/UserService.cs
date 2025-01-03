@@ -26,12 +26,6 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
-using Fido2NetLib;
-using Fido2NetLib.Objects;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using File = System.IO.File;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
@@ -1143,7 +1137,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             ? new UserLicense(user, _licenseService)
             : new UserLicense(user, subscriptionInfo, _licenseService);
 
-        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        }
 
         return userLicense;
     }
