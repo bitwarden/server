@@ -91,9 +91,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("LimitCollectionCreation")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<bool>("LimitCollectionCreationDeletion")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("tinyint(1)");
 

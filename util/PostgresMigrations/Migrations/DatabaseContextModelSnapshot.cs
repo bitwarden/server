@@ -93,9 +93,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("LimitCollectionCreation")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("LimitCollectionCreationDeletion")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("boolean");
 
