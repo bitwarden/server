@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -22,7 +23,8 @@ public class SubscriberService(
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
-    IStripeAdapter stripeAdapter) : ISubscriberService
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -608,25 +610,54 @@ public class SubscriberService(
             }
         });
 
-        if (!subscriber.IsUser())
+        var taxId = customer.TaxIds?.FirstOrDefault();
+
+        if (taxId != null)
         {
-            var taxId = customer.TaxIds?.FirstOrDefault();
+            await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+        }
 
-            if (taxId != null)
+        if (string.IsNullOrWhiteSpace(taxInformation.TaxId))
+        {
+            return;
+        }
+
+        var taxIdType = taxInformation.TaxIdType;
+        if (string.IsNullOrWhiteSpace(taxIdType))
+        {
+            taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
+                taxInformation.TaxId);
+
+            if (taxIdType == null)
             {
-                await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                    taxInformation.Country,
+                    taxInformation.TaxId);
+                throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
             }
+        }
 
-            var taxIdType = taxInformation.GetTaxIdType();
-
-            if (!string.IsNullOrWhiteSpace(taxInformation.TaxId) &&
-                !string.IsNullOrWhiteSpace(taxIdType))
+        try
+        {
+            await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
+        }
+        catch (StripeException e)
+        {
+            switch (e.StripeError.Code)
             {
-                await stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
-                {
-                    Type = taxIdType,
-                    Value = taxInformation.TaxId,
-                });
+                case StripeConstants.ErrorCodes.TaxIdInvalid:
+                    logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                        taxInformation.TaxId,
+                        taxInformation.Country);
+                    throw new Exceptions.BadRequestException("billingInvalidTaxIdError");
+                default:
+                    logger.LogError(e,
+                        "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                        taxInformation.TaxId,
+                        taxInformation.Country,
+                        customer.Id);
+                    throw new Exceptions.BadRequestException("billingTaxIdCreationError");
             }
         }
 
@@ -635,8 +666,7 @@ public class SubscriberService(
             await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions
                 {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
                 });
         }
 
@@ -650,41 +680,53 @@ public class SubscriberService(
 
     public async Task VerifyBankAccount(
         ISubscriber subscriber,
-        (long, long) microdeposits)
+        string descriptorCode)
     {
-        ArgumentNullException.ThrowIfNull(subscriber);
-
         var setupIntentId = await setupIntentCache.Get(subscriber.Id);
 
         if (string.IsNullOrEmpty(setupIntentId))
         {
             logger.LogError("No setup intent ID exists to verify for subscriber with ID ({SubscriberID})", subscriber.Id);
-
             throw new BillingException();
         }
 
-        var (amount1, amount2) = microdeposits;
-
-        await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId, new SetupIntentVerifyMicrodepositsOptions
+        try
         {
-            Amounts = [amount1, amount2]
-        });
+            await stripeAdapter.SetupIntentVerifyMicroDeposit(setupIntentId,
+                new SetupIntentVerifyMicrodepositsOptions { DescriptorCode = descriptorCode });
 
-        var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
+            var setupIntent = await stripeAdapter.SetupIntentGet(setupIntentId);
 
-        await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId, new PaymentMethodAttachOptions
-        {
-            Customer = subscriber.GatewayCustomerId
-        });
+            await stripeAdapter.PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
+                new PaymentMethodAttachOptions { Customer = subscriber.GatewayCustomerId });
 
-        await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
-            new CustomerUpdateOptions
-            {
-                InvoiceSettings = new CustomerInvoiceSettingsOptions
+            await stripeAdapter.CustomerUpdateAsync(subscriber.GatewayCustomerId,
+                new CustomerUpdateOptions
                 {
-                    DefaultPaymentMethod = setupIntent.PaymentMethodId
-                }
-            });
+                    InvoiceSettings = new CustomerInvoiceSettingsOptions
+                    {
+                        DefaultPaymentMethod = setupIntent.PaymentMethodId
+                    }
+                });
+        }
+        catch (StripeException stripeException)
+        {
+            if (!string.IsNullOrEmpty(stripeException.StripeError?.Code))
+            {
+                var message = stripeException.StripeError.Code switch
+                {
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationAttemptsExceeded => "You have exceeded the number of allowed verification attempts. Please contact support.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationDescriptorCodeMismatch => "The verification code you provided does not match the one sent to your bank account. Please try again.",
+                    StripeConstants.ErrorCodes.PaymentMethodMicroDepositVerificationTimeout => "Your bank account was not verified within the required time period. Please contact support.",
+                    _ => BillingException.DefaultMessage
+                };
+
+                throw new BadRequestException(message);
+            }
+
+            logger.LogError(stripeException, "An unhandled Stripe exception was thrown while verifying subscriber's ({SubscriberID}) bank account", subscriber.Id);
+            throw new BillingException();
+        }
     }
 
     #region Shared Utilities
@@ -757,6 +799,7 @@ public class SubscriberService(
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,

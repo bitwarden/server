@@ -1,26 +1,19 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
+using Bit.Core.Enums;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
 
 public class PolicyUpdateRequestModel : PolicyBaseModel
 {
-    public Policy ToPolicy(Guid orgId, PolicyType type)
+    public PolicyUpdate ToPolicyUpdate(Guid organizationId, PolicyType type) => new()
     {
-        return ToPolicy(new Policy
-        {
-            OrganizationId = orgId,
-            Enabled = Enabled.GetValueOrDefault(),
-            Data = Data != null ? JsonSerializer.Serialize(Data) : null,
-            Type = type
-        });
-    }
-
-    public virtual Policy ToPolicy(Policy existingPolicy)
-    {
-        existingPolicy.Enabled = Enabled.GetValueOrDefault();
-        existingPolicy.Data = Data != null ? JsonSerializer.Serialize(Data) : null;
-        return existingPolicy;
-    }
+        Type = type,
+        OrganizationId = organizationId,
+        Data = Data != null ? JsonSerializer.Serialize(Data) : null,
+        Enabled = Enabled.GetValueOrDefault(),
+        PerformedBy = new SystemUser(EventSystemUser.PublicApi)
+    };
 }

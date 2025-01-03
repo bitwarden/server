@@ -27,7 +27,11 @@ namespace Bit.Commercial.Core.AdminConsole.Services;
 
 public class ProviderService : IProviderService
 {
-    public static PlanType[] ProviderDisallowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
+    private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
+        PlanType.Free,
+        PlanType.FamiliesAnnually,
+        PlanType.FamiliesAnnually2019
+    ];
 
     private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
@@ -690,13 +694,14 @@ public class ProviderService : IProviderService
                     throw new BadRequestException($"Multi-organization Enterprise Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
                 }
                 break;
+            case ProviderType.Reseller:
+                if (_resellerDisallowedOrganizationTypes.Contains(requestedType))
+                {
+                    throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
+                }
+                break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
-        }
-
-        if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
-        {
-            throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
         }
     }
 }
