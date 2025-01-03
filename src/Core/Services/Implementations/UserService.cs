@@ -1142,7 +1142,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
         {
-        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
         }
 
         return userLicense;
