@@ -107,7 +107,8 @@ public class UsersController : Controller
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
-        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain));
+        var deviceVerificationRequired = await _userService.ActiveNewDeviceVerificationException(user.Id);
+        return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, deviceVerificationRequired));
     }
 
     [HttpPost]
@@ -160,6 +161,22 @@ public class UsersController : Controller
         }
 
         return RedirectToAction("Index");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.User_GeneralDetails_View)]
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
+    public async Task<IActionResult> ToggleNewDeviceVerification(Guid id)
+    {
+        var user = await _userRepository.GetByIdAsync(id);
+        if (user == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        await _userService.ToggleNewDeviceVerificationException(user.Id);
+        return RedirectToAction("Edit", new { id });
     }
 
     // TODO: Feature flag to be removed in PM-14207
