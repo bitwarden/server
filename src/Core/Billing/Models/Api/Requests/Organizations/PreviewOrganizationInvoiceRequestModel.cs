@@ -8,7 +8,7 @@ public class PreviewOrganizationInvoiceRequestBody
     public Guid OrganizationId { get; set; }
 
     [Required]
-    public PasswordManagerRequestModel PasswordManager { get; set; }
+    public OrganizationPasswordManagerRequestModel PasswordManager { get; set; }
 
     public SecretsManagerRequestModel SecretsManager { get; set; }
 
@@ -16,7 +16,7 @@ public class PreviewOrganizationInvoiceRequestBody
     public TaxInformationRequestModel TaxInformation { get; set; }
 }
 
-public class PasswordManagerRequestModel
+public class OrganizationPasswordManagerRequestModel
 {
     public PlanType Plan { get; set; }
 
