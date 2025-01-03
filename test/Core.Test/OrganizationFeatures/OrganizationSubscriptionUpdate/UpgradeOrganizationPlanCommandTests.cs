@@ -139,7 +139,7 @@ public class UpgradeOrganizationPlanCommandTests
                 && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
 
         Assert.True(result.Item1);
-        Assert.NotNull(result.Item2);
+        Assert.Null(result.Item2);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]

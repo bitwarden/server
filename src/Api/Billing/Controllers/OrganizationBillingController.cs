@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -136,11 +135,6 @@ public class OrganizationBillingController(
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -165,11 +159,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -196,11 +185,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -226,11 +210,6 @@ public class OrganizationBillingController(
     [HttpGet("tax-information")]
     public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -255,11 +234,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] TaxInformationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
