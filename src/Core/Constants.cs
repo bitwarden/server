@@ -140,7 +140,6 @@ public static class FeatureFlagKeys
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
-    public const string SecureOrgGroupDetails = "pm-3479-secure-org-group-details";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
