@@ -46,6 +46,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly IRotateUserAccountKeysCommand _rotateUserAccountKeysCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
@@ -75,6 +76,7 @@ public class AccountsControllerTests : IDisposable
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
+        _rotateUserAccountKeysCommand = Substitute.For<IRotateUserAccountKeysCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _subscriberService = Substitute.For<ISubscriberService>();
@@ -103,6 +105,7 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _tdeOffboardingPasswordCommand,
             _rotateUserKeyCommand,
+            _rotateUserAccountKeysCommand,
             _featureService,
             _subscriberService,
             _referenceEventService,

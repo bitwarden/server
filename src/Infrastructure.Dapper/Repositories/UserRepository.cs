@@ -220,30 +220,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         try
         {
             // Update user
-            await using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
-            {
-                cmd.CommandType = CommandType.StoredProcedure;
-                cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
-                cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
-                cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
-
-                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value =
-                    string.IsNullOrWhiteSpace(user.PrivateKey) ? DBNull.Value : user.PrivateKey;
-
-                cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
-                cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
-                    user.AccountRevisionDate;
-                cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
-                    user.LastKeyRotationDate;
-                cmd.ExecuteNonQuery();
-            }
+            await ReplaceAsync(user);
 
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
                 await action(connection, transaction);
             }
-
             transaction.Commit();
         }
         catch

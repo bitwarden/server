@@ -57,6 +57,7 @@ public class AccountsController : Controller
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly IRotateUserAccountKeysCommand _rotateUserAccountKeysCommand;
     private readonly IFeatureService _featureService;
     private readonly ISubscriberService _subscriberService;
     private readonly IReferenceEventService _referenceEventService;
@@ -85,6 +86,7 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         ITdeOffboardingPasswordCommand tdeOffboardingPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
+        IRotateUserAccountKeysCommand rotateUserKeyCommandV2,
         IFeatureService featureService,
         ISubscriberService subscriberService,
         IReferenceEventService referenceEventService,
@@ -109,6 +111,7 @@ public class AccountsController : Controller
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
         _tdeOffboardingPasswordCommand = tdeOffboardingPasswordCommand;
         _rotateUserKeyCommand = rotateUserKeyCommand;
+        _rotateUserAccountKeysCommand = rotateUserKeyCommandV2;
         _featureService = featureService;
         _subscriberService = subscriberService;
         _referenceEventService = referenceEventService;
@@ -377,6 +380,9 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
+    /**
+     * @deprecated
+     */
     [HttpPost("key")]
     public async Task PostKey([FromBody] UpdateKeyRequestModel model)
     {
@@ -412,6 +418,54 @@ public class AccountsController : Controller
         }
 
         await Task.Delay(2000);
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("rotate-user-account-keys")]
+    public async Task PostUserAccountKeys([FromBody] RotateUserAccountKeysModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var unlockData = new MasterPasswordUnlockData
+        {
+            KdfType = model.MasterPasswordUnlockData.KdfType,
+            KdfIterations = model.MasterPasswordUnlockData.KdfIterations,
+            KdfMemory = model.MasterPasswordUnlockData.KdfMemory,
+            KdfParallelism = model.MasterPasswordUnlockData.KdfParallelism,
+            Email = model.MasterPasswordUnlockData.Email,
+            MasterPasswordHash = model.MasterPasswordUnlockData.MasterPasswordHash,
+            MasterKeyEncryptedUserKey = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
+        };
+
+        var dataModel = new RotateUserAccountKeysData
+        {
+            MasterPasswordUnlockData = unlockData,
+            OldMasterPasswordHash = model.OldMasterPasswordHash,
+            UserKeyEncryptedPrivateKey = model.UserKeyEncryptedPrivateKey,
+            Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user, model.Folders),
+            Sends = await _sendValidator.ValidateAsync(user, model.Sends),
+            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
+            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.ResetPasswordKeys),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.WebAuthnKeys)
+        };
+
+        var result = await _rotateUserAccountKeysCommand.rotateUserAccountKeysAsync(user, dataModel);
+
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
         throw new BadRequestException(ModelState);
     }
 

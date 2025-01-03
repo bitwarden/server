@@ -801,7 +801,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             user.KdfMemory = kdfMemory;
             user.KdfParallelism = kdfParallelism;
             await _userRepository.ReplaceAsync(user);
-            await _pushService.PushLogOutAsync(user.Id);
+            await _pushService.PushLogOutAsync(user.Id, true);
             return IdentityResult.Success;
         }
 
