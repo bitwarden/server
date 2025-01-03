@@ -210,6 +210,11 @@ public class CipherService : ICipherService
             AttachmentData = JsonSerializer.Serialize(data)
         });
         cipher.AddAttachment(attachmentId, data);
+
+        // Update the revision date when an attachment is added
+        cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
 
         return (attachmentId, uploadUrl);
@@ -258,6 +263,10 @@ public class CipherService : ICipherService
             await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, data);
             throw;
         }
+
+        // Update the revision date when an attachment is added
+        cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -441,7 +450,7 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
+    public async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId,
         bool orgAdmin = false)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
@@ -454,7 +463,7 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-        await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
+        return await DeleteAttachmentAsync(cipher, cipher.GetAttachments()[attachmentId]);
     }
 
     public async Task PurgeAsync(Guid organizationId)
@@ -1009,11 +1018,11 @@ public class CipherService : ICipherService
         }
     }
 
-    private async Task DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
+    private async Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(Cipher cipher, CipherAttachment.MetaData attachmentData)
     {
         if (attachmentData == null || string.IsNullOrWhiteSpace(attachmentData.AttachmentId))
         {
-            return;
+            return null;
         }
 
         await _cipherRepository.DeleteAttachmentAsync(cipher.Id, attachmentData.AttachmentId);
@@ -1021,8 +1030,14 @@ public class CipherService : ICipherService
         await _attachmentStorageService.DeleteAttachmentAsync(cipher.Id, attachmentData);
         await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_AttachmentDeleted);
 
+        // Update the revision date when an attachment is deleted
+        cipher.RevisionDate = DateTime.UtcNow;
+        await _cipherRepository.ReplaceAsync((CipherDetails)cipher);
+
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+
+        return new DeleteAttachmentResponseData(cipher);
     }
 
     private async Task ValidateCipherEditForAttachmentAsync(Cipher cipher, Guid savingUserId, bool orgAdmin,
