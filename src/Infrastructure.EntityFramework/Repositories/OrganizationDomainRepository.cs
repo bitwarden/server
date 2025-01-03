@@ -147,13 +147,13 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var unverifiedDomainsInLast72Hours = await dbContext.OrganizationDomains
-            .Where(x => x.CreationDate.Date >= DateTime.UtcNow.AddDays(-4).Date
+        var threeDaysOldUnverifiedDomains = await dbContext.OrganizationDomains
+            .Where(x => x.CreationDate.Date == DateTime.UtcNow.AddDays(-4).Date
                       && x.VerifiedDate == null)
             .AsNoTracking()
             .ToListAsync();
 
-        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(unverifiedDomainsInLast72Hours);
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(threeDaysOldUnverifiedDomains);
     }
 
     public async Task<bool> DeleteExpiredAsync(int expirationPeriod)

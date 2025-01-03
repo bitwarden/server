@@ -1,7 +1,6 @@
-﻿
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
-using Bit.Infrastructure.EntityFramework.Models;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;
@@ -9,7 +8,7 @@ namespace Bit.Infrastructure.IntegrationTest.Repositories;
 public class OrganizationDomainRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
-    public async Task GetExpiredOrganizationDomainsAsync_ShouldReturnExpiredOrganizationDomains(
+    public async Task GetExpiredOrganizationDomainsAsync_ShouldReturn3DaysOldUnverifiedDomains(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
      IOrganizationDomainRepository organizationDomainRepository)
@@ -40,6 +39,11 @@ public class OrganizationDomainRepositoryTests
             DomainName = $"domain2+{id}@example.com",
             Txt = "btw+12345"
         };
+        var dummyInterval = 1;
+        organizationDomain1.SetNextRunDate(dummyInterval);
+
+        var beforeValidationDate = DateTime.UtcNow.AddDays(-4).Date;
+
         await organizationDomainRepository.CreateAsync(organizationDomain1);
         var organization2 = await organizationRepository.CreateAsync(new Organization
         {
@@ -47,14 +51,16 @@ public class OrganizationDomainRepositoryTests
             BillingEmail = user1.Email,
             Plan = "Test",
             PrivateKey = "privatekey",
-
+            CreationDate = beforeValidationDate
         });
         var organizationDomain2 = new OrganizationDomain
         {
             OrganizationId = organization2.Id,
             DomainName = $"domain2+{id}@example.com",
-            Txt = "btw+12345"
+            Txt = "btw+12345",
+            CreationDate = beforeValidationDate
         };
+        organizationDomain2.SetNextRunDate(dummyInterval);
         await organizationDomainRepository.CreateAsync(organizationDomain2);
 
         // Act
@@ -69,7 +75,7 @@ public class OrganizationDomainRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetExpiredOrganizationDomainsAsync_ShouldReturnNotReturnDomainsPast72Hours(
+    public async Task GetExpiredOrganizationDomainsAsync_ShouldNotReturnDomainsUnder3DaysOld(
      IUserRepository userRepository,
      IOrganizationRepository organizationRepository,
      IOrganizationDomainRepository organizationDomainRepository)
@@ -94,14 +100,16 @@ public class OrganizationDomainRepositoryTests
 
         });
 
-        var pastDateForValidation = DateTime.UtcNow.AddDays(-6).Date;
+        var beforeValidationDate = DateTime.UtcNow.AddDays(-1).Date;
         var organizationDomain = new OrganizationDomain
         {
             OrganizationId = organization.Id,
             DomainName = $"domain{id}@example.com",
             Txt = "btw+12345",
-            CreationDate = pastDateForValidation
+            CreationDate = beforeValidationDate
         };
+        var dummyInterval = 1;
+        organizationDomain.SetNextRunDate(dummyInterval);
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
         // Act
@@ -111,7 +119,6 @@ public class OrganizationDomainRepositoryTests
         var expectedDomain2 = domains.FirstOrDefault(domain => domain.DomainName == organizationDomain.DomainName);
         Assert.Null(expectedDomain2);
     }
-
 
     [DatabaseTheory, DatabaseData]
     public async Task GetExpiredOrganizationDomainsAsync_ShouldNotReturnVerifiedDomains(
@@ -146,6 +153,9 @@ public class OrganizationDomainRepositoryTests
             Txt = "btw+12345"
         };
         organizationDomain1.SetVerifiedDate();
+        var dummyInterval = 1;
+
+        organizationDomain1.SetNextRunDate(dummyInterval);
 
         await organizationDomainRepository.CreateAsync(organizationDomain1);
 
@@ -163,6 +173,7 @@ public class OrganizationDomainRepositoryTests
             DomainName = $"domain2+{id}@example.com",
             Txt = "btw+12345"
         };
+        organizationDomain2.SetNextRunDate(dummyInterval);
         organizationDomain2.SetVerifiedDate();
 
         await organizationDomainRepository.CreateAsync(organizationDomain2);
