@@ -26,7 +26,7 @@ namespace Bit.Core.Services;
 public class StripePaymentService : IPaymentService
 {
     private const string PremiumPlanId = "premium-annually";
-    private const string StoragePlanId = "storage-gb-annually";
+    private const string StoragePlanId = "personal-storage-gb-annually";
     private const string ProviderDiscountId = "msp-discount-35";
     private const string SecretsManagerStandaloneDiscountId = "sm-standalone";
 
