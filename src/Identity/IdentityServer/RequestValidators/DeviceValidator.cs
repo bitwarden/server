@@ -115,7 +115,7 @@ public class DeviceValidator(
     /// </summary>
     /// <param name="user">user attempting to authenticate</param>
     /// <param name="ValidatedRequest">The Request is used to check for the NewDeviceOtp and for the raw device data</param>
-    /// <returns>returns deviceValtaionResultType</returns>
+    /// <returns>returns deviceValidationResultType</returns>
     private async Task<DeviceValidationResultType> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
     {
         // currently unreachable due to backward compatibility
@@ -123,6 +123,12 @@ public class DeviceValidator(
         if (user == null)
         {
             return DeviceValidationResultType.InvalidUser;
+        }
+
+        // Has the User opted out of new device verification
+        if (!user.VerifyDevices)
+        {
+            return DeviceValidationResultType.Success;
         }
 
         // CS exception flow
@@ -146,6 +152,12 @@ public class DeviceValidator(
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
             if (otpValid)
             {
+                // In order to get here they would have to have access to their email so we verify it if it's not already
+                if (!user.EmailVerified)
+                {
+                    user.EmailVerified = true;
+                    await _userService.SaveUserAsync(user);
+                }
                 return DeviceValidationResultType.Success;
             }
             return DeviceValidationResultType.InvalidNewDeviceOtp;
