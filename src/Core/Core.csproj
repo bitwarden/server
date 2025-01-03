@@ -60,6 +60,9 @@
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="8.0.10" />
     <PackageReference Include="LaunchDarkly.ServerSdk" Version="8.6.0" />
+    <PackageReference Include="Quartz" Version="3.13.1" />
+    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+    <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
   </ItemGroup>
 
   <ItemGroup>
