@@ -57,7 +57,7 @@ public static class AuthConstants
     public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
     public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
     public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
-
+    public static readonly string NewDeviceVerificationExceptionCacheKeyFormat = "NewDeviceVerificationException_{0}";
 }
 
 public class RangeConstant
@@ -141,7 +141,6 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string SecureOrgGroupDetails = "pm-3479-secure-org-group-details";
-    public const string AccessIntelligence = "pm-13227-access-intelligence";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
@@ -160,6 +159,11 @@ public static class FeatureFlagKeys
     public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
+    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
+    public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
+    public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
+    public const string AppReviewPrompt = "app-review-prompt";
+    public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
 
     public static List<string> GetAllKeys()
     {
