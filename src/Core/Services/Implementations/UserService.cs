@@ -973,6 +973,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await paymentService.CancelAndRecoverChargesAsync(user);
             throw;
         }
+
+
+
         return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
             paymentIntentClientSecret);
     }
