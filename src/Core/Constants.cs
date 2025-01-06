@@ -162,6 +162,9 @@ public static class FeatureFlagKeys
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
     public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
+    public const string AppReviewPrompt = "app-review-prompt";
+    public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
+    public const string UsePricingService = "use-pricing-service";
 
     public static List<string> GetAllKeys()
     {
