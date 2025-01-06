@@ -973,6 +973,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await paymentService.CancelAndRecoverChargesAsync(user);
             throw;
         }
+
+
+
         return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
             paymentIntentClientSecret);
     }
@@ -1140,7 +1143,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             ? new UserLicense(user, _licenseService)
             : new UserLicense(user, subscriptionInfo, _licenseService);
 
-        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        }
 
         return userLicense;
     }
