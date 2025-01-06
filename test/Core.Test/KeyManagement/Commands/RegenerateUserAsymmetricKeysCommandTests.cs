@@ -8,7 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Commands;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Repositories;
-using Bit.Core.Services;
+using Bit.Core.Platform.Push;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

@@ -7,7 +7,11 @@ public record OrganizationMetadataResponse(
     bool IsManaged,
     bool IsOnSecretsManagerStandalone,
     bool IsSubscriptionUnpaid,
-    bool HasSubscription)
+    bool HasSubscription,
+    bool HasOpenInvoice,
+    DateTime? InvoiceDueDate,
+    DateTime? InvoiceCreatedDate,
+    DateTime? SubPeriodEndDate)
 {
     public static OrganizationMetadataResponse From(OrganizationMetadata metadata)
         => new(
@@ -15,5 +19,9 @@ public record OrganizationMetadataResponse(
             metadata.IsManaged,
             metadata.IsOnSecretsManagerStandalone,
             metadata.IsSubscriptionUnpaid,
-            metadata.HasSubscription);
+            metadata.HasSubscription,
+            metadata.HasOpenInvoice,
+            metadata.InvoiceDueDate,
+            metadata.InvoiceCreatedDate,
+            metadata.SubPeriodEndDate);
 }
