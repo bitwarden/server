@@ -1,4 +1,4 @@
-CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -40,9 +40,10 @@ SELECT
     P.[Type] ProviderType
 FROM
     [dbo].[ProviderUser] PU
-INNER JOIN
+        INNER JOIN
     [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
-INNER JOIN
+        INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
-INNER JOIN
+        INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
