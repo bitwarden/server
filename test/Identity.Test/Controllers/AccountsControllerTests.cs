@@ -103,6 +103,7 @@ public class AccountsControllerTests : IDisposable
     [Fact]
     public async Task PostPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
     {
+        SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
