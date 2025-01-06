@@ -8,7 +8,7 @@ public interface IDeviceService
     Task SaveAsync((string Endpoint, string P256dh, string Auth) webPush, Device device);
     Task SaveAsync(Device device);
     Task ClearTokenAsync(Device device);
-    Task DeleteAsync(Device device);
+    Task DeactivateAsync(Device device);
     Task UpdateDevicesTrustAsync(string currentDeviceIdentifier,
         Guid currentUserId,
         DeviceKeysUpdateRequestModel currentDeviceUpdate,

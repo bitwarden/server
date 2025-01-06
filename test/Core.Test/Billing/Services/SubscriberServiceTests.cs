@@ -1545,7 +1545,7 @@ public class SubscriberServiceTests
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1" }] } };
+        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] } };
 
         stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
             options => options.Expand.Contains("tax_ids"))).Returns(customer);
@@ -1554,6 +1554,7 @@ public class SubscriberServiceTests
             "US",
             "12345",
             "123456789",
+            "us_ein",
             "123 Example St.",
             null,
             "Example Town",
@@ -1582,20 +1583,17 @@ public class SubscriberServiceTests
     #region VerifyBankAccount
 
     [Theory, BitAutoData]
-    public async Task VerifyBankAccount_NullSubscriber_ThrowsArgumentNullException(
-        SutProvider<SubscriberService> sutProvider) => await Assert.ThrowsAsync<ArgumentNullException>(
-        () => sutProvider.Sut.VerifyBankAccount(null, (0, 0)));
-
-    [Theory, BitAutoData]
     public async Task VerifyBankAccount_NoSetupIntentId_ThrowsBillingException(
         Provider provider,
-        SutProvider<SubscriberService> sutProvider) => await ThrowsBillingExceptionAsync(() => sutProvider.Sut.VerifyBankAccount(provider, (1, 1)));
+        SutProvider<SubscriberService> sutProvider) => await ThrowsBillingExceptionAsync(() => sutProvider.Sut.VerifyBankAccount(provider, ""));
 
     [Theory, BitAutoData]
     public async Task VerifyBankAccount_MakesCorrectInvocations(
         Provider provider,
         SutProvider<SubscriberService> sutProvider)
     {
+        const string descriptorCode = "SM1234";
+
         var setupIntent = new SetupIntent
         {
             Id = "setup_intent_id",
@@ -1608,11 +1606,11 @@ public class SubscriberServiceTests
 
         stripeAdapter.SetupIntentGet(setupIntent.Id).Returns(setupIntent);
 
-        await sutProvider.Sut.VerifyBankAccount(provider, (1, 1));
+        await sutProvider.Sut.VerifyBankAccount(provider, descriptorCode);
 
         await stripeAdapter.Received(1).SetupIntentVerifyMicroDeposit(setupIntent.Id,
             Arg.Is<SetupIntentVerifyMicrodepositsOptions>(
-                options => options.Amounts[0] == 1 && options.Amounts[1] == 1));
+                options => options.DescriptorCode == descriptorCode));
 
         await stripeAdapter.Received(1).PaymentMethodAttachAsync(setupIntent.PaymentMethodId,
             Arg.Is<PaymentMethodAttachOptions>(

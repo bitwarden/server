@@ -3,10 +3,10 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,22 +18,19 @@ public class PoliciesController : Controller
 {
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly IUserService _userService;
-    private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly ISavePolicyCommand _savePolicyCommand;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        IUserService userService,
-        IOrganizationService organizationService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISavePolicyCommand savePolicyCommand)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _userService = userService;
-        _organizationService = organizationService;
         _currentContext = currentContext;
+        _savePolicyCommand = savePolicyCommand;
     }
 
     /// <summary>
@@ -48,14 +45,13 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(PolicyType type)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
-            _currentContext.OrganizationId.Value, type);
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(_currentContext.OrganizationId.Value, type);
         if (policy == null)
         {
             return new NotFoundResult();
         }
-        var response = new PolicyResponseModel(policy);
-        return new JsonResult(response);
+
+        return new JsonResult(new PolicyResponseModel(policy));
     }
 
     /// <summary>
@@ -69,9 +65,8 @@ public class PoliciesController : Controller
     public async Task<IActionResult> List()
     {
         var policies = await _policyRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-        var policyResponses = policies.Select(p => new PolicyResponseModel(p));
-        var response = new ListResponseModel<PolicyResponseModel>(policyResponses);
-        return new JsonResult(response);
+
+        return new JsonResult(new ListResponseModel<PolicyResponseModel>(policies.Select(p => new PolicyResponseModel(p))));
     }
 
     /// <summary>
@@ -89,17 +84,9 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
-            _currentContext.OrganizationId.Value, type);
-        if (policy == null)
-        {
-            policy = model.ToPolicy(_currentContext.OrganizationId.Value, type);
-        }
-        else
-        {
-            policy = model.ToPolicy(policy);
-        }
-        await _policyService.SaveAsync(policy, _userService, _organizationService, null);
+        var policyUpdate = model.ToPolicyUpdate(_currentContext.OrganizationId!.Value, type);
+        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);
     }

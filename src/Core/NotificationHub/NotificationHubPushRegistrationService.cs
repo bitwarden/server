@@ -7,7 +7,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
@@ -82,37 +81,18 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         switch (type)
         {
             case DeviceType.Android:
-                var featureService = _serviceProvider.GetRequiredService<IFeatureService>();
-                if (featureService.IsEnabled(FeatureFlagKeys.AnhFcmv1Migration))
-                {
-                    installation.Templates.Add(BuildInstallationTemplate("payload",
-                        "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}",
-                        userId, identifier));
-                    installation.Templates.Add(BuildInstallationTemplate("message",
-                        "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
-                        userId, identifier));
-                    installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
-                        "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
-                        userId, identifier));
-                    installation.Platform = NotificationPlatform.FcmV1;
-                }
-                else
-                {
-                    installation.Templates.Add(BuildInstallationTemplate("payload",
-                        "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}",
-                        userId, identifier));
-                    installation.Templates.Add(BuildInstallationTemplate("message",
-                        "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
-                        userId, identifier));
-                    installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
-                        "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
-                        "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
-                        userId, identifier));
-                    installation.Platform = NotificationPlatform.Fcm;
-                }
+                installation.Templates.Add(BuildInstallationTemplate("payload",
+                    "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}",
+                    userId, identifier));
+                installation.Templates.Add(BuildInstallationTemplate("message",
+                    "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
+                    userId, identifier));
+                installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
+                    "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                    "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
+                    userId, identifier));
+                installation.Platform = NotificationPlatform.Fcm;
                 break;
             case DeviceType.iOS:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
@@ -222,7 +202,6 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
 
         return new KeyValuePair<string, InstallationTemplate>(fullTemplateId, template);
-        // installation.Templates.Add(fullTemplateId, template);
     }
 
     public async Task DeleteRegistrationAsync(string deviceId)

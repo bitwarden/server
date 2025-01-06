@@ -20,6 +20,7 @@ public class NotificationHubPool : INotificationHubPool
     private List<NotificationHubConnection> FilterInvalidHubs(IEnumerable<GlobalSettings.NotificationHubSettings> hubs)
     {
         List<NotificationHubConnection> result = new();
+        _logger.LogDebug("Filtering {HubCount} notification hubs", hubs.Count());
         foreach (var hub in hubs)
         {
             var connection = NotificationHubConnection.From(hub);
@@ -28,6 +29,7 @@ public class NotificationHubPool : INotificationHubPool
                 _logger.LogWarning("Invalid notification hub settings: {HubName}", hub.HubName ?? "hub name missing");
                 continue;
             }
+            _logger.LogDebug("Adding notification hub: {ConnectionLogString}", connection.LogString);
             result.Add(connection);
         }
 
@@ -43,7 +45,8 @@ public class NotificationHubPool : INotificationHubPool
     /// <exception cref="InvalidOperationException">Thrown when no notification hub is found for a given comb.</exception>
     public NotificationHubClient ClientFor(Guid comb)
     {
-        return ConnectionFor(comb).HubClient;
+        var resolvedConnection = ConnectionFor(comb);
+        return resolvedConnection.HubClient;
     }
 
     /// <summary>
@@ -62,14 +65,11 @@ public class NotificationHubPool : INotificationHubPool
                 $"Hub start and end times are configured as follows:\n" +
                 string.Join("\n", _connections.Select(c => $"Hub {c.HubName} - Start: {c.RegistrationStartDate}, End: {c.RegistrationEndDate}")));
         }
-        return possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)];
+        var resolvedConnection = possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)];
+        _logger.LogTrace("Resolved notification hub for comb {Comb} out of {HubCount} hubs.\n{ConnectionInfo}", comb, possibleConnections.Length, resolvedConnection.LogString);
+        return resolvedConnection;
+
     }
 
-    public INotificationHubProxy AllClients
-    {
-        get
-        {
-            return new NotificationHubClientProxy(_clients);
-        }
-    }
+    public INotificationHubProxy AllClients { get { return new NotificationHubClientProxy(_clients); } }
 }

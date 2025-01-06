@@ -2,9 +2,9 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -196,8 +196,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return results.SingleOrDefault();
         }
     }
-    public async Task<Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>>
-        GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -206,9 +205,9 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 new { Id = id },
                 commandType: CommandType.StoredProcedure);
 
-            var user = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
+            var organizationUserUserDetails = (await results.ReadAsync<OrganizationUserUserDetails>()).SingleOrDefault();
             var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
-            return new Tuple<OrganizationUserUserDetails?, ICollection<CollectionAccessSelection>>(user, collections);
+            return (organizationUserUserDetails, collections);
         }
     }
 
@@ -544,5 +543,28 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                 new { UserId = userId, OrganizationUserJson = JsonSerializer.Serialize(resetPasswordKeys) },
                 transaction: transaction,
                 commandType: CommandType.StoredProcedure);
+    }
+
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUser>(
+                $"[{Schema}].[OrganizationUser_ReadByOrganizationIdWithClaimedDomains]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_SetStatusForUsersById]",
+            new { OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds), Status = OrganizationUserStatusType.Revoked },
+            commandType: CommandType.StoredProcedure);
     }
 }

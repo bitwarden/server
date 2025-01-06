@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.NotificationCenter.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -9,6 +10,7 @@ using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.Dapper.Billing.Repositories;
+using Bit.Infrastructure.Dapper.KeyManagement.Repositories;
 using Bit.Infrastructure.Dapper.NotificationCenter.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
@@ -56,6 +58,12 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IProviderInvoiceItemRepository, ProviderInvoiceItemRepository>();
         services.AddSingleton<INotificationRepository, NotificationRepository>();
         services.AddSingleton<INotificationStatusRepository, NotificationStatusRepository>();
+        services
+            .AddSingleton<IClientOrganizationMigrationRecordRepository, ClientOrganizationMigrationRecordRepository>();
+        services.AddSingleton<IPasswordHealthReportApplicationRepository, PasswordHealthReportApplicationRepository>();
+        services.AddSingleton<ISecurityTaskRepository, SecurityTaskRepository>();
+        services.AddSingleton<IUserAsymmetricKeysRepository, UserAsymmetricKeysRepository>();
+        services.AddSingleton<IOrganizationInstallationRepository, OrganizationInstallationRepository>();
 
         if (selfHosted)
         {

@@ -22,6 +22,7 @@ public static class Constants
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+    public const string SSHKeyCipherMinimumVersion = "2024.12.0";
 
     /// <summary>
     /// Used by IdentityServer to identify our own provider.
@@ -56,7 +57,7 @@ public static class AuthConstants
     public static readonly RangeConstant ARGON2_ITERATIONS = new(2, 10, 3);
     public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
     public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
-
+    public static readonly string NewDeviceVerificationExceptionCacheKeyFormat = "NewDeviceVerificationException_{0}";
 }
 
 public class RangeConstant
@@ -100,41 +101,34 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string DisplayEuEnvironment = "display-eu-environment";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string ItemShare = "item-share";
-    public const string KeyRotationImprovements = "key-rotation-improvements";
     public const string DuoRedirect = "duo-redirect";
-    public const string PM5864DollarThreshold = "PM-5864-dollar-threshold";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
-    public const string EnableConsolidatedBilling = "enable-consolidated-billing";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
-    public const string EnableDeleteProvider = "AC-1218-delete-provider";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string AnhFcmv1Migration = "anh-fcmv1-migration";
     public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
-    public const string BulkDeviceApproval = "bulk-device-approval";
     public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
-    public const string AC2828_ProviderPortalMembersPage = "AC-2828_provider-portal-members-page";
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
+    public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
+    public const string SSHAgent = "ssh-agent";
+    public const string SSHVersionCheckQAOverride = "ssh-version-check-qa-override";
     public const string AuthenticatorTwoFactorToken = "authenticator-2fa-token";
-    public const string EnableUpgradePasswordManagerSub = "AC-2708-upgrade-password-manager-sub";
     public const string IdpAutoSubmitLogin = "idp-auto-submit-login";
     public const string UnauthenticatedExtensionUIRefresh = "unauth-ui-refresh";
     public const string GenerateIdentityFillScriptRefactor = "generate-identity-fill-script-refactor";
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
-    public const string MembersTwoFAQueryOptimization = "ac-1698-members-two-fa-query-optimization";
     public const string NativeCarouselFlow = "native-carousel-flow";
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
@@ -144,6 +138,33 @@ public static class FeatureFlagKeys
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
+    public const string TrialPayment = "PM-8163-trial-payment";
+    public const string RemoveServerVersionHeader = "remove-server-version-header";
+    public const string SecureOrgGroupDetails = "pm-3479-secure-org-group-details";
+    public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
+    public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
+    public const string GeneratorToolsModernization = "generator-tools-modernization";
+    public const string NewDeviceVerification = "new-device-verification";
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
+    public const string IntegrationPage = "pm-14505-admin-console-integration-page";
+    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
+    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
+    public const string SecurityTasks = "security-tasks";
+    public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
+    public const string PM11360RemoveProviderExportPermission = "pm-11360-remove-provider-export-permission";
+    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
+    public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
+    public const string InlineMenuTotp = "inline-menu-totp";
+    public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
+    public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
+    public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
+    public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
+    public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
+    public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
+    public const string AppReviewPrompt = "app-review-prompt";
+    public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
+    public const string UsePricingService = "use-pricing-service";
 
     public static List<string> GetAllKeys()
     {
@@ -159,8 +180,6 @@ public static class FeatureFlagKeys
         return new Dictionary<string, string>()
         {
             { DuoRedirect, "true" },
-            { BulkDeviceApproval, "true" },
-            { CipherKeyEncryption, "true" },
         };
     }
 }

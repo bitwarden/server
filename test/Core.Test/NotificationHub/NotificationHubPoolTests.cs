@@ -22,8 +22,8 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = null,
                         HubName = "hub",
-                        RegistrationStart = DateTime.UtcNow,
-                        RegistrationEnd = DateTime.UtcNow.AddDays(1)
+                        RegistrationStartDate = DateTime.UtcNow,
+                        RegistrationEndDate = DateTime.UtcNow.AddDays(1)
                     }
                 }
             }
@@ -52,8 +52,8 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "connection",
                         HubName = null,
-                        RegistrationStart = DateTime.UtcNow,
-                        RegistrationEnd = DateTime.UtcNow.AddDays(1)
+                        RegistrationStartDate = DateTime.UtcNow,
+                        RegistrationEndDate = DateTime.UtcNow.AddDays(1)
                     }
                 }
             }
@@ -82,8 +82,8 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",
-                        RegistrationStart = null,
-                        RegistrationEnd = null,
+                        RegistrationStartDate = null,
+                        RegistrationEndDate = null,
                     }
                 }
             }
@@ -110,8 +110,8 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "Endpoint=sb://example.servicebus.windows.net/;SharedAccessKey=example///example=",
                         HubName = "hub",
-                        RegistrationStart = DateTime.UtcNow,
-                        RegistrationEnd = DateTime.UtcNow.AddDays(1),
+                        RegistrationStartDate = DateTime.UtcNow.AddMinutes(-1),
+                        RegistrationEndDate = DateTime.UtcNow.AddDays(1),
                     }
                 }
             }
@@ -138,8 +138,8 @@ public class NotificationHubPoolTests
                     new() {
                         ConnectionString = "connection",
                         HubName = "hub",
-                        RegistrationStart = DateTime.UtcNow,
-                        RegistrationEnd = DateTime.UtcNow.AddDays(1),
+                        RegistrationStartDate = DateTime.UtcNow,
+                        RegistrationEndDate = DateTime.UtcNow.AddDays(1),
                     }
                 }
             }

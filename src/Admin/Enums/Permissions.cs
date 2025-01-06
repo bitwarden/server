@@ -44,8 +44,11 @@ public enum Permission
 
     Tools_ChargeBrainTreeCustomer,
     Tools_PromoteAdmin,
+    Tools_PromoteProviderServiceUser,
     Tools_GenerateLicenseFile,
     Tools_ManageTaxRates,
     Tools_ManageStripeSubscriptions,
-    Tools_CreateEditTransaction
+    Tools_CreateEditTransaction,
+    Tools_ProcessStripeEvents,
+    Tools_MigrateProviders
 }

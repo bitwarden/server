@@ -13,6 +13,16 @@ public class ConfigResponseModel : ResponseModel
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
     public PushSettings Push { get; set; }
+    public ServerSettingsResponseModel Settings { get; set; }
+
+    public ConfigResponseModel() : base("config")
+    {
+        Version = AssemblyHelpers.GetVersion();
+        GitHash = AssemblyHelpers.GetGitHash();
+        Environment = new EnvironmentConfigResponseModel();
+        FeatureStates = new Dictionary<string, object>();
+        Settings = new ServerSettingsResponseModel();
+    }
 
     public ConfigResponseModel(
         IGlobalSettings globalSettings,
@@ -31,6 +41,10 @@ public class ConfigResponseModel : ResponseModel
         };
         FeatureStates = featureStates;
         Push = new PushSettings(globalSettings);
+        Settings = new ServerSettingsResponseModel
+        {
+            DisableUserRegistration = globalSettings.DisableUserRegistration
+        };
     }
 }
 
@@ -68,4 +82,9 @@ public class PushSettings
             ? PushTechnologyType.WebPush
             : PushTechnologyType.SignalR;
     }
+}
+
+public class ServerSettingsResponseModel
+{
+    public bool DisableUserRegistration { get; set; }
 }

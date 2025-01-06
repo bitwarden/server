@@ -75,6 +75,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -99,6 +100,10 @@ public class Startup
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
         services.AddScoped<IProviderEventService, ProviderEventService>();
+
+        // Jobs service
+        Jobs.JobsHostedService.AddJobsServices(services);
+        services.AddHostedService<Jobs.JobsHostedService>();
     }
 
     public void Configure(

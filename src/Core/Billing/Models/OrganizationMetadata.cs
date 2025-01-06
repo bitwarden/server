@@ -1,8 +1,12 @@
 ﻿namespace Bit.Core.Billing.Models;
 
 public record OrganizationMetadata(
-    bool IsOnSecretsManagerStandalone)
-{
-    public static OrganizationMetadata Default() => new(
-        IsOnSecretsManagerStandalone: default);
-}
+    bool IsEligibleForSelfHost,
+    bool IsManaged,
+    bool IsOnSecretsManagerStandalone,
+    bool IsSubscriptionUnpaid,
+    bool HasSubscription,
+    bool HasOpenInvoice,
+    DateTime? InvoiceDueDate,
+    DateTime? InvoiceCreatedDate,
+    DateTime? SubPeriodEndDate);

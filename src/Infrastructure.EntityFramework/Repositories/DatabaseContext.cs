@@ -7,6 +7,7 @@ using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.NotificationCenter.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -74,6 +75,10 @@ public class DatabaseContext : DbContext
     public DbSet<ProviderInvoiceItem> ProviderInvoiceItems { get; set; }
     public DbSet<Notification> Notifications { get; set; }
     public DbSet<NotificationStatus> NotificationStatuses { get; set; }
+    public DbSet<ClientOrganizationMigrationRecord> ClientOrganizationMigrationRecords { get; set; }
+    public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
+    public DbSet<SecurityTask> SecurityTasks { get; set; }
+    public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -105,10 +110,7 @@ public class DatabaseContext : DbContext
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
-        // Shadow property configurations
-        builder.Entity<OrganizationUser>()
-            .Property<bool>("AccessAll")
-            .HasDefaultValue(false);
+        // Shadow property configurations go here
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();

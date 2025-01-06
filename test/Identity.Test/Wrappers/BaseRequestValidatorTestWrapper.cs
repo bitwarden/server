@@ -1,16 +1,13 @@
 ﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Identity.IdentityServer;
+using Bit.Identity.IdentityServer.RequestValidators;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -51,43 +48,33 @@ IBaseRequestValidatorTestWrapper
     public bool isValid { get; set; }
     public BaseRequestValidatorTestWrapper(
         UserManager<User> userManager,
-        IDeviceRepository deviceRepository,
-        IDeviceService deviceService,
         IUserService userService,
         IEventService eventService,
-        IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-        ITemporaryDuoWebV4SDKService duoWebV4SDKService,
-        IOrganizationRepository organizationRepository,
+        IDeviceValidator deviceValidator,
+        ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
-        IApplicationCacheService applicationCacheService,
         IMailService mailService,
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder) :
-        base(
+         base(
             userManager,
-            deviceRepository,
-            deviceService,
             userService,
             eventService,
-            organizationDuoWebTokenProvider,
-            duoWebV4SDKService,
-            organizationRepository,
+            deviceValidator,
+            twoFactorAuthenticationValidator,
             organizationUserRepository,
-            applicationCacheService,
             mailService,
             logger,
             currentContext,
             globalSettings,
             userRepository,
             policyService,
-            tokenDataFactory,
             featureService,
             ssoConfigRepository,
             userDecryptionOptionsBuilder)
@@ -98,13 +85,6 @@ IBaseRequestValidatorTestWrapper
         BaseRequestValidationContextFake context)
     {
         await ValidateAsync(context, context.ValidatedTokenRequest, context.CustomValidatorRequestContext);
-    }
-
-    public async Task<Tuple<bool, Organization>> TestRequiresTwoFactorAsync(
-        User user,
-        ValidatedTokenRequest context)
-    {
-        return await RequiresTwoFactorAsync(user, context);
     }
 
     protected override ClaimsPrincipal GetSubject(
@@ -141,6 +121,11 @@ IBaseRequestValidatorTestWrapper
     protected override void SetTwoFactorResult(
         BaseRequestValidationContextFake context,
         Dictionary<string, object> customResponse)
+    { }
+
+    protected override void SetValidationErrorResult(
+        BaseRequestValidationContextFake context,
+        CustomValidatorRequestContext requestContext)
     { }
 
     protected override Task<bool> ValidateContextAsync(

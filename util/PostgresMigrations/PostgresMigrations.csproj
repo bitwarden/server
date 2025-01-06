@@ -26,5 +26,6 @@
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
     <EmbeddedResource Include="HelperScripts\2024-04-25_00_EnableOrgsCollectionEnhancements.psql" />
     <EmbeddedResource Include="HelperScripts\2024-08-26_00_FinalFlexibleCollectionsDataMigrations.psql" />
+    <EmbeddedResource Include="HelperScripts\2024-09-05_00_SyncDuoVersionFourMetadataToVersionTwo.psql" />
   </ItemGroup>
 </Project>

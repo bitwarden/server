@@ -23,17 +23,18 @@ public interface ICurrentContext
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
-    ClientType ClientType { get; set; }
+    IdentityClientType IdentityClientType { get; set; }
     bool IsBot { get; set; }
     bool MaybeBot { get; set; }
     int? BotScore { get; set; }
     string ClientId { get; set; }
     Version ClientVersion { get; set; }
+    bool ClientVersionIsPrerelease { get; set; }
+
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 
     Task SetContextAsync(ClaimsPrincipal user);
-
 
     Task<bool> OrganizationUser(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);

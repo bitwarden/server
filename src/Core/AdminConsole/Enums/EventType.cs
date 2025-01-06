@@ -46,7 +46,7 @@ public enum EventType : int
     OrganizationUser_Invited = 1500,
     OrganizationUser_Confirmed = 1501,
     OrganizationUser_Updated = 1502,
-    OrganizationUser_Removed = 1503,
+    OrganizationUser_Removed = 1503, // Organization user data was deleted
     OrganizationUser_UpdatedGroups = 1504,
     OrganizationUser_UnlinkedSso = 1505,
     OrganizationUser_ResetPassword_Enroll = 1506,
@@ -58,6 +58,8 @@ public enum EventType : int
     OrganizationUser_Restored = 1512,
     OrganizationUser_ApprovedAuthRequest = 1513,
     OrganizationUser_RejectedAuthRequest = 1514,
+    OrganizationUser_Deleted = 1515, // Both user and organization user data were deleted
+    OrganizationUser_Left = 1516,    // User voluntarily left the organization
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,

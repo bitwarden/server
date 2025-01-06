@@ -144,7 +144,8 @@ public class SelfHostedOrganizationDetails : Organization
             RevisionDate = RevisionDate,
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
-            LimitCollectionCreationDeletion = LimitCollectionCreationDeletion,
+            LimitCollectionCreation = LimitCollectionCreation,
+            LimitCollectionDeletion = LimitCollectionDeletion,
             AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
             Status = Status
         };

@@ -10,14 +10,28 @@ public interface IStripeAdapter
     Task<Stripe.Customer> CustomerUpdateAsync(string id, Stripe.CustomerUpdateOptions options = null);
     Task<Stripe.Customer> CustomerDeleteAsync(string id);
     Task<List<PaymentMethod>> CustomerListPaymentMethods(string id, CustomerListPaymentMethodsOptions options = null);
+    Task<CustomerBalanceTransaction> CustomerBalanceTransactionCreate(string customerId,
+        CustomerBalanceTransactionCreateOptions options);
     Task<Stripe.Subscription> SubscriptionCreateAsync(Stripe.SubscriptionCreateOptions subscriptionCreateOptions);
     Task<Stripe.Subscription> SubscriptionGetAsync(string id, Stripe.SubscriptionGetOptions options = null);
+
+    /// <summary>
+    /// Retrieves a subscription object for a provider.
+    /// </summary>
+    /// <param name="id">The subscription ID.</param>
+    /// <param name="providerId">The provider ID.</param>
+    /// <param name="options">Additional options.</param>
+    /// <returns>The subscription object.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the subscription doesn't belong to the provider.</exception>
+    Task<Stripe.Subscription> ProviderSubscriptionGetAsync(string id, Guid providerId, Stripe.SubscriptionGetOptions options = null);
+
     Task<List<Stripe.Subscription>> SubscriptionListAsync(StripeSubscriptionListOptions subscriptionSearchOptions);
     Task<Stripe.Subscription> SubscriptionUpdateAsync(string id, Stripe.SubscriptionUpdateOptions options = null);
     Task<Stripe.Subscription> SubscriptionCancelAsync(string Id, Stripe.SubscriptionCancelOptions options = null);
     Task<Stripe.Invoice> InvoiceUpcomingAsync(Stripe.UpcomingInvoiceOptions options);
     Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
     Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);
+    Task<Stripe.Invoice> InvoiceCreatePreviewAsync(InvoiceCreatePreviewOptions options);
     Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options);
     Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options);
     Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options);
@@ -29,6 +43,7 @@ public interface IStripeAdapter
     IAsyncEnumerable<Stripe.PaymentMethod> PaymentMethodListAutoPagingAsync(Stripe.PaymentMethodListOptions options);
     Task<Stripe.PaymentMethod> PaymentMethodAttachAsync(string id, Stripe.PaymentMethodAttachOptions options = null);
     Task<Stripe.PaymentMethod> PaymentMethodDetachAsync(string id, Stripe.PaymentMethodDetachOptions options = null);
+    Task<Stripe.Plan> PlanGetAsync(string id, Stripe.PlanGetOptions options = null);
     Task<Stripe.TaxRate> TaxRateCreateAsync(Stripe.TaxRateCreateOptions options);
     Task<Stripe.TaxRate> TaxRateUpdateAsync(string id, Stripe.TaxRateUpdateOptions options);
     Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options);

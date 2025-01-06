@@ -1,15 +1,22 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -60,6 +67,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IPremiumUserBillingService _premiumUserBillingService;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
     public UserService(
         IUserRepository userRepository,
@@ -91,7 +102,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IFeatureService featureService,
+        IPremiumUserBillingService premiumUserBillingService,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
         : base(
               store,
               optionsAccessor,
@@ -129,6 +144,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _featureService = featureService;
+        _premiumUserBillingService = premiumUserBillingService;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -281,6 +300,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (user == null)
         {
             // No user exists.
+            return;
+        }
+
+        if (await IsManagedByAnyOrganizationAsync(user.Id))
+        {
+            await _mailService.SendCannotDeleteManagedAccountEmailAsync(user.Email);
             return;
         }
 
@@ -818,8 +843,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type,
-        IOrganizationService organizationService)
+    public async Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type)
     {
         var providers = user.GetTwoFactorProviders();
         if (!providers?.ContainsKey(type) ?? true)
@@ -834,12 +858,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (!await TwoFactorIsEnabledAsync(user))
         {
-            await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
+            await CheckPoliciesOnTwoFactorRemovalAsync(user);
         }
     }
 
-    public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode,
-        IOrganizationService organizationService)
+    public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
     {
         var user = await _userRepository.GetByEmailAsync(email);
         if (user == null)
@@ -863,7 +886,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await SaveUserAsync(user);
         await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
-        await CheckPoliciesOnTwoFactorRemovalAsync(user, organizationService);
+        await CheckPoliciesOnTwoFactorRemovalAsync(user);
 
         return true;
     }
@@ -891,7 +914,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user, out var exceptionMessage))
+            var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
+
+            if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
             {
                 throw new BadRequestException(exceptionMessage);
             }
@@ -903,8 +928,18 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         else
         {
-            paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
-                paymentToken, additionalStorageGb, taxInfo);
+            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
+
+            if (deprecateStripeSourcesAPI)
+            {
+                var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
+                await _premiumUserBillingService.Finalize(sale);
+            }
+            else
+            {
+                paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
+                    paymentToken, additionalStorageGb, taxInfo);
+            }
         }
 
         user.Premium = true;
@@ -938,6 +973,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await paymentService.CancelAndRecoverChargesAsync(user);
             throw;
         }
+
+
+
         return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
             paymentIntentClientSecret);
     }
@@ -960,7 +998,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user, out var exceptionMessage))
+        var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
+
+        if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
         {
             throw new BadRequestException(exceptionMessage);
         }
@@ -1084,7 +1124,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
+    public async Task<UserLicense> GenerateLicenseAsync(
+        User user,
+        SubscriptionInfo subscriptionInfo = null,
         int? version = null)
     {
         if (user == null)
@@ -1097,8 +1139,16 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
         }
 
-        return subscriptionInfo == null ? new UserLicense(user, _licenseService) :
-            new UserLicense(user, subscriptionInfo, _licenseService);
+        var userLicense = subscriptionInfo == null
+            ? new UserLicense(user, _licenseService)
+            : new UserLicense(user, subscriptionInfo, _licenseService);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        }
+
+        return userLicense;
     }
 
     public override async Task<bool> CheckPasswordAsync(User user, string password)
@@ -1244,6 +1294,28 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IsLegacyUser(user);
     }
 
+    public async Task<bool> IsManagedByAnyOrganizationAsync(Guid userId)
+    {
+        var managingOrganizations = await GetOrganizationsManagingUserAsync(userId);
+        return managingOrganizations.Any();
+    }
+
+    public async Task<IEnumerable<Organization>> GetOrganizationsManagingUserAsync(Guid userId)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
+        {
+            return Enumerable.Empty<Organization>();
+        }
+
+        // Get all organizations that have verified the user's email domain.
+        var organizationsWithVerifiedUserEmailDomain = await _organizationRepository.GetByVerifiedUserEmailDomainAsync(userId);
+
+        // Organizations must be enabled and able to have verified domains.
+        // TODO: Replace "UseSso" with a new organization ability like "UseOrganizationDomains" (PM-11622).
+        // Verified domains were tied to SSO, so we currently check the "UseSso" organization ability.
+        return organizationsWithVerifiedUserEmailDomain.Where(organization => organization is { Enabled: true, UseSso: true });
+    }
+
     /// <inheritdoc cref="IsLegacyUser(string)"/>
     public static bool IsLegacyUser(User user)
     {
@@ -1292,16 +1364,30 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
+    private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+        var organizationsManagingUser = await GetOrganizationsManagingUserAsync(user.Id);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await organizationService.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.DisplayName(), user.Email);
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && organizationsManagingUser.Any(o => o.Id == p.OrganizationId))
+            {
+                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        p.OrganizationId,
+                        [new OrganizationUserUserDetails { UserId = user.Id, OrganizationId = p.OrganizationId }],
+                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                await _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(), user.Email);
+            }
+            else
+            {
+                await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
+                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                    organization.DisplayName(), user.Email);
+            }
+
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);
@@ -1327,7 +1413,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task SendOTPAsync(User user)
     {
-        if (user.Email == null)
+        if (string.IsNullOrEmpty(user.Email))
         {
             throw new BadRequestException("No user email.");
         }
@@ -1368,6 +1454,20 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
+    }
+
+    public async Task ResendNewDeviceVerificationEmail(string email, string secret)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null)
+        {
+            return;
+        }
+
+        if (await VerifySecretAsync(user, secret))
+        {
+            await SendOTPAsync(user);
+        }
     }
 
     private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)

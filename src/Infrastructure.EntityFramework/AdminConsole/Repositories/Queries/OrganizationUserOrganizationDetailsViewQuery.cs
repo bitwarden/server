@@ -66,8 +66,10 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UsePasswordManager = o.UsePasswordManager,
                         SmSeats = o.SmSeats,
                         SmServiceAccounts = o.SmServiceAccounts,
-                        LimitCollectionCreationDeletion = o.LimitCollectionCreationDeletion,
+                        LimitCollectionCreation = o.LimitCollectionCreation,
+                        LimitCollectionDeletion = o.LimitCollectionDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
+                        UseRiskInsights = o.UseRiskInsights,
                     };
         return query;
     }

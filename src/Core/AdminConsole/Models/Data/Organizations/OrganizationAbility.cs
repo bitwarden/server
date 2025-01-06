@@ -21,8 +21,10 @@ public class OrganizationAbility
         UseResetPassword = organization.UseResetPassword;
         UseCustomPermissions = organization.UseCustomPermissions;
         UsePolicies = organization.UsePolicies;
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 
     public Guid Id { get; set; }
@@ -37,6 +39,8 @@ public class OrganizationAbility
     public bool UseResetPassword { get; set; }
     public bool UseCustomPermissions { get; set; }
     public bool UsePolicies { get; set; }
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

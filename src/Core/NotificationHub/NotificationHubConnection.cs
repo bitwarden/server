@@ -66,6 +66,14 @@ public class NotificationHubConnection
         }
     }
 
+    public string LogString
+    {
+        get
+        {
+            return $"HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}";
+        }
+    }
+
     /// <summary>
     /// Gets whether registration is enabled for the given comb ID.
     /// This is based off of the generation time encoded in the comb ID.
@@ -90,7 +98,7 @@ public class NotificationHubConnection
             return false;
         }
 
-        return RegistrationStartDate <= queryTime;
+        return RegistrationStartDate < queryTime;
     }
 
     public HttpRequestMessage CreateRequest(HttpMethod method, string pathUri, params string[] queryParameters)
@@ -136,8 +144,8 @@ public class NotificationHubConnection
             ConnectionString = settings.ConnectionString,
             EnableSendTracing = settings.EnableSendTracing,
             // Comb time is not precise enough for millisecond accuracy
-            RegistrationStartDate = settings.RegistrationStart.HasValue ? Truncate(settings.RegistrationStart.Value, TimeSpan.FromMilliseconds(10)) : null,
-            RegistrationEndDate = settings.RegistrationEnd
+            RegistrationStartDate = settings.RegistrationStartDate.HasValue ? Truncate(settings.RegistrationStartDate.Value, TimeSpan.FromMilliseconds(10)) : null,
+            RegistrationEndDate = settings.RegistrationEndDate
         };
     }
 

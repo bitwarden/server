@@ -1,6 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Api.Requests.Accounts;
+using Bit.Core.Billing.Models.Api.Requests.Organizations;
+using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -15,6 +18,9 @@ public interface IPaymentService
         string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false, int additionalSmSeats = 0,
         int additionalServiceAccount = 0, bool signupIsFromSecretsManagerTrial = false);
+    Task<string> PurchaseOrganizationNoPaymentMethod(Organization org, Plan plan, int additionalSeats,
+        bool premiumAccessAddon, int additionalSmSeats = 0, int additionalServiceAccount = 0,
+        bool signupIsFromSecretsManagerTrial = false);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan, OrganizationUpgrade upgrade);
@@ -56,4 +62,7 @@ public interface IPaymentService
     Task<bool> RisksSubscriptionFailure(Organization organization);
     Task<bool> HasSecretsManagerStandalone(Organization organization);
     Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Stripe.Subscription subscription);
+    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewIndividualInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
+    Task<PreviewInvoiceResponseModel> PreviewInvoiceAsync(PreviewOrganizationInvoiceRequestBody parameters, string gatewayCustomerId, string gatewaySubscriptionId);
+
 }

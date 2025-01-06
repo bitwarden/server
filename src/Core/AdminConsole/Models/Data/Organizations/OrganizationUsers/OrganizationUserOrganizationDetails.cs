@@ -54,6 +54,8 @@ public class OrganizationUserOrganizationDetails
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }
