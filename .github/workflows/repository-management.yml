@@ -241,6 +241,7 @@ jobs:
               git cherry-pick --strategy-option=theirs -x $SOURCE_COMMIT
               git push -u origin $destination_branch
             fi
+          }
 
           # If we are cutting 'hotfix-rc':
           if [[ "$CUT_BRANCH" == "hotfix-rc" ]]; then
