@@ -28,7 +28,8 @@ public class OrganizationBillingService(
     IOrganizationRepository organizationRepository,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IOrganizationBillingService
+    ISubscriberService subscriberService,
+    ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -68,7 +69,7 @@ public class OrganizationBillingService(
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
-                false, false, false, null, null, null);
+                false, false, false, false, null, null, null);
         }
 
         var customer = await subscriberService.GetCustomer(organization,
@@ -78,6 +79,7 @@ public class OrganizationBillingService(
 
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
         var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
+        var isSubscriptionCanceled = IsSubscriptionCanceled(subscription);
         var hasSubscription = true;
         var openInvoice = await HasOpenInvoiceAsync(subscription);
         var hasOpenInvoice = openInvoice.HasOpenInvoice;
@@ -86,7 +88,7 @@ public class OrganizationBillingService(
         var subPeriodEndDate = subscription?.CurrentPeriodEnd;
 
         return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
+            isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, isSubscriptionCanceled, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
     }
 
     public async Task UpdatePaymentMethod(
@@ -173,14 +175,38 @@ public class OrganizationBillingService(
                 throw new BillingException();
             }
 
-            var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
-
-            customerCreateOptions.Address = address;
+            customerCreateOptions.Address = new AddressOptions
+            {
+                Line1 = customerSetup.TaxInformation.Line1,
+                Line2 = customerSetup.TaxInformation.Line2,
+                City = customerSetup.TaxInformation.City,
+                PostalCode = customerSetup.TaxInformation.PostalCode,
+                State = customerSetup.TaxInformation.State,
+                Country = customerSetup.TaxInformation.Country,
+            };
             customerCreateOptions.Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
-            customerCreateOptions.TaxIdData = taxIdData;
+
+            if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
+            {
+                var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
+                    customerSetup.TaxInformation.TaxId);
+
+                if (taxIdType == null)
+                {
+                    logger.LogWarning("Could not determine tax ID type for organization '{OrganizationID}' in country '{Country}' with tax ID '{TaxID}'.",
+                        organization.Id,
+                        customerSetup.TaxInformation.Country,
+                        customerSetup.TaxInformation.TaxId);
+                }
+
+                customerCreateOptions.TaxIdData =
+                [
+                    new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
+                ];
+            }
 
             var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
 
@@ -411,6 +437,16 @@ public class OrganizationBillingService(
         return invoice?.Status == "open"
             ? (true, invoice.Created, invoice.DueDate)
             : (false, null, null);
+    }
+
+    private static bool IsSubscriptionCanceled(Subscription subscription)
+    {
+        if (subscription == null)
+        {
+            return false;
+        }
+
+        return subscription.Status == "canceled";
     }
     #endregion
 }

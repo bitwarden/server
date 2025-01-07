@@ -12,25 +12,41 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
     {
         var subscriptionInfo = licenseContext.SubscriptionInfo;
 
-        var expires = subscriptionInfo.UpcomingInvoice?.Date?.AddDays(7) ?? entity.PremiumExpirationDate?.AddDays(7);
-        var refresh = subscriptionInfo.UpcomingInvoice?.Date ?? entity.PremiumExpirationDate;
-        var trial = (subscriptionInfo.Subscription?.TrialEndDate.HasValue ?? false) &&
+        var expires = subscriptionInfo?.UpcomingInvoice?.Date?.AddDays(7) ?? entity.PremiumExpirationDate?.AddDays(7);
+        var refresh = subscriptionInfo?.UpcomingInvoice?.Date ?? entity.PremiumExpirationDate;
+        var trial = (subscriptionInfo?.Subscription?.TrialEndDate.HasValue ?? false) &&
                     subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow;
 
         var claims = new List<Claim>
         {
             new(nameof(UserLicenseConstants.LicenseType), LicenseType.User.ToString()),
-            new(nameof(UserLicenseConstants.LicenseKey), entity.LicenseKey),
             new(nameof(UserLicenseConstants.Id), entity.Id.ToString()),
             new(nameof(UserLicenseConstants.Name), entity.Name),
             new(nameof(UserLicenseConstants.Email), entity.Email),
             new(nameof(UserLicenseConstants.Premium), entity.Premium.ToString()),
-            new(nameof(UserLicenseConstants.MaxStorageGb), entity.MaxStorageGb.ToString()),
             new(nameof(UserLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
-            new(nameof(UserLicenseConstants.Expires), expires.ToString()),
-            new(nameof(UserLicenseConstants.Refresh), refresh.ToString()),
             new(nameof(UserLicenseConstants.Trial), trial.ToString()),
         };
+
+        if (entity.LicenseKey is not null)
+        {
+            claims.Add(new(nameof(UserLicenseConstants.LicenseKey), entity.LicenseKey));
+        }
+
+        if (entity.MaxStorageGb is not null)
+        {
+            claims.Add(new(nameof(UserLicenseConstants.MaxStorageGb), entity.MaxStorageGb.ToString()));
+        }
+
+        if (expires is not null)
+        {
+            claims.Add(new(nameof(UserLicenseConstants.Expires), expires.ToString()));
+        }
+
+        if (refresh is not null)
+        {
+            claims.Add(new(nameof(UserLicenseConstants.Refresh), refresh.ToString()));
+        }
 
         return Task.FromResult(claims);
     }

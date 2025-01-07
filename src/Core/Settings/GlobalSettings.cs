@@ -81,8 +81,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
-
     public virtual bool EnableEmailVerification { get; set; }
+    public virtual string PricingUri { get; set; }
 
     public string BuildExternalUri(string explicitValue, string name)
     {
