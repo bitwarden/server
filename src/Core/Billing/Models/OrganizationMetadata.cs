@@ -7,6 +7,7 @@ public record OrganizationMetadata(
     bool IsSubscriptionUnpaid,
     bool HasSubscription,
     bool HasOpenInvoice,
+    bool IsSubscriptionCanceled,
     DateTime? InvoiceDueDate,
     DateTime? InvoiceCreatedDate,
     DateTime? SubPeriodEndDate);
