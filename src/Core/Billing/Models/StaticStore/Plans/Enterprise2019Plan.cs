@@ -85,7 +85,7 @@ public record Enterprise2019Plan : Plan
 
             if (isAnnual)
             {
-                StripeStoragePlanId = "storage-gb-annually";
+                StripeStoragePlanId = "business-storage-gb-annually";
                 StripeSeatPlanId = "enterprise-org-seat-annually";
                 SeatPrice = 36;
                 AdditionalStoragePricePerGb = 4;

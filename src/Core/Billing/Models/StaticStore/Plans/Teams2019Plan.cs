@@ -79,7 +79,7 @@ public record Teams2019Plan : Plan
             if (isAnnual)
             {
                 StripePlanId = "teams-org-annually";
-                StripeStoragePlanId = "storage-gb-annually";
+                StripeStoragePlanId = "business-storage-gb-annually";
                 StripeSeatPlanId = "teams-org-seat-annually";
                 SeatPrice = 24;
                 BasePrice = 60;
