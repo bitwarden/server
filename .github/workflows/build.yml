@@ -307,7 +307,7 @@ jobs:
 
       - name: Scan Docker image
         id: container-scan
-        uses: anchore/scan-action@5ed195cc06065322983cae4bb31e2a751feb86fd # v5.2.0
+        uses: anchore/scan-action@abae793926ec39a78ab18002bc7fc45bbbd94342 # v6.0.0
         with:
           image: ${{ steps.image-tags.outputs.primary_tag }}
           fail-build: false
@@ -653,6 +653,21 @@ jobs:
                 ephemeral_env_branch: process.env.GITHUB_HEAD_REF
               }
             })
+
+  trigger-ephemeral-environment-sync:
+    name: Trigger Ephemeral Environment Sync
+    needs: trigger-ee-updates
+    if: |
+      github.event_name == 'pull_request_target'
+      && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
+    uses: bitwarden/gh-actions/.github/workflows/_ephemeral_environment_manager.yml@main
+    with:
+      ephemeral_env_branch: process.env.GITHUB_HEAD_REF
+      project: server
+      sync_environment: true
+      pull_request_number: ${{ github.event.number }}
+    secrets: inherit
+
 
   check-failures:
     name: Check for failures
