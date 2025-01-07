@@ -29,4 +29,5 @@ public interface IPushNotificationService
     Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
         string deviceId = null);
     Task PushSyncOrganizationStatusAsync(Organization organization);
+    Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization);
 }

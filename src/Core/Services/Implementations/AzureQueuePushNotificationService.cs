@@ -233,4 +233,12 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
     }
 
+    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
+        await SendMessageAsync(PushType.SyncOrganizationCollectionSettingChanged,
+            new OrganizationCollectionManagementPushNotification
+            {
+                OrganizationId = organization.Id,
+                LimitCollectionCreation = organization.LimitCollectionCreation,
+                LimitCollectionDeletion = organization.LimitCollectionDeletion
+            }, false);
 }

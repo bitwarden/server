@@ -801,6 +801,11 @@ public class OrganizationService : IOrganizationService
                 Description = organization.DisplayBusinessName()
             });
         }
+
+        if (eventType == EventType.Organization_CollectionManagement_Updated)
+        {
+            await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(organization);
+        }
     }
 
     public async Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type)

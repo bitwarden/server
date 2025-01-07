@@ -151,6 +151,12 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization)
+    {
+        PushToServices(s => s.PushSyncOrganizationCollectionManagementSettingsAsync(organization));
+        return Task.CompletedTask;
+    }
+
     private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
     {
         if (_services != null)

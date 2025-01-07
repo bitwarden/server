@@ -94,6 +94,8 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) => Task.CompletedTask;
+
     public Task PushAuthRequestAsync(AuthRequest authRequest)
     {
         return Task.FromResult(0);
