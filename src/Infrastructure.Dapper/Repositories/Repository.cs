@@ -51,7 +51,7 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
             var parameters = new DynamicParameters();
             parameters.AddDynamicParams(obj);
             parameters.Add("Id", obj.Id, direction: ParameterDirection.InputOutput);
-            var results = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Create]",
                 parameters,
                 commandType: CommandType.StoredProcedure);
@@ -64,7 +64,7 @@ public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_Update]",
                 obj,
                 commandType: CommandType.StoredProcedure);
