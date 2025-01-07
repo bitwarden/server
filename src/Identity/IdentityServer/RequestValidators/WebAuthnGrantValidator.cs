@@ -44,8 +44,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand
-        )
+        IAssertWebAuthnLoginCredentialCommand assertWebAuthnLoginCredentialCommand)
         : base(
             userManager,
             userService,
