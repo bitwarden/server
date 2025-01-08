@@ -68,6 +68,11 @@ public class RepeatingPatternBitAutoDataAttribute : BitAutoDataAttribute
 
     public override IEnumerable<object?[]> GetData(MethodInfo testMethod)
     {
+        if (_repeatingDataList.Count == 0)
+        {
+            yield return base.GetData(testMethod).First();
+        }
+
         foreach (var repeatingData in _repeatingDataList)
         {
             var bitData = base.GetData(testMethod).First();
