@@ -18,5 +18,6 @@ public static class EnrichCipherHelpers
         new EnrichedCipherDetails(cipher, new ItemPermissions
         {
             CanDelete = ItemPermissionHelpers.CanDelete(cipher, allCollections)
+            // TODO: other permissions like Edit would be moved off the CipherDetails model and calculated here instead
         });
 }
