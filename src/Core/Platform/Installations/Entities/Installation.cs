@@ -19,6 +19,7 @@ public class Installation : ITableObject<Guid>
     public string Key { get; set; } = null!;
     public bool Enabled { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
+    public DateTime? LastActivityDate { get; internal set; }
 
     public void SetNewId()
     {
