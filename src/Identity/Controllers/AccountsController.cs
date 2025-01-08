@@ -19,7 +19,6 @@ using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.Identity.Models.Response.Accounts;
 using Bit.SharedWeb.Utilities;
@@ -82,7 +81,6 @@ public class AccountsController : Controller
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
@@ -106,7 +104,6 @@ public class AccountsController : Controller
         return NoContent();
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/verification-email-clicked")]
     public async Task<IActionResult> PostRegisterVerificationEmailClicked([FromBody] RegisterVerificationEmailClickedRequestModel model)
     {
@@ -139,7 +136,6 @@ public class AccountsController : Controller
 
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/finish")]
     public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
