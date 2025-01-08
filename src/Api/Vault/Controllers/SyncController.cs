@@ -1,4 +1,5 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿using Bit.Api.Vault.Authorization;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -104,9 +105,17 @@ public class SyncController : Controller
         var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
         var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
+        // Enrich ciphers with permissions info
+        // This is purely functional - we already have all the data we need and can just pass it in
+        var ciphersWithCollectionIds = ciphers.Select(c =>
+            new CipherDetailsWithCollections(c, collectionCiphersGroupDict));
+        var enrichedCiphers = ciphersWithCollectionIds.Select(c =>
+            EnrichCipherHelpers.EnrichCipher(c, collections));
+
+        // TODO: update response models to recognise and handle the enriched cipher model
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,
             organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
+            folders, collections, enrichedCiphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
     }
 
