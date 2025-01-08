@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -206,7 +207,9 @@ public class CipherRepositoryTests
         ICollectionCipherRepository collectionCipherRepository,
         ICollectionRepository collectionRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository
+        )
     {
 
         var user = await userRepository.CreateAsync(new User
@@ -231,6 +234,14 @@ public class CipherRepositoryTests
             Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.Owner,
         });
+
+        // A group that will be assigned Edit permissions to any collections
+        var editGroup = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = organization.Id,
+            Name = "Edit Group",
+        });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser.Id });
 
         // MANAGE
 
@@ -332,6 +343,17 @@ public class CipherRepositoryTests
                 new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = true, Manage = false }
             });
 
+        // Assign the EditGroup to this View Only collection. The user belongs to this group.
+        // The user permissions specified above (ViewOnly) should take precedence.
+        await groupRepository.ReplaceAsync(editGroup,
+            new[]
+            {
+                new CollectionAccessSelection
+                {
+                    Id = viewOnlyCollection.Id, HidePasswords = false, ReadOnly = false, Manage = false
+                },
+            });
+
         // VIEW EXCEPT PASSWORD
 
         var viewExceptPasswordCollection = await collectionRepository.CreateAsync(new Collection
@@ -375,7 +397,6 @@ public class CipherRepositoryTests
         Assert.True(manageCipherPermission.Edit);
         Assert.True(manageCipherPermission.Read);
         Assert.True(manageCipherPermission.ViewPassword);
-        Assert.False(manageCipherPermission.Unassigned);
 
         var editCipherPermission = permissions.FirstOrDefault(c => c.Id == editCipher.Id);
         Assert.NotNull(editCipherPermission);
@@ -383,7 +404,6 @@ public class CipherRepositoryTests
         Assert.True(editCipherPermission.Edit);
         Assert.True(editCipherPermission.Read);
         Assert.True(editCipherPermission.ViewPassword);
-        Assert.False(editCipherPermission.Unassigned);
 
         var editExceptPasswordCipherPermission = permissions.FirstOrDefault(c => c.Id == editExceptPasswordCipher.Id);
         Assert.NotNull(editExceptPasswordCipherPermission);
@@ -391,7 +411,6 @@ public class CipherRepositoryTests
         Assert.True(editExceptPasswordCipherPermission.Edit);
         Assert.True(editExceptPasswordCipherPermission.Read);
         Assert.False(editExceptPasswordCipherPermission.ViewPassword);
-        Assert.False(editExceptPasswordCipherPermission.Unassigned);
 
         var viewOnlyCipherPermission = permissions.FirstOrDefault(c => c.Id == viewOnlyCipher.Id);
         Assert.NotNull(viewOnlyCipherPermission);
@@ -399,7 +418,6 @@ public class CipherRepositoryTests
         Assert.False(viewOnlyCipherPermission.Edit);
         Assert.True(viewOnlyCipherPermission.Read);
         Assert.True(viewOnlyCipherPermission.ViewPassword);
-        Assert.False(viewOnlyCipherPermission.Unassigned);
 
         var viewExceptPasswordCipherPermission = permissions.FirstOrDefault(c => c.Id == viewExceptPasswordCipher.Id);
         Assert.NotNull(viewExceptPasswordCipherPermission);
@@ -407,11 +425,9 @@ public class CipherRepositoryTests
         Assert.False(viewExceptPasswordCipherPermission.Edit);
         Assert.True(viewExceptPasswordCipherPermission.Read);
         Assert.False(viewExceptPasswordCipherPermission.ViewPassword);
-        Assert.False(viewExceptPasswordCipherPermission.Unassigned);
 
         var unassignedCipherPermission = permissions.FirstOrDefault(c => c.Id == unassignedCipher.Id);
         Assert.NotNull(unassignedCipherPermission);
-        Assert.True(unassignedCipherPermission.Unassigned);
         Assert.False(unassignedCipherPermission.Manage);
         Assert.False(unassignedCipherPermission.Edit);
         Assert.False(unassignedCipherPermission.Read);

@@ -325,7 +325,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                         ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
                         Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
                         Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
-                        Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
                     }).ToList();
             }
             else
@@ -341,7 +340,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
                                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
                                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
-                                       Unassigned = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Unassigned))),
                                    };
                 permissions = await groupByQuery.ToListAsync();
             }

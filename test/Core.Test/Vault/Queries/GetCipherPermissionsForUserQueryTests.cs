@@ -47,6 +47,12 @@ public class GetCipherPermissionsForUserQueryTests
 
         sutProvider.GetDependency<ICipherRepository>().GetCipherPermissionsForOrganizationAsync(organizationId, userId)
             .Returns(cipherPermissions);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId)
+            .Returns(new List<CipherOrganizationDetails>
+            {
+                new() { Id = _unassignedCipherId }
+            });
 
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
@@ -59,7 +65,6 @@ public class GetCipherPermissionsForUserQueryTests
         Assert.True(result[_manageCipherId].Manage);
         Assert.True(result[_readExceptPasswordCipherId].Read);
         Assert.False(result[_readExceptPasswordCipherId].ViewPassword);
-        Assert.True(result[_unassignedCipherId].Unassigned);
         Assert.False(result[_unassignedCipherId].Read);
     }
 
@@ -77,6 +82,12 @@ public class GetCipherPermissionsForUserQueryTests
 
         sutProvider.GetDependency<ICipherRepository>().GetCipherPermissionsForOrganizationAsync(organizationId, userId)
             .Returns(cipherPermissions);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId)
+            .Returns(new List<CipherOrganizationDetails>
+            {
+                new() { Id = _unassignedCipherId }
+            });
 
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
@@ -104,6 +115,12 @@ public class GetCipherPermissionsForUserQueryTests
 
         sutProvider.GetDependency<ICipherRepository>().GetCipherPermissionsForOrganizationAsync(organizationId, userId)
             .Returns(cipherPermissions);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId)
+            .Returns(new List<CipherOrganizationDetails>
+            {
+                new() { Id = _unassignedCipherId }
+            });
 
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
@@ -126,6 +143,12 @@ public class GetCipherPermissionsForUserQueryTests
 
         sutProvider.GetDependency<ICipherRepository>().GetCipherPermissionsForOrganizationAsync(organizationId, userId)
             .Returns(cipherPermissions);
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId)
+            .Returns(new List<CipherOrganizationDetails>
+            {
+                new() { Id = _unassignedCipherId }
+            });
 
         var result = await sutProvider.Sut.GetByOrganization(organizationId);
 
@@ -139,7 +162,6 @@ public class GetCipherPermissionsForUserQueryTests
         Assert.True(result[_readExceptPasswordCipherId].Read);
         Assert.False(result[_readExceptPasswordCipherId].ViewPassword);
 
-        Assert.True(result[_unassignedCipherId].Unassigned);
         Assert.True(result[_unassignedCipherId].Read);
         Assert.True(result[_unassignedCipherId].Edit);
         Assert.True(result[_unassignedCipherId].ViewPassword);
@@ -156,7 +178,6 @@ public class GetCipherPermissionsForUserQueryTests
             Edit = false,
             Manage = false,
             ViewPassword = false,
-            Unassigned = false
         };
 
         var readOnlyCipher = new OrganizationCipherPermission
@@ -166,7 +187,6 @@ public class GetCipherPermissionsForUserQueryTests
             Edit = false,
             Manage = false,
             ViewPassword = true,
-            Unassigned = false
         };
 
         var editCipher = new OrganizationCipherPermission
@@ -176,7 +196,6 @@ public class GetCipherPermissionsForUserQueryTests
             Edit = true,
             Manage = false,
             ViewPassword = true,
-            Unassigned = false
         };
 
         var manageCipher = new OrganizationCipherPermission
@@ -186,7 +205,6 @@ public class GetCipherPermissionsForUserQueryTests
             Edit = true,
             Manage = true,
             ViewPassword = true,
-            Unassigned = false
         };
 
         var readExceptPasswordCipher = new OrganizationCipherPermission
@@ -196,7 +214,6 @@ public class GetCipherPermissionsForUserQueryTests
             Edit = false,
             Manage = false,
             ViewPassword = false,
-            Unassigned = false
         };
 
         var unassignedCipher = new OrganizationCipherPermission
@@ -206,7 +223,6 @@ public class GetCipherPermissionsForUserQueryTests
             Edit = false,
             Manage = false,
             ViewPassword = false,
-            Unassigned = true
         };
 
         return new List<OrganizationCipherPermission>
