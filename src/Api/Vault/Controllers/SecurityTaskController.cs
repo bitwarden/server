@@ -20,17 +20,20 @@ public class SecurityTaskController : Controller
     private readonly IUserService _userService;
     private readonly IGetTaskDetailsForUserQuery _getTaskDetailsForUserQuery;
     private readonly IMarkTaskAsCompleteCommand _markTaskAsCompleteCommand;
+    private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
 
     public SecurityTaskController(
         IUserService userService,
         IGetTaskDetailsForUserQuery getTaskDetailsForUserQuery,
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
+        IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
         ICreateManyTasksCommand createManyTasksCommand)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
         _markTaskAsCompleteCommand = markTaskAsCompleteCommand;
+        _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
     }
 
@@ -57,6 +60,20 @@ public class SecurityTaskController : Controller
     {
         await _markTaskAsCompleteCommand.CompleteAsync(taskId);
         return NoContent();
+    }
+
+    /// <summary>
+    /// Retrieves security tasks for an organization. Restricted to organization administrators.
+    /// </summary>
+    /// <param name="organizationId">The organization Id</param>
+    /// <param name="status">Optional filter for task status. If not provided, returns tasks of all statuses.</param>
+    [HttpGet("organization")]
+    public async Task<ListResponseModel<SecurityTasksResponseModel>> ListForOrganization(
+        [FromQuery] Guid organizationId, [FromQuery] SecurityTaskStatus? status)
+    {
+        var securityTasks = await _getTasksForOrganizationQuery.GetTasksAsync(organizationId, status);
+        var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
+        return new ListResponseModel<SecurityTasksResponseModel>(response);
     }
 
     /// <summary>
