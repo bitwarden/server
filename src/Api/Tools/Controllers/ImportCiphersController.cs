@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.ImportFeatures.Interfaces;
 using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ public class ImportCiphersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IImportCiphersCommand _importCiphersCommand;
 
     public ImportCiphersController(
         ICipherService cipherService,
@@ -33,7 +35,8 @@ public class ImportCiphersController : Controller
         GlobalSettings globalSettings,
         ICollectionRepository collectionRepository,
         IAuthorizationService authorizationService,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        IImportCiphersCommand importCiphersCommand)
     {
         _cipherService = cipherService;
         _userService = userService;
@@ -42,6 +45,7 @@ public class ImportCiphersController : Controller
         _globalSettings = globalSettings;
         _collectionRepository = collectionRepository;
         _authorizationService = authorizationService;
+        _importCiphersCommand = importCiphersCommand;
     }
 
     [HttpPost("import")]
@@ -57,7 +61,7 @@ public class ImportCiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
-        await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
+        await _importCiphersCommand.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
     }
 
     [HttpPost("import-organization")]
@@ -85,7 +89,7 @@ public class ImportCiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
-        await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
+        await _importCiphersCommand.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
     }
 
     private async Task<bool> CheckOrgImportPermission(List<Collection> collections, Guid orgId)
