@@ -1,5 +1,4 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -155,9 +154,6 @@ public class RemoveOrganizationFromProviderCommandTests
             "b@example.com"
         ]);
 
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(false);
-
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(organization.GatewaySubscriptionId)
             .Returns(GetSubscription(organization.GatewaySubscriptionId));
 
@@ -221,9 +217,6 @@ public class RemoveOrganizationFromProviderCommandTests
             "a@example.com",
             "b@example.com"
         ]);
-
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 

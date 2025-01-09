@@ -5,8 +5,11 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services;
+using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -93,24 +96,7 @@ public class ProviderClientsControllerTests
     #region UpdateAsync
 
     [Theory, BitAutoData]
-    public async Task UpdateAsync_NoProviderOrganization_NotFound(
-        Provider provider,
-        Guid providerOrganizationId,
-        UpdateClientOrganizationRequestBody requestBody,
-        SutProvider<ProviderClientsController> sutProvider)
-    {
-        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
-            .ReturnsNull();
-
-        var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
-
-        AssertNotFound(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_AssignedSeats_Ok(
+    public async Task UpdateAsync_ServiceUserMakingPurchase_Unauthorized(
         Provider provider,
         Guid providerOrganizationId,
         UpdateClientOrganizationRequestBody requestBody,
@@ -118,6 +104,11 @@ public class ProviderClientsControllerTests
         Organization organization,
         SutProvider<ProviderClientsController> sutProvider)
     {
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Seats = 10;
+        organization.Status = OrganizationStatusType.Managed;
+        requestBody.AssignedSeats = 20;
+
         ConfigureStableProviderServiceUserInputs(provider, sutProvider);
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
@@ -125,50 +116,58 @@ public class ProviderClientsControllerTests
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(providerOrganization.OrganizationId)
             .Returns(organization);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
+
+        sutProvider.GetDependency<IProviderBillingService>().SeatAdjustmentResultsInPurchase(
+            provider,
+            PlanType.TeamsMonthly,
+            10).Returns(true);
+
+        var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
+
+        AssertUnauthorized(result, message: "Service users cannot purchase additional seats.");
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAsync_Ok(
+        Provider provider,
+        Guid providerOrganizationId,
+        UpdateClientOrganizationRequestBody requestBody,
+        ProviderOrganization providerOrganization,
+        Organization organization,
+        SutProvider<ProviderClientsController> sutProvider)
+    {
+        organization.PlanType = PlanType.TeamsMonthly;
+        organization.Seats = 10;
+        organization.Status = OrganizationStatusType.Managed;
+        requestBody.AssignedSeats = 20;
+
+        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
+
+        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
+            .Returns(providerOrganization);
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(providerOrganization.OrganizationId)
+            .Returns(organization);
+
+        sutProvider.GetDependency<ICurrentContext>().ProviderProviderAdmin(provider.Id).Returns(false);
+
+        sutProvider.GetDependency<IProviderBillingService>().SeatAdjustmentResultsInPurchase(
+            provider,
+            PlanType.TeamsMonthly,
+            10).Returns(false);
 
         var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
 
         await sutProvider.GetDependency<IProviderBillingService>().Received(1)
-            .AssignSeatsToClientOrganization(
+            .ScaleSeats(
                 provider,
-                organization,
-                requestBody.AssignedSeats);
+                PlanType.TeamsMonthly,
+                10);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<Organization>(org => org.Name == requestBody.Name));
-
-        Assert.IsType<Ok>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateAsync_Name_Ok(
-        Provider provider,
-        Guid providerOrganizationId,
-        UpdateClientOrganizationRequestBody requestBody,
-        ProviderOrganization providerOrganization,
-        Organization organization,
-        SutProvider<ProviderClientsController> sutProvider)
-    {
-        ConfigureStableProviderServiceUserInputs(provider, sutProvider);
-
-        sutProvider.GetDependency<IProviderOrganizationRepository>().GetByIdAsync(providerOrganizationId)
-            .Returns(providerOrganization);
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(providerOrganization.OrganizationId)
-            .Returns(organization);
-
-        requestBody.AssignedSeats = organization.Seats!.Value;
-
-        var result = await sutProvider.Sut.UpdateAsync(provider.Id, providerOrganizationId, requestBody);
-
-        await sutProvider.GetDependency<IProviderBillingService>().DidNotReceiveWithAnyArgs()
-            .AssignSeatsToClientOrganization(
-                Arg.Any<Provider>(),
-                Arg.Any<Organization>(),
-                Arg.Any<int>());
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1)
-            .ReplaceAsync(Arg.Is<Organization>(org => org.Name == requestBody.Name));
+            .ReplaceAsync(Arg.Is<Organization>(org => org.Seats == requestBody.AssignedSeats && org.Name == requestBody.Name));
 
         Assert.IsType<Ok>(result);
     }

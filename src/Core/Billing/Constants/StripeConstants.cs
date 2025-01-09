@@ -25,6 +25,9 @@ public static class StripeConstants
     public static class ErrorCodes
     {
         public const string CustomerTaxLocationInvalid = "customer_tax_location_invalid";
+        public const string PaymentMethodMicroDepositVerificationAttemptsExceeded = "payment_method_microdeposit_verification_attempts_exceeded";
+        public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
+        public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
         public const string TaxIdInvalid = "tax_id_invalid";
     }
 

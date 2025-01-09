@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries.Interfaces;
@@ -21,8 +22,8 @@ public class GetNotificationStatusDetailsForUserQuery : IGetNotificationStatusDe
         _notificationRepository = notificationRepository;
     }
 
-    public async Task<IEnumerable<NotificationStatusDetails>> GetByUserIdStatusFilterAsync(
-        NotificationStatusFilter statusFilter)
+    public async Task<PagedResult<NotificationStatusDetails>> GetByUserIdStatusFilterAsync(
+        NotificationStatusFilter statusFilter, PageOptions pageOptions)
     {
         if (!_currentContext.UserId.HasValue)
         {
@@ -33,6 +34,6 @@ public class GetNotificationStatusDetailsForUserQuery : IGetNotificationStatusDe
 
         // Note: only returns the user's notifications - no authorization check needed
         return await _notificationRepository.GetByUserIdAndStatusAsync(_currentContext.UserId.Value, clientType,
-            statusFilter);
+            statusFilter, pageOptions);
     }
 }

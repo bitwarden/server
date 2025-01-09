@@ -2,6 +2,7 @@
 using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 
 namespace Bit.Core.Test.AdminConsole.AutoFixture;
@@ -12,7 +13,8 @@ internal class PolicyUpdateCustomization(PolicyType type, bool enabled) : ICusto
     {
         fixture.Customize<PolicyUpdate>(composer => composer
             .With(o => o.Type, type)
-            .With(o => o.Enabled, enabled));
+            .With(o => o.Enabled, enabled)
+            .With(o => o.PerformedBy, new StandardUser(Guid.NewGuid(), false)));
     }
 }
 

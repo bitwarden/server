@@ -4,7 +4,7 @@ using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core;
@@ -14,12 +14,12 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -561,6 +561,49 @@ public class AccountsControllerTests : IDisposable
         await _sut.Delete(new SecretVerificationRequestModel());
 
         await _userService.Received(1).DeleteAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+        SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.SetUserVerifyDevicesAsync(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenInvalidSecret_ShouldFail(
+        User user, SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((user)));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.SetUserVerifyDevicesAsync(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenRequestValid_ShouldSucceed(
+        User user, SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        user.VerifyDevices = false;
+        model.VerifyDevices = true;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((user)));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.SetUserVerifyDevicesAsync(model);
+
+        await _userService.Received(1).SaveUserAsync(user);
+        Assert.Equal(model.VerifyDevices, user.VerifyDevices);
     }
 
     // Below are helper functions that currently belong to this

@@ -27,20 +27,20 @@
         </div>
     </div>
     <form method="post" enctype="multipart/form-data" asp-action="TaxRateUpload">
-        <div class="form-group">
-            <input type="file" name="file" />
+        <div class="mb-3">
+            <input type="file" class="form-control" name="file" />
         </div>
-        <div class="form-group">
-            <input type="submit" value="Upload" class="btn btn-primary mb-2" />
+        <div class="mb-3">
+            <input type="submit" value="Upload" class="btn btn-primary" />
         </div>
     </form>
 </section>
 
-<hr/>
+<hr class="my-4">
 <h2>View &amp; Manage Tax Rates</h2>
-<a class="btn btn-primary mb-2" asp-controller="Tools" asp-action="TaxRateAddEdit">Add a Rate</a>
+<a class="btn btn-primary mb-3" asp-controller="Tools" asp-action="TaxRateAddEdit">Add a Rate</a>
 <div class="table-responsive">
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover align-middle">
         <thead>
             <tr>
                 <th style="width: 190px;">Id</th>
@@ -97,7 +97,7 @@
     </table>
 </div>
 
-<nav>
+<nav aria-label="Tax rates pagination">
     <ul class="pagination">
         @if(Model.PreviousPage.HasValue)
         {

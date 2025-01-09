@@ -54,7 +54,8 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @LimitCollectionCreationDeletion BIT = NULL, -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     @LimitCollectionCreation BIT = NULL,
     @LimitCollectionDeletion BIT = NULL,
-    @AllowAdminAccessToAllCollectionItems BIT = 0
+    @AllowAdminAccessToAllCollectionItems BIT = 0,
+    @UseRiskInsights BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -119,7 +120,8 @@ BEGIN
         [LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
-        [AllowAdminAccessToAllCollectionItems]
+        [AllowAdminAccessToAllCollectionItems],
+        [UseRiskInsights]
     )
     VALUES
     (
@@ -178,6 +180,7 @@ BEGIN
         COALESCE(@LimitCollectionCreation, @LimitCollectionDeletion, 0), -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863)
         @LimitCollectionCreation,
         @LimitCollectionDeletion,
-        @AllowAdminAccessToAllCollectionItems
+        @AllowAdminAccessToAllCollectionItems,
+        @UseRiskInsights
     )
 END

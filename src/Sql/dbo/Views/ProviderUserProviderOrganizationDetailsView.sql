@@ -35,7 +35,9 @@ SELECT
     O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
-    O.[AllowAdminAccessToAllCollectionItems]
+    O.[AllowAdminAccessToAllCollectionItems],
+    O.[UseRiskInsights],
+    P.[Type] ProviderType
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

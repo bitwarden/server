@@ -34,21 +34,21 @@
     <h2>Billing</h2>
     <div class="row">
         <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="BillingEmail"></label>
+            <div class="mb-3">
+                <label asp-for="BillingEmail" class="form-label"></label>
                 <input type="email" class="form-control" asp-for="BillingEmail" readonly='@(!canEdit)'>
             </div>
         </div>
     </div>
     <div class="row">
         <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="BillingPhone"></label>
+            <div class="mb-3">
+                <label asp-for="BillingPhone" class="form-label"></label>
                 <input type="tel" class="form-control" asp-for="BillingPhone">
             </div>
         </div>
     </div>
-    @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling) && Model.Provider.IsBillable())
+    @if (Model.Provider.IsBillable())
     {
         switch (Model.Provider.Type)
         {
@@ -56,55 +56,15 @@
             {
                 <div class="row">
                     <div class="col-sm">
-                        <div class="form-group">
-                            <label asp-for="TeamsMonthlySeatMinimum"></label>
+                        <div class="mb-3">
+                            <label asp-for="TeamsMonthlySeatMinimum" class="form-label"></label>
                             <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
                         </div>
                     </div>
                     <div class="col-sm">
-                        <div class="form-group">
-                            <label asp-for="EnterpriseMonthlySeatMinimum"></label>
+                        <div class="mb-3">
+                            <label asp-for="EnterpriseMonthlySeatMinimum" class="form-label"></label>
                             <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm">
-                        <div class="form-group">
-                            <div class="form-group">
-                                <label asp-for="Gateway"></label>
-                                <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                                    <option value="">--</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm">
-                        <div class="form-group">
-                            <label asp-for="GatewayCustomerId"></label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" asp-for="GatewayCustomerId">
-                                <div class="input-group-append">
-                                    <a href="@Model.GatewayCustomerUrl" class="btn btn-secondary" target="_blank">
-                                        <i class="fa fa-external-link"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-sm">
-                        <div class="form-group">
-                            <label asp-for="GatewaySubscriptionId"></label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
-                                <div class="input-group-append">
-                                    <a href="@Model.GatewaySubscriptionUrl" class="btn btn-secondary" target="_blank">
-                                        <i class="fa fa-external-link"></i>
-                                    </a>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -116,7 +76,7 @@
                 {
                     <div class="row">
                         <div class="col-sm">
-                            <div class="form-group">
+                            <div class="mb-3">
                                 @{
                                     var multiOrgPlans = new List<PlanType>
                                     {
@@ -124,15 +84,15 @@
                                         PlanType.EnterpriseMonthly
                                     };
                                 }
-                                <label asp-for="Plan"></label>
+                                <label asp-for="Plan" class="form-label"></label>
                                 <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
                                     <option value="">--</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-sm">
-                            <div class="form-group">
-                                <label asp-for="EnterpriseMinimumSeats"></label>
+                            <div class="mb-3">
+                                <label asp-for="EnterpriseMinimumSeats" class="form-label"></label>
                                 <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
                             </div>
                         </div>
@@ -141,6 +101,40 @@
                 break;
             }
         }
+        <div class="row">
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="Gateway" class="form-label"></label>
+                    <select class="form-control" asp-for="Gateway" asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                        <option value="">--</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="GatewayCustomerId" class="form-label"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewayCustomerId">
+                        <button class="btn btn-secondary" type="button" onclick="window.open('@Model.GatewayCustomerUrl', '_blank')">
+                            <i class="fa fa-external-link"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="mb-3">
+                    <label asp-for="GatewaySubscriptionId" class="form-label"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
+                        <button class="btn btn-secondary" type="button" onclick="window.open('@Model.GatewaySubscriptionUrl', '_blank')">
+                            <i class="fa fa-external-link"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
 </form>
 @await Html.PartialAsync("Organizations", Model)
@@ -151,21 +145,21 @@
         <div class="modal-dialog">
             <div class="modal-content rounded">
                 <div class="p-3">
-                    <h4 class="font-weight-bolder" id="exampleModalLabel">Request provider deletion</h4>
+                    <h4 class="fw-bolder" id="exampleModalLabel">Request provider deletion</h4>
                 </div>
                 <div class="modal-body">
-                    <span class="font-weight-light">
+                    <span class="fw-light">
                         Enter the email of the provider admin that will receive the request to delete the provider portal.
                     </span>
                     <form>
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label for="provider-email" class="col-form-label">Provider email</label>
                             <input type="email" class="form-control" id="provider-email">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger btn-pill" onclick="initiateDeleteProvider('@Model.Provider.Id')">Send email request</button>
                 </div>
             </div>
@@ -175,21 +169,21 @@
         <div class="modal-dialog">
             <div class="modal-content rounded">
                 <div class="p-3">
-                    <h4 class="font-weight-bolder" id="exampleModalLabel">Delete provider</h4>
+                    <h4 class="fw-bolder" id="exampleModalLabel">Delete provider</h4>
                 </div>
                 <div class="modal-body">
-                    <span class="font-weight-light">
+                    <span class="fw-light">
                         This action is permanent and irreversible. Enter the provider name to complete deletion of the provider and associated data.
                     </span>
                     <form>
-                        <div class="form-group">
+                        <div class="mb-3">
                             <label for="provider-name" class="col-form-label">Provider name</label>
                             <input type="text" class="form-control" id="provider-name">
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger btn-pill" onclick="deleteProvider('@Model.Provider.Id');">Delete provider</button>
                 </div>
             </div>
@@ -199,12 +193,12 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content rounded">
                 <div class="modal-body">
-                    <h4 class="font-weight-bolder">Cannot Delete @Model.Name</h4>
-                    <p class="font-weight-lighter">You must unlink all clients before you can delete @Model.Name.</p>
+                    <h4 class="fw-bolder">Cannot Delete @Model.Name</h4>
+                    <p class="fw-lighter">You must unlink all clients before you can delete @Model.Name.</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary btn-pill" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-pill" data-dismiss="modal">Ok</button>
+                    <button type="button" class="btn btn-outline-primary btn-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-pill" data-bs-dismiss="modal">Ok</button>
                 </div>
             </div>
         </div>
@@ -214,15 +208,14 @@
 
     <div class="d-flex mt-4">
         <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
-        <div class="ml-auto d-flex">
+        <div class="ms-auto d-flex">
             <button class="btn btn-danger" onclick="openRequestDeleteModal(@Model.ProviderOrganizations.Count())">Request Delete</button>
-            <button id="requestDeletionBtn" hidden="hidden" data-toggle="modal" data-target="#requestDeletionModal"></button>
+            <button id="requestDeletionBtn" hidden="hidden" data-bs-toggle="modal" data-bs-target="#requestDeletionModal"></button>
 
-            <button class="btn btn-outline-danger ml-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
-            <button id="deleteBtn" hidden="hidden" data-toggle="modal" data-target="#DeleteModal"></button>
+            <button class="btn btn-outline-danger ms-2" onclick="openDeleteModal(@Model.ProviderOrganizations.Count())">Delete</button>
+            <button id="deleteBtn" hidden="hidden" data-bs-toggle="modal" data-bs-target="#DeleteModal"></button>
 
-            <button id="linkAccWarningBtn" hidden="hidden" data-toggle="modal" data-target="#linkedWarningModal"></button>
-
+            <button id="linkAccWarningBtn" hidden="hidden" data-bs-toggle="modal" data-bs-target="#linkedWarningModal"></button>
         </div>
     </div>
 }

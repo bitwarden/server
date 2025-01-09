@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -363,9 +364,9 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewSubscription(Guid orgId)
     {
-        var orgManagedByMspProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType == ProviderType.Msp);
+        var isManagedByBillableProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType.SupportsConsolidatedBilling());
 
-        return orgManagedByMspProvider
+        return isManagedByBillableProvider
             ? await ProviderUserForOrgAsync(orgId)
             : await OrganizationOwner(orgId);
     }

@@ -282,9 +282,7 @@ public class ProvidersController : Controller
         await _providerRepository.ReplaceAsync(provider);
         await _applicationCacheService.UpsertProviderAbilityAsync(provider);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        if (!provider.IsBillable())
         {
             return RedirectToAction("Edit", new { id });
         }
@@ -340,10 +338,7 @@ public class ProvidersController : Controller
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-
-        if (!isConsolidatedBillingEnabled || !provider.IsBillable())
+        if (!provider.IsBillable())
         {
             return new ProviderEditModel(provider, users, providerOrganizations, new List<ProviderPlan>());
         }

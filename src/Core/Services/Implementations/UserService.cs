@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -14,7 +16,9 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -67,6 +71,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IFeatureService _featureService;
     private readonly IPremiumUserBillingService _premiumUserBillingService;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IRevokeNonCompliantOrganizationUserCommand _revokeNonCompliantOrganizationUserCommand;
 
     public UserService(
         IUserRepository userRepository,
@@ -101,7 +106,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IFeatureService featureService,
         IPremiumUserBillingService premiumUserBillingService,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand)
         : base(
               store,
               optionsAccessor,
@@ -142,6 +148,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _featureService = featureService;
         _premiumUserBillingService = premiumUserBillingService;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _revokeNonCompliantOrganizationUserCommand = revokeNonCompliantOrganizationUserCommand;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -908,7 +915,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 throw new BadRequestException("Invalid license.");
             }
 
-            if (!license.CanUse(user, out var exceptionMessage))
+            var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
+
+            if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
             {
                 throw new BadRequestException(exceptionMessage);
             }
@@ -965,6 +974,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await paymentService.CancelAndRecoverChargesAsync(user);
             throw;
         }
+
+
+
         return new Tuple<bool, string>(string.IsNullOrWhiteSpace(paymentIntentClientSecret),
             paymentIntentClientSecret);
     }
@@ -987,7 +999,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid license.");
         }
 
-        if (!license.CanUse(user, out var exceptionMessage))
+        var claimsPrincipal = _licenseService.GetClaimsPrincipalFromLicense(license);
+
+        if (!license.CanUse(user, claimsPrincipal, out var exceptionMessage))
         {
             throw new BadRequestException(exceptionMessage);
         }
@@ -1111,7 +1125,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
+    public async Task<UserLicense> GenerateLicenseAsync(
+        User user,
+        SubscriptionInfo subscriptionInfo = null,
         int? version = null)
     {
         if (user == null)
@@ -1124,8 +1140,16 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
         }
 
-        return subscriptionInfo == null ? new UserLicense(user, _licenseService) :
-            new UserLicense(user, subscriptionInfo, _licenseService);
+        var userLicense = subscriptionInfo == null
+            ? new UserLicense(user, _licenseService)
+            : new UserLicense(user, subscriptionInfo, _licenseService);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        }
+
+        return userLicense;
     }
 
     public override async Task<bool> CheckPasswordAsync(User user, string password)
@@ -1344,13 +1368,27 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
+        var organizationsManagingUser = await GetOrganizationsManagingUserAsync(user.Id);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
-            await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
-                organization.DisplayName(), user.Email);
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && organizationsManagingUser.Any(o => o.Id == p.OrganizationId))
+            {
+                await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
+                    new RevokeOrganizationUsersRequest(
+                        p.OrganizationId,
+                        [new OrganizationUserUserDetails { UserId = user.Id, OrganizationId = p.OrganizationId }],
+                        new SystemUser(EventSystemUser.TwoFactorDisabled)));
+                await _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(), user.Email);
+            }
+            else
+            {
+                await _removeOrganizationUserCommand.RemoveUserAsync(p.OrganizationId, user.Id);
+                await _mailService.SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(
+                    organization.DisplayName(), user.Email);
+            }
+
         }).ToArray();
 
         await Task.WhenAll(removeOrgUserTasks);
@@ -1376,7 +1414,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task SendOTPAsync(User user)
     {
-        if (user.Email == null)
+        if (string.IsNullOrEmpty(user.Email))
         {
             throw new BadRequestException("No user email.");
         }
@@ -1417,6 +1455,20 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         return isVerified;
+    }
+
+    public async Task ResendNewDeviceVerificationEmail(string email, string secret)
+    {
+        var user = await _userRepository.GetByEmailAsync(email);
+        if (user == null)
+        {
+            return;
+        }
+
+        if (await VerifySecretAsync(user, secret))
+        {
+            await SendOTPAsync(user);
+        }
     }
 
     private async Task SendAppropriateWelcomeEmailAsync(User user, string initiationPath)

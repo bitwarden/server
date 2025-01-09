@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -58,4 +58,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     /// Returns a list of OrganizationUsers with email domains that match one of the Organization's claimed domains.
     /// </summary>
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
+
+    Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
 }

@@ -43,11 +43,11 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UserId = organization.UserId;
         ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
+        ProviderType = organization.ProviderType;
         ProductTierType = StaticStore.GetPlan(organization.PlanType).ProductTier;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        // https://bitwarden.atlassian.net/browse/PM-10863
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 }

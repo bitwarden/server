@@ -1,9 +1,7 @@
-﻿
-using System.Text.Json;
-using Bit.Core;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -52,8 +50,7 @@ public interface ITwoFactorAuthenticationValidator
 public class TwoFactorAuthenticationValidator(
     IUserService userService,
     UserManager<User> userManager,
-    IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-    ITemporaryDuoWebV4SDKService duoWebV4SDKService,
+    IOrganizationDuoUniversalTokenProvider organizationDuoWebTokenProvider,
     IFeatureService featureService,
     IApplicationCacheService applicationCacheService,
     IOrganizationUserRepository organizationUserRepository,
@@ -63,8 +60,7 @@ public class TwoFactorAuthenticationValidator(
 {
     private readonly IUserService _userService = userService;
     private readonly UserManager<User> _userManager = userManager;
-    private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
-    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService = duoWebV4SDKService;
+    private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider = organizationDuoWebTokenProvider;
     private readonly IFeatureService _featureService = featureService;
     private readonly IApplicationCacheService _applicationCacheService = applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
@@ -153,17 +149,7 @@ public class TwoFactorAuthenticationValidator(
         {
             if (organization.TwoFactorProviderIsEnabled(type))
             {
-                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                {
-                    if (!token.Contains(':'))
-                    {
-                        // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
-                        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-                        return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
-                    }
-                }
-                return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
+                return await _organizationDuoUniversalTokenProvider.ValidateAsync(token, organization, user);
             }
             return false;
         }
@@ -180,19 +166,6 @@ public class TwoFactorAuthenticationValidator(
                     !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return false;
-                }
-                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                {
-                    if (type == TwoFactorProviderType.Duo)
-                    {
-                        if (!token.Contains(':'))
-                        {
-                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
-                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
-                        }
-                    }
                 }
                 return await _userManager.VerifyTwoFactorTokenAsync(user,
                     CoreHelpers.CustomProviderName(type), token);
@@ -248,10 +221,11 @@ public class TwoFactorAuthenticationValidator(
             in the future the `AuthUrl` will be the generated "token" - PM-8107
         */
         if (type == TwoFactorProviderType.OrganizationDuo &&
-            await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
+            await _organizationDuoUniversalTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
         {
             twoFactorParams.Add("Host", provider.MetaData["Host"]);
-            twoFactorParams.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+            twoFactorParams.Add("AuthUrl",
+                await _organizationDuoUniversalTokenProvider.GenerateAsync(organization, user));
 
             return twoFactorParams;
         }
@@ -261,13 +235,9 @@ public class TwoFactorAuthenticationValidator(
             CoreHelpers.CustomProviderName(type));
         switch (type)
         {
-            /*
-                Note: Duo is in the midst of being updated to use the UserManager built-in TwoFactor class
-                in the future the `AuthUrl` will be the generated "token" - PM-8107
-            */
             case TwoFactorProviderType.Duo:
                 twoFactorParams.Add("Host", provider.MetaData["Host"]);
-                twoFactorParams.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+                twoFactorParams.Add("AuthUrl", token);
                 break;
             case TwoFactorProviderType.WebAuthn:
                 if (token != null)

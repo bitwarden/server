@@ -76,7 +76,7 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret, bool isSettingMFA = false);
-
+    Task ResendNewDeviceVerificationEmail(string email, string secret);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 

@@ -2,9 +2,9 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -556,5 +556,15 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             return results.ToList();
         }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        await connection.ExecuteAsync(
+            "[dbo].[OrganizationUser_SetStatusForUsersById]",
+            new { OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds), Status = OrganizationUserStatusType.Revoked },
+            commandType: CommandType.StoredProcedure);
     }
 }

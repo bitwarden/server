@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Services.Contracts;
@@ -12,18 +11,10 @@ namespace Bit.Core.Billing.Services;
 public interface IProviderBillingService
 {
     /// <summary>
-    /// Assigns a specified number of <paramref name="seats"/> to a client <paramref name="organization"/> on behalf of
-    /// its <paramref name="provider"/>. Seat adjustments for the client organization may autoscale the provider's Stripe
-    /// <see cref="Stripe.Subscription"/> depending on the provider's seat minimum for the client <paramref name="organization"/>'s
-    /// <see cref="PlanType"/>.
+    /// Changes the assigned provider plan for the provider.
     /// </summary>
-    /// <param name="provider">The <see cref="Provider"/> that manages the client <paramref name="organization"/>.</param>
-    /// <param name="organization">The client <see cref="Organization"/> whose <paramref name="seats"/> you want to update.</param>
-    /// <param name="seats">The number of seats to assign to the client organization.</param>
-    Task AssignSeatsToClientOrganization(
-        Provider provider,
-        Organization organization,
-        int seats);
+    /// <param name="command">The command to change the provider plan.</param>
+    Task ChangePlan(ChangeProviderPlanCommand command);
 
     /// <summary>
     /// Create a Stripe <see cref="Stripe.Customer"/> for the provided client <paramref name="organization"/> utilizing
@@ -45,18 +36,6 @@ public interface IProviderBillingService
         string invoiceId);
 
     /// <summary>
-    /// Retrieves the number of seats an MSP has assigned to its client organizations with a specified <paramref name="planType"/>.
-    /// </summary>
-    /// <param name="providerId">The ID of the MSP to retrieve the assigned seat total for.</param>
-    /// <param name="planType">The type of plan to retrieve the assigned seat total for.</param>
-    /// <returns>An <see cref="int"/> representing the number of seats the provider has assigned to its client organizations with the specified <paramref name="planType"/>.</returns>
-    /// <exception cref="BillingException">Thrown when the provider represented by the <paramref name="providerId"/> is <see langword="null"/>.</exception>
-    /// <exception cref="BillingException">Thrown when the provider represented by the <paramref name="providerId"/> has <see cref="Provider.Type"/> <see cref="ProviderType.Reseller"/>.</exception>
-    Task<int> GetAssignedSeatTotalForPlanOrThrow(
-        Guid providerId,
-        PlanType planType);
-
-    /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
     /// This operation may autoscale the provider's Stripe <see cref="Stripe.Subscription"/> depending on the <paramref name="provider"/>'s seat minimum for the
     /// specified <paramref name="planType"/>.
@@ -65,6 +44,22 @@ public interface IProviderBillingService
     /// <param name="planType">The <see cref="PlanType"/> to scale seats for.</param>
     /// <param name="seatAdjustment">The change in the number of seats you'd like to apply to the <paramref name="provider"/>.</param>
     Task ScaleSeats(
+        Provider provider,
+        PlanType planType,
+        int seatAdjustment);
+
+    /// <summary>
+    /// Determines whether the provided <paramref name="seatAdjustment"/> will result in a purchase for the <paramref name="provider"/>'s <see cref="planType"/>.
+    /// Seat adjustments that result in purchases include:
+    /// <list type="bullet">
+    /// <item>The <paramref name="provider"/> going from below the seat minimum to above the seat minimum for the provided <paramref name="planType"/></item>
+    /// <item>The <paramref name="provider"/> going from above the seat minimum to further above the seat minimum for the provided <paramref name="planType"/></item>
+    /// </list>
+    /// </summary>
+    /// <param name="provider">The provider to check seat adjustments for.</param>
+    /// <param name="planType">The plan type to check seat adjustments for.</param>
+    /// <param name="seatAdjustment">The change in seats for the <paramref name="provider"/>'s <paramref name="planType"/>.</param>
+    Task<bool> SeatAdjustmentResultsInPurchase(
         Provider provider,
         PlanType planType,
         int seatAdjustment);
@@ -89,13 +84,6 @@ public interface IProviderBillingService
     /// <remarks>This method requires the <paramref name="provider"/> to already have a linked Stripe <see cref="Stripe.Customer"/> via its <see cref="Provider.GatewayCustomerId"/> field.</remarks>
     Task<Subscription> SetupSubscription(
         Provider provider);
-
-    /// <summary>
-    /// Changes the assigned provider plan for the provider.
-    /// </summary>
-    /// <param name="command">The command to change the provider plan.</param>
-    /// <returns></returns>
-    Task ChangePlan(ChangeProviderPlanCommand command);
 
     Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command);
 }

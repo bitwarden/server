@@ -14,14 +14,13 @@ namespace Bit.Api.Billing.Controllers;
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderRepository providerRepository,
     IProviderService providerService,
-    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
+    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
     [HttpPost]
     public async Task<IResult> CreateAsync(
@@ -102,15 +101,27 @@ public class ProviderClientsController(
 
         var clientOrganization = await organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
-        if (clientOrganization.Seats != requestBody.AssignedSeats)
+        if (clientOrganization is not { Status: OrganizationStatusType.Managed })
         {
-            await providerBillingService.AssignSeatsToClientOrganization(
-                provider,
-                clientOrganization,
-                requestBody.AssignedSeats);
+            return Error.ServerError();
         }
 
+        var seatAdjustment = requestBody.AssignedSeats - (clientOrganization.Seats ?? 0);
+
+        var seatAdjustmentResultsInPurchase = await providerBillingService.SeatAdjustmentResultsInPurchase(
+            provider,
+            clientOrganization.PlanType,
+            seatAdjustment);
+
+        if (seatAdjustmentResultsInPurchase && !currentContext.ProviderProviderAdmin(provider.Id))
+        {
+            return Error.Unauthorized("Service users cannot purchase additional seats.");
+        }
+
+        await providerBillingService.ScaleSeats(provider, clientOrganization.PlanType, seatAdjustment);
+
         clientOrganization.Name = requestBody.Name;
+        clientOrganization.Seats = requestBody.AssignedSeats;
 
         await organizationRepository.ReplaceAsync(clientOrganization);
 

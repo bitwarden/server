@@ -7,7 +7,6 @@ using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.ReportFeatures.Interfaces;
 using Bit.Core.Tools.ReportFeatures.OrganizationReportMembers.Interfaces;
 using Bit.Core.Tools.ReportFeatures.Requests;
-using Bit.Core.Tools.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,18 +20,21 @@ public class ReportsController : Controller
     private readonly IMemberAccessCipherDetailsQuery _memberAccessCipherDetailsQuery;
     private readonly IAddPasswordHealthReportApplicationCommand _addPwdHealthReportAppCommand;
     private readonly IGetPasswordHealthReportApplicationQuery _getPwdHealthReportAppQuery;
+    private readonly IDropPasswordHealthReportApplicationCommand _dropPwdHealthReportAppCommand;
 
     public ReportsController(
         ICurrentContext currentContext,
         IMemberAccessCipherDetailsQuery memberAccessCipherDetailsQuery,
         IAddPasswordHealthReportApplicationCommand addPasswordHealthReportApplicationCommand,
-        IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery
+        IGetPasswordHealthReportApplicationQuery getPasswordHealthReportApplicationQuery,
+        IDropPasswordHealthReportApplicationCommand dropPwdHealthReportAppCommand
     )
     {
         _currentContext = currentContext;
         _memberAccessCipherDetailsQuery = memberAccessCipherDetailsQuery;
         _addPwdHealthReportAppCommand = addPasswordHealthReportApplicationCommand;
         _getPwdHealthReportAppQuery = getPasswordHealthReportApplicationQuery;
+        _dropPwdHealthReportAppCommand = dropPwdHealthReportAppCommand;
     }
 
     /// <summary>
@@ -160,5 +162,27 @@ public class ReportsController : Controller
         }).ToList();
 
         return await _addPwdHealthReportAppCommand.AddPasswordHealthReportApplicationAsync(commandRequests);
+    }
+
+    /// <summary>
+    /// Drops a record from PasswordHealthReportApplication
+    /// </summary>
+    /// <param name="request">
+    ///     A single instance of DropPasswordHealthReportApplicationRequest
+    ///     { OrganizationId, array of PasswordHealthReportApplicationIds }
+    /// </param>
+    /// <returns></returns>
+    /// <exception cref="NotFoundException">If user does not have access to the organization</exception>
+    /// <exception cref="BadRequestException">If the organization does not have any records</exception>
+    [HttpDelete("password-health-report-application")]
+    public async Task DropPasswordHealthReportApplication(
+        [FromBody] DropPasswordHealthReportApplicationRequest request)
+    {
+        if (!await _currentContext.AccessReports(request.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        await _dropPwdHealthReportAppCommand.DropPasswordHealthReportApplicationAsync(request);
     }
 }

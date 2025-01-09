@@ -5,14 +5,11 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.RequestValidation;
@@ -217,48 +214,6 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
         Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
     }
 
-    [Fact]
-    public async Task ValidateAsync_DeviceSaveAsync_ReturnsNullDevice_ErrorResult()
-    {
-        // Arrange
-        var factory = new IdentityApplicationFactory();
-
-        // Stub DeviceValidator
-        factory.SubstituteService<IDeviceValidator>(sub =>
-        {
-            sub.SaveDeviceAsync(Arg.Any<User>(), Arg.Any<ValidatedTokenRequest>())
-                .Returns(null as Device);
-        });
-
-        // Add User
-        await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = DefaultUsername,
-            MasterPasswordHash = DefaultPassword
-        });
-        var userManager = factory.GetService<UserManager<User>>();
-        await factory.RegisterAsync(new RegisterRequestModel
-        {
-            Email = DefaultUsername,
-            MasterPasswordHash = DefaultPassword
-        });
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token",
-            GetFormUrlEncodedContent(),
-            context => context.SetAuthEmail(DefaultUsername));
-
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
-        Assert.Equal("No device information provided.", errorMessage);
-    }
-
     private async Task EnsureUserCreatedAsync(IdentityApplicationFactory factory = null)
     {
         factory ??= _factory;
@@ -287,6 +242,18 @@ public class ResourceOwnerPasswordValidatorTests : IClassFixture<IdentityApplica
             { "grant_type", "password" },
             { "username", username ?? DefaultUsername },
             { "password", password ?? DefaultPassword },
+        });
+    }
+
+    private FormUrlEncodedContent GetDefaultFormUrlEncodedContentWithoutDevice()
+    {
+        return new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "grant_type", "password" },
+            { "username", DefaultUsername },
+            { "password", DefaultPassword },
         });
     }
 

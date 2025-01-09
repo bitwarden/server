@@ -1,9 +1,4 @@
-@using Bit.Core.AdminConsole.Enums.Provider
-@using Bit.Core
-
 @model CreateMspProviderModel
-
-@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     ViewData["Title"] = "Create Managed Service Provider";
@@ -11,29 +6,26 @@
 
 <h1>Create Managed Service Provider</h1>
 <div>
-    <form class="form-group" method="post" asp-action="CreateMsp">
+    <form method="post" asp-action="CreateMsp">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
-        <div class="form-group">
-            <label asp-for="OwnerEmail"></label>
+        <div class="mb-3">
+            <label asp-for="OwnerEmail" class="form-label"></label>
             <input type="text" class="form-control" asp-for="OwnerEmail">
         </div>
-        @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="TeamsMonthlySeatMinimum"></label>
+                <div class="mb-3">
+                    <label asp-for="TeamsMonthlySeatMinimum" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="EnterpriseMonthlySeatMinimum"></label>
+                <div class="mb-3">
+                    <label asp-for="EnterpriseMonthlySeatMinimum" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
                 </div>
             </div>
         </div>
-        }
         <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
     </form>
 </div>

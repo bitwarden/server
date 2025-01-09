@@ -26,7 +26,7 @@
     },
     {
       "matchManagers": ["github-actions", "dockerfile", "docker-compose"],
-      "commitMessagePrefix": "[deps] DevOps:"
+      "commitMessagePrefix": "[deps] BRE:"
     },
     {
       "matchPackageNames": ["DnsClient"],
@@ -63,6 +63,7 @@
         "BitPay.Light",
         "Braintree",
         "coverlet.collector",
+        "CsvHelper",
         "FluentAssertions",
         "Kralizek.AutoFixture.Extensions.MockHttp",
         "Microsoft.AspNetCore.Mvc.Testing",
@@ -104,6 +105,7 @@
         "Microsoft.EntityFrameworkCore.Relational",
         "Microsoft.EntityFrameworkCore.Sqlite",
         "Microsoft.EntityFrameworkCore.SqlServer",
+        "Microsoft.Extensions.Caching.Cosmos",
         "Microsoft.Extensions.Caching.SqlServer",
         "Microsoft.Extensions.Caching.StackExchangeRedis",
         "Npgsql.EntityFrameworkCore.PostgreSQL",
@@ -116,8 +118,8 @@
     {
       "matchPackageNames": ["CommandDotNet", "YamlDotNet"],
       "description": "DevOps owned dependencies",
-      "commitMessagePrefix": "[deps] DevOps:",
-      "reviewers": ["team:dept-devops"]
+      "commitMessagePrefix": "[deps] BRE:",
+      "reviewers": ["team:dept-bre"]
     },
     {
       "matchPackageNames": [

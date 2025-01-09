@@ -5,10 +5,16 @@
 
 <h1>Users</h1>
 
-<form class="form-inline mb-2" method="get">
-    <label class="sr-only" asp-for="Email">Email</label>
-    <input type="text" class="form-control mb-2 mr-2" placeholder="Email" asp-for="Email" name="email">
-    <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
+<form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get">
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="Email">Email</label>
+        <input type="text" class="form-control" placeholder="Email" asp-for="Email" name="email">
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary" title="Search">
+            <i class="fa fa-search"></i> Search
+        </button>
+    </div>
 </form>
 
 <div class="table-responsive">
@@ -49,7 +55,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-star-o fa-lg fa-fw text-muted" title="Not Premium"></i>
+                            <i class="fa fa-star-o fa-lg fa-fw text-body-secondary" title="Not Premium"></i>
                         }
                         @if (user.MaxStorageGb.HasValue && user.MaxStorageGb > 1)
                         {
@@ -59,7 +65,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-plus-square-o fa-lg fa-fw text-muted"
+                            <i class="fa fa-plus-square-o fa-lg fa-fw text-body-secondary"
                                title="No Additional Storage">
                             </i>
                         }
@@ -69,7 +75,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-times-circle-o fa-lg fa-fw text-muted" title="Email Not Verified"></i>
+                            <i class="fa fa-times-circle-o fa-lg fa-fw text-body-secondary" title="Email Not Verified"></i>
                         }
                         @if (user.TwoFactorEnabled)
                         {
@@ -77,7 +83,7 @@
                         }
                         else
                         {
-                            <i class="fa fa-unlock fa-lg fa-fw text-muted" title="2FA Not Enabled"></i>
+                            <i class="fa fa-unlock fa-lg fa-fw text-body-secondary" title="2FA Not Enabled"></i>
                         }
                     </td>
                 </tr>

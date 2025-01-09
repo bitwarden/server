@@ -3,6 +3,7 @@ using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -18,15 +19,18 @@ public class PoliciesController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
+    private readonly ISavePolicyCommand _savePolicyCommand;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISavePolicyCommand savePolicyCommand)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
         _currentContext = currentContext;
+        _savePolicyCommand = savePolicyCommand;
     }
 
     /// <summary>
@@ -80,17 +84,9 @@ public class PoliciesController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Put(PolicyType type, [FromBody] PolicyUpdateRequestModel model)
     {
-        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(
-            _currentContext.OrganizationId.Value, type);
-        if (policy == null)
-        {
-            policy = model.ToPolicy(_currentContext.OrganizationId.Value, type);
-        }
-        else
-        {
-            policy = model.ToPolicy(policy);
-        }
-        await _policyService.SaveAsync(policy, null);
+        var policyUpdate = model.ToPolicyUpdate(_currentContext.OrganizationId!.Value, type);
+        var policy = await _savePolicyCommand.SaveAsync(policyUpdate);
+
         var response = new PolicyResponseModel(policy);
         return new JsonResult(response);
     }
