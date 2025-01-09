@@ -30,30 +30,37 @@ public class GetCipherPermissionsForUserQuery : IGetCipherPermissionsForUserQuer
             throw new NotFoundException();
         }
 
-        var cipherPermissions = (await _cipherRepository.GetCipherPermissionsForOrganizationAsync(organizationId, userId.Value)).ToList();
+        var cipherPermissions =
+            (await _cipherRepository.GetCipherPermissionsForOrganizationAsync(organizationId, userId.Value))
+            .ToList()
+            .ToDictionary(c => c.Id);
 
         if (await CanEditAllCiphersAsync(org))
         {
             foreach (var cipher in cipherPermissions)
             {
-                cipher.Read = true;
-                cipher.Edit = true;
-                cipher.Manage = true;
-                cipher.ViewPassword = true;
+                cipher.Value.Read = true;
+                cipher.Value.Edit = true;
+                cipher.Value.Manage = true;
+                cipher.Value.ViewPassword = true;
             }
         }
         else if (await CanAccessUnassignedCiphersAsync(org))
         {
-            foreach (var unassignedCipher in cipherPermissions.Where(c => c.Unassigned))
+            var unassignedCiphers = await _cipherRepository.GetManyUnassignedOrganizationDetailsByOrganizationIdAsync(organizationId);
+            foreach (var unassignedCipher in unassignedCiphers)
             {
-                unassignedCipher.Read = true;
-                unassignedCipher.Edit = true;
-                unassignedCipher.Manage = true;
-                unassignedCipher.ViewPassword = true;
+                if (cipherPermissions.TryGetValue(unassignedCipher.Id, out var p))
+                {
+                    p.Read = true;
+                    p.Edit = true;
+                    p.Manage = true;
+                    p.ViewPassword = true;
+                }
             }
         }
 
-        return cipherPermissions.ToDictionary(c => c.Id);
+        return cipherPermissions;
     }
 
     private async Task<bool> CanEditAllCiphersAsync(CurrentContextOrganization org)

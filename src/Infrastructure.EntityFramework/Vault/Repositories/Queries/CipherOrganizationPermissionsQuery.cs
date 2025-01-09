@@ -58,7 +58,6 @@ public class CipherOrganizationPermissionsQuery : IQuery<OrganizationCipherPermi
                    ViewPassword = !((bool?)cu.HidePasswords ?? (bool?)cg.HidePasswords ?? true),
                    Edit = !((bool?)cu.ReadOnly ?? (bool?)cg.ReadOnly ?? true),
                    Manage = (bool?)cu.Manage ?? (bool?)cg.Manage ?? false,
-                   Unassigned = !dbContext.CollectionCiphers.Any(cc => cc.CipherId == c.Id)
                };
     }
 }

@@ -22,6 +22,7 @@ public class LaunchDarklyFeatureServiceTests
         globalSettings.ProjectName = "LaunchDarkly Tests";
 
         var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.DeviceIdentifier.Returns(Guid.NewGuid().ToString());
         currentContext.UserId.Returns(Guid.NewGuid());
         currentContext.ClientVersion.Returns(new Version(AssemblyHelpers.GetVersion()));
         currentContext.ClientVersionIsPrerelease.Returns(true);

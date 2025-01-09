@@ -37,9 +37,4 @@ public class OrganizationCipherPermission
     /// The user has manage level access to the cipher.
     /// </summary>
     public bool Manage { get; set; }
-
-    /// <summary>
-    /// The cipher is not assigned to any collection within the organization.
-    /// </summary>
-    public bool Unassigned { get; set; }
 }

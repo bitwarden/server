@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Models.Data;
 using Bit.Core.NotificationCenter.Models.Filter;
 using Bit.Core.NotificationCenter.Queries;
@@ -19,37 +20,49 @@ namespace Bit.Core.Test.NotificationCenter.Queries;
 public class GetNotificationStatusDetailsForUserQueryTest
 {
     private static void Setup(SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
-        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter statusFilter, Guid? userId)
+        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter statusFilter, Guid? userId,
+        PageOptions pageOptions, string? continuationToken)
     {
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<INotificationRepository>().GetByUserIdAndStatusAsync(
-                userId.GetValueOrDefault(Guid.NewGuid()), Arg.Any<ClientType>(), statusFilter)
-            .Returns(notificationsStatusDetails);
+        sutProvider.GetDependency<INotificationRepository>()
+            .GetByUserIdAndStatusAsync(userId.GetValueOrDefault(Guid.NewGuid()), Arg.Any<ClientType>(), statusFilter,
+                pageOptions)
+            .Returns(new PagedResult<NotificationStatusDetails>
+            {
+                Data = notificationsStatusDetails,
+                ContinuationToken = continuationToken
+            });
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_NotLoggedIn_NotFoundException(
         SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
-        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter notificationStatusFilter)
+        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter notificationStatusFilter,
+        PageOptions pageOptions, string? continuationToken)
     {
-        Setup(sutProvider, notificationsStatusDetails, notificationStatusFilter, userId: null);
+        Setup(sutProvider, notificationsStatusDetails, notificationStatusFilter, userId: null, pageOptions,
+            continuationToken);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter));
+            sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter, pageOptions));
     }
 
     [Theory]
     [BitAutoData]
     public async Task GetByUserIdStatusFilterAsync_NotificationsFound_Returned(
         SutProvider<GetNotificationStatusDetailsForUserQuery> sutProvider,
-        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter notificationStatusFilter)
+        List<NotificationStatusDetails> notificationsStatusDetails, NotificationStatusFilter notificationStatusFilter,
+        PageOptions pageOptions, string? continuationToken)
     {
-        Setup(sutProvider, notificationsStatusDetails, notificationStatusFilter, Guid.NewGuid());
+        Setup(sutProvider, notificationsStatusDetails, notificationStatusFilter, Guid.NewGuid(), pageOptions,
+            continuationToken);
 
-        var actualNotificationsStatusDetails =
-            await sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter);
+        var actualNotificationsStatusDetailsPagedResult =
+            await sutProvider.Sut.GetByUserIdStatusFilterAsync(notificationStatusFilter, pageOptions);
 
-        Assert.Equal(notificationsStatusDetails, actualNotificationsStatusDetails);
+        Assert.NotNull(actualNotificationsStatusDetailsPagedResult);
+        Assert.Equal(notificationsStatusDetails, actualNotificationsStatusDetailsPagedResult.Data);
+        Assert.Equal(continuationToken, actualNotificationsStatusDetailsPagedResult.ContinuationToken);
     }
 }

@@ -82,13 +82,19 @@ public class PremiumUserBillingService(
             throw new BillingException();
         }
 
-        var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
-
         var subscriberName = user.SubscriberName();
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Address = address,
+            Address = new AddressOptions
+            {
+                Line1 = customerSetup.TaxInformation.Line1,
+                Line2 = customerSetup.TaxInformation.Line2,
+                City = customerSetup.TaxInformation.City,
+                PostalCode = customerSetup.TaxInformation.PostalCode,
+                State = customerSetup.TaxInformation.State,
+                Country = customerSetup.TaxInformation.Country,
+            },
             Description = user.Name,
             Email = user.Email,
             Expand = ["tax"],
@@ -113,8 +119,7 @@ public class PremiumUserBillingService(
             Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-            },
-            TaxIdData = taxIdData
+            }
         };
 
         var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;

@@ -746,6 +746,12 @@ public class ProviderBillingServiceTests
     {
         provider.Name = "MSP";
 
+        sutProvider.GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(
+                p => p == taxInfo.BillingAddressCountry),
+                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
         taxInfo.BillingAddressCountry = "AD";
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -775,6 +781,29 @@ public class ProviderBillingServiceTests
         var actual = await sutProvider.Sut.SetupCustomer(provider, taxInfo);
 
         Assert.Equivalent(expected, actual);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SetupCustomer_Throws_BadRequestException_WhenTaxIdIsInvalid(
+        SutProvider<ProviderBillingService> sutProvider,
+        Provider provider,
+        TaxInfo taxInfo)
+    {
+        provider.Name = "MSP";
+
+        taxInfo.BillingAddressCountry = "AD";
+
+        sutProvider.GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(
+                    p => p == taxInfo.BillingAddressCountry),
+                Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns((string)null);
+
+        var actual = await Assert.ThrowsAsync<BadRequestException>(async () =>
+            await sutProvider.Sut.SetupCustomer(provider, taxInfo));
+
+        Assert.IsType<BadRequestException>(actual);
+        Assert.Equal("billingTaxIdTypeInferenceError", actual.Message);
     }
 
     #endregion
