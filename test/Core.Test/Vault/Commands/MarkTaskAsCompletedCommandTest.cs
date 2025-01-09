@@ -3,7 +3,7 @@ using System.Security.Claims;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Test.Vault.AutoFixture;
-using Bit.Core.Vault.Authorization;
+using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.Core.Vault.Commands;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
