@@ -30,7 +30,6 @@ public class LicensingService : ILicensingService
     private readonly ILogger<LicensingService> _logger;
     private readonly ILicenseClaimsFactory<Organization> _organizationLicenseClaimsFactory;
     private readonly ILicenseClaimsFactory<User> _userLicenseClaimsFactory;
-    private readonly IFeatureService _featureService;
 
     private IDictionary<Guid, DateTime> _userCheckCache = new Dictionary<Guid, DateTime>();
 
@@ -42,7 +41,6 @@ public class LicensingService : ILicensingService
         ILogger<LicensingService> logger,
         IGlobalSettings globalSettings,
         ILicenseClaimsFactory<Organization> organizationLicenseClaimsFactory,
-        IFeatureService featureService,
         ILicenseClaimsFactory<User> userLicenseClaimsFactory)
     {
         _userRepository = userRepository;
@@ -51,7 +49,6 @@ public class LicensingService : ILicensingService
         _logger = logger;
         _globalSettings = globalSettings;
         _organizationLicenseClaimsFactory = organizationLicenseClaimsFactory;
-        _featureService = featureService;
         _userLicenseClaimsFactory = userLicenseClaimsFactory;
 
         var certThumbprint = environment.IsDevelopment() ?
@@ -344,11 +341,6 @@ public class LicensingService : ILicensingService
 
     public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
-        {
-            return null;
-        }
-
         var licenseContext = new LicenseContext
         {
             InstallationId = installationId,
@@ -363,11 +355,6 @@ public class LicensingService : ILicensingService
 
     public async Task<string> CreateUserTokenAsync(User user, SubscriptionInfo subscriptionInfo)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
-        {
-            return null;
-        }
-
         var licenseContext = new LicenseContext { SubscriptionInfo = subscriptionInfo };
         var claims = await _userLicenseClaimsFactory.GenerateClaims(user, licenseContext);
         var audience = $"user:{user.Id}";
