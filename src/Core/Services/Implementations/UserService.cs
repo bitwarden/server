@@ -18,6 +18,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -1143,7 +1144,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             ? new UserLicense(user, _licenseService)
             : new UserLicense(user, subscriptionInfo, _licenseService);
 
-        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
+        {
+            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
+        }
 
         return userLicense;
     }

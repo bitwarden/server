@@ -27,6 +27,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -800,6 +801,11 @@ public class OrganizationService : IOrganizationService
                 Email = organization.BillingEmail,
                 Description = organization.DisplayBusinessName()
             });
+        }
+
+        if (eventType == EventType.Organization_CollectionManagement_Updated)
+        {
+            await _pushNotificationService.PushSyncOrganizationCollectionManagementSettingsAsync(organization);
         }
     }
 

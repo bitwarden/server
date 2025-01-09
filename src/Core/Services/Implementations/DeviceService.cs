@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
