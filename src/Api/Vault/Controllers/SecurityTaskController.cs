@@ -1,4 +1,4 @@
-using Bit.Api.Models.Response;
+﻿using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;

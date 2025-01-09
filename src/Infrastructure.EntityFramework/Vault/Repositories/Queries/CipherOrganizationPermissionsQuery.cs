@@ -1,4 +1,4 @@
-using Bit.Core.Vault.Models.Data;
+﻿using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
