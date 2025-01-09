@@ -351,7 +351,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(organization.DisplayName(),
+            .SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(),
                 "user3@test.com");
     }
 }
