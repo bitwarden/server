@@ -336,7 +336,7 @@ public class TwoFactorAuthenticationPolicyValidatorTests
             .TwoFactorIsEnabledAsync(Arg.Any<IEnumerable<OrganizationUserUserDetails>>())
             .Returns(new List<(OrganizationUserUserDetails user, bool hasTwoFactor)>()
             {
-                (orgUserDetailUserWithout2Fa, true),
+                (orgUserDetailUserWithout2Fa, false)
             });
 
         sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
