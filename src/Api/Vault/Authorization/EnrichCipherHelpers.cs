@@ -13,11 +13,13 @@ public static class EnrichCipherHelpers
     /// </summary>
     /// <param name="cipher">The item to be enriched.</param>
     /// <param name="allCollections">All collections the user is assigned to.</param>
-    public static EnrichedCipherDetails EnrichCipher(CipherDetailsWithCollections cipher,
+    public static EnrichedCipherDetails EnrichCipher(
+        Guid userId,
+        CipherDetailsWithCollections cipher,
         IEnumerable<CollectionDetails> allCollections) =>
         new EnrichedCipherDetails(cipher, new ItemPermissions
         {
-            CanDelete = ItemPermissionHelpers.CanDelete(cipher, allCollections)
+            CanDelete = ItemPermissionHelpers.CanDelete(userId, cipher, allCollections)
             // TODO: other permissions like Edit would be moved off the CipherDetails model and calculated here instead
         });
 }

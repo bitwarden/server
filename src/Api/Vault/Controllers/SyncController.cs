@@ -110,7 +110,7 @@ public class SyncController : Controller
         var ciphersWithCollectionIds = ciphers.Select(c =>
             new CipherDetailsWithCollections(c, collectionCiphersGroupDict));
         var enrichedCiphers = ciphersWithCollectionIds.Select(c =>
-            EnrichCipherHelpers.EnrichCipher(c, collections));
+            EnrichCipherHelpers.EnrichCipher(user.Id, c, collections));
 
         // TODO: update response models to recognise and handle the enriched cipher model
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization,

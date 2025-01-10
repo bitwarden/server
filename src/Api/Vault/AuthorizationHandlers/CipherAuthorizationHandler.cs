@@ -50,6 +50,6 @@ public class CipherAuthorizationHandler : AuthorizationHandler<OperationAuthoriz
         // Give it to the same underlying function as the sync data
         // Note that by this point we've fetched all our data upfront, we could map this over a list of many ciphers if we wanted
         // without any performance concerns
-        return ItemPermissionHelpers.CanDelete(cipherWithCollectionIds, allCollections);
+        return ItemPermissionHelpers.CanDelete(_currentContext.UserId.Value, cipherWithCollectionIds, allCollections);
     }
 }

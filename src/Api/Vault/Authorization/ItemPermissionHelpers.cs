@@ -14,10 +14,11 @@ public static class ItemPermissionHelpers
     /// <summary>
     /// Whether a user can delete an item.
     /// </summary>
+    /// <param name="userId">The User ID for the user whose permissions are being evaluated.</param>
     /// <param name="cipher">The item to be deleted.</param>
     /// <param name="allCollections">All collections the user is assigned to.</param>
-    public static bool CanDelete(CipherDetailsWithCollections cipher, IEnumerable<CollectionDetails> allCollections) =>
-        ItemIsOwnedByUser(cipher) ||
+    public static bool CanDelete(Guid userId, CipherDetailsWithCollections cipher, IEnumerable<CollectionDetails> allCollections) =>
+        ItemIsOwnedByUser(userId, cipher) ||
         CanManageAtLeastOneCollection(cipher, allCollections);
 
     // TODO: CanEdit, ViewPasswords, maybe AssignToCollections
@@ -28,6 +29,6 @@ public static class ItemPermissionHelpers
             .Where(collection => cipher.CollectionIds.Contains(collection.Id))
             .Any(collection => collection.Manage);
 
-    private static bool ItemIsOwnedByUser(Cipher cipher) =>
-        cipher.UserId is not null && cipher.OrganizationId is null;
+    private static bool ItemIsOwnedByUser(Guid userId, Cipher cipher) =>
+        cipher.UserId == userId;
 }
