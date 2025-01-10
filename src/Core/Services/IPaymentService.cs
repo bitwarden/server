@@ -54,9 +54,6 @@ public interface IPaymentService
     Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber);
     Task<TaxInfo> GetTaxInfoAsync(ISubscriber subscriber);
     Task SaveTaxInfoAsync(ISubscriber subscriber, TaxInfo taxInfo);
-    Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate);
-    Task UpdateTaxRateAsync(TaxRate taxRate);
-    Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
         int additionalServiceAccount);
     Task<bool> RisksSubscriptionFailure(Organization organization);
