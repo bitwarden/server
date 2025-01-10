@@ -32,6 +32,7 @@ using Bit.Test.Common.Helpers;
 using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -242,7 +243,43 @@ public class UserServiceTests
             });
 
         // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
-        var sut = RebuildSut(sutProvider);
+        var sut = new UserService(
+            sutProvider.GetDependency<IUserRepository>(),
+            sutProvider.GetDependency<ICipherRepository>(),
+            sutProvider.GetDependency<IOrganizationUserRepository>(),
+            sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IMailService>(),
+            sutProvider.GetDependency<IPushNotificationService>(),
+            sutProvider.GetDependency<IUserStore<User>>(),
+            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
+            sutProvider.GetDependency<IPasswordHasher<User>>(),
+            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
+            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
+            sutProvider.GetDependency<ILookupNormalizer>(),
+            sutProvider.GetDependency<IdentityErrorDescriber>(),
+            sutProvider.GetDependency<IServiceProvider>(),
+            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
+            sutProvider.GetDependency<ILicensingService>(),
+            sutProvider.GetDependency<IEventService>(),
+            sutProvider.GetDependency<IApplicationCacheService>(),
+            sutProvider.GetDependency<IDataProtectionProvider>(),
+            sutProvider.GetDependency<IPaymentService>(),
+            sutProvider.GetDependency<IPolicyRepository>(),
+            sutProvider.GetDependency<IPolicyService>(),
+            sutProvider.GetDependency<IReferenceEventService>(),
+            sutProvider.GetDependency<IFido2>(),
+            sutProvider.GetDependency<ICurrentContext>(),
+            sutProvider.GetDependency<IGlobalSettings>(),
+            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
+            sutProvider.GetDependency<IProviderUserRepository>(),
+            sutProvider.GetDependency<IStripeSyncService>(),
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
+            sutProvider.GetDependency<IFeatureService>(),
+            sutProvider.GetDependency<IPremiumUserBillingService>(),
+            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
+            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
+            sutProvider.GetDependency<IDistributedCache>()
+            );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
 
@@ -582,6 +619,68 @@ public class UserServiceTests
         }
     }
 
+    [Theory, BitAutoData]
+    public async Task ActiveNewDeviceVerificationException_UserNotInCache_ReturnsFalseAsync(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns(null as byte[]);
+
+        var result = await sutProvider.Sut.ActiveNewDeviceVerificationException(Guid.NewGuid());
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ActiveNewDeviceVerificationException_UserInCache_ReturnsTrueAsync(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns([1]);
+
+        var result = await sutProvider.Sut.ActiveNewDeviceVerificationException(Guid.NewGuid());
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ToggleNewDeviceVerificationException_UserInCache_RemovesUserFromCache(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns([1]);
+
+        await sutProvider.Sut.ToggleNewDeviceVerificationException(Guid.NewGuid());
+
+        await sutProvider.GetDependency<IDistributedCache>()
+                .DidNotReceive()
+                .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+        await sutProvider.GetDependency<IDistributedCache>()
+                .Received(1)
+                .RemoveAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task ToggleNewDeviceVerificationException_UserNotInCache_AddsUserToCache(
+        SutProvider<UserService> sutProvider)
+    {
+        sutProvider.GetDependency<IDistributedCache>()
+            .GetAsync(Arg.Any<string>())
+            .Returns(null as byte[]);
+
+        await sutProvider.Sut.ToggleNewDeviceVerificationException(Guid.NewGuid());
+
+        await sutProvider.GetDependency<IDistributedCache>()
+                .Received(1)
+                .SetAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
+        await sutProvider.GetDependency<IDistributedCache>()
+                .DidNotReceive()
+                .RemoveAsync(Arg.Any<string>());
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
@@ -670,7 +769,8 @@ public class UserServiceTests
             sutProvider.GetDependency<IFeatureService>(),
             sutProvider.GetDependency<IPremiumUserBillingService>(),
             sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
-            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
+            sutProvider.GetDependency<IDistributedCache>()
             );
     }
 }
