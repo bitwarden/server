@@ -13,6 +13,7 @@ BEGIN
              LEFT JOIN (
         SELECT TOP 1 -- Take only the top record sorted by auth request creation date
                      Id,
+                     UserId,
                      CreationDate,
                      RequestDeviceIdentifier
         FROM dbo.AuthRequestView
