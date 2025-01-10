@@ -111,7 +111,7 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         }
 
         await Task.WhenAll(currentActiveRevocableOrganizationUsers.Select(x =>
-            _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(), x.Email)));
+            _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), x.Email)));
     }
 
     private async Task RemoveNonCompliantUsersAsync(Guid organizationId)
