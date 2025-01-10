@@ -22,7 +22,7 @@ BEGIN
             AND CreationDate >= DATEADD(MINUTE, @ExpirationMinutes, GETUTCDATE()) -- Ensure the request hasn't expired
             AND UserId = @UserId --  Requests for this user only
     ) AR -- This join will get the most recent request per device, regardless of approval status 
-    ON D.Identifier = AR.RequestDeviceIdentifier AND AR.rn = 1 AND AR.Approved = 0  -- Get only the most recent unapproved request per device
+    ON D.Identifier = AR.RequestDeviceIdentifier AND AR.rn = 1 AND AR.Approved IS NULL  -- Get only the most recent unapproved request per device
     WHERE
         D.UserId = @UserId -- Include only devices for this user
       AND D.Active = 1; -- Include only active devices
