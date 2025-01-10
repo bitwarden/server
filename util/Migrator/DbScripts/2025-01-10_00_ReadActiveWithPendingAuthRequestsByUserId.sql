@@ -20,8 +20,9 @@ BEGIN
         WHERE Type IN (0, 1) -- Include only AuthenticateAndUnlock and Unlock types, excluding Admin Approval (type 2)
           AND CreationDate >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE()) -- Ensure the request hasn't expired
           AND Approved IS NULL -- Include only requests that haven't been acknowledged or approved
+          AND UserId = @UserId
         ORDER BY CreationDate DESC
-    ) AR ON D.Identifier = AR.RequestDeviceIdentifier AND D.UserId = AR.UserId
+    ) AR ON D.Identifier = AR.RequestDeviceIdentifier
     WHERE
         D.UserId = @UserId
       AND D.Active = 1; -- Include only active devices
