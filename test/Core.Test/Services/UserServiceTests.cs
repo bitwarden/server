@@ -517,7 +517,7 @@ public class UserServiceTests
                     r.OrganizationUsers.First().OrganizationId == organization1.Id));
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization1.DisplayName(), user.Email);
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization1.DisplayName(), user.Email);
 
         // Remove the user from the second organization
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
@@ -528,7 +528,7 @@ public class UserServiceTests
                     r.OrganizationUsers.First().OrganizationId == organization2.Id));
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization2.DisplayName(), user.Email);
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization2.DisplayName(), user.Email);
     }
 
     [Theory, BitAutoData]
@@ -572,7 +572,7 @@ public class UserServiceTests
             .RevokeNonCompliantOrganizationUsersAsync(default);
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceiveWithAnyArgs()
-            .SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(default, default);
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
     }
 
     [Theory, BitAutoData]
