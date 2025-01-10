@@ -12,8 +12,18 @@ public class PremiumRequestModel : IValidatableObject
     [Range(0, 99)]
     public short? AdditionalStorageGb { get; set; }
     public IFormFile License { get; set; }
-    public string Country { get; set; }
+
+    public string Line1 { get; set; }
+    public string Line2 { get; set; }
+
+    [Required]
     public string PostalCode { get; set; }
+
+    public string City { get; set; }
+    public string State { get; set; }
+
+    [Required]
+    public string Country { get; set; }
 
     public bool Validate(GlobalSettings globalSettings)
     {
@@ -31,11 +41,6 @@ public class PremiumRequestModel : IValidatableObject
         if (string.IsNullOrWhiteSpace(PaymentToken) && !creditType && License == null)
         {
             yield return new ValidationResult("Payment token or license is required.");
-        }
-        if (Country == "US" && string.IsNullOrWhiteSpace(PostalCode))
-        {
-            yield return new ValidationResult("Zip / postal code is required.",
-                new string[] { nameof(PostalCode) });
         }
     }
 }
