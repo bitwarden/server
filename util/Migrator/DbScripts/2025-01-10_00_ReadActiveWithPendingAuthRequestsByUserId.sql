@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Device_ReadActiveWithPendingAuthRequestsByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Device_ReadActiveWithPendingAuthRequestsByUserId]
     @UserId UNIQUEIDENTIFIER,
     @ExpirationMinutes INT
 AS
@@ -27,4 +27,3 @@ BEGIN
         D.UserId = @UserId -- Include only devices for this user
       AND D.Active = 1; -- Include only active devices
 END;
-
