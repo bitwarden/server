@@ -36,6 +36,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
         signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -85,6 +86,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.UseSecretsManager = false;
+        signup.IsFromProvider = false;
 
         // Extract orgUserId when created
         Guid? orgUserId = null;
@@ -128,6 +130,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.IsFromSecretsManagerTrial = false;
+        signup.IsFromProvider = false;
+
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -196,6 +200,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = 10;
         signup.AdditionalStorageGb = 0;
+        signup.IsFromProvider = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -213,6 +218,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = 10;
+        signup.IsFromProvider = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -230,6 +236,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = -10;
+        signup.IsFromProvider = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
