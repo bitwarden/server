@@ -3,6 +3,8 @@ version: '3'
 services:
   bitwarden_server:
     image: mcr.microsoft.com/devcontainers/dotnet:8.0
+    env_file:
+      - ../../dev/.env
     volumes:
       - ../../:/workspace:cached
     # Overrides default command so things don't shut down after the process ends.
