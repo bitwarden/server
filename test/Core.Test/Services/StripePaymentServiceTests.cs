@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -609,6 +610,43 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
         await braintreeGateway.Customer.Received(1).DeleteAsync("Braintree-Id");
     }
+
+    [Theory]
+    [BitAutoData("ES", "A5372895732985327895237")]
+    public async Task PurchaseOrganizationAsync_ThrowsBadRequestException_WhenTaxIdInvalid(string country, string taxId, SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
+    {
+        taxInfo.BillingAddressCountry = country;
+        taxInfo.TaxIdNumber = taxId;
+        taxInfo.TaxIdType = null;
+
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        organization.UseSecretsManager = true;
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
+        {
+            Id = "C-1",
+        });
+        stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription
+        {
+            Id = "S-1",
+            CurrentPeriodEnd = DateTime.Today.AddDays(10),
+        });
+        sutProvider.GetDependency<IGlobalSettings>()
+            .BaseServiceUri.CloudRegion
+            .Returns("US");
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == country), Arg.Is<string>(p => p == taxId))
+            .Returns((string)null);
+
+        var actual = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo, false, 8, 10));
+
+        Assert.Equal("billingTaxIdTypeInferenceError", actual.Message);
+
+        await stripeAdapter.Received(0).CustomerCreateAsync(Arg.Any<Stripe.CustomerCreateOptions>());
+        await stripeAdapter.Received(0).SubscriptionCreateAsync(Arg.Any<Stripe.SubscriptionCreateOptions>());
+    }
+
 
     [Theory, BitAutoData]
     public async Task UpgradeFreeOrganizationAsync_Success(SutProvider<StripePaymentService> sutProvider,
