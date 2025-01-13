@@ -4,7 +4,7 @@ using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
-using Bit.Core.Services;
+using Bit.Core.Platform.Push;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 

@@ -5,7 +5,7 @@ using Bit.Core.NotificationCenter.Authorization;
 using Bit.Core.NotificationCenter.Commands;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Repositories;
-using Bit.Core.Services;
+using Bit.Core.Platform.Push;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

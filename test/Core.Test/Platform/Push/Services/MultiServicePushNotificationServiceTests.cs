@@ -1,9 +1,7 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
-using Bit.Core.Services;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
-using AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
