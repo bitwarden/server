@@ -79,10 +79,10 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             throw new NotFoundException();
         }
 
-        if (organization.PlanType == PlanType.Free && user.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+        if (user.UserId.HasValue && organization.PlanType == PlanType.Free && user.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
         {
             // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
-            var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.Id);
+            var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(user.UserId.Value);
             if (adminCount > 0)
             {
                 throw new BadRequestException("User can only be an admin of one free organization.");

@@ -197,7 +197,7 @@ public class UpdateOrganizationUserCommandTests
         Setup(sutProvider, organization, newUserData, oldUserData);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(newUserData.Id)
+            .GetCountByFreeOrganizationAdminUserAsync(newUserData.UserId!.Value)
             .Returns(1);
 
         // Assert
