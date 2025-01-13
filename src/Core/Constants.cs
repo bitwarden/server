@@ -164,6 +164,7 @@ public static class FeatureFlagKeys
     public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
+    public const string Argon2Default = "argon2-default";
 
     public static List<string> GetAllKeys()
     {
