@@ -10,6 +10,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer.Enums;
 using Duende.IdentityServer.Validation;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
 
@@ -20,6 +21,8 @@ public class DeviceValidator(
     IMailService mailService,
     ICurrentContext currentContext,
     IUserService userService,
+    IDistributedCache distributedCache,
+    ILogger<DeviceValidator> logger,
     IFeatureService featureService) : IDeviceValidator
 {
     private readonly IDeviceService _deviceService = deviceService;
@@ -28,6 +31,8 @@ public class DeviceValidator(
     private readonly IMailService _mailService = mailService;
     private readonly ICurrentContext _currentContext = currentContext;
     private readonly IUserService _userService = userService;
+    private readonly IDistributedCache distributedCache = distributedCache;
+    private readonly ILogger<DeviceValidator> _logger = logger;
     private readonly IFeatureService _featureService = featureService;
 
     public async Task<bool> ValidateRequestDeviceAsync(ValidatedTokenRequest request, CustomValidatorRequestContext context)
@@ -67,7 +72,6 @@ public class DeviceValidator(
             !context.SsoRequired &&
             _globalSettings.EnableNewDeviceVerification)
         {
-            // We only want to return early if the device is invalid or there is an error
             var validationResult = await HandleNewDeviceVerificationAsync(context.User, request);
             if (validationResult != DeviceValidationResultType.Success)
             {
@@ -111,7 +115,7 @@ public class DeviceValidator(
     /// </summary>
     /// <param name="user">user attempting to authenticate</param>
     /// <param name="ValidatedRequest">The Request is used to check for the NewDeviceOtp and for the raw device data</param>
-    /// <returns>returns deviceValtaionResultType</returns>
+    /// <returns>returns deviceValidationResultType</returns>
     private async Task<DeviceValidationResultType> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
     {
         // currently unreachable due to backward compatibility
@@ -119,6 +123,24 @@ public class DeviceValidator(
         if (user == null)
         {
             return DeviceValidationResultType.InvalidUser;
+        }
+
+        // Has the User opted out of new device verification
+        if (!user.VerifyDevices)
+        {
+            return DeviceValidationResultType.Success;
+        }
+
+        // CS exception flow
+        // Check cache for user information
+        var cacheKey = string.Format(AuthConstants.NewDeviceVerificationExceptionCacheKeyFormat, user.Id.ToString());
+        var cacheValue = await distributedCache.GetAsync(cacheKey);
+        if (cacheValue != null)
+        {
+            // if found in cache return success result and remove from cache
+            await distributedCache.RemoveAsync(cacheKey);
+            _logger.LogInformation("New device verification exception for user {UserId} found in cache", user.Id);
+            return DeviceValidationResultType.Success;
         }
 
         // parse request for NewDeviceOtp to validate
@@ -130,6 +152,12 @@ public class DeviceValidator(
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
             if (otpValid)
             {
+                // In order to get here they would have to have access to their email so we verify it if it's not already
+                if (!user.EmailVerified)
+                {
+                    user.EmailVerified = true;
+                    await _userService.SaveUserAsync(user);
+                }
                 return DeviceValidationResultType.Success;
             }
             return DeviceValidationResultType.InvalidNewDeviceOtp;
