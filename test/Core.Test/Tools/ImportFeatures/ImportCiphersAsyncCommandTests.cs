@@ -31,12 +31,6 @@ public class ImportCiphersAsyncCommandTests
         List<CipherDetails> ciphers,
         SutProvider<ImportCiphersCommand> sutProvider)
     {
-        KeyValuePair<int, int>[] collectionRelationships = {
-            new(0, 0),
-            new(1, 1),
-            new(2, 2)
-        };
-
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership)
             .Returns(false);

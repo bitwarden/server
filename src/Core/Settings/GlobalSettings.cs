@@ -69,6 +69,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+    public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
     public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
@@ -480,6 +481,13 @@ public class GlobalSettings : IGlobalSettings
         public string MerchantId { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
+    }
+
+    public class ImportCiphersLimitationSettings
+    {
+        public int CiphersLimit { get; set; }
+        public int CollectionRelationshipsLimit { get; set; }
+        public int CollectionsLimit { get; set; }
     }
 
     public class BitPaySettings
