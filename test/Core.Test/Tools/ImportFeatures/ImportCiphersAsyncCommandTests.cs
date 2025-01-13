@@ -26,7 +26,61 @@ namespace Bit.Core.Test.Tools.ImportFeatures;
 public class ImportCiphersAsyncCommandTests
 {
     [Theory, BitAutoData]
-    public async Task ImportCiphersAsync_IntoOrganization_Success(
+    public async Task ImportIntoIndividualVaultAsync_Success(
+        Guid importingUserId,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership)
+            .Returns(false);
+
+        sutProvider.GetDependency<IFolderRepository>()
+            .GetManyByUserIdAsync(importingUserId)
+            .Returns(new List<Folder>());
+
+        var folders = new List<Folder> { new Folder { UserId = importingUserId } };
+
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        // Act
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(ciphers, Arg.Any<List<Folder>>());
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoIndividualVaultAsync_ThrowsBadRequestException(
+        List<Folder> folders,
+        List<CipherDetails> ciphers,
+        SutProvider<ImportCiphersCommand> sutProvider)
+    {
+        var userId = Guid.NewGuid();
+        folders.ForEach(f => f.UserId = userId);
+        ciphers.ForEach(c => c.UserId = userId);
+
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.PersonalOwnership)
+            .Returns(true);
+
+        var folderRelationships = new List<KeyValuePair<int, int>>();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships));
+
+        Assert.Equal("You cannot import items into your personal vault because you are a member of an organization which forbids it.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportIntoOrganizationalVaultAsync_Success(
         Organization organization,
         Guid importingUserId,
         OrganizationUser importingOrganizationUser,
@@ -66,7 +120,7 @@ public class ImportCiphersAsyncCommandTests
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(new List<Collection> { collections[0] });
 
-        await sutProvider.Sut.ImportCiphersAsync(collections, ciphers, collectionRelationships, importingUserId);
+        await sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId);
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
             ciphers,
@@ -84,24 +138,50 @@ public class ImportCiphersAsyncCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ImportCiphersAsync_ThrowsBadRequestException_WhenAnyPoliciesApplicableToUser(
-        List<Folder> folders,
+    public async Task ImportIntoOrganizationalVaultAsync_ThrowsBadRequestException(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
         List<CipherDetails> ciphers,
         SutProvider<ImportCiphersCommand> sutProvider)
     {
-        var userId = Guid.NewGuid();
-        folders.ForEach(f => f.UserId = userId);
-        ciphers.ForEach(c => c.UserId = userId);
+        organization.MaxCollections = 1;
+        importingOrganizationUser.OrganizationId = organization.Id;
 
-        sutProvider.GetDependency<IPolicyService>()
-            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.PersonalOwnership)
-            .Returns(true);
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
 
-        var folderRelationships = new List<KeyValuePair<int, int>>();
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        // Set up a collection that already exists in the organization
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection> { collections[0] });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.ImportCiphersAsync(folders, ciphers, folderRelationships));
+            sutProvider.Sut.ImportIntoOrganizationalVaultAsync(collections, ciphers, collectionRelationships, importingUserId));
 
-        Assert.Equal("You cannot import items into your personal vault because you are a member of an organization which forbids it.", exception.Message);
+        Assert.Equal("This organization can only have a maximum of " +
+        $"{organization.MaxCollections} collections.", exception.Message);
     }
 }

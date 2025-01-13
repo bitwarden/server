@@ -51,7 +51,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
     }
 
 
-    public async Task ImportCiphersAsync(
+    public async Task ImportIntoIndividualVaultAsync(
         List<Folder> folders,
         List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> folderRelationships)
@@ -115,7 +115,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         }
     }
 
-    public async Task ImportCiphersAsync(
+    public async Task ImportIntoOrganizationalVaultAsync(
         List<Collection> collections,
         List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> collectionRelationships,

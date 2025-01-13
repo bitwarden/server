@@ -6,9 +6,9 @@ namespace Bit.Core.Tools.ImportFeatures.Interfaces;
 
 public interface IImportCiphersCommand
 {
-    Task ImportCiphersAsync(List<Folder> folders, List<CipherDetails> ciphers,
+    Task ImportIntoIndividualVaultAsync(List<Folder> folders, List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> folderRelationships);
 
-    Task ImportCiphersAsync(List<Collection> collections, List<CipherDetails> ciphers,
+    Task ImportIntoOrganizationalVaultAsync(List<Collection> collections, List<CipherDetails> ciphers,
         IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId);
 }
