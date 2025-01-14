@@ -40,6 +40,11 @@ public class StripePaymentServiceTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -96,6 +101,12 @@ public class StripePaymentServiceTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
+
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -153,6 +164,12 @@ public class StripePaymentServiceTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
+
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -210,6 +227,11 @@ public class StripePaymentServiceTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
+
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -398,6 +420,11 @@ public class StripePaymentServiceTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -463,6 +490,12 @@ public class StripePaymentServiceTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
+
+        sutProvider
+            .GetDependency<ITaxService>()
+            .GetStripeTaxCode(Arg.Is<string>(p => p == taxInfo.BillingAddressCountry), Arg.Is<string>(p => p == taxInfo.TaxIdNumber))
+            .Returns(taxInfo.TaxIdType);
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
