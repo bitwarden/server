@@ -19,7 +19,7 @@ public class PricingClient(
     HttpClient httpClient,
     ILogger<PricingClient> logger) : IPricingClient
 {
-    public async Task<Plan> GetPlanOrThrow(PlanType planType)
+    public async Task<Plan> GetPlan(PlanType planType)
     {
         if (globalSettings.SelfHosted)
         {
@@ -61,6 +61,11 @@ public class PricingClient(
 
     public async Task<List<Plan>> ListPlans()
     {
+        if (globalSettings.SelfHosted)
+        {
+            throw new BillingException(message: "The Pricing Service cannot be called from a Self-Hosted instance.");
+        }
+
         var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
 
         if (!usePricingService)
