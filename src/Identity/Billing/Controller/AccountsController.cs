@@ -20,6 +20,7 @@ public class AccountsController(
 {
     [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("trial/send-verification-email")]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> PostTrialInitiationSendVerificationEmailAsync([FromBody] TrialSendVerificationEmailRequestModel model)
     {
         var token = await sendTrialInitiationEmailForRegistrationCommand.Handle(
