@@ -9,7 +9,6 @@ namespace Bit.Core.Platform.Push.Internal;
 
 public class RelayPushRegistrationService : BaseIdentityClientService, IPushRegistrationService
 {
-
     public RelayPushRegistrationService(
         IHttpClientFactory httpFactory,
         GlobalSettings globalSettings,

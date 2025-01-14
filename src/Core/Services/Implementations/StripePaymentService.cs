@@ -19,7 +19,6 @@ using Microsoft.Extensions.Logging;
 using Stripe;
 using PaymentMethod = Stripe.PaymentMethod;
 using StaticStore = Bit.Core.Models.StaticStore;
-using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Services;
 
@@ -33,7 +32,6 @@ public class StripePaymentService : IPaymentService
     private readonly ITransactionRepository _transactionRepository;
     private readonly ILogger<StripePaymentService> _logger;
     private readonly Braintree.IBraintreeGateway _btGateway;
-    private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IGlobalSettings _globalSettings;
     private readonly IFeatureService _featureService;
@@ -43,7 +41,6 @@ public class StripePaymentService : IPaymentService
     public StripePaymentService(
         ITransactionRepository transactionRepository,
         ILogger<StripePaymentService> logger,
-        ITaxRateRepository taxRateRepository,
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
         IGlobalSettings globalSettings,
@@ -53,7 +50,6 @@ public class StripePaymentService : IPaymentService
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
-        _taxRateRepository = taxRateRepository;
         _stripeAdapter = stripeAdapter;
         _btGateway = braintreeGateway;
         _globalSettings = globalSettings;
@@ -1775,50 +1771,6 @@ public class StripePaymentService : IPaymentService
                         customer.Id);
                     throw new BadRequestException("billingTaxIdCreationError");
             }
-        }
-    }
-
-    public async Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate)
-    {
-        var stripeTaxRateOptions = new TaxRateCreateOptions()
-        {
-            DisplayName = $"{taxRate.Country} - {taxRate.PostalCode}",
-            Inclusive = false,
-            Percentage = taxRate.Rate,
-            Active = true
-        };
-        var stripeTaxRate = await _stripeAdapter.TaxRateCreateAsync(stripeTaxRateOptions);
-        taxRate.Id = stripeTaxRate.Id;
-        await _taxRateRepository.CreateAsync(taxRate);
-        return taxRate;
-    }
-
-    public async Task UpdateTaxRateAsync(TaxRate taxRate)
-    {
-        if (string.IsNullOrWhiteSpace(taxRate.Id))
-        {
-            return;
-        }
-
-        await ArchiveTaxRateAsync(taxRate);
-        await CreateTaxRateAsync(taxRate);
-    }
-
-    public async Task ArchiveTaxRateAsync(TaxRate taxRate)
-    {
-        if (string.IsNullOrWhiteSpace(taxRate.Id))
-        {
-            return;
-        }
-
-        var updatedStripeTaxRate = await _stripeAdapter.TaxRateUpdateAsync(
-                taxRate.Id,
-                new TaxRateUpdateOptions() { Active = false }
-        );
-        if (!updatedStripeTaxRate.Active)
-        {
-            taxRate.Active = false;
-            await _taxRateRepository.ArchiveAsync(taxRate);
         }
     }
 

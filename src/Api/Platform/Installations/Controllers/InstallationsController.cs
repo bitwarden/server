@@ -6,6 +6,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Platform.Installations;
 
+/// <summary>
+/// Routes used to manipulate `Installation` objects: a type used to manage
+/// a record of a self hosted installation.
+/// </summary>
+/// <remarks>
+/// This controller is not called from any clients. It's primarily referenced
+/// in the `Setup` project for creating a new self hosted installation.
+/// </remarks>
+/// <seealso>Bit.Setup.Program</seealso>
 [Route("installations")]
 [SelfHosted(NotSelfHostedOnly = true)]
 public class InstallationsController : Controller
