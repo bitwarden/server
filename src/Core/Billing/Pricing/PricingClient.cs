@@ -1,12 +1,13 @@
-﻿using Bit.Core.Billing.Enums;
-using Bit.Core.Models.StaticStore;
+﻿using System.Net;
+using System.Text.Json;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing.Models;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Google.Protobuf.WellKnownTypes;
-using Grpc.Core;
-using Grpc.Net.Client;
-using Proto.Billing.Pricing;
+using Microsoft.Extensions.Logging;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 #nullable enable
 
@@ -14,10 +15,17 @@ namespace Bit.Core.Billing.Pricing;
 
 public class PricingClient(
     IFeatureService featureService,
-    GlobalSettings globalSettings) : IPricingClient
+    GlobalSettings globalSettings,
+    HttpClient httpClient,
+    ILogger<PricingClient> logger) : IPricingClient
 {
-    public async Task<Plan?> GetPlan(PlanType planType)
+    public async Task<Plan> GetPlanOrThrow(PlanType planType)
     {
+        if (globalSettings.SelfHosted)
+        {
+            throw new BillingException(message: "The Pricing Service cannot be called from a Self-Hosted instance.");
+        }
+
         var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
 
         if (!usePricingService)
@@ -25,26 +33,30 @@ public class PricingClient(
             return StaticStore.GetPlan(planType);
         }
 
-        using var channel = GrpcChannel.ForAddress(globalSettings.PricingUri);
-        var client = new PasswordManager.PasswordManagerClient(channel);
+        var lookupKey = GetLookupKey(planType);
 
-        var lookupKey = ToLookupKey(planType);
-        if (string.IsNullOrEmpty(lookupKey))
+        if (lookupKey == null)
         {
-            return null;
+            logger.LogError("Could not find Pricing Service lookup key for PlanType {PlanType}", planType);
+            throw new NotFoundException();
         }
 
-        try
-        {
-            var response =
-                await client.GetPlanByLookupKeyAsync(new GetPlanByLookupKeyRequest { LookupKey = lookupKey });
+        var response = await httpClient.GetAsync($"plans/lookup/{lookupKey}");
 
-            return new PlanAdapter(response);
-        }
-        catch (RpcException rpcException) when (rpcException.StatusCode == StatusCode.NotFound)
+        if (response.IsSuccessStatusCode)
         {
-            return null;
+            var plan = await DeserializeAsync<PlanDTO>(response.Content);
+            return new PlanAdapter(plan);
         }
+
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            logger.LogError("Pricing Service plan for PlanType {PlanType} was not found", planType);
+            throw new NotFoundException();
+        }
+
+        throw new BillingException(
+            message: $"Request to the Pricing Service failed with status code {response.StatusCode}");
     }
 
     public async Task<List<Plan>> ListPlans()
@@ -56,14 +68,39 @@ public class PricingClient(
             return StaticStore.Plans.ToList();
         }
 
-        using var channel = GrpcChannel.ForAddress(globalSettings.PricingUri);
-        var client = new PasswordManager.PasswordManagerClient(channel);
+        var response = await httpClient.GetAsync("plans");
 
-        var response = await client.ListPlansAsync(new Empty());
-        return response.Plans.Select(Plan (plan) => new PlanAdapter(plan)).ToList();
+        if (response.IsSuccessStatusCode)
+        {
+            var plans = await DeserializeAsync<List<PlanDTO>>(response.Content);
+            return plans.Select(Plan (plan) => new PlanAdapter(plan)).ToList();
+        }
+
+        throw new BillingException(
+            message: $"Request to the Pricing Service failed with status {response.StatusCode}");
     }
 
-    private static string? ToLookupKey(PlanType planType)
+    private static async Task<T> DeserializeAsync<T>(HttpContent content)
+    {
+        var json = await content.ReadAsStringAsync();
+        try
+        {
+            var value = JsonSerializer.Deserialize<T>(json);
+            if (value == null)
+            {
+                throw new BillingException(message: "Deserialization of Pricing Service response resulted in null");
+            }
+            return value;
+        }
+        catch (Exception exception)
+        {
+            throw new BillingException(
+                message: "Failed to deserialize successful response from the Pricing Service",
+                innerException: exception);
+        }
+    }
+
+    private static string? GetLookupKey(PlanType planType)
         => planType switch
         {
             PlanType.EnterpriseAnnually => "enterprise-annually",

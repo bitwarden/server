@@ -7,6 +7,6 @@ namespace Bit.Core.Billing.Pricing;
 
 public interface IPricingClient
 {
-    Task<Plan?> GetPlan(PlanType planType);
+    Task<Plan> GetPlanOrThrow(PlanType planType);
     Task<List<Plan>> ListPlans();
 }
