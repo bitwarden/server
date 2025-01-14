@@ -80,7 +80,6 @@ jobs:
       - name: Scan with SonarCloud
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           dotnet-sonarscanner begin /k:"${{ github.repository_owner }}_${{ github.event.repository.name }}" \
           /d:sonar.test.inclusions=test/,bitwarden_license/test/ \
