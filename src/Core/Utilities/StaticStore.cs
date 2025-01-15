@@ -138,6 +138,7 @@ public static class StaticStore
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
+    [Obsolete("Use PricingClient.ListPlans to retrieve all plans.")]
     public static IEnumerable<Plan> Plans { get; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
@@ -152,6 +153,7 @@ public static class StaticStore
             }
         };
 
+    [Obsolete("Use PricingClient.GetPlan to retrieve a plan.")]
     public static Plan GetPlan(PlanType planType) => Plans.SingleOrDefault(p => p.Type == planType);
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
@@ -168,6 +170,7 @@ public static class StaticStore
     /// </returns>
     public static bool IsAddonSubscriptionItem(string stripePlanId)
     {
+        // TODO: PRICING -> https://bitwarden.atlassian.net/browse/PM-16844
         return Plans.Any(p =>
                 p.PasswordManager.StripeStoragePlanId == stripePlanId ||
                 (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId));
