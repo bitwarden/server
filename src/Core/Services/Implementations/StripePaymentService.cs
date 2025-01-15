@@ -2087,12 +2087,12 @@ public class StripePaymentService : IPaymentService
 
             if (gatewayCustomer.Discount != null)
             {
-                options.Discounts.Add(new InvoiceDiscountOptions
-                {
-                    Discount = gatewayCustomer.Discount.Id
-                });
+                options.Discounts.Add(new InvoiceDiscountOptions { Discount = gatewayCustomer.Discount.Id });
             }
+        }
 
+        if (gatewaySubscriptionId != null)
+        {
             var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
 
             if (gatewaySubscription?.Discount != null)
