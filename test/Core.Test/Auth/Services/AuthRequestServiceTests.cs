@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -227,6 +228,14 @@ public class AuthRequestServiceTests
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received()
             .CreateAsync(createdAuthRequest);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
     }
 
     /// <summary>
@@ -266,7 +275,10 @@ public class AuthRequestServiceTests
         AuthRequestCreateRequestModel createModel,
         User user,
         OrganizationUser organizationUser1,
-        OrganizationUser organizationUser2)
+        OrganizationUserUserDetails admin1,
+        OrganizationUser organizationUser2,
+        OrganizationUserUserDetails admin2,
+        OrganizationUserUserDetails admin3)
     {
         createModel.Type = AuthRequestType.AdminApproval;
         user.Email = createModel.Email;
@@ -298,6 +310,21 @@ public class AuthRequestServiceTests
                 organizationUser2,
             });
 
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Admin)
+            .Returns(
+            [
+                admin1,
+            ]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(organizationUser2.OrganizationId, OrganizationUserType.Admin)
+            .Returns(
+            [
+                admin2,
+                admin3,
+            ]);
+
         sutProvider.GetDependency<IAuthRequestRepository>()
             .CreateAsync(Arg.Any<AuthRequest>())
             .Returns(c => c.ArgAt<AuthRequest>(0));
@@ -321,6 +348,22 @@ public class AuthRequestServiceTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Is<IEnumerable<string>>(emails => emails.Count() == 1 && emails.Contains(admin1.Email)),
+                organizationUser1.OrganizationId,
+                user.Email,
+                user.Name);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Is<IEnumerable<string>>(emails => emails.Count() == 2 && emails.Contains(admin2.Email) && emails.Contains(admin3.Email)),
+                organizationUser2.OrganizationId,
+                user.Email,
+                user.Name);
     }
 
     /// <summary>
