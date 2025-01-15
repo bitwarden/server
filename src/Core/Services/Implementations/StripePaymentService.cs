@@ -119,7 +119,7 @@ public class StripePaymentService : IPaymentService
         Subscription subscription;
         try
         {
-            if (taxInfo.TaxIdNumber != null && taxInfo.TaxIdType == null)
+            if (!string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber))
             {
                 taxInfo.TaxIdType = _taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
                     taxInfo.TaxIdNumber);
@@ -2058,7 +2058,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        if (!string.IsNullOrEmpty(parameters.TaxInformation.TaxId))
+        if (!string.IsNullOrWhiteSpace(parameters.TaxInformation.TaxId))
         {
             var taxIdType = _taxService.GetStripeTaxCode(
                 options.CustomerDetails.Address.Country,
