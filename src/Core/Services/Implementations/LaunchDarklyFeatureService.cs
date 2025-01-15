@@ -16,6 +16,7 @@ public class LaunchDarklyFeatureService : IFeatureService
     private readonly ICurrentContext _currentContext;
     private const string _anonymousUser = "25a15cac-58cf-4ac0-ad0f-b17c4bd92294";
 
+    private const string _contextKindDevice = "device";
     private const string _contextKindOrganization = "organization";
     private const string _contextKindServiceAccount = "service-account";
 
@@ -157,6 +158,16 @@ public class LaunchDarklyFeatureService : IFeatureService
         }
 
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
+
+        if (!string.IsNullOrWhiteSpace(_currentContext.DeviceIdentifier))
+        {
+            var ldDevice = LaunchDarkly.Sdk.Context.Builder(_currentContext.DeviceIdentifier);
+
+            ldDevice.Kind(_contextKindDevice);
+            SetCommonContextAttributes(ldDevice);
+
+            builder.Add(ldDevice.Build());
+        }
 
         switch (_currentContext.IdentityClientType)
         {

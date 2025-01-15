@@ -24,6 +24,7 @@ public enum Permission
     Org_CheckEnabledBox,
     Org_BusinessInformation_View,
     Org_InitiateTrial,
+    Org_RequestDelete,
     Org_Delete,
     Org_BillingInformation_View,
     Org_BillingInformation_DownloadInvoice,
