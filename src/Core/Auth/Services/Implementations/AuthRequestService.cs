@@ -27,7 +27,7 @@ public class AuthRequestService : IAuthRequestService
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-
+    private readonly IMailService _mailService;
     public AuthRequestService(
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
@@ -36,7 +36,8 @@ public class AuthRequestService : IAuthRequestService
         ICurrentContext currentContext,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IOrganizationUserRepository organizationRepository)
+        IOrganizationUserRepository organizationRepository,
+        IMailService mailService)
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -46,6 +47,7 @@ public class AuthRequestService : IAuthRequestService
         _pushNotificationService = pushNotificationService;
         _eventService = eventService;
         _organizationUserRepository = organizationRepository;
+        _mailService = mailService;
     }
 
     public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
@@ -132,6 +134,8 @@ public class AuthRequestService : IAuthRequestService
             {
                 var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
                 firstAuthRequest ??= createdAuthRequest;
+
+                await NotifyAdminsOfDeviceApprovalRequestAsync(organizationUser, user);
             }
 
             // I know this won't be null because I have already validated that at least one organization exists
@@ -275,5 +279,14 @@ public class AuthRequestService : IAuthRequestService
     private static bool IsDateExpired(DateTime savedDate, TimeSpan allowedLifetime)
     {
         return DateTime.UtcNow > savedDate.Add(allowedLifetime);
+    }
+
+    private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
+    {
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
+            organizationUser.OrganizationId,
+            OrganizationUserType.Admin);
+        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+        await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(adminEmails, organizationUser.OrganizationId, user.Email, user.Name);
     }
 }
