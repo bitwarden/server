@@ -115,7 +115,6 @@ public static class FeatureFlagKeys
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string MemberAccessReport = "ac-2059-member-access-report";
-    public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
@@ -134,6 +133,7 @@ public static class FeatureFlagKeys
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
+    public const string NotificationRefresh = "notification-refresh";
     public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
