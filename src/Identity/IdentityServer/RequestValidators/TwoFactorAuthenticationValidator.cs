@@ -156,6 +156,8 @@ public class TwoFactorAuthenticationValidator(
 
         switch (type)
         {
+            case TwoFactorProviderType.RecoveryCode:
+                return await _userService.RecoverTwoFactorAsync(user, token);
             case TwoFactorProviderType.Authenticator:
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.Duo:

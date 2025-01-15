@@ -401,6 +401,7 @@ public class TwoFactorController : Controller
         return response;
     }
 
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     [HttpPost("recover")]
     [AllowAnonymous]
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)

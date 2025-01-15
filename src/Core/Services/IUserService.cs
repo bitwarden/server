@@ -41,7 +41,20 @@ public interface IUserService
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
+    /// <summary>
+    /// This method is used by the TwoFactorAuthenticationValidator to recover two factor for a user. This allows users
+    /// to be logged in after a successful recovery attempt.
+    ///
+    /// This method logs the event, sends an email to the user, and removes two factor providers on the user account.
+    /// This means that a user will have to accomplish new device verification on their account on new logins, if it
+    /// is enabled for their user.
+    /// </summary>
+    /// <param name="user">the user logging in</param>
+    /// <param name="recoveryCode">recovery code associated with the user logging in</param>
+    /// <returns>true if the recovery code is valid; false otherwise</returns>
+    Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode);
     Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);

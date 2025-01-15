@@ -867,6 +867,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
     {
         var user = await _userRepository.GetByEmailAsync(email);
@@ -881,6 +882,23 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return false;
         }
 
+        if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
+        {
+            return false;
+        }
+
+        user.TwoFactorProviders = null;
+        user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        await SaveUserAsync(user);
+        await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+        await CheckPoliciesOnTwoFactorRemovalAsync(user);
+
+        return true;
+    }
+
+    public async Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode)
+    {
         if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
         {
             return false;
