@@ -282,7 +282,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
     }
 
     private static SubscriptionData GetSubscriptionDataFor(Organization organization, Plan plan)
-        => new ()
+        => new()
         {
             Plan = plan,
             PurchasedPasswordManagerSeats = organization.Seats.HasValue

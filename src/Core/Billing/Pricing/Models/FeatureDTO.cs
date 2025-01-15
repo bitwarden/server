@@ -1,4 +1,4 @@
-namespace Bit.Core.Billing.Pricing.Models;
+﻿namespace Bit.Core.Billing.Pricing.Models;
 
 #nullable enable
 

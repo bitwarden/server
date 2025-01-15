@@ -1,4 +1,4 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Billing.Pricing;

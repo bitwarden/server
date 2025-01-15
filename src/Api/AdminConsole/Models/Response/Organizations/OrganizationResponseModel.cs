@@ -149,7 +149,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
-        this(organization, (Plan) null)
+        this(organization, (Plan)null)
     {
         if (license != null)
         {

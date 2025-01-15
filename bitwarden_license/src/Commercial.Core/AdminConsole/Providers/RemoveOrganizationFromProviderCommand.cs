@@ -11,7 +11,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;

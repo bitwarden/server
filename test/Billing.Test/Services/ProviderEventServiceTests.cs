@@ -11,8 +11,6 @@ using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
-using Bit.Test.Common.AutoFixture;
-using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;

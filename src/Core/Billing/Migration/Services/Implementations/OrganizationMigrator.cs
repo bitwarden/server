@@ -8,7 +8,6 @@ using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;

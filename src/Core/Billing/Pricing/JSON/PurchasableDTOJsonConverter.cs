@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Billing.Pricing.Models;
 
 namespace Bit.Core.Billing.Pricing.JSON;

@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Billing.Pricing.JSON;
 using OneOf;
 
@@ -9,9 +9,9 @@ namespace Bit.Core.Billing.Pricing.Models;
 [JsonConverter(typeof(PurchasableDTOJsonConverter))]
 public class PurchasableDTO(OneOf<FreeDTO, PackagedDTO, ScalableDTO> input) : OneOfBase<FreeDTO, PackagedDTO, ScalableDTO>(input)
 {
-    public static implicit operator PurchasableDTO(FreeDTO free) => new (free);
-    public static implicit operator PurchasableDTO(PackagedDTO packaged) => new (packaged);
-    public static implicit operator PurchasableDTO(ScalableDTO scalable) => new (scalable);
+    public static implicit operator PurchasableDTO(FreeDTO free) => new(free);
+    public static implicit operator PurchasableDTO(PackagedDTO packaged) => new(packaged);
+    public static implicit operator PurchasableDTO(ScalableDTO scalable) => new(scalable);
 
     public T? FromFree<T>(Func<FreeDTO, T> select, Func<PurchasableDTO, T>? fallback = null) =>
         IsT0 ? select(AsT0) : fallback != null ? fallback(this) : default;
@@ -30,8 +30,8 @@ public class PurchasableDTO(OneOf<FreeDTO, PackagedDTO, ScalableDTO> input) : On
 [JsonConverter(typeof(FreeOrScalableDTOJsonConverter))]
 public class FreeOrScalableDTO(OneOf<FreeDTO, ScalableDTO> input) : OneOfBase<FreeDTO, ScalableDTO>(input)
 {
-    public static implicit operator FreeOrScalableDTO(FreeDTO freeDTO) => new (freeDTO);
-    public static implicit operator FreeOrScalableDTO(ScalableDTO scalableDTO) => new (scalableDTO);
+    public static implicit operator FreeOrScalableDTO(FreeDTO freeDTO) => new(freeDTO);
+    public static implicit operator FreeOrScalableDTO(ScalableDTO scalableDTO) => new(scalableDTO);
 
     public T? FromFree<T>(Func<FreeDTO, T> select, Func<FreeOrScalableDTO, T>? fallback = null) =>
         IsT0 ? select(AsT0) : fallback != null ? fallback(this) : default;

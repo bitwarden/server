@@ -17,7 +17,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Stripe;

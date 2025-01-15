@@ -5,7 +5,6 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
-using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Billing.Services.Implementations;

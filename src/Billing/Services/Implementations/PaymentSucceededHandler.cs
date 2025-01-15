@@ -9,7 +9,6 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
