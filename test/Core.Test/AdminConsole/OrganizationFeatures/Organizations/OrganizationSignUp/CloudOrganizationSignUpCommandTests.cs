@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -37,6 +38,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.UseSecretsManager = false;
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -88,6 +91,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.UseSecretsManager = false;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         // Extract orgUserId when created
         Guid? orgUserId = null;
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -132,6 +137,7 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.IsFromSecretsManagerTrial = false;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         var result = await sutProvider.Sut.SignUpOrganizationAsync(signup);
 
@@ -184,6 +190,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.IsFromProvider = true;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
     }
@@ -201,6 +209,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = 10;
         signup.AdditionalStorageGb = 0;
         signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
@@ -220,6 +230,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.AdditionalServiceAccounts = 10;
         signup.IsFromProvider = false;
 
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
@@ -237,6 +249,8 @@ public class CloudICloudOrganizationSignUpCommandTests
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = -10;
         signup.IsFromProvider = false;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(StaticStore.GetPlan(signup.Plan));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));

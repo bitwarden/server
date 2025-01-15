@@ -31,6 +31,11 @@ public static class StripeConstants
         public const string TaxIdInvalid = "tax_id_invalid";
     }
 
+    public static class InvoiceStatus
+    {
+        public const string Open = "open";
+    }
+
     public static class PaymentBehavior
     {
         public const string DefaultIncomplete = "default_incomplete";

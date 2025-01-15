@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -56,6 +57,7 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IFeatureService _featureService;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -82,7 +84,7 @@ public class OrganizationsController : Controller
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IProviderBillingService providerBillingService,
-        IFeatureService featureService)
+        IFeatureService featureService, IPricingClient pricingClient)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -109,6 +111,7 @@ public class OrganizationsController : Controller
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
         _providerBillingService = providerBillingService;
         _featureService = featureService;
+        _pricingClient = pricingClient;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -208,6 +211,8 @@ public class OrganizationsController : Controller
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
 
+        var plans = await _pricingClient.ListPlans();
+
         return View(new OrganizationEditModel(
             organization,
             provider,
@@ -220,6 +225,7 @@ public class OrganizationsController : Controller
             billingHistoryInfo,
             billingSyncConnection,
             _globalSettings,
+            plans,
             secrets,
             projects,
             serviceAccounts,
@@ -249,8 +255,9 @@ public class OrganizationsController : Controller
 
         UpdateOrganization(organization, model);
 
-        if (organization.UseSecretsManager &&
-            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+
+        if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";
             return RedirectToAction("Edit", new { id });

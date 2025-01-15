@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -19,6 +20,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IUserService _userService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IPricingClient _pricingClient;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -28,7 +30,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
         IPushNotificationService pushNotificationService,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        IPricingClient pricingClient)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -38,6 +41,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _userService = userService;
         _pushNotificationService = pushNotificationService;
         _organizationRepository = organizationRepository;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
@@ -132,10 +136,27 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     /// </summary>
     /// <param name="parsedEvent"></param>
     /// <param name="subscription"></param>
-    private async Task RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(Event parsedEvent,
+    private async Task RemovePasswordManagerCouponIfRemovingSecretsManagerTrialAsync(
+        Event parsedEvent,
         Subscription subscription)
     {
         if (parsedEvent.Data.PreviousAttributes?.items is null)
+        {
+            return;
+        }
+
+        var organization = subscription.Metadata.TryGetValue("organizationId", out var organizationId)
+            ? await _organizationRepository.GetByIdAsync(Guid.Parse(organizationId))
+            : null;
+
+        if (organization == null)
+        {
+            return;
+        }
+
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+
+        if (!plan.SupportsSecretsManager)
         {
             return;
         }
@@ -147,17 +168,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         // This being false doesn't necessarily mean that the organization doesn't subscribe to Secrets Manager.
         // If there are changes to any subscription item, Stripe sends every item in the subscription, both
         // changed and unchanged.
-        var previousSubscriptionHasSecretsManager = previousSubscription?.Items is not null &&
-                                                    previousSubscription.Items.Any(previousItem =>
-                                                        StaticStore.Plans.Any(p =>
-                                                            p.SecretsManager is not null &&
-                                                            p.SecretsManager.StripeSeatPlanId ==
-                                                            previousItem.Plan.Id));
+        var previousSubscriptionHasSecretsManager =
+            previousSubscription?.Items is not null &&
+            previousSubscription.Items.Any(
+                previousSubscriptionItem => previousSubscriptionItem.Plan.Id == plan.SecretsManager.StripeSeatPlanId);
 
-        var currentSubscriptionHasSecretsManager = subscription.Items.Any(i =>
-            StaticStore.Plans.Any(p =>
-                p.SecretsManager is not null &&
-                p.SecretsManager.StripeSeatPlanId == i.Plan.Id));
+        var currentSubscriptionHasSecretsManager =
+            subscription.Items.Any(
+                currentSubscriptionItem => currentSubscriptionItem.Plan.Id == plan.SecretsManager.StripeSeatPlanId);
 
         if (!previousSubscriptionHasSecretsManager || currentSubscriptionHasSecretsManager)
         {

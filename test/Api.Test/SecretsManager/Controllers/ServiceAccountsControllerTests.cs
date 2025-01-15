@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -15,6 +16,7 @@ using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -118,6 +120,8 @@ public class ServiceAccountsControllerTests
         ServiceAccountCreateRequestModel data, Organization organization)
     {
         ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
 
         await sutProvider.Sut.CreateAsync(organization.Id, data);
 

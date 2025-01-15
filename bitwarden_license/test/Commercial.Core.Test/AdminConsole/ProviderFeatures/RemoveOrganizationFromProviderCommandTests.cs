@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -204,6 +205,8 @@ public class RemoveOrganizationFromProviderCommandTests
         organization.PlanType = PlanType.TeamsMonthly;
 
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlan(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,

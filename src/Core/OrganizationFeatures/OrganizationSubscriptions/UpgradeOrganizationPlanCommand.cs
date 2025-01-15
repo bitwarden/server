@@ -6,6 +6,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -38,6 +39,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IOrganizationService _organizationService;
     private readonly IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
+    private readonly IPricingClient _pricingClient;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -53,7 +55,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IFeatureService featureService,
-        IOrganizationBillingService organizationBillingService)
+        IOrganizationBillingService organizationBillingService,
+        IPricingClient pricingClient)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -69,6 +72,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _organizationService = organizationService;
         _featureService = featureService;
         _organizationBillingService = organizationBillingService;
+        _pricingClient = pricingClient;
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -84,14 +88,11 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             throw new BadRequestException("Your account has no payment method available.");
         }
 
-        var existingPlan = StaticStore.GetPlan(organization.PlanType);
-        if (existingPlan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
+        var existingPlan = await _pricingClient.GetPlan(organization.PlanType);
 
-        var newPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
-        if (newPlan == null)
+        var newPlan = await _pricingClient.GetPlan(upgrade.Plan);
+
+        if (newPlan.Disabled)
         {
             throw new BadRequestException("Plan not found.");
         }

@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -45,11 +46,12 @@ public class CloudOrganizationSignUpCommand(
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
-    IDeviceRepository deviceRepository) : ICloudOrganizationSignUpCommand
+    IDeviceRepository deviceRepository,
+    IPricingClient pricingClient) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = await pricingClient.GetPlan(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
 

@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -55,6 +56,7 @@ public class OrganizationUsersController : Controller
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
     private readonly IFeatureService _featureService;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -77,7 +79,8 @@ public class OrganizationUsersController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -100,6 +103,7 @@ public class OrganizationUsersController : Controller
         _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
         _featureService = featureService;
+        _pricingClient = pricingClient;
     }
 
     [HttpGet("{id}")]
@@ -633,7 +637,9 @@ public class OrganizationUsersController : Controller
         if (additionalSmSeatsRequired > 0)
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            var update = new SecretsManagerSubscriptionUpdate(organization, true)
+            // TODO: https://bitwarden.atlassian.net/browse/PM-17000
+            var plan = await _pricingClient.GetPlan(organization!.PlanType);
+            var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }

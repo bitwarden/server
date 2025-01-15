@@ -3,6 +3,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Migration.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -19,6 +20,7 @@ public class OrganizationMigrator(
     ILogger<OrganizationMigrator> logger,
     IMigrationTrackerCache migrationTrackerCache,
     IOrganizationRepository organizationRepository,
+    IPricingClient pricingClient,
     IStripeAdapter stripeAdapter) : IOrganizationMigrator
 {
     private const string _cancellationComment = "Cancelled as part of provider migration to Consolidated Billing";
@@ -137,7 +139,7 @@ public class OrganizationMigrator(
         logger.LogInformation("CB: Bringing organization ({OrganizationID}) under provider management",
             organization.Id);
 
-        var plan = StaticStore.GetPlan(organization.Plan.Contains("Teams") ? PlanType.TeamsMonthly : PlanType.EnterpriseMonthly);
+        var plan = await pricingClient.GetPlan(organization.Plan.Contains("Teams") ? PlanType.TeamsMonthly : PlanType.EnterpriseMonthly);
 
         ResetOrganizationPlan(organization, plan);
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
@@ -206,7 +208,7 @@ public class OrganizationMigrator(
                     ? StripeConstants.CollectionMethod.ChargeAutomatically
                     : StripeConstants.CollectionMethod.SendInvoice;
 
-            var plan = StaticStore.GetPlan(organization.PlanType);
+            var plan = await pricingClient.GetPlan(organization.PlanType);
 
             var items = new List<SubscriptionItemOptions>
             {
@@ -279,7 +281,7 @@ public class OrganizationMigrator(
             throw new Exception();
         }
 
-        var plan = StaticStore.GetPlan(migrationRecord.PlanType);
+        var plan = await pricingClient.GetPlan(migrationRecord.PlanType);
 
         ResetOrganizationPlan(organization, plan);
         organization.MaxStorageGb = migrationRecord.MaxStorageGb;

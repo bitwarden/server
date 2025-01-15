@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -27,6 +28,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IProviderBillingService _providerBillingService;
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -38,7 +40,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IFeatureService featureService,
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _mailService = mailService;
@@ -50,6 +53,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _providerBillingService = providerBillingService;
         _subscriberService = subscriberService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -110,7 +114,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Email = organization.BillingEmail
             });
 
-            var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+            var plan = await _pricingClient.GetPlan(organization.PlanType);
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
@@ -124,7 +128,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+                Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);

@@ -16,6 +16,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -52,6 +53,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
+    private readonly IPricingClient _pricingClient;
     private readonly OrganizationsController _sut;
 
     public OrganizationsControllerTests()
@@ -75,6 +77,7 @@ public class OrganizationsControllerTests : IDisposable
         _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _cloudOrganizationSignUpCommand = Substitute.For<ICloudOrganizationSignUpCommand>();
+        _pricingClient = Substitute.For<IPricingClient>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -95,7 +98,8 @@ public class OrganizationsControllerTests : IDisposable
             _providerBillingService,
             _orgDeleteTokenDataFactory,
             _removeOrganizationUserCommand,
-            _cloudOrganizationSignUpCommand);
+            _cloudOrganizationSignUpCommand,
+            _pricingClient);
     }
 
     public void Dispose()

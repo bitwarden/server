@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -147,7 +148,7 @@ public static class StaticStore
                 SponsoringProductTierType = ProductTierType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).ProductTier == ProductTierType.Enterprise,
+                    org.PlanType.GetProductTier() == ProductTierType.Enterprise,
             }
         };
 

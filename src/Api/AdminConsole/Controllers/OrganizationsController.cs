@@ -9,6 +9,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -21,10 +22,12 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -58,6 +61,7 @@ public class OrganizationsController : Controller
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -78,7 +82,8 @@ public class OrganizationsController : Controller
         IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
-        ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand)
+        ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -99,6 +104,7 @@ public class OrganizationsController : Controller
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
+        _pricingClient = pricingClient;
     }
 
     [HttpGet("{id}")]
@@ -116,7 +122,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationResponseModel(organization);
+        var plan = await GetPlanIfNotSelfHostedAsync(organization);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("")]
@@ -177,7 +184,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await GetPlanIfNotSelfHostedAsync(result.Organization);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPost("create-without-payment")]
@@ -192,7 +200,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await GetPlanIfNotSelfHostedAsync(result.Organization);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPut("{id}")]
@@ -220,7 +229,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        return new OrganizationResponseModel(organization);
+        var plan = await GetPlanIfNotSelfHostedAsync(organization);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpPost("{id}/storage")]
@@ -354,8 +364,8 @@ public class OrganizationsController : Controller
         if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
-            var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.ProductTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
+            var productTier = organization.PlanType.GetProductTier();
+            if (productTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
             {
                 throw new NotFoundException();
             }
@@ -538,7 +548,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
-        return new OrganizationResponseModel(organization);
+        var plan = await GetPlanIfNotSelfHostedAsync(organization);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("{id}/plan-type")]
@@ -552,5 +563,15 @@ public class OrganizationsController : Controller
         }
 
         return organization.PlanType;
+    }
+
+    private async Task<Plan> GetPlanIfNotSelfHostedAsync(Organization organization)
+    {
+        if (_globalSettings.SelfHosted)
+        {
+            return null;
+        }
+
+        return await _pricingClient.GetPlan(organization.PlanType);
     }
 }
