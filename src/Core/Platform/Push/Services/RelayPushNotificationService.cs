@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -55,7 +56,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -219,6 +220,36 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         }
     }
 
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    {
+        var message = new NotificationPushNotification
+        {
+            Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
+        };
+
+        if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationStatus, message, true,
+                notification.ClientType);
+        }
+        else if (notification.OrganizationId.HasValue)
+        {
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationStatus, message,
+                true, notification.ClientType);
+        }
+    }
+
     public async Task PushSyncOrganizationStatusAsync(Organization organization)
     {
         var message = new OrganizationStatusPushNotification
@@ -276,7 +307,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
     {
         var currentContext =
-            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
         {
             var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
@@ -292,14 +323,14 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         }
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }
