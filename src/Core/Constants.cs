@@ -133,6 +133,7 @@ public static class FeatureFlagKeys
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
+    public const string NotificationRefresh = "notification-refresh";
     public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -156,7 +157,6 @@ public static class FeatureFlagKeys
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
-    public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
     public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
