@@ -21,11 +21,15 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
         {
             new(nameof(UserLicenseConstants.LicenseType), LicenseType.User.ToString()),
             new(nameof(UserLicenseConstants.Id), entity.Id.ToString()),
-            new(nameof(UserLicenseConstants.Email), entity.Email),
             new(nameof(UserLicenseConstants.Premium), entity.Premium.ToString()),
             new(nameof(UserLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
             new(nameof(UserLicenseConstants.Trial), trial.ToString()),
         };
+
+        if (entity.Email is not null)
+        {
+            claims.Add(new(nameof(UserLicenseConstants.Email), entity.Email));
+        }
 
         if (entity.Name is not null)
         {

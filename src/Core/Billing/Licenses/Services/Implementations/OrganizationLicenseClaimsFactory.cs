@@ -23,10 +23,7 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
         {
             new(nameof(OrganizationLicenseConstants.LicenseType), LicenseType.Organization.ToString()),
             new(nameof(OrganizationLicenseConstants.Id), entity.Id.ToString()),
-            new(nameof(OrganizationLicenseConstants.Name), entity.Name),
-            new(nameof(OrganizationLicenseConstants.BillingEmail), entity.BillingEmail),
             new(nameof(OrganizationLicenseConstants.Enabled), entity.Enabled.ToString()),
-            new(nameof(OrganizationLicenseConstants.Plan), entity.Plan),
             new(nameof(OrganizationLicenseConstants.PlanType), entity.PlanType.ToString()),
             new(nameof(OrganizationLicenseConstants.UsePolicies), entity.UsePolicies.ToString()),
             new(nameof(OrganizationLicenseConstants.UseSso), entity.UseSso.ToString()),
@@ -56,6 +53,21 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.ExpirationWithoutGracePeriod), expirationWithoutGracePeriod.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Trial), trial.ToString()),
         };
+
+        if (entity.Name is not null)
+        {
+            claims.Add(new(nameof(OrganizationLicenseConstants.Name), entity.Name));
+        }
+
+        if (entity.BillingEmail is not null)
+        {
+            claims.Add(new(nameof(OrganizationLicenseConstants.BillingEmail), entity.BillingEmail));
+        }
+
+        if (entity.Plan is not null)
+        {
+            claims.Add(new(nameof(OrganizationLicenseConstants.Plan), entity.Plan));
+        }
 
         if (entity.BusinessName is not null)
         {
