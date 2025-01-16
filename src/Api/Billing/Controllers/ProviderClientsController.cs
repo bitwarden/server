@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Billing.Models.Requests;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Services;
@@ -7,6 +8,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Billing.Controllers;
@@ -14,6 +16,7 @@ namespace Bit.Api.Billing.Controllers;
 [Route("providers/{providerId:guid}/clients")]
 public class ProviderClientsController(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IOrganizationRepository organizationRepository,
     IProviderBillingService providerBillingService,
@@ -22,7 +25,10 @@ public class ProviderClientsController(
     IProviderService providerService,
     IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
+    private readonly ICurrentContext _currentContext = currentContext;
+
     [HttpPost]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IResult> CreateAsync(
         [FromRoute] Guid providerId,
         [FromBody] CreateClientOrganizationRequestBody requestBody)
@@ -80,6 +86,7 @@ public class ProviderClientsController(
     }
 
     [HttpPut("{providerOrganizationId:guid}")]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IResult> UpdateAsync(
         [FromRoute] Guid providerId,
         [FromRoute] Guid providerOrganizationId,
@@ -113,7 +120,7 @@ public class ProviderClientsController(
             clientOrganization.PlanType,
             seatAdjustment);
 
-        if (seatAdjustmentResultsInPurchase && !currentContext.ProviderProviderAdmin(provider.Id))
+        if (seatAdjustmentResultsInPurchase && !_currentContext.ProviderProviderAdmin(provider.Id))
         {
             return Error.Unauthorized("Service users cannot purchase additional seats.");
         }
@@ -124,6 +131,60 @@ public class ProviderClientsController(
         clientOrganization.Seats = requestBody.AssignedSeats;
 
         await organizationRepository.ReplaceAsync(clientOrganization);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpGet("addable")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> GetAddableOrganizationsAsync([FromRoute] Guid providerId)
+    {
+        if (!featureService.IsEnabled(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal))
+        {
+            return Error.NotFound();
+        }
+
+        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var userId = _currentContext.UserId;
+
+        if (!userId.HasValue)
+        {
+            return Error.Unauthorized();
+        }
+
+        var addable =
+            await providerBillingService.GetAddableOrganizations(provider, userId.Value);
+
+        return TypedResults.Ok(addable);
+    }
+
+    [HttpPost("existing")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> AddExistingOrganizationAsync(
+        [FromRoute] Guid providerId,
+        [FromBody] AddExistingOrganizationRequestBody requestBody)
+    {
+        var (provider, result) = await TryGetBillableProviderForServiceUserOperation(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(requestBody.OrganizationId);
+
+        if (organization == null)
+        {
+            return Error.BadRequest("The organization being added to the provider does not exist.");
+        }
+
+        await providerBillingService.AddExistingOrganization(provider, organization, requestBody.Key);
 
         return TypedResults.Ok();
     }

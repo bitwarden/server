@@ -164,6 +164,7 @@ public static class FeatureFlagKeys
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
     public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
+    public const string P15179_AddExistingOrgsFromProviderPortal = "PM-15179-add-existing-orgs-from-provider-portal";
 
     public static List<string> GetAllKeys()
     {
