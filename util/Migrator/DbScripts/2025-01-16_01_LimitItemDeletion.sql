@@ -46,7 +46,6 @@ SELECT
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
     O.[PlanType],
-    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
@@ -61,6 +60,7 @@ INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
 INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+
 GO
 
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
@@ -111,7 +111,6 @@ SELECT
     O.[UsePasswordManager],
     O.[SmSeats],
     O.[SmServiceAccounts],
-    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
@@ -131,10 +130,12 @@ LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
+
 GO
 
 
 -- Refresh Stored Procedures
+
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
@@ -188,7 +189,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCreationDeletion BIT = NULL, -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     @LimitCollectionCreation BIT = NULL,
     @LimitCollectionDeletion BIT = NULL,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
@@ -197,9 +197,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
 AS
 BEGIN
     SET NOCOUNT ON
-
-    SET @LimitCollectionCreation = COALESCE(@LimitCollectionCreation, @LimitCollectionCreationDeletion, 0);
-    SET @LimitCollectionDeletion = COALESCE(@LimitCollectionDeletion, @LimitCollectionCreationDeletion, 0);
 
     INSERT INTO [dbo].[Organization]
     (
@@ -255,7 +252,6 @@ BEGIN
         [MaxAutoscaleSmSeats],
         [MaxAutoscaleSmServiceAccounts],
         [SecretsManagerBeta],
-        [LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
@@ -316,7 +312,6 @@ BEGIN
         @MaxAutoscaleSmSeats,
         @MaxAutoscaleSmServiceAccounts,
         @SecretsManagerBeta,
-        COALESCE(@LimitCollectionCreation, @LimitCollectionDeletion, 0), -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863)
         @LimitCollectionCreation,
         @LimitCollectionDeletion,
         @AllowAdminAccessToAllCollectionItems,
@@ -350,7 +345,6 @@ BEGIN
         [UseResetPassword],
         [UsePolicies],
         [Enabled],
-        [LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
@@ -358,6 +352,7 @@ BEGIN
     FROM
         [dbo].[Organization]
 END
+
 GO
 
 
@@ -415,7 +410,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @MaxAutoscaleSmSeats INT = null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCreationDeletion BIT = null, -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     @LimitCollectionCreation BIT = null,
     @LimitCollectionDeletion BIT = null,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
@@ -424,9 +418,6 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
 AS
 BEGIN
     SET NOCOUNT ON
-
-    SET @LimitCollectionCreation = COALESCE(@LimitCollectionCreation, @LimitCollectionCreationDeletion, 0);
-    SET @LimitCollectionDeletion = COALESCE(@LimitCollectionDeletion, @LimitCollectionCreationDeletion, 0);
 
     UPDATE
         [dbo].[Organization]
@@ -482,7 +473,6 @@ BEGIN
         [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
         [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
         [SecretsManagerBeta] = @SecretsManagerBeta,
-        [LimitCollectionCreationDeletion] = COALESCE(@LimitCollectionCreation, @LimitCollectionDeletion, 0),
         [LimitCollectionCreation] = @LimitCollectionCreation,
         [LimitCollectionDeletion] = @LimitCollectionDeletion,
         [AllowAdminAccessToAllCollectionItems] = @AllowAdminAccessToAllCollectionItems,
@@ -491,5 +481,6 @@ BEGIN
     WHERE
         [Id] = @Id
 END
+
 
 GO
