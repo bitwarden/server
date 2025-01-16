@@ -21,31 +21,35 @@ public class UserLicenseClaimsFactory : ILicenseClaimsFactory<User>
         {
             new(nameof(UserLicenseConstants.LicenseType), LicenseType.User.ToString()),
             new(nameof(UserLicenseConstants.Id), entity.Id.ToString()),
-            new(nameof(UserLicenseConstants.Name), entity.Name),
             new(nameof(UserLicenseConstants.Email), entity.Email),
             new(nameof(UserLicenseConstants.Premium), entity.Premium.ToString()),
             new(nameof(UserLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
             new(nameof(UserLicenseConstants.Trial), trial.ToString()),
         };
 
+        if (entity.Name is not null)
+        {
+            claims.Add(new(nameof(UserLicenseConstants.Name), entity.Name));
+        }
+
         if (entity.LicenseKey is not null)
         {
             claims.Add(new(nameof(UserLicenseConstants.LicenseKey), entity.LicenseKey));
         }
 
-        if (entity.MaxStorageGb is not null)
+        if (entity.MaxStorageGb.HasValue)
         {
             claims.Add(new(nameof(UserLicenseConstants.MaxStorageGb), entity.MaxStorageGb.ToString()));
         }
 
-        if (expires is not null)
+        if (expires.HasValue)
         {
-            claims.Add(new(nameof(UserLicenseConstants.Expires), expires.ToString()));
+            claims.Add(new(nameof(UserLicenseConstants.Expires), expires.Value.ToString(CultureInfo.InvariantCulture)));
         }
 
-        if (refresh is not null)
+        if (refresh.HasValue)
         {
-            claims.Add(new(nameof(UserLicenseConstants.Refresh), refresh.ToString()));
+            claims.Add(new(nameof(UserLicenseConstants.Refresh), refresh.Value.ToString(CultureInfo.InvariantCulture)));
         }
 
         return Task.FromResult(claims);
