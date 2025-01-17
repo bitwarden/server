@@ -70,7 +70,7 @@ public class OrganizationsController(
             return new OrganizationSubscriptionResponseModel(organization, orgLicense);
         }
 
-        var plan = await pricingClient.GetPlan(organization.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
         {
@@ -169,7 +169,7 @@ public class OrganizationsController(
 
         organization = await AdjustOrganizationSeatsForSmTrialAsync(id, organization, model);
 
-        var plan = await pricingClient.GetPlan(organization.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, plan);
 
         await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);

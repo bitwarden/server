@@ -87,9 +87,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             throw new BadRequestException("Your account has no payment method available.");
         }
 
-        var existingPlan = await _pricingClient.GetPlan(organization.PlanType);
+        var existingPlan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
-        var newPlan = await _pricingClient.GetPlan(upgrade.Plan);
+        var newPlan = await _pricingClient.GetPlanOrThrow(upgrade.Plan);
 
         if (newPlan.Disabled)
         {

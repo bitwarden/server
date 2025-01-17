@@ -206,7 +206,7 @@ public class RemoveOrganizationFromProviderCommandTests
 
         var teamsMonthlyPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthlyPlan);
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,

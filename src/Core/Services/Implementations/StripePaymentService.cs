@@ -305,7 +305,7 @@ public class StripePaymentService : IPaymentService
         OrganizationSponsorship sponsorship,
         bool applySponsorship)
     {
-        var existingPlan = await _pricingClient.GetPlan(org.PlanType);
+        var existingPlan = await _pricingClient.GetPlanOrThrow(org.PlanType);
         var sponsoredPlan = sponsorship?.PlanSponsorshipType != null ?
             Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;
@@ -921,7 +921,7 @@ public class StripePaymentService : IPaymentService
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
         int newlyPurchasedAdditionalStorage)
     {
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         return await FinalizeSubscriptionChangeAsync(
             organization,
             new CompleteSubscriptionUpdate(
@@ -1993,7 +1993,7 @@ public class StripePaymentService : IPaymentService
         string gatewayCustomerId,
         string gatewaySubscriptionId)
     {
-        var plan = await _pricingClient.GetPlan(parameters.PasswordManager.Plan);
+        var plan = await _pricingClient.GetPlanOrThrow(parameters.PasswordManager.Plan);
 
         var options = new InvoiceCreatePreviewOptions
         {

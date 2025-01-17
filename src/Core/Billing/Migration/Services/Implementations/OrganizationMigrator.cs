@@ -138,7 +138,7 @@ public class OrganizationMigrator(
         logger.LogInformation("CB: Bringing organization ({OrganizationID}) under provider management",
             organization.Id);
 
-        var plan = await pricingClient.GetPlan(organization.Plan.Contains("Teams") ? PlanType.TeamsMonthly : PlanType.EnterpriseMonthly);
+        var plan = await pricingClient.GetPlanOrThrow(organization.Plan.Contains("Teams") ? PlanType.TeamsMonthly : PlanType.EnterpriseMonthly);
 
         ResetOrganizationPlan(organization, plan);
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
@@ -207,7 +207,7 @@ public class OrganizationMigrator(
                     ? StripeConstants.CollectionMethod.ChargeAutomatically
                     : StripeConstants.CollectionMethod.SendInvoice;
 
-            var plan = await pricingClient.GetPlan(organization.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
             var items = new List<SubscriptionItemOptions>
             {
@@ -280,7 +280,7 @@ public class OrganizationMigrator(
             throw new Exception();
         }
 
-        var plan = await pricingClient.GetPlan(migrationRecord.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(migrationRecord.PlanType);
 
         ResetOrganizationPlan(organization, plan);
         organization.MaxStorageGb = migrationRecord.MaxStorageGb;

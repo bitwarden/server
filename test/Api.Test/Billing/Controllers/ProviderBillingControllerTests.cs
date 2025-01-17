@@ -334,7 +334,7 @@ public class ProviderBillingControllerTests
 
         foreach (var providerPlan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
         }
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);

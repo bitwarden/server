@@ -113,7 +113,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Email = organization.BillingEmail
             });
 
-            var plan = await _pricingClient.GetPlan(organization.PlanType);
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {

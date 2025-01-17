@@ -312,7 +312,7 @@ public class OrganizationBillingService(
         Customer customer,
         SubscriptionSetup subscriptionSetup)
     {
-        var plan = await pricingClient.GetPlan(subscriptionSetup.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(subscriptionSetup.PlanType);
 
         var passwordManagerOptions = subscriptionSetup.PasswordManagerOptions;
 
@@ -409,7 +409,7 @@ public class OrganizationBillingService(
             return false;
         }
 
-        var plan = await pricingClient.GetPlan(organization.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {

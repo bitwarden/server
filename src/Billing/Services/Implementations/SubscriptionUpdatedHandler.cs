@@ -153,7 +153,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             return;
         }
 
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {

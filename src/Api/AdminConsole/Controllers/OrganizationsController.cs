@@ -122,7 +122,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var plan = await GetPlanIfNotSelfHostedAsync(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
 
@@ -184,7 +184,7 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        var plan = await GetPlanIfNotSelfHostedAsync(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
         return new OrganizationResponseModel(result.Organization, plan);
     }
 
@@ -200,7 +200,7 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        var plan = await GetPlanIfNotSelfHostedAsync(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
         return new OrganizationResponseModel(result.Organization, plan);
     }
 
@@ -229,7 +229,7 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        var plan = await GetPlanIfNotSelfHostedAsync(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
 
@@ -548,7 +548,7 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
-        var plan = await GetPlanIfNotSelfHostedAsync(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
         return new OrganizationResponseModel(organization, plan);
     }
 
@@ -563,15 +563,5 @@ public class OrganizationsController : Controller
         }
 
         return organization.PlanType;
-    }
-
-    private async Task<Plan> GetPlanIfNotSelfHostedAsync(Organization organization)
-    {
-        if (_globalSettings.SelfHosted)
-        {
-            return null;
-        }
-
-        return await _pricingClient.GetPlan(organization.PlanType);
     }
 }

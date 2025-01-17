@@ -129,7 +129,7 @@ public class ServiceAccountsController : Controller
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
             // TODO: https://bitwarden.atlassian.net/browse/PM-17002
-            var plan = await _pricingClient.GetPlan(org!.PlanType);
+            var plan = await _pricingClient.GetPlanOrThrow(org!.PlanType);
             var update = new SecretsManagerSubscriptionUpdate(org, plan, true)
                 .AdjustServiceAccounts(newServiceAccountSlotsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);

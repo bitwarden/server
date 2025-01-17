@@ -43,7 +43,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         organization.PlanType = planType;
 
         var plan = StaticStore.GetPlan(organization.PlanType);
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType).Returns(plan);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(plan);
 
         await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
 
@@ -87,7 +87,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     {
         organization.GatewayCustomerId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
@@ -105,7 +105,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     {
         organization.GatewaySubscriptionId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
@@ -138,7 +138,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         organization.UseSecretsManager = false;
         provider.Type = ProviderType.Msp;
         sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(

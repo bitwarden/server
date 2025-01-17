@@ -63,7 +63,7 @@ public class ProviderEventService(
                             return;
                         }
 
-                        var plan = await pricingClient.GetPlan(organization.PlanType);
+                        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
                         var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
 
@@ -85,7 +85,7 @@ public class ProviderEventService(
 
                     foreach (var providerPlan in providerPlans.Where(x => x.PurchasedSeats is null or 0))
                     {
-                        var plan = await pricingClient.GetPlan(providerPlan.PlanType);
+                        var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
                         var clientSeats = invoiceItems
                             .Where(item => item.PlanName == plan.Name)

@@ -117,7 +117,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             {
                 var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 // TODO: https://bitwarden.atlassian.net/browse/PM-17012
-                var plan = await _pricingClient.GetPlan(organization!.PlanType);
+                var plan = await _pricingClient.GetPlanOrThrow(organization!.PlanType);
                 var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);

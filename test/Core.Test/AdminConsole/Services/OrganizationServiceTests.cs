@@ -209,7 +209,7 @@ public class OrganizationServiceTests
 
         var plan = StaticStore.GetPlan(signup.Plan);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(signup.Plan).Returns(plan);
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(plan);
 
         var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
 
@@ -900,7 +900,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites);
 
@@ -941,7 +941,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default)
             .ThrowsForAnyArgs<BadRequestException>();
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
         await Assert.ThrowsAsync<AggregateException>(async () =>
@@ -1349,7 +1349,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organization.MaxAutoscaleSeats = currentMaxAutoscaleSeats;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
@@ -1374,7 +1374,7 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organization.Seats = 100;
         organization.SmSeats = 100;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);

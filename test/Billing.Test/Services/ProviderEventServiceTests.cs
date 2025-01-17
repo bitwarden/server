@@ -186,7 +186,7 @@ public class ProviderEventServiceTests
 
         foreach (var providerPlan in providerPlans)
         {
-            _pricingClient.GetPlan(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+            _pricingClient.GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
         }
 
         _providerPlanRepository.GetByProviderId(providerId).Returns(providerPlans);

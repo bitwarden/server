@@ -98,9 +98,9 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 return;
             }
 
-            var teamsMonthly = await _pricingClient.GetPlan(PlanType.TeamsMonthly);
+            var teamsMonthly = await _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly);
 
-            var enterpriseMonthly = await _pricingClient.GetPlan(PlanType.EnterpriseMonthly);
+            var enterpriseMonthly = await _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly);
 
             var teamsMonthlyLineItem =
                 subscription.Items.Data.FirstOrDefault(item =>
@@ -146,7 +146,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 return;
             }
 
-            var plan = await _pricingClient.GetPlan(organization.PlanType);
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
             if (subscription.Items.All(item => plan.PasswordManager.StripePlanId != item.Plan.Id))
             {

@@ -121,7 +121,7 @@ public class ServiceAccountsControllerTests
     {
         ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
 
         await sutProvider.Sut.CreateAsync(organization.Id, data);
 

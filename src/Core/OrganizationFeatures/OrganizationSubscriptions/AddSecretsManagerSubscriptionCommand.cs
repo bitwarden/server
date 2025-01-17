@@ -33,7 +33,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     {
         await ValidateOrganization(organization);
 
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
@@ -76,7 +76,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new BadRequestException("Organization already uses Secrets Manager.");
         }
 
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {

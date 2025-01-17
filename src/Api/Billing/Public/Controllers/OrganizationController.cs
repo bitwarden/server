@@ -144,7 +144,7 @@ public class OrganizationController : Controller
             return "Organization has no access to Secrets Manager.";
         }
 
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         var secretsManagerUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization, plan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(secretsManagerUpdate);
 

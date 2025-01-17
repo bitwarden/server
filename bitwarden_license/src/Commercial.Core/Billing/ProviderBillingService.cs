@@ -50,8 +50,8 @@ public class ProviderBillingService(
             return;
         }
 
-        var oldPlanConfiguration = await pricingClient.GetPlan(plan.PlanType);
-        var newPlanConfiguration = await pricingClient.GetPlan(command.NewPlan);
+        var oldPlanConfiguration = await pricingClient.GetPlanOrThrow(plan.PlanType);
+        var newPlanConfiguration = await pricingClient.GetPlanOrThrow(command.NewPlan);
 
         plan.PlanType = command.NewPlan;
         await providerPlanRepository.ReplaceAsync(plan);
@@ -392,7 +392,7 @@ public class ProviderBillingService(
 
         foreach (var providerPlan in providerPlans)
         {
-            var plan = await pricingClient.GetPlan(providerPlan.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
             if (!providerPlan.IsConfigured())
             {
@@ -476,7 +476,7 @@ public class ProviderBillingService(
 
             if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
             {
-                var newPlan = await pricingClient.GetPlan(newPlanConfiguration.Plan);
+                var newPlan = await pricingClient.GetPlanOrThrow(newPlanConfiguration.Plan);
 
                 var priceId = newPlan.PasswordManager.StripeProviderPortalSeatPlanId;
 
@@ -543,7 +543,7 @@ public class ProviderBillingService(
         ProviderPlan providerPlan,
         int newlyAssignedSeats) => async (currentlySubscribedSeats, newlySubscribedSeats) =>
     {
-        var plan = await pricingClient.GetPlan(providerPlan.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
         await paymentService.AdjustSeats(
             provider,
@@ -567,7 +567,7 @@ public class ProviderBillingService(
         var providerOrganizations =
             await providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id);
 
-        var plan = await pricingClient.GetPlan(planType);
+        var plan = await pricingClient.GetPlanOrThrow(planType);
 
         return providerOrganizations
             .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)

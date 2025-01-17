@@ -19,11 +19,11 @@ public class PricingClient(
     HttpClient httpClient,
     ILogger<PricingClient> logger) : IPricingClient
 {
-    public async Task<Plan> GetPlan(PlanType planType)
+    public async Task<Plan?> GetPlan(PlanType planType)
     {
         if (globalSettings.SelfHosted)
         {
-            throw new BillingException(message: "The Pricing Service cannot be called from a Self-Hosted instance.");
+            return null;
         }
 
         var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);
@@ -38,7 +38,7 @@ public class PricingClient(
         if (lookupKey == null)
         {
             logger.LogError("Could not find Pricing Service lookup key for PlanType {PlanType}", planType);
-            throw new NotFoundException();
+            return null;
         }
 
         var response = await httpClient.GetAsync($"plans/lookup/{lookupKey}");
@@ -52,18 +52,30 @@ public class PricingClient(
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             logger.LogError("Pricing Service plan for PlanType {PlanType} was not found", planType);
-            throw new NotFoundException();
+            return null;
         }
 
         throw new BillingException(
             message: $"Request to the Pricing Service failed with status code {response.StatusCode}");
     }
 
+    public async Task<Plan> GetPlanOrThrow(PlanType planType)
+    {
+        var plan = await GetPlan(planType);
+
+        if (plan == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return plan;
+    }
+
     public async Task<List<Plan>> ListPlans()
     {
         if (globalSettings.SelfHosted)
         {
-            throw new BillingException(message: "The Pricing Service cannot be called from a Self-Hosted instance.");
+            return [];
         }
 
         var usePricingService = featureService.IsEnabled(FeatureFlagKeys.UsePricingService);

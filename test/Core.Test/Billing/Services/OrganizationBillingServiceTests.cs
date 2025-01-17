@@ -28,7 +28,7 @@ public class OrganizationBillingServiceTests
 
         sutProvider.GetDependency<IPricingClient>().ListPlans().Returns(StaticStore.Plans.ToList());
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
         var subscriberService = sutProvider.GetDependency<ISubscriberService>();

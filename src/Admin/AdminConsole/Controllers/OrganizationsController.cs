@@ -255,7 +255,7 @@ public class OrganizationsController : Controller
 
         UpdateOrganization(organization, model);
 
-        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {

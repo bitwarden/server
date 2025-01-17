@@ -129,7 +129,7 @@ public class ProviderBillingServiceTests
             .GetByIdAsync(Arg.Is<Guid>(p => p == providerPlanId))
             .Returns(existingPlan);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(existingPlan.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(existingPlan.PlanType)
             .Returns(StaticStore.GetPlan(existingPlan.PlanType));
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -160,7 +160,7 @@ public class ProviderBillingServiceTests
         var command =
             new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(command.NewPlan)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
             .Returns(StaticStore.GetPlan(command.NewPlan));
 
         // Act
@@ -399,7 +399,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -466,7 +466,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -536,7 +536,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -606,7 +606,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -667,7 +667,7 @@ public class ProviderBillingServiceTests
             }
         ]);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(planType).Returns(StaticStore.GetPlan(planType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(StaticStore.GetPlan(planType));
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
@@ -705,7 +705,7 @@ public class ProviderBillingServiceTests
             }
         ]);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(planType).Returns(StaticStore.GetPlan(planType));
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(StaticStore.GetPlan(planType));
 
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
@@ -891,7 +891,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(PlanType.EnterpriseMonthly)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.EnterpriseMonthly)
             .Returns(StaticStore.GetPlan(PlanType.EnterpriseMonthly));
 
         await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
@@ -919,7 +919,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(PlanType.TeamsMonthly)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly)
             .Returns(StaticStore.GetPlan(PlanType.TeamsMonthly));
 
         await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
@@ -966,7 +966,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -1017,7 +1017,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -1121,7 +1121,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -1200,7 +1200,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -1279,7 +1279,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -1352,7 +1352,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 
@@ -1431,7 +1431,7 @@ public class ProviderBillingServiceTests
 
         foreach (var plan in providerPlans)
         {
-            sutProvider.GetDependency<IPricingClient>().GetPlan(plan.PlanType)
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
                 .Returns(StaticStore.GetPlan(plan.PlanType));
         }
 

@@ -455,14 +455,14 @@ public class ProviderService : IProviderService
 
         if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var plan = await _pricingClient.GetPlan(organization.PlanType);
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
             var subscriptionItem = await GetSubscriptionItemAsync(
                 organization.GatewaySubscriptionId,
                 plan.PasswordManager.StripeSeatPlanId);
 
             var extractedPlanType = PlanTypeMappings(organization);
-            var extractedPlan = await _pricingClient.GetPlan(extractedPlanType);
+            var extractedPlan = await _pricingClient.GetPlanOrThrow(extractedPlanType);
 
             if (subscriptionItem != null)
             {

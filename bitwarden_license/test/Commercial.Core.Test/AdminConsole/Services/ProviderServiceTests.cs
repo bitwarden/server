@@ -551,12 +551,12 @@ public class ProviderServiceTests
         organization.PlanType = PlanType.EnterpriseMonthly;
         organization.Plan = "Enterprise (Monthly)";
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(organization.PlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
             .Returns(StaticStore.GetPlan(organization.PlanType));
 
         var expectedPlanType = PlanType.EnterpriseMonthly2020;
 
-        sutProvider.GetDependency<IPricingClient>().GetPlan(expectedPlanType)
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(expectedPlanType)
             .Returns(StaticStore.GetPlan(expectedPlanType));
 
         var expectedPlanId = "2020-enterprise-org-seat-monthly";

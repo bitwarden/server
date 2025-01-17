@@ -51,7 +51,7 @@ public class CloudOrganizationSignUpCommand(
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
-        var plan = await pricingClient.GetPlan(signup.Plan);
+        var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
 

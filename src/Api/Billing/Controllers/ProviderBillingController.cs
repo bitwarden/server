@@ -88,7 +88,7 @@ public class ProviderBillingController(
 
         var configuredProviderPlans = await Task.WhenAll(providerPlans.Select(async providerPlan =>
         {
-            var plan = await pricingClient.GetPlan(providerPlan.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
             return new ConfiguredProviderPlan(
                 providerPlan.Id,
                 providerPlan.ProviderId,

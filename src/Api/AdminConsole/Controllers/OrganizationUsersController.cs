@@ -638,7 +638,7 @@ public class OrganizationUsersController : Controller
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
             // TODO: https://bitwarden.atlassian.net/browse/PM-17000
-            var plan = await _pricingClient.GetPlan(organization!.PlanType);
+            var plan = await _pricingClient.GetPlanOrThrow(organization!.PlanType);
             var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
