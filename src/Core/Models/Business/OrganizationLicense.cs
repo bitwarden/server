@@ -59,7 +59,6 @@ public class OrganizationLicense : ILicense
         // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
         AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
-        LimitItemDeletion = org.LimitItemDeletion;
         //
 
         if (subscriptionInfo?.Subscription == null)
@@ -147,7 +146,6 @@ public class OrganizationLicense : ILicense
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
-    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; } = true;
     //
 
