@@ -419,7 +419,6 @@ public class AccountsControllerTests : IDisposable
 
 
     [Theory]
-    [BitAutoData(true, false)]  // User has PublicKey and PrivateKey, and Keys in request are NOT null
     [BitAutoData(true, true)]   // User has PublicKey and PrivateKey, and Keys in request are null
     [BitAutoData(false, false)] // User has neither PublicKey nor PrivateKey, and Keys in request are NOT null
     [BitAutoData(false, true)]  // User has neither PublicKey nor PrivateKey, and Keys in request are null
@@ -506,6 +505,41 @@ public class AccountsControllerTests : IDisposable
             Assert.Null(user.PrivateKey);
         }
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync(
+    User user,
+    SetPasswordRequestModel setPasswordRequestModel)
+    {
+        // Arrange
+        const string existingPublicKey = "existingPublicKey";
+        const string existingEncryptedPrivateKey = "existingEncryptedPrivateKey";
+
+        const string newPublicKey = "newPublicKey";
+        const string newEncryptedPrivateKey = "newEncryptedPrivateKey";
+
+        user.PublicKey = existingPublicKey;
+        user.PrivateKey = existingEncryptedPrivateKey;
+
+        setPasswordRequestModel.Keys = new KeysRequestModel()
+        {
+            PublicKey = newPublicKey,
+            EncryptedPrivateKey = newEncryptedPrivateKey
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+                user,
+                setPasswordRequestModel.MasterPasswordHash,
+                setPasswordRequestModel.Key,
+                setPasswordRequestModel.OrgIdentifier)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+    }
+
 
     [Theory]
     [BitAutoData]
