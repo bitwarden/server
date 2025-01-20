@@ -20,11 +20,11 @@ public class KeysRequestModel
 
         if (!string.IsNullOrWhiteSpace(PublicKey) || !string.IsNullOrWhiteSpace(EncryptedPrivateKey))
         {
-            if (string.IsNullOrWhiteSpace(existingUser.PublicKey))
+            if (string.IsNullOrWhiteSpace(PublicKey))
             {
                 throw new InvalidOperationException("Must set both public and private key(s) at the same time, received only private key.");
             }
-            else if (string.IsNullOrWhiteSpace(existingUser.PrivateKey))
+            else if (string.IsNullOrWhiteSpace(EncryptedPrivateKey))
             {
                 throw new InvalidOperationException("Must set both public and private key(s) at the same time, received only public key.");
             }
