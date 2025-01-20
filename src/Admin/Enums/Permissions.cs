@@ -17,6 +17,7 @@ public enum Permission
     User_Billing_View,
     User_Billing_Edit,
     User_Billing_LaunchGateway,
+    User_NewDeviceException_Edit,
 
     Org_List_View,
     Org_OrgInformation_View,
