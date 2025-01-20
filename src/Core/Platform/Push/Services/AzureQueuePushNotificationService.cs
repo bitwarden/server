@@ -7,11 +7,13 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
@@ -19,13 +21,22 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 {
     private readonly QueueClient _queueClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IGlobalSettings _globalSettings;
 
     public AzureQueuePushNotificationService(
         [FromKeyedServices("notifications")] QueueClient queueClient,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IGlobalSettings globalSettings,
+        ILogger<AzureQueuePushNotificationService> logger)
     {
         _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;
+        _globalSettings = globalSettings;
+
+        if (globalSettings.Installation.Id == default)
+        {
+            logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
+        }
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -166,25 +177,6 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
-    public async Task PushNotificationAsync(Notification notification)
-    {
-        var message = new NotificationPushNotification
-        {
-            Id = notification.Id,
-            Priority = notification.Priority,
-            Global = notification.Global,
-            ClientType = notification.ClientType,
-            UserId = notification.UserId,
-            OrganizationId = notification.OrganizationId,
-            Title = notification.Title,
-            Body = notification.Body,
-            CreationDate = notification.CreationDate,
-            RevisionDate = notification.RevisionDate
-        };
-
-        await SendMessageAsync(PushType.SyncNotification, message, true);
-    }
-
     public async Task PushSyncOrganizationStatusAsync(Organization organization)
     {
         var message = new OrganizationStatusPushNotification
@@ -204,6 +196,26 @@ public class AzureQueuePushNotificationService : IPushNotificationService
                 LimitCollectionDeletion = organization.LimitCollectionDeletion
             }, false);
 
+    public async Task PushNotificationAsync(Notification notification)
+    {
+        var message = new NotificationPushNotification
+        {
+            Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
+            RevisionDate = notification.RevisionDate
+        };
+
+        await SendMessageAsync(PushType.Notification, message, true);
+    }
+
     public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
         var message = new NotificationPushNotification
@@ -214,6 +226,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
@@ -222,7 +235,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             DeletedDate = notificationStatus.DeletedDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
+        await SendMessageAsync(PushType.NotificationStatus, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)
@@ -259,6 +272,11 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) =>
+        // Noop
+        Task.CompletedTask;
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
