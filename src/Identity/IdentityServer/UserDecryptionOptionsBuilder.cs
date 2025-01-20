@@ -128,17 +128,23 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         }
 
         var hasAdminApproval = false;
+        var usesKeyConnector = false;
         if (_user != null)
         {
             // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
             var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+            if (organizationUser != null)
+            {
+                hasManageResetPasswordPermission |= organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin;
+                // They are only able to be approved by an admin if they have enrolled is reset password
+                hasAdminApproval = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
 
-            hasManageResetPasswordPermission |= organizationUser != null && (organizationUser.Type == OrganizationUserType.Owner || organizationUser.Type == OrganizationUserType.Admin);
-            // They are only able to be approved by an admin if they have enrolled is reset password
-            hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+                var organizationUserDetails = await _organizationUserRepository.GetDetailsByIdAsync(organizationUser.Id);
+                usesKeyConnector = organizationUserDetails != null && organizationUserDetails.UsesKeyConnector;
+            }
         }
 
-        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && !isTdeActive && (_device.IsTrusted() || hasAdminApproval);
+        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && !isTdeActive && (_device.IsTrusted() || hasAdminApproval) && !usesKeyConnector;
 
         if (isTdeActive || isTdeOffboarding)
         {
