@@ -956,35 +956,6 @@ public class CipherService : ICipherService
         return restoringCiphers;
     }
 
-    public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationCiphers(Guid userId, Guid organizationId)
-    {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId) && !await _currentContext.AccessImportExport(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        IEnumerable<CipherOrganizationDetails> orgCiphers;
-        if (await _currentContext.AccessImportExport(organizationId))
-        {
-            // Admins, Owners, Providers and Custom (with import/export permission) can access all items even if not assigned to them
-            orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
-        }
-        else
-        {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: true);
-            orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId);
-        }
-
-        var orgCipherIds = orgCiphers.Select(c => c.Id);
-
-        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
-        var collectionCiphersGroupDict = collectionCiphers
-            .Where(c => orgCipherIds.Contains(c.CipherId))
-            .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
-
-        return (orgCiphers, collectionCiphersGroupDict);
-    }
-
     private async Task<bool> UserCanEditAsync(Cipher cipher, Guid userId)
     {
         if (!cipher.OrganizationId.HasValue && cipher.UserId.HasValue && cipher.UserId.Value == userId)

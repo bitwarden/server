@@ -295,7 +295,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email)
+    public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
     {
         var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
         var model = new OrganizationUserRevokedForPolicyTwoFactorViewModel
@@ -472,7 +472,7 @@ public class HandlebarsMailService : IMailService
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Hey {emailAddress}, your account is owned by {org.DisplayName()}",
+                    TitleFirst = $"Your Bitwarden account is claimed by {org.DisplayName()}",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
                 });
     }
@@ -863,7 +863,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"Join {providerName}", email);
         var model = new ProviderUserInvitedViewModel
         {
-            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            ProviderName = CoreHelpers.SanitizeForEmail(providerName, false),
             Email = WebUtility.UrlEncode(providerUser.Email),
             ProviderId = providerUser.ProviderId.ToString(),
             ProviderUserId = providerUser.Id.ToString(),
