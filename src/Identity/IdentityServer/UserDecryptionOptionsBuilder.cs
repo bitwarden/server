@@ -97,7 +97,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
         }
 
         var isTdeActive = _ssoConfig.GetData() is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption };
-        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && _device.IsTrusted() && !isTdeActive;
+        var isTdeOffboarding = _user != null && !_user.HasMasterPassword() && _device != null && !isTdeActive;
         if (!isTdeActive && !isTdeOffboarding)
         {
             return;
