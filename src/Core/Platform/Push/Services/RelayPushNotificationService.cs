@@ -230,6 +230,10 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.Notification, message,
                 true, notification.ClientType);
         }
+        else
+        {
+            _logger.LogWarning("Invalid notification id {NotificationId} push notification", notification.Id);
+        }
     }
 
     public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
@@ -264,6 +268,10 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         {
             await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.NotificationStatus, message,
                 true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification status id {NotificationId} push notification", notification.Id);
         }
     }
 

@@ -218,10 +218,19 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             RevisionDate = notification.RevisionDate
         };
 
-        if (notification.Global && installationId.HasValue)
+        if (notification.Global)
         {
-            await SendPayloadToInstallationAsync(installationId.Value, PushType.Notification, message, true,
-                notification.ClientType);
+            if (installationId.HasValue)
+            {
+                await SendPayloadToInstallationAsync(installationId.Value, PushType.Notification, message, true,
+                    notification.ClientType);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Invalid global notification id {NotificationId} push notification. No installation id provided.",
+                    notification.Id);
+            }
         }
         else if (notification.UserId.HasValue)
         {
@@ -232,6 +241,10 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         {
             await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.Notification, message,
                 true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification id {NotificationId} push notification", notification.Id);
         }
     }
 
@@ -258,10 +271,19 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             DeletedDate = notificationStatus.DeletedDate
         };
 
-        if (notification.Global && installationId.HasValue)
+        if (notification.Global)
         {
-            await SendPayloadToInstallationAsync(installationId.Value, PushType.NotificationStatus, message, true,
-                notification.ClientType);
+            if (installationId.HasValue)
+            {
+                await SendPayloadToInstallationAsync(installationId.Value, PushType.NotificationStatus, message, true,
+                    notification.ClientType);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Invalid global notification status id {NotificationId} push notification. No installation id provided.",
+                    notification.Id);
+            }
         }
         else if (notification.UserId.HasValue)
         {
@@ -272,6 +294,10 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         {
             await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.NotificationStatus,
                 message, true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification status id {NotificationId} push notification", notification.Id);
         }
     }
 
