@@ -52,16 +52,19 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
-        services.AddOrganizationCommands();
+        services.AddOrganizationSignUpCommands();
+        services.AddOrganizationDeleteCommands();
         services.AddOrganizationAuthCommands();
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
 
-    private static void AddOrganizationCommands(this IServiceCollection services)
-    {
+    private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+
+    private static void AddOrganizationDeleteCommands(this IServiceCollection services)
+    {
         services.AddScoped<IOrganizationDeleteCommand, OrganizationDeleteCommand>();
         services.AddScoped<IOrganizationInitiateDeleteCommand, OrganizationInitiateDeleteCommand>();
     }
