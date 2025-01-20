@@ -9,7 +9,6 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
@@ -162,32 +161,6 @@ public class SendsController : Controller
         await _sendService.SaveSendAsync(send);
         return new SendResponseModel(send, _globalSettings);
     }
-
-    [HttpPost("file")]
-    [Obsolete("Deprecated File Send API", false)]
-    [RequestSizeLimit(Constants.FileSize101mb)]
-    [DisableFormValueModelBinding]
-    public async Task<SendResponseModel> PostFile()
-    {
-        if (!Request?.ContentType.Contains("multipart/") ?? true)
-        {
-            throw new BadRequestException("Invalid content.");
-        }
-
-        Send send = null;
-        await Request.GetSendFileAsync(async (stream, fileName, model) =>
-        {
-            model.ValidateCreation();
-            var userId = _userService.GetProperUserId(User).Value;
-            var (madeSend, madeData) = model.ToSend(userId, fileName, _sendService);
-            send = madeSend;
-            await _sendService.SaveFileSendAsync(send, madeData, model.FileLength.GetValueOrDefault(0));
-            await _sendService.UploadFileToExistingSendAsync(stream, send);
-        });
-
-        return new SendResponseModel(send, _globalSettings);
-    }
-
 
     [HttpPost("file/v2")]
     public async Task<SendFileUploadDataResponseModel> PostFile([FromBody] SendRequestModel model)
