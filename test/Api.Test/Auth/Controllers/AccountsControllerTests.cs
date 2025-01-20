@@ -419,6 +419,7 @@ public class AccountsControllerTests : IDisposable
 
 
     [Theory]
+    [BitAutoData(true, false)]   // User has PublicKey and PrivateKey, and Keys in request are set to the same keys
     [BitAutoData(true, true)]   // User has PublicKey and PrivateKey, and Keys in request are null
     [BitAutoData(false, false)] // User has neither PublicKey nor PrivateKey, and Keys in request are NOT null
     [BitAutoData(false, true)]  // User has neither PublicKey nor PrivateKey, and Keys in request are null
@@ -452,10 +453,17 @@ public class AccountsControllerTests : IDisposable
         }
         else
         {
-            setPasswordRequestModel.Keys = new KeysRequestModel()
+            setPasswordRequestModel.Keys = new KeysRequestModel();
+            if (hasExistingKeys)
             {
-                PublicKey = newPublicKey,
-                EncryptedPrivateKey = newEncryptedPrivateKey
+                // The keys being different should fail and is tested in `PostSetPasswordAsync_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync`
+                setPasswordRequestModel.Keys.PublicKey = existingPublicKey;
+                setPasswordRequestModel.Keys.EncryptedPrivateKey = existingEncryptedPrivateKey;
+            }
+            else
+            {
+                setPasswordRequestModel.Keys.PublicKey = newPublicKey;
+                setPasswordRequestModel.Keys.EncryptedPrivateKey = newEncryptedPrivateKey;
             };
         }
 
