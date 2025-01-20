@@ -101,7 +101,6 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string BrowserFilelessImport = "browser-fileless-import";
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string ItemShare = "item-share";
@@ -115,7 +114,6 @@ public static class FeatureFlagKeys
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string MemberAccessReport = "ac-2059-member-access-report";
-    public const string BlockLegacyUsers = "block-legacy-users";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
@@ -133,6 +131,8 @@ public static class FeatureFlagKeys
     public const string NativeCreateAccountFlow = "native-create-account-flow";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
+    public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
+    public const string NotificationRefresh = "notification-refresh";
     public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
@@ -140,7 +140,6 @@ public static class FeatureFlagKeys
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
-    public const string SecureOrgGroupDetails = "pm-3479-secure-org-group-details";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
@@ -150,15 +149,12 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
-    public const string PM14401_ScaleMSPOnClientOrganizationUpdate = "PM-14401-scale-msp-on-client-organization-update";
-    public const string PM11360RemoveProviderExportPermission = "pm-11360-remove-provider-export-permission";
     public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
-    public const string PromoteProviderServiceUserTool = "pm-15128-promote-provider-service-user-tool";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
     public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
