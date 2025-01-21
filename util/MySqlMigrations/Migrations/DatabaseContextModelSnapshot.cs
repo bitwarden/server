@@ -94,6 +94,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("LimitItemDeletion")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
