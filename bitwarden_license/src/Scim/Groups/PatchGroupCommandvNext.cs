@@ -133,7 +133,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
     {
         var groupMembers = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
 
-        // Azure Entra ID is known to send duplicate "add" requests for each existing member every time any member
+        // Azure Entra ID is known to send redundant "add" requests for each existing member every time any member
         // is removed. To avoid excessive load on the database we detect these and return early.
         if (usersToAdd.IsSubsetOf(groupMembers))
         {
