@@ -103,14 +103,13 @@ public class GroupsController : Controller
     [HttpPatch("{id}")]
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm16812ShortcutPatchRequests))
         {
-            await _patchGroupCommandvNext.PatchGroupAsync(organization, id, model);
+            await _patchGroupCommandvNext.PatchGroupAsync(organizationId, id, model);
         }
         else
         {
+            var organization = await _organizationRepository.GetByIdAsync(organizationId);
             await _patchGroupCommand.PatchGroupAsync(organization, id, model);
         }
 

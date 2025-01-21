@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -17,34 +18,37 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
     private readonly IGroupService _groupService;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly ILogger<PatchGroupCommandvNext> _logger;
+    private readonly IOrganizationRepository _organizationRepository;
 
     public PatchGroupCommandvNext(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IUpdateGroupCommand updateGroupCommand,
-        ILogger<PatchGroupCommandvNext> logger)
+        ILogger<PatchGroupCommandvNext> logger,
+        IOrganizationRepository organizationRepository)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
         _updateGroupCommand = updateGroupCommand;
         _logger = logger;
+        _organizationRepository = organizationRepository;
     }
 
-    public async Task PatchGroupAsync(Organization organization, Guid id, ScimPatchModel model)
+    public async Task PatchGroupAsync(Guid organizationId, Guid groupId, ScimPatchModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || group.OrganizationId != organization.Id)
+        var group = await _groupRepository.GetByIdAsync(groupId);
+        if (group == null || group.OrganizationId != organizationId)
         {
             throw new NotFoundException("Group not found.");
         }
 
         foreach (var operation in model.Operations)
         {
-            await HandleOperation(organization, group, operation);
+            await HandleOperationAsync(organizationId, group, operation);
         }
     }
 
-    private async Task HandleOperation(Organization organization, Group group, ScimPatchModel.OperationModel operation)
+    private async Task HandleOperationAsync(Guid organizationId, Group group, ScimPatchModel.OperationModel operation)
     {
         switch (operation.Op?.ToLowerInvariant())
         {
@@ -60,6 +64,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
             case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.DisplayName:
                 {
                     group.Name = operation.Value.GetString();
+                    var organization = await _organizationRepository.GetByIdAsync(organizationId);
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     break;
                 }
@@ -70,6 +75,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
                 operation.Value.TryGetProperty("displayName", out var displayNameProperty):
                 {
                     group.Name = displayNameProperty.GetString();
+                    var organization = await _organizationRepository.GetByIdAsync(organizationId);
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     break;
                 }
@@ -80,9 +86,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
                 operation.Path.ToLowerInvariant().StartsWith("members[value eq ") &&
                 TryGetOperationPathId(operation.Path, out var addId):
                 {
-                    var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                    orgUserIds.Add(addId);
-                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                    await AddMembersAsync(group, [addId]);
                     break;
                 }
 
@@ -90,12 +94,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
             case PatchOps.Add when
                 operation.Path?.ToLowerInvariant() == PatchPaths.Members:
                 {
-                    var orgUserIds = (await _groupRepository.GetManyUserIdsByIdAsync(group.Id)).ToHashSet();
-                    foreach (var v in GetOperationValueIds(operation.Value))
-                    {
-                        orgUserIds.Add(v);
-                    }
-                    await _groupRepository.UpdateUsersAsync(group.Id, orgUserIds);
+                    await AddMembersAsync(group, GetOperationValueIds(operation.Value).ToHashSet());
                     break;
                 }
 
@@ -128,6 +127,22 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
                     break;
                 }
         }
+    }
+
+    private async Task AddMembersAsync(Group group, HashSet<Guid> usersToAdd)
+    {
+        var groupMembers = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
+
+        // Azure Entra ID is known to send duplicate "add" requests for each existing member every time any member
+        // is removed. To avoid excessive load on the database we detect these and return early.
+        if (usersToAdd.IsSubsetOf(groupMembers))
+        {
+            _logger.LogDebug("Ignoring duplicate SCIM request to add members {Members} to group {Group}", usersToAdd, group.Id);
+            return;
+        }
+
+        var updatedMembers = groupMembers.Concat(usersToAdd).ToHashSet();
+        await _groupRepository.UpdateUsersAsync(group.Id, updatedMembers);
     }
 
     private List<Guid> GetOperationValueIds(JsonElement objArray)
