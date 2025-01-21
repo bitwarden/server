@@ -161,6 +161,8 @@ public static class FeatureFlagKeys
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
+    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
 
     public static List<string> GetAllKeys()
     {
