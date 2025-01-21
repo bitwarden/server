@@ -354,12 +354,10 @@ public class ProviderBillingService(
                 throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
-            customerCreateOptions.TaxIdData = taxInfo.HasTaxId
-                ?
-                [
-                    new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
-                ]
-                : null;
+            customerCreateOptions.TaxIdData =
+            [
+                new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
+            ];
         }
 
         try

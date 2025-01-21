@@ -171,7 +171,7 @@ public class StripePaymentService : IPaymentService
                     City = taxInfo?.BillingAddressCity,
                     State = taxInfo?.BillingAddressState,
                 },
-                TaxIdData = taxInfo.HasTaxId
+                TaxIdData = !string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber)
                     ? [new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }]
                     : null
             };

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -53,48 +54,64 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     /// <summary>
     /// Update an organization user.
     /// </summary>
-    /// <param name="user">The modified user to save.</param>
+    /// <param name="organizationUser">The modified organization user to save.</param>
     /// <param name="savingUserId">The userId of the currently logged in user who is making the change.</param>
     /// <param name="collectionAccess">The user's updated collection access. If set to null, this removes all collection access.</param>
     /// <param name="groupAccess">The user's updated group access. If set to null, groups are not updated.</param>
     /// <exception cref="BadRequestException"></exception>
-    public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
+    public async Task UpdateUserAsync(OrganizationUser organizationUser, Guid? savingUserId,
         List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
     {
         // Avoid multiple enumeration
         collectionAccess = collectionAccess?.ToList();
         groupAccess = groupAccess?.ToList();
 
-        if (user.Id.Equals(default(Guid)))
+        if (organizationUser.Id.Equals(default(Guid)))
         {
             throw new BadRequestException("Invite the user first.");
         }
 
-        var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-        if (originalUser == null || user.OrganizationId != originalUser.OrganizationId)
+        var originalOrganizationUser = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
+        if (originalOrganizationUser == null || organizationUser.OrganizationId != originalOrganizationUser.OrganizationId)
         {
             throw new NotFoundException();
         }
 
+        var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (organizationUser.UserId.HasValue && organization.PlanType == PlanType.Free && organizationUser.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+        {
+            // Since free organizations only supports a few users there is not much point in avoiding N+1 queries for this.
+            var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(organizationUser.UserId.Value);
+            if (adminCount > 0)
+            {
+                throw new BadRequestException("User can only be an admin of one free organization.");
+            }
+        }
+
         if (collectionAccess?.Any() == true)
         {
-            await ValidateCollectionAccessAsync(originalUser, collectionAccess.ToList());
+            await ValidateCollectionAccessAsync(originalOrganizationUser, collectionAccess.ToList());
         }
 
         if (groupAccess?.Any() == true)
         {
-            await ValidateGroupAccessAsync(originalUser, groupAccess.ToList());
+            await ValidateGroupAccessAsync(originalOrganizationUser, groupAccess.ToList());
         }
 
         if (savingUserId.HasValue)
         {
-            await _organizationService.ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
+            await _organizationService.ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, originalOrganizationUser.Type, organizationUser.GetPermissions());
         }
 
-        await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
+        await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(organizationUser.OrganizationId, organizationUser.Type);
 
-        if (user.Type != OrganizationUserType.Owner &&
-            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
+        if (organizationUser.Type != OrganizationUserType.Owner &&
+            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -110,28 +127,27 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 
         // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
         // updating Stripe
-        if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
+        if (!originalOrganizationUser.AccessSecretsManager && organizationUser.AccessSecretsManager)
         {
-            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
+            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
                 // TODO: https://bitwarden.atlassian.net/browse/PM-17012
-                var plan = await _pricingClient.GetPlanOrThrow(organization!.PlanType);
+                var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
                 var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                     .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 
-        await _organizationUserRepository.ReplaceAsync(user, collectionAccess);
+        await _organizationUserRepository.ReplaceAsync(organizationUser, collectionAccess);
 
         if (groupAccess != null)
         {
-            await _organizationUserRepository.UpdateGroupsAsync(user.Id, groupAccess);
+            await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupAccess);
         }
 
-        await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Updated);
     }
 
     private async Task ValidateCollectionAccessAsync(OrganizationUser originalUser,
