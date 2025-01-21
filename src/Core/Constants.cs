@@ -162,6 +162,7 @@ public static class FeatureFlagKeys
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string Pm16812ShortcutPatchRequests = "pm-16812-shortcut-patch-requests";
 
     public static List<string> GetAllKeys()
     {

@@ -1,8 +1,10 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -22,9 +24,10 @@ public class GroupsController : Controller
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IPatchGroupCommand _patchGroupCommand;
+    private readonly IPatchGroupCommandvNext _patchGroupCommandvNext;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
-    private readonly ILogger<GroupsController> _logger;
+    private readonly IFeatureService _featureService;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -32,18 +35,21 @@ public class GroupsController : Controller
         IGetGroupsListQuery getGroupsListQuery,
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
+        IPatchGroupCommandvNext patchGroupCommandvNext,
         IPostGroupCommand postGroupCommand,
         IPutGroupCommand putGroupCommand,
-        ILogger<GroupsController> logger)
+        IFeatureService featureService
+        )
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
         _getGroupsListQuery = getGroupsListQuery;
         _deleteGroupCommand = deleteGroupCommand;
         _patchGroupCommand = patchGroupCommand;
+        _patchGroupCommandvNext = patchGroupCommandvNext;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
-        _logger = logger;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -98,7 +104,16 @@ public class GroupsController : Controller
     public async Task<IActionResult> Patch(Guid organizationId, Guid id, [FromBody] ScimPatchModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        await _patchGroupCommand.PatchGroupAsync(organization, id, model);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.Pm16812ShortcutPatchRequests))
+        {
+            await _patchGroupCommandvNext.PatchGroupAsync(organization, id, model);
+        }
+        else
+        {
+            await _patchGroupCommand.PatchGroupAsync(organization, id, model);
+        }
+
         return new NoContentResult();
     }
 
