@@ -105,13 +105,18 @@ public class GroupsController : Controller
     {
         if (_featureService.IsEnabled(FeatureFlagKeys.Pm16812ShortcutPatchRequests))
         {
-            await _patchGroupCommandvNext.PatchGroupAsync(organizationId, id, model);
+            var group = await _groupRepository.GetByIdAsync(id);
+            if (group == null || group.OrganizationId != organizationId)
+            {
+                throw new NotFoundException("Group not found.");
+            }
+
+            await _patchGroupCommandvNext.PatchGroupAsync(group, model);
+            return new NoContentResult();
         }
-        else
-        {
-            var organization = await _organizationRepository.GetByIdAsync(organizationId);
-            await _patchGroupCommand.PatchGroupAsync(organization, id, model);
-        }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        await _patchGroupCommand.PatchGroupAsync(organization, id, model);
 
         return new NoContentResult();
     }

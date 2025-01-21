@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
@@ -34,21 +33,15 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
         _organizationRepository = organizationRepository;
     }
 
-    public async Task PatchGroupAsync(Guid organizationId, Guid groupId, ScimPatchModel model)
+    public async Task PatchGroupAsync(Group group, ScimPatchModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(groupId);
-        if (group == null || group.OrganizationId != organizationId)
-        {
-            throw new NotFoundException("Group not found.");
-        }
-
         foreach (var operation in model.Operations)
         {
-            await HandleOperationAsync(organizationId, group, operation);
+            await HandleOperationAsync(group, operation);
         }
     }
 
-    private async Task HandleOperationAsync(Guid organizationId, Group group, ScimPatchModel.OperationModel operation)
+    private async Task HandleOperationAsync(Group group, ScimPatchModel.OperationModel operation)
     {
         switch (operation.Op?.ToLowerInvariant())
         {
@@ -64,7 +57,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
             case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.DisplayName:
                 {
                     group.Name = operation.Value.GetString();
-                    var organization = await _organizationRepository.GetByIdAsync(organizationId);
+                    var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     break;
                 }
@@ -75,7 +68,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
                 operation.Value.TryGetProperty("displayName", out var displayNameProperty):
                 {
                     group.Name = displayNameProperty.GetString();
-                    var organization = await _organizationRepository.GetByIdAsync(organizationId);
+                    var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     break;
                 }
@@ -161,7 +154,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
         return ids;
     }
 
-    private bool TryGetOperationPathId(string path, out Guid pathId)
+    private static bool TryGetOperationPathId(string path, out Guid pathId)
     {
         // Parse Guid from string like: members[value eq "{GUID}"}]
         return Guid.TryParse(path.Substring(18).Replace("\"]", string.Empty), out pathId);
