@@ -86,9 +86,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("LimitCollectionCreation")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("LimitCollectionCreationDeletion")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("INTEGER");
 
@@ -1133,35 +1130,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("GroupUser", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Installation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("LastActivityDate")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Installation", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1651,6 +1619,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("VerifyDevices")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -1732,6 +1703,35 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("NotificationId");
 
                     b.ToTable("NotificationStatus", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Platform.Installation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastActivityDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Installation", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
@@ -2359,7 +2359,7 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationInstallation", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Platform.Installation", "Installation")
                         .WithMany()
                         .HasForeignKey("InstallationId")
                         .OnDelete(DeleteBehavior.Cascade)

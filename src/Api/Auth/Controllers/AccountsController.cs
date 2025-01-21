@@ -666,7 +666,7 @@ public class AccountsController : Controller
             new TaxInfo
             {
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
+                BillingAddressPostalCode = model.PostalCode
             });
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
@@ -721,8 +721,13 @@ public class AccountsController : Controller
         await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType.Value,
             new TaxInfo
             {
+                BillingAddressLine1 = model.Line1,
+                BillingAddressLine2 = model.Line2,
+                BillingAddressCity = model.City,
+                BillingAddressState = model.State,
                 BillingAddressCountry = model.Country,
                 BillingAddressPostalCode = model.PostalCode,
+                TaxIdNumber = model.TaxId
             });
     }
 
@@ -964,9 +969,26 @@ public class AccountsController : Controller
     [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [AllowAnonymous]
     [HttpPost("resend-new-device-otp")]
-    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificatioRequestModel request)
+    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
     {
         await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+    }
+
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
+    [HttpPost("verify-devices")]
+    [HttpPut("verify-devices")]
+    public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+        user.VerifyDevices = request.VerifyDevices;
+
+        await _userService.SaveUserAsync(user);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)

@@ -93,9 +93,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("LimitCollectionCreation")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("LimitCollectionCreationDeletion")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("boolean");
 
@@ -1149,35 +1146,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("GroupUser", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Installation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("character varying(150)");
-
-                    b.Property<DateTime?>("LastActivityDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Installation", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationApiKey", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1668,6 +1636,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("VerifyDevices")
+                        .HasColumnType("boolean");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -1749,6 +1720,35 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("NotificationId");
 
                     b.ToTable("NotificationStatus", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Platform.Installation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("LastActivityDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Installation", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.AccessPolicy", b =>
@@ -2376,7 +2376,7 @@ namespace Bit.PostgresMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Billing.Models.OrganizationInstallation", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Installation", "Installation")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Platform.Installation", "Installation")
                         .WithMany()
                         .HasForeignKey("InstallationId")
                         .OnDelete(DeleteBehavior.Cascade)

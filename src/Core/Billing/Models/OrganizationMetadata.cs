@@ -5,4 +5,9 @@ public record OrganizationMetadata(
     bool IsManaged,
     bool IsOnSecretsManagerStandalone,
     bool IsSubscriptionUnpaid,
-    bool HasSubscription);
+    bool HasSubscription,
+    bool HasOpenInvoice,
+    bool IsSubscriptionCanceled,
+    DateTime? InvoiceDueDate,
+    DateTime? InvoiceCreatedDate,
+    DateTime? SubPeriodEndDate);
