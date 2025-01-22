@@ -96,7 +96,7 @@ jobs:
             linux/amd64,
             linux/arm/v7,
             linux/arm64/v8
-          push: false
+          push: true
           tags: ${{ steps.image-tags.outputs.tags }}
           target: build-dotnet
 
@@ -230,8 +230,8 @@ jobs:
         id: build-docker
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc # v6.11.0
         with:
-          cache-from: type=registry,ref=${{ env._AZ_REGISTRY }}/buildcache:${{ steps.tag.outputs.image_tag }}
-          cache-to: type=registry,ref=${{ env._AZ_REGISTRY }}/buildcache:${{ steps.tag.outputs.image_tag }},mode=max
+          cache-from: type=registry,ref=${{ env._AZ_REGISTRY }}/${{ steps.setup.outputs.project_name }}:${{ steps.tag.outputs.image_tag }}
+          cache-to: type=registry,ref=${{ env._AZ_REGISTRY }}/${{ steps.setup.outputs.project_name }}:${{ steps.tag.outputs.image_tag }},mode=max
           context: .
           file: build.Dockerfile
           platforms: |
