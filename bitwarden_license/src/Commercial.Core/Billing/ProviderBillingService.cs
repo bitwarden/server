@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.ComponentModel;
+using System.Globalization;
 using Bit.Commercial.Core.Billing.Models;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
@@ -76,7 +77,10 @@ public class ProviderBillingService(
                 new InvoiceFinalizeOptions { AutoAdvance = true });
         }
 
-        var plan = StaticStore.GetPlan(GetMSPPlanType(organization));
+        var managedPlanType = await GetManagedPlanTypeAsync(provider, organization);
+
+        // TODO: Replace with PricingClient
+        var plan = StaticStore.GetPlan(managedPlanType);
         organization.Plan = plan.Name;
         organization.PlanType = plan.Type;
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
@@ -315,7 +319,7 @@ public class ProviderBillingService(
                 Seats: > 0,
                 Status: OrganizationStatusType.Created,
                 UseSecretsManager: false
-            } && HasAddablePlan(organization));
+            } && HasApplicablePlan(provider, organization));
 
         var active = (await Task.WhenAll(owned.Select(async organization =>
             {
@@ -339,17 +343,12 @@ public class ProviderBillingService(
         {
             var (organization, _) = pair;
 
-            var plan = organization.PlanType switch
-            {
-                var planType when IsEnterprise(planType) => "Enterprise",
-                var planType when IsTeams(planType) => "Teams",
-                _ => throw new BillingException()
-            };
+            var planName = DerivePlanName(provider, organization);
 
             var addable = new AddableOrganization(
                 organization.Id,
                 organization.Name,
-                plan,
+                planName,
                 organization.Seats!.Value);
 
             if (providerUser.Type != ProviderUserType.ServiceUser)
@@ -357,13 +356,30 @@ public class ProviderBillingService(
                 return addable;
             }
 
-            var mappedPlanType = GetMSPPlanType(organization);
+            var applicablePlanType = await GetManagedPlanTypeAsync(provider, organization);
 
             var requiresPurchase =
-                await SeatAdjustmentResultsInPurchase(provider, mappedPlanType, organization.Seats!.Value);
+                await SeatAdjustmentResultsInPurchase(provider, applicablePlanType, organization.Seats!.Value);
 
             return addable with { Disabled = requiresPurchase };
         }));
+
+        string DerivePlanName(Provider localProvider, Organization localOrganization)
+        {
+            if (localProvider.Type == ProviderType.Msp)
+            {
+                return localOrganization.PlanType switch
+                {
+                    var planType when IsEnterprise(planType) => "Enterprise",
+                    var planType when IsTeams(planType) => "Teams",
+                    _ => throw new BillingException()
+                };
+            }
+
+            // TODO: Replace with PricingClient
+            var plan = StaticStore.GetPlan(localOrganization.PlanType);
+            return plan.Name;
+        }
     }
 
     public async Task ScaleSeats(
@@ -745,12 +761,31 @@ public class ProviderBillingService(
 
     private static bool IsEnterprise(PlanType planType) => planType.ToString().Contains("Enterprise");
     private static bool IsTeams(PlanType planType) => planType.ToString().Contains("Teams");
-    private static bool HasAddablePlan(Organization organization) => IsEnterprise(organization.PlanType) || IsTeams(organization.PlanType);
-    private static PlanType GetMSPPlanType(Organization organization)
-        => organization.PlanType switch
+
+    private static bool HasApplicablePlan(
+        Provider provider,
+        Organization organization)
+        => provider.Type switch
+        {
+            ProviderType.Msp => IsEnterprise(organization.PlanType) || IsTeams(organization.PlanType),
+            ProviderType.MultiOrganizationEnterprise => IsEnterprise(organization.PlanType),
+            _ => false
+        };
+
+    private async Task<PlanType> GetManagedPlanTypeAsync(
+        Provider provider,
+        Organization organization)
+    {
+        if (provider.Type == ProviderType.MultiOrganizationEnterprise)
+        {
+            return (await providerPlanRepository.GetByProviderId(provider.Id)).First().PlanType;
+        }
+
+        return organization.PlanType switch
         {
             var planType when IsTeams(planType) => PlanType.TeamsMonthly,
             var planType when IsEnterprise(planType) => PlanType.EnterpriseMonthly,
             _ => throw new BillingException()
         };
+    }
 }
