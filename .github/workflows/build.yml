@@ -39,7 +39,7 @@ jobs:
   build-using-docker:
     name: Build using Docker
     runs-on: ubuntu-24.04
-    needs: lint
+    needs: check-run
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
