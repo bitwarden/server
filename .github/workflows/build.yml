@@ -40,11 +40,6 @@ jobs:
     name: Build Docker base images
     runs-on: ubuntu-24.04
     needs: check-run
-    strategy:
-      matrix:
-        include:
-          - image_name: build-dotnet
-          - image_name: build-base
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -88,25 +83,22 @@ jobs:
         id: image-tags
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-          IMAGE_NAME: ${{ matrix.image_name }}
-          SHA: ${{ github.sha }}
-        run: |
-          SHORT_SHA=$(git rev-parse --short ${SHA})
-          TAGS="${_AZ_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}-${SHORT_SHA}"
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+        run: echo "tags=${_AZ_REGISTRY}/buildcache:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc # v6.11.0
         with:
+          cache-from: type=registry,ref=${{ env._AZ_REGISTRY }}/buildcache:${{ steps.tag.outputs.image_tag }}
+          cache-to: type=registry,ref=${{ env._AZ_REGISTRY }}/buildcache:${{ steps.tag.outputs.image_tag }},mode=max
           context: .
           file: build.Dockerfile
           platforms: |
             linux/amd64,
             linux/arm/v7,
             linux/arm64/v8
-          push: true
+          push: false
           tags: ${{ steps.image-tags.outputs.tags }}
-          target: ${{ matrix.image_name }}
+          target: build-dotnet
 
 
   build-docker:
@@ -222,22 +214,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
-      - name: Pull build images
-        env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          SHA: ${{ github.sha }}  
-        run: |
-          SHORT_SHA="$(git rev-parse --short ${SHA})"
-          docker pull ${_AZ_REGISTRY}/build-base:${IMAGE_TAG}-${SHORT_SHA}
-          docker pull ${_AZ_REGISTRY}/build-dotnet:${IMAGE_TAG}-${SHORT_SHA}
-          docker tag ${_AZ_REGISTRY}/build-base:${IMAGE_TAG}-${SHORT_SHA} build-base
-          docker tag ${_AZ_REGISTRY}/build-dotnet:${IMAGE_TAG}-${SHORT_SHA} build-dotnet
+      # - name: Pull build images
+      #   env:
+      #     IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+      #     PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+      #     SHA: ${{ github.sha }}  
+      #   run: |
+      #     SHORT_SHA="$(git rev-parse --short ${SHA})"
+      #     docker pull ${_AZ_REGISTRY}/build-base:${IMAGE_TAG}-${SHORT_SHA}
+      #     docker pull ${_AZ_REGISTRY}/build-dotnet:${IMAGE_TAG}-${SHORT_SHA}
+      #     docker tag ${_AZ_REGISTRY}/build-base:${IMAGE_TAG}-${SHORT_SHA} build-base
+      #     docker tag ${_AZ_REGISTRY}/build-dotnet:${IMAGE_TAG}-${SHORT_SHA} build-dotnet
 
       - name: Build Docker image
         id: build-docker
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc # v6.11.0
         with:
+          cache-from: type=registry,ref=${{ env._AZ_REGISTRY }}/buildcache:${{ steps.tag.outputs.image_tag }}
+          cache-to: type=registry,ref=${{ env._AZ_REGISTRY }}/buildcache:${{ steps.tag.outputs.image_tag }},mode=max
           context: .
           file: build.Dockerfile
           platforms: |
