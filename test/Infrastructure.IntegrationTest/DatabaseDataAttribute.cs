@@ -35,14 +35,14 @@ public class DatabaseDataAttribute : DataAttribute
 
             TheoryDataRowBase theory;
 
-            if (!isEnabled)
+            if (isEnabled)
             {
-                theory = new TheoryDataRow()
-                    .WithSkip("Not Enabled");
+                theory = new ServiceTheoryDataRow(testMethod, disposalTracker, customizationContext);
             }
             else
             {
-                theory = new ServiceTheoryDataRow(testMethod, disposalTracker, customizationContext);
+                theory = new TheoryDataRow()
+                    .WithSkip("Not Enabled");
             }
 
             theory
