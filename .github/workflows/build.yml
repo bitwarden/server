@@ -145,24 +145,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
-      - name: Download dotnet-build image
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: dotnet-build
-          path: ${{ runner.temp }}
-
-      - name: Download app-base image
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
-        with:
-          name: app-base
-          path: ${{ runner.temp }}
-
-      - name: Load images
-        run: |
-          docker load --input ${{ runner.temp }}/dotnet-build.tar
-          docker load --input ${{ runner.temp }}/app-base.tar
-          docker image ls -a
-
       - name: Build Docker image
         id: build-docker
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc # v6.11.0
