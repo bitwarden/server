@@ -238,8 +238,8 @@ jobs:
         run: |
           docker pull ${_AZ_REGISTRY}/build-dotnet:dev # Fix with SHA as well
           docker pull ${_AZ_REGISTRY}/build-base:dev # Fix with SHA as well
-          docker tag ${_AZ_REGISTRY}/build-dotnet:dev dotnet-build
-          docker tag ${_AZ_REGISTRY}/build-base app-base
+          docker tag ${_AZ_REGISTRY}/build-dotnet:dev build-dotnet
+          docker tag ${_AZ_REGISTRY}/build-base build-base
 
       - name: Build Docker image
         id: build-docker

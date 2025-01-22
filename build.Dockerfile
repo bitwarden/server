@@ -2,7 +2,7 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS dotnet-build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build-dotnet
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
@@ -183,7 +183,7 @@ COPY bitwarden_license/src/Scim/entrypoint.sh ./Scim/
 ###################################################
 #              App stage - Base Image             #
 ###################################################
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS app-base
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS build-base
 
 ARG TARGETPLATFORM
 
@@ -211,99 +211,99 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 ###################################################
 #                App stage - Admin                #
 ###################################################
-FROM app-base AS app-admin
+FROM build-base AS app-admin
 
 LABEL com.bitwarden.project="admin"
 
-COPY --from=dotnet-build /app/Admin ./
+COPY --from=build-dotnet /app/Admin ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #                 App stage - Api                 #
 ###################################################
-FROM app-base AS app-api
+FROM build-base AS app-api
 
 LABEL com.bitwarden.project="api"
 
-COPY --from=dotnet-build /app/Api ./
+COPY --from=build-dotnet /app/Api ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #               App stage - Billing               #
 ###################################################
-FROM app-base AS app-billing
+FROM build-base AS app-billing
 
 LABEL com.bitwarden.project="billing"
 
-COPY --from=dotnet-build /app/Billing ./
+COPY --from=build-dotnet /app/Billing ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #               App stage - Events                #
 ###################################################
-FROM app-base AS app-events
+FROM build-base AS app-events
 
 LABEL com.bitwarden.project="events"
 
-COPY --from=dotnet-build /app/Events ./
+COPY --from=build-dotnet /app/Events ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #           App stage - EventsProcessor           #
 ###################################################
-FROM app-base AS app-eventsprocessor
+FROM build-base AS app-eventsprocessor
 
 LABEL com.bitwarden.project="eventsprocessor"
 
-COPY --from=dotnet-build /app/EventsProcessor ./
+COPY --from=build-dotnet /app/EventsProcessor ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #               App stage - Icons                 #
 ###################################################
-FROM app-base AS app-icons
+FROM build-base AS app-icons
 
 LABEL com.bitwarden.project="icons"
 
-COPY --from=dotnet-build /app/Icons ./
+COPY --from=build-dotnet /app/Icons ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #              App stage - Identity               #
 ###################################################
-FROM app-base AS app-identity
+FROM build-base AS app-identity
 
 LABEL com.bitwarden.project="identity"
 
-COPY --from=dotnet-build /app/Identity ./
+COPY --from=build-dotnet /app/Identity ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #            App stage - Notifications            #
 ###################################################
-FROM app-base AS app-notifications
+FROM build-base AS app-notifications
 
 LABEL com.bitwarden.project="notifications"
 
-COPY --from=dotnet-build /app/Notifications ./
+COPY --from=build-dotnet /app/Notifications ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #                 App stage - Sso                 #
 ###################################################
-FROM app-base AS app-sso
+FROM build-base AS app-sso
 
 LABEL com.bitwarden.project="sso"
 
-COPY --from=dotnet-build /app/Sso ./
+COPY --from=build-dotnet /app/Sso ./
 RUN chmod +x entrypoint.sh
 
 ###################################################
 #                App stage - Scim                 #
 ###################################################
-FROM app-base AS app-scim
+FROM build-base AS app-scim
 
 LABEL com.bitwarden.project="scim"
 
-COPY --from=dotnet-build /app/Scim ./
+COPY --from=build-dotnet /app/Scim ./
 RUN chmod +x entrypoint.sh
