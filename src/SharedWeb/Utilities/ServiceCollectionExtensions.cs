@@ -30,6 +30,9 @@ using Bit.Core.KeyManagement;
 using Bit.Core.NotificationCenter;
 using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
+using Bit.Core.Platform;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
@@ -124,6 +127,7 @@ public static class ServiceCollectionExtensions
         services.AddReportingServices();
         services.AddKeyManagementServices();
         services.AddNotificationCenterServices();
+        services.AddPlatformServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -234,7 +238,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentHistoryService, PaymentHistoryService>();
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
-        services.AddScoped<ILicensingService, LicensingService>();
+        services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
             var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15), UseTcpOnly = true };
