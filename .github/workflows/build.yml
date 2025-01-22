@@ -567,7 +567,6 @@ jobs:
     needs:
       - check-run
       - lint
-      - build-using-docker
       - build-docker
       - upload
       - build-mssqlmigratorutility
