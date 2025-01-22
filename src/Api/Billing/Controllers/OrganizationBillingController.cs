@@ -310,6 +310,9 @@ public class OrganizationBillingController(
         }
         var organizationSignup = model.ToOrganizationSignup(user);
         var sale = OrganizationSale.From(organization, organizationSignup);
+        var plan = StaticStore.GetPlan(model.PlanType);
+        sale.Organization.PlanType = plan.Type;
+        sale.Organization.Plan = plan.Name;
         await organizationBillingService.Finalize(sale);
 
         return TypedResults.Ok();
