@@ -214,18 +214,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
 
-      # - name: Pull build images
-      #   env:
-      #     IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-      #     PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-      #     SHA: ${{ github.sha }}  
-      #   run: |
-      #     SHORT_SHA="$(git rev-parse --short ${SHA})"
-      #     docker pull ${_AZ_REGISTRY}/build-base:${IMAGE_TAG}-${SHORT_SHA}
-      #     docker pull ${_AZ_REGISTRY}/build-dotnet:${IMAGE_TAG}-${SHORT_SHA}
-      #     docker tag ${_AZ_REGISTRY}/build-base:${IMAGE_TAG}-${SHORT_SHA} build-base
-      #     docker tag ${_AZ_REGISTRY}/build-dotnet:${IMAGE_TAG}-${SHORT_SHA} build-dotnet
-
       - name: Build Docker image
         id: build-docker
         uses: docker/build-push-action@b32b51a8eda65d6793cd0494a773d4f6bcef32dc # v6.11.0
@@ -259,18 +247,18 @@ jobs:
           done
           cosign sign --yes ${images}
 
-      - name: Scan Docker image
-        id: container-scan
-        uses: anchore/scan-action@abae793926ec39a78ab18002bc7fc45bbbd94342 # v6.0.0
-        with:
-          image: ${{ steps.image-tags.outputs.primary_tag }}
-          fail-build: false
-          output-format: sarif
+      # - name: Scan Docker image
+      #   id: container-scan
+      #   uses: anchore/scan-action@abae793926ec39a78ab18002bc7fc45bbbd94342 # v6.0.0
+      #   with:
+      #     image: ${{ steps.image-tags.outputs.primary_tag }}
+      #     fail-build: false
+      #     output-format: sarif
 
-      - name: Upload Grype results to GitHub
-        uses: github/codeql-action/upload-sarif@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169 # v3.28.0
-        with:
-          sarif_file: ${{ steps.container-scan.outputs.sarif }}
+      # - name: Upload Grype results to GitHub
+      #   uses: github/codeql-action/upload-sarif@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169 # v3.28.0
+      #   with:
+      #     sarif_file: ${{ steps.container-scan.outputs.sarif }}
 
 
   upload:
