@@ -104,7 +104,9 @@ public class ProviderBillingService(
 
         var providerOrganization = new ProviderOrganization
         {
-            ProviderId = provider.Id, OrganizationId = organization.Id, Key = key
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id,
+            Key = key
         };
 
         await Task.WhenAll(

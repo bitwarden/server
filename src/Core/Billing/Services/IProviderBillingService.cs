@@ -4,9 +4,7 @@ using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Contracts;
-using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using OneOf;
 using Stripe;
 
 namespace Bit.Core.Billing.Services;
