@@ -163,8 +163,10 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
-    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
+    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false)
     {
+        // EF is only used for self-hosted so read-only replica parameter is ignored
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);

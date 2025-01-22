@@ -109,9 +109,13 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
-    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
+    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        var connectionString = useReadOnlyReplica
+            ? ReadOnlyConnectionString
+            : ConnectionString;
+
+        using (var connection = new SqlConnection(connectionString))
         {
             var results = await connection.QueryAsync<Guid>(
                 $"[{Schema}].[GroupUser_ReadOrganizationUserIdsByGroupId]",

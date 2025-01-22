@@ -14,7 +14,16 @@ public interface IGroupRepository : IRepository<Group, Guid>
         Guid organizationId);
     Task<ICollection<Group>> GetManyByManyIds(IEnumerable<Guid> groupIds);
     Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
-    Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id);
+    /// <summary>
+    /// Query all OrganizationUserIds who are a member of the specified group.
+    /// </summary>
+    /// <param name="id">The group id.</param>
+    /// <param name="useReadOnlyReplica">
+    /// Whether to use the high-availability database replica. This is for paths with high traffic where immediate data
+    /// consistency is not required. You generally do not want this.
+    /// </param>
+    /// <returns></returns>
+    Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false);
     Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
