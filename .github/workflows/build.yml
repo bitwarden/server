@@ -113,19 +113,19 @@ jobs:
         include:
           - project_name: Admin
           - project_name: Api
-          - project_name: Attachments
+          # - project_name: Attachments
           - project_name: Billing
           - project_name: Events
           - project_name: EventsProcessor
           - project_name: Icons
           - project_name: Identity
-          - project_name: MsSql
-          - project_name: MsSqlMigratorUtility
-          - project_name: Nginx
+          # - project_name: MsSql
+          # - project_name: MsSqlMigratorUtility
+          # - project_name: Nginx
           - project_name: Notifications
           - project_name: Scim
-          - project_name: Server
-          - project_name: Setup
+          # - project_name: Server
+          # - project_name: Setup
           - project_name: Sso
     steps:
       - name: Check out repo
