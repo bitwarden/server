@@ -75,6 +75,72 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
+    public async Task GetManyByUserIdWithDeviceAuth_WorksWithMultipleUsersOnSameDevice_ReturnsExpectedResults(
+        IDeviceRepository sutRepository,
+        IUserRepository userRepository,
+        IAuthRequestRepository authRequestRepository)
+    {
+        // Arrange
+        var userA = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User A",
+            Email = $"test_user_A+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var userB = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User B",
+            Email = $"test_user_B+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var sharedDeviceIdentifier = Guid.NewGuid().ToString();
+
+        var deviceForUserA = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = userA.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = sharedDeviceIdentifier,
+        });
+
+        var deviceForUserB = await sutRepository.CreateAsync(new Device
+        {
+            Active = true,
+            Name = "chrome-test",
+            UserId = userB.Id,
+            Type = DeviceType.ChromeBrowser,
+            Identifier = sharedDeviceIdentifier,
+        });
+
+        var userAAuthRequest = await authRequestRepository.CreateAsync(new AuthRequest
+        {
+            ResponseDeviceId = null,
+            Approved = null,
+            Type = AuthRequestType.AuthenticateAndUnlock,
+            OrganizationId = null,
+            UserId = userA.Id,
+            RequestIpAddress = ":1",
+            RequestDeviceIdentifier = deviceForUserA.Identifier,
+            AccessCode = "AccessCode_1234",
+            PublicKey = "PublicKey_1234"
+        });
+        await authRequestRepository.ReplaceAsync(userAAuthRequest);
+
+        // Act
+        var response = await sutRepository.GetManyByUserIdWithDeviceAuth(userB.Id);
+
+        // Assert
+        Assert.Null(response.First().AuthRequestId);
+        Assert.Null(response.First().AuthRequestCreatedAt);
+    }
+
+    [DatabaseTheory]
+    [DatabaseData]
     public async Task GetManyByUserIdWithDeviceAuth_WorksWithNoAuthRequestAndMultipleDevices_ReturnsExpectedResults(
         IDeviceRepository sutRepository,
         IUserRepository userRepository)
@@ -117,7 +183,7 @@ public class DeviceRepositoryTests
 
     [DatabaseTheory]
     [DatabaseData]
-    public async Task GetManyByUserIdWithDeviceAuth_FailsToRespondWithAnyAuthData_ReturnsExpectedResults(
+    public async Task GetManyByUserIdWithDeviceAuth_FailsToRespondWithAnyAuthData_ReturnsEmptyResults(
         IDeviceRepository sutRepository,
         IUserRepository userRepository,
         IAuthRequestRepository authRequestRepository)
