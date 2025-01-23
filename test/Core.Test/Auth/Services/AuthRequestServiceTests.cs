@@ -275,6 +275,77 @@ public class AuthRequestServiceTests
         AuthRequestCreateRequestModel createModel,
         User user,
         OrganizationUser organizationUser1,
+        OrganizationUser organizationUser2)
+    {
+        createModel.Type = AuthRequestType.AdminApproval;
+        user.Email = createModel.Email;
+        organizationUser1.UserId = user.Id;
+        organizationUser2.UserId = user.Id;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(user.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.ChromeExtension);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .UserId
+            .Returns(user.Id);
+
+        sutProvider.GetDependency<IGlobalSettings>()
+            .PasswordlessAuth.KnownDevicesOnly
+            .Returns(false);
+
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>
+            {
+                organizationUser1,
+                organizationUser2,
+            });
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .CreateAsync(Arg.Any<AuthRequest>())
+            .Returns(c => c.ArgAt<AuthRequest>(0));
+
+        var authRequest = await sutProvider.Sut.CreateAuthRequestAsync(createModel);
+
+        Assert.Equal(organizationUser1.OrganizationId, authRequest.OrganizationId);
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<AuthRequest>(o => o.OrganizationId == organizationUser1.OrganizationId));
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<AuthRequest>(o => o.OrganizationId == organizationUser2.OrganizationId));
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(2)
+            .CreateAsync(Arg.Any<AuthRequest>());
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendDeviceApprovalRequestedNotificationEmailAsync(
+                Arg.Any<IEnumerable<string>>(),
+                Arg.Any<Guid>(),
+                Arg.Any<string>(),
+                Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task CreateAuthRequestAsync_AdminApproval_WithAdminNotifications_CreatesForEachOrganization_SendsEmails(
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user,
+        OrganizationUser organizationUser1,
         OrganizationUserUserDetails admin1,
         OrganizationUser organizationUser2,
         OrganizationUserUserDetails admin2,
@@ -284,6 +355,10 @@ public class AuthRequestServiceTests
         user.Email = createModel.Email;
         organizationUser1.UserId = user.Id;
         organizationUser2.UserId = user.Id;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications)
+            .Returns(true);
 
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(user.Email)

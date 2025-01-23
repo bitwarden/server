@@ -28,6 +28,8 @@ public class AuthRequestService : IAuthRequestService
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
+    private readonly IFeatureService _featureService;
+
     public AuthRequestService(
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
@@ -37,7 +39,8 @@ public class AuthRequestService : IAuthRequestService
         IPushNotificationService pushNotificationService,
         IEventService eventService,
         IOrganizationUserRepository organizationRepository,
-        IMailService mailService)
+        IMailService mailService,
+        IFeatureService featureService)
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -48,6 +51,7 @@ public class AuthRequestService : IAuthRequestService
         _eventService = eventService;
         _organizationUserRepository = organizationRepository;
         _mailService = mailService;
+        _featureService = featureService;
     }
 
     public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
@@ -283,6 +287,11 @@ public class AuthRequestService : IAuthRequestService
 
     private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
+        {
+            return;
+        }
+
         var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
             organizationUser.OrganizationId,
             OrganizationUserType.Admin);
