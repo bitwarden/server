@@ -296,7 +296,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             btObjIdField = "provider_id";
             btObjId = providerId.Value;
         }
-        var btInvoiceAmount = invoice.AmountDue / 100M;
+        var btInvoiceAmount = Math.Round(invoice.AmountDue / 100M, 2);
 
         var existingTransactions = organizationId.HasValue
             ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
@@ -338,7 +338,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 }
             };
 
-            _logger.LogInformation("Creating Braintree transaction with Amount: {Amount}, CustomerId: {CustomerId}, " + 
+            _logger.LogInformation("Creating Braintree transaction with Amount: {Amount}, CustomerId: {CustomerId}, " +
                 "CustomField: {CustomField}, CustomFields: {@CustomFields}",
                 transactionRequest.Amount,
                 transactionRequest.CustomerId,
