@@ -7,7 +7,7 @@
     ViewData["Title"] = "User: " + Model.User.Email;
 
     var canViewUserInformation = AccessControlService.UserHasPermission(Permission.User_UserInformation_View);
-    var canViewNewDeviceException = AccessControlService.UserHasPermission(Permission.User_UserInformation_View) &&
+    var canViewNewDeviceException = AccessControlService.UserHasPermission(Permission.User_NewDeviceException_Edit) &&
                                     FeatureService.IsEnabled(Bit.Core.FeatureFlagKeys.NewDeviceVerification);
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.User_BillingInformation_View);
     var canViewGeneral = AccessControlService.UserHasPermission(Permission.User_GeneralDetails_View);

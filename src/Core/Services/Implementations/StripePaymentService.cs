@@ -167,7 +167,7 @@ public class StripePaymentService : IPaymentService
                     City = taxInfo?.BillingAddressCity,
                     State = taxInfo?.BillingAddressState,
                 },
-                TaxIdData = taxInfo.HasTaxId
+                TaxIdData = !string.IsNullOrWhiteSpace(taxInfo.TaxIdNumber)
                     ? [new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }]
                     : null
             };
@@ -2081,7 +2081,7 @@ public class StripePaymentService : IPaymentService
             ];
         }
 
-        if (gatewayCustomerId != null)
+        if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
             var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
@@ -2091,7 +2091,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        if (gatewaySubscriptionId != null)
+        if (!string.IsNullOrWhiteSpace(gatewaySubscriptionId))
         {
             var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
 

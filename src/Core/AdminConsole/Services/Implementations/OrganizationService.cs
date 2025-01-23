@@ -2165,7 +2165,8 @@ public class OrganizationService : IOrganizationService
 
         // Query Two Factor Authentication status for all users in the organization
         // This is an optimization to avoid querying the Two Factor Authentication status for each user individually
-        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(filteredUsers.Select(ou => ou.UserId.Value));
+        var organizationUsersTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(
+            filteredUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value));
 
         var result = new List<Tuple<OrganizationUser, string>>();
 
@@ -2188,7 +2189,8 @@ public class OrganizationService : IOrganizationService
                     throw new BadRequestException("Only owners can restore other owners.");
                 }
 
-                var twoFactorIsEnabled = organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
+                var twoFactorIsEnabled = organizationUser.UserId.HasValue
+                    && organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
                 await CheckPoliciesBeforeRestoreAsync(organizationUser, twoFactorIsEnabled);
 
                 var status = GetPriorActiveOrganizationUserStatusType(organizationUser);
@@ -2247,7 +2249,7 @@ public class OrganizationService : IOrganizationService
         if (!userHasTwoFactorEnabled)
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Revoked);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 twoFactorCompliant = false;
