@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using System.Text.Json;
+using System.Net.Http.Json;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing.Models;
 using Bit.Core.Exceptions;
@@ -45,7 +45,11 @@ public class PricingClient(
 
         if (response.IsSuccessStatusCode)
         {
-            var plan = await DeserializeAsync<PlanDTO>(response.Content);
+            var plan = await response.Content.ReadFromJsonAsync<PlanDTO>();
+            if (plan == null)
+            {
+                throw new BillingException(message: "Deserialization of Pricing Service response resulted in null");
+            }
             return new PlanAdapter(plan);
         }
 
@@ -89,32 +93,16 @@ public class PricingClient(
 
         if (response.IsSuccessStatusCode)
         {
-            var plans = await DeserializeAsync<List<PlanDTO>>(response.Content);
+            var plans = await response.Content.ReadFromJsonAsync<List<PlanDTO>>();
+            if (plans == null)
+            {
+                throw new BillingException(message: "Deserialization of Pricing Service response resulted in null");
+            }
             return plans.Select(Plan (plan) => new PlanAdapter(plan)).ToList();
         }
 
         throw new BillingException(
             message: $"Request to the Pricing Service failed with status {response.StatusCode}");
-    }
-
-    private static async Task<T> DeserializeAsync<T>(HttpContent content)
-    {
-        var json = await content.ReadAsStringAsync();
-        try
-        {
-            var value = JsonSerializer.Deserialize<T>(json);
-            if (value == null)
-            {
-                throw new BillingException(message: "Deserialization of Pricing Service response resulted in null");
-            }
-            return value;
-        }
-        catch (Exception exception)
-        {
-            throw new BillingException(
-                message: "Failed to deserialize successful response from the Pricing Service",
-                innerException: exception);
-        }
     }
 
     private static string? GetLookupKey(PlanType planType)
