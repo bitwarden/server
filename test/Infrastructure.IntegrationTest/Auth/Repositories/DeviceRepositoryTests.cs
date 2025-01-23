@@ -129,7 +129,6 @@ public class DeviceRepositoryTests
             AccessCode = "AccessCode_1234",
             PublicKey = "PublicKey_1234"
         });
-        await authRequestRepository.ReplaceAsync(userAAuthRequest);
 
         // Act
         var response = await sutRepository.GetManyByUserIdWithDeviceAuth(userB.Id);
