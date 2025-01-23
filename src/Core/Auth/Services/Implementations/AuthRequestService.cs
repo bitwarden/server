@@ -12,6 +12,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -29,6 +30,7 @@ public class AuthRequestService : IAuthRequestService
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IMailService _mailService;
     private readonly IFeatureService _featureService;
+    private readonly ILogger<AuthRequestService> _logger;
 
     public AuthRequestService(
         IAuthRequestRepository authRequestRepository,
@@ -40,7 +42,8 @@ public class AuthRequestService : IAuthRequestService
         IEventService eventService,
         IOrganizationUserRepository organizationRepository,
         IMailService mailService,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ILogger<AuthRequestService> logger)
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -52,6 +55,7 @@ public class AuthRequestService : IAuthRequestService
         _organizationUserRepository = organizationRepository;
         _mailService = mailService;
         _featureService = featureService;
+        _logger = logger;
     }
 
     public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
@@ -289,6 +293,7 @@ public class AuthRequestService : IAuthRequestService
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
         {
+            _logger.LogWarning("Skipped sending device approval notification to admins - feature flag disabled");
             return;
         }
 
