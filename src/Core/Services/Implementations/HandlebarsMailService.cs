@@ -73,14 +73,16 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
         IEnumerable<ProductType> products)
     {
-        var message = CreateDefaultMessage("Verify your email", email);
+        var message = CreateDefaultMessage("Verify your emails", email);
         var model = new TrialInitiationVerifyEmail
         {
+            IsExistingUser = isExistingUser,
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
