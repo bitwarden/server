@@ -123,24 +123,72 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Accept_RequireMasterPasswordReset(Guid orgId, Guid orgUserId,
+    public async Task Accept_WhenOrganizationUsePoliciesIsEnabledAndResetPolicyIsEnabled_ShouldHandleResetPassword(Guid orgId, Guid orgUserId,
         OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
     {
+        // Arrange
+        var providerUserRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        providerUserRepository.GetByIdAsync(orgId).Returns(new Organization { UsePolicies = true });
+
         var policy = new Policy
         {
             Enabled = true,
             Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
         };
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(orgId,
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+
+        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        policyRepository.GetByOrganizationIdTypeAsync(orgId,
             PolicyType.ResetPassword).Returns(policy);
 
+        // Act
         await sutProvider.Sut.Accept(orgId, orgUserId, model);
 
+        // Assert
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
-            .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, sutProvider.GetDependency<IUserService>());
+            .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
         await sutProvider.GetDependency<IOrganizationService>().Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+
+
+        await userService.Received(1).GetUserByPrincipalAsync(default);
+        await policyRepository.Received(1).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Accept_WhenOrganizationUsePoliciesIsDisabled_ShouldNotHandleResetPassword(Guid orgId, Guid orgUserId,
+        OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        var providerUserRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        providerUserRepository.GetByIdAsync(orgId).Returns(new Organization { UsePolicies = false });
+
+        var policy = new Policy
+        {
+            Enabled = true,
+            Data = CoreHelpers.ClassToJsonData(new ResetPasswordDataModel { AutoEnrollEnabled = true, }),
+        };
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+
+        var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
+        policyRepository.GetByOrganizationIdTypeAsync(orgId,
+            PolicyType.ResetPassword).Returns(policy);
+
+        // Act
+        await sutProvider.Sut.Accept(orgId, orgUserId, model);
+
+        // Assert
+        await userService.Received(1).GetUserByPrincipalAsync(default);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(0)
+            .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+        await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
     }
 
     [Theory]
