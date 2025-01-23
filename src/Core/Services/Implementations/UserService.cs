@@ -1372,19 +1372,18 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
-        var organizationsManagingUser = await GetOrganizationsManagingUserAsync(user.Id);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && organizationsManagingUser.Any(o => o.Id == p.OrganizationId))
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
             {
                 await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
                     new RevokeOrganizationUsersRequest(
                         p.OrganizationId,
-                        [new OrganizationUserUserDetails { UserId = user.Id, OrganizationId = p.OrganizationId }],
+                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
                         new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                await _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(), user.Email);
+                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }
             else
             {

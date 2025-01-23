@@ -34,11 +34,6 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
         AddPremiumAccessAddon(plan, premiumAccessAddon);
         AddPasswordManagerSeat(plan, additionalSeats);
         AddAdditionalStorage(plan, additionalStorageGb);
-
-        if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
-        {
-            DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
-        }
     }
 
     private void AddSecretsManagerSeat(Plan plan, int additionalSmSeats)
