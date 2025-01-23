@@ -35,11 +35,7 @@
                 // Premium
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
                 document.getElementById('@(nameof(Model.Premium))').checked = true;
-    using Stripe.Entitlements;
                 // Licensing
-    using Bit.Core;
-    using Stripe.Entitlements;
-                using Microsoft.Identity.Client.Extensibility;
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.PremiumExpirationDate))').value =
                     '@Model.OneYearExpirationDate';
