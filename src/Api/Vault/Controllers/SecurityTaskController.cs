@@ -7,6 +7,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Queries;
+using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,19 +23,24 @@ public class SecurityTaskController : Controller
     private readonly IMarkTaskAsCompleteCommand _markTaskAsCompleteCommand;
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
+    private readonly ICipherRepository _cipherRepository;
+    private readonly IGetUsersForSecurityTasksQuery _getUsersForSecurityTasksQuery;
+
 
     public SecurityTaskController(
         IUserService userService,
         IGetTaskDetailsForUserQuery getTaskDetailsForUserQuery,
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
-        ICreateManyTasksCommand createManyTasksCommand)
+        ICreateManyTasksCommand createManyTasksCommand,
+        IGetUsersForSecurityTasksQuery getUsersForSecurityTasksQuery)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
         _markTaskAsCompleteCommand = markTaskAsCompleteCommand;
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
+        _getUsersForSecurityTasksQuery = getUsersForSecurityTasksQuery;
     }
 
     /// <summary>
@@ -87,6 +93,7 @@ public class SecurityTaskController : Controller
         [FromBody] BulkCreateSecurityTasksRequestModel model)
     {
         var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
+        var userTaskCount = await _getUsersForSecurityTasksQuery.GetAllUsersBySecurityTasks(orgId, securityTasks);
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
     }

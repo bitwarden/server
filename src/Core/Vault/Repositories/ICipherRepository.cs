@@ -50,6 +50,13 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
         Guid userId);
 
     /// <summary>
+    /// Returns the users and the number of security tasks that are applicable to them.
+    ///
+    /// Security tasks are actionable when a user has manage access to the associated cipher.
+    /// </summary>
+    Task<ICollection<UserSecurityTasksCount>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds);
+
+    /// <summary>
     /// Updates encrypted data for ciphers during a key rotation
     /// </summary>
     /// <param name="userId">The user that initiated the key rotation</param>

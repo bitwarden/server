@@ -323,6 +323,20 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<ICollection<UserSecurityTasksCount>> GetUserSecurityTasksByCipherIdsAsync(
+        Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<UserSecurityTasksCount>(
+                $"[{Schema}].[UserSecurityTasks_GetManyByCipherIds]",
+                new { OrganizationId = organizationId, CipherIds = cipherIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Cipher> ciphers)
