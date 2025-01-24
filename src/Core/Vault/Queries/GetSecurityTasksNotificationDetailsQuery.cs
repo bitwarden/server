@@ -6,18 +6,18 @@ using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Queries;
 
-public class GetUsersForSecurityTasksQuery : IGetUsersForSecurityTasksQuery
+public class GetSecurityTasksNotificationDetailsQuery : IGetSecurityTasksNotificationDetailsQuery
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICipherRepository _cipherRepository;
 
-    public GetUsersForSecurityTasksQuery(ICurrentContext currentContext, ICipherRepository cipherRepository)
+    public GetSecurityTasksNotificationDetailsQuery(ICurrentContext currentContext, ICipherRepository cipherRepository)
     {
         _currentContext = currentContext;
         _cipherRepository = cipherRepository;
     }
 
-    public async Task<ICollection<UserSecurityTasksCount>> GetAllUsersBySecurityTasks(Guid organizationId, IEnumerable<SecurityTask> tasks)
+    public async Task<ICollection<UserSecurityTasksCount>> GetNotificationDetailsByManyIds(Guid organizationId, IEnumerable<SecurityTask> tasks)
     {
         var org = _currentContext.GetOrganization(organizationId);
         var cipherIds = tasks
