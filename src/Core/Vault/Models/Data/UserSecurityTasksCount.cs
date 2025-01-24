@@ -6,12 +6,18 @@
 public class UserSecurityTasksCount
 {
     /// <summary>
-    /// The User Id.
+    /// The user's Id.
     /// </summary>
     public Guid UserId { get; set; }
 
     /// <summary>
+    /// The user's email.
+    /// </summary>
+    public string Email { get; set; }
+
+    /// <summary>
     /// The number of actionable security tasks for the respective users.
     /// </summary>
-    public int TaskCount { get; set; }
+    public int TaskCount
+    { get; set; }
 }
