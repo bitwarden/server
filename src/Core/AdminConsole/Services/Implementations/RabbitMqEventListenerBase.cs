@@ -54,12 +54,9 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
         var consumer = new AsyncEventingBasicConsumer(_channel);
         consumer.ReceivedAsync += async (model, eventArgs) =>
         {
-            var body = eventArgs.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-
             try
             {
-                var eventMessage = JsonSerializer.Deserialize<EventMessage>(message);
+                var eventMessage = JsonSerializer.Deserialize<EventMessage>(eventArgs.Body.Span);
                 await HandleMessageAsync(eventMessage);
             }
             catch (Exception ex)

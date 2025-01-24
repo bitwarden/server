@@ -31,8 +31,7 @@ public class RabbitMqEventWriteService : IEventWriteService
 
         await channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout);
 
-        var message = JsonSerializer.Serialize(e);
-        var body = Encoding.UTF8.GetBytes(message);
+        var body = JsonSerializer.SerializeToUtf8Bytes(e);
 
         await channel.BasicPublishAsync(exchange: _exchangeName, routingKey: string.Empty, body: body);
     }
@@ -45,8 +44,7 @@ public class RabbitMqEventWriteService : IEventWriteService
 
         foreach (var e in events)
         {
-            var message = JsonSerializer.Serialize(e);
-            var body = Encoding.UTF8.GetBytes(message);
+            var body = JsonSerializer.SerializeToUtf8Bytes(e);
 
             await channel.BasicPublishAsync(exchange: _exchangeName, routingKey: string.Empty, body: body);
         }

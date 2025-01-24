@@ -21,9 +21,8 @@ public class RabbitMqEventHttpPostListener : RabbitMqEventListenerBase
     }
     protected override async Task HandleMessageAsync(EventMessage eventMessage)
     {
-        var message = JsonSerializer.Serialize(eventMessage);
         using var httpClient = new HttpClient();
-        var content = new StringContent(message, Encoding.UTF8, "application/json");
+        var content = JsonContent.Create(eventMessage);
         var response = await httpClient.PostAsync(_httpPostUrl, content);
         response.EnsureSuccessStatusCode();
     }
