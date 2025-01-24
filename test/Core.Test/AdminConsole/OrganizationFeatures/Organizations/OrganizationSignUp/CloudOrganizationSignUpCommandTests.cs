@@ -1,14 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
@@ -60,20 +60,16 @@ public class CloudICloudOrganizationSignUpCommandTests
         Assert.NotNull(result.Organization);
         Assert.NotNull(result.OrganizationUser);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
-            Arg.Any<Organization>(),
-            signup.PaymentMethodType.Value,
-            signup.PaymentToken,
-            plan,
-            signup.AdditionalStorageGb,
-            signup.AdditionalSeats,
-            signup.PremiumAccessAddon,
-            signup.TaxInfo,
-            false,
-            signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault(),
-            signup.UseSecretsManager
-        );
+        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(
+            Arg.Is<OrganizationSale>(sale =>
+                sale.CustomerSetup.TokenizedPaymentSource.Type == signup.PaymentMethodType.Value &&
+                sale.CustomerSetup.TokenizedPaymentSource.Token == signup.PaymentToken &&
+                sale.CustomerSetup.TaxInformation.Country == signup.TaxInfo.BillingAddressCountry &&
+                sale.CustomerSetup.TaxInformation.PostalCode == signup.TaxInfo.BillingAddressPostalCode &&
+                sale.SubscriptionSetup.Plan == plan &&
+                sale.SubscriptionSetup.PasswordManagerOptions.Seats == signup.AdditionalSeats &&
+                sale.SubscriptionSetup.PasswordManagerOptions.Storage == signup.AdditionalStorageGb &&
+                sale.SubscriptionSetup.SecretsManagerOptions == null));
     }
 
     [Theory]
@@ -155,20 +151,17 @@ public class CloudICloudOrganizationSignUpCommandTests
         Assert.NotNull(result.Organization);
         Assert.NotNull(result.OrganizationUser);
 
-        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
-            Arg.Any<Organization>(),
-            signup.PaymentMethodType.Value,
-            signup.PaymentToken,
-            Arg.Is<Plan>(plan),
-            signup.AdditionalStorageGb,
-            signup.AdditionalSeats,
-            signup.PremiumAccessAddon,
-            signup.TaxInfo,
-            false,
-            signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault(),
-            signup.IsFromSecretsManagerTrial
-        );
+        await sutProvider.GetDependency<IOrganizationBillingService>().Received(1).Finalize(
+            Arg.Is<OrganizationSale>(sale =>
+                sale.CustomerSetup.TokenizedPaymentSource.Type == signup.PaymentMethodType.Value &&
+                sale.CustomerSetup.TokenizedPaymentSource.Token == signup.PaymentToken &&
+                sale.CustomerSetup.TaxInformation.Country == signup.TaxInfo.BillingAddressCountry &&
+                sale.CustomerSetup.TaxInformation.PostalCode == signup.TaxInfo.BillingAddressPostalCode &&
+                sale.SubscriptionSetup.Plan == plan &&
+                sale.SubscriptionSetup.PasswordManagerOptions.Seats == signup.AdditionalSeats &&
+                sale.SubscriptionSetup.PasswordManagerOptions.Storage == signup.AdditionalStorageGb &&
+                sale.SubscriptionSetup.SecretsManagerOptions.Seats == signup.AdditionalSmSeats &&
+                sale.SubscriptionSetup.SecretsManagerOptions.ServiceAccounts == signup.AdditionalServiceAccounts));
     }
 
     [Theory]
