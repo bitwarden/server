@@ -82,6 +82,20 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        // Optional RabbitMQ Listeners
+        if (CoreHelpers.SettingHasValue(globalSettings.RabbitMq.HostName) &&
+            CoreHelpers.SettingHasValue(globalSettings.RabbitMq.Username) &&
+            CoreHelpers.SettingHasValue(globalSettings.RabbitMq.Password) &&
+            CoreHelpers.SettingHasValue(globalSettings.RabbitMq.ExchangeName))
+        {
+            services.AddHostedService<Core.Services.RabbitMqEventRepositoryListener>();
+
+            if (CoreHelpers.SettingHasValue(globalSettings.RabbitMqHttpPostUrl))
+            {
+                services.AddHostedService<Core.Services.RabbitMqEventHttpPostListener>();
+            }
+        }
     }
 
     public void Configure(
