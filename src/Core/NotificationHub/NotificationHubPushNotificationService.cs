@@ -46,7 +46,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         _logger = logger;
         _globalSettings = globalSettings;
 
-        if (globalSettings.Installation.Id == default)
+        if (globalSettings.Installation.Id == Guid.Empty)
         {
             logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
         }
@@ -199,7 +199,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     public async Task PushNotificationAsync(Notification notification)
     {
-        Guid? installationId = notification.Global && _globalSettings.Installation.Id != default
+        Guid? installationId = notification.Global && _globalSettings.Installation.Id != Guid.Empty
             ? _globalSettings.Installation.Id
             : null;
 
@@ -250,7 +250,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
-        Guid? installationId = notification.Global && _globalSettings.Installation.Id != default
+        Guid? installationId = notification.Global && _globalSettings.Installation.Id != Guid.Empty
             ? _globalSettings.Installation.Id
             : null;
 

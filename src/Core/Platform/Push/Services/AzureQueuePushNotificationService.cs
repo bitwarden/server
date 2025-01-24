@@ -33,7 +33,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         _httpContextAccessor = httpContextAccessor;
         _globalSettings = globalSettings;
 
-        if (globalSettings.Installation.Id == default)
+        if (globalSettings.Installation.Id == Guid.Empty)
         {
             logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
         }

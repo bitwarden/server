@@ -280,7 +280,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
         {
-            if (globalSettings.Installation.Id == default)
+            if (globalSettings.Installation.Id == Guid.Empty)
             {
                 throw new InvalidOperationException("Installation Id must be set for self-hosted installations.");
             }
