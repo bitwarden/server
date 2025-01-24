@@ -348,6 +348,44 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<ICollection<UserSecurityTasksCount>> GetUserSecurityTasksByCipherIdsAsync(
+        Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new UserSecurityTasksByCipherIdsQuery(organizationId, cipherIds).Run(dbContext);
+
+            ICollection<UserSecurityTasksCount> userTasksCount;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                userTasksCount = (await query.ToListAsync())
+                    .GroupBy(c => new { c.UserId, c.TaskCount })
+                    .Select(g => new UserSecurityTasksCount
+                    {
+                        UserId = g.Key.UserId,
+                        TaskCount = g.Key.TaskCount,
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.UserId, p.TaskCount }
+                    into g
+                                   select new UserSecurityTasksCount
+                                   {
+                                       UserId = g.Key.UserId,
+                                       TaskCount = g.Key.TaskCount,
+                                   };
+                userTasksCount = await groupByQuery.ToListAsync();
+            }
+
+            return userTasksCount;
+        }
+    }
+
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
