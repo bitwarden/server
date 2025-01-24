@@ -11,7 +11,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Platform.Push;
+namespace Bit.Api.Test.Platform.Push.Controllers;
 
 [ControllerCustomize(typeof(PushController))]
 [SutProviderCustomize]

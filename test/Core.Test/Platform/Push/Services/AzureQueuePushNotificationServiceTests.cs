@@ -16,7 +16,7 @@ using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.Push.Internal;
+namespace Bit.Core.Test.Platform.Push.Services;
 
 [QueueClientCustomize]
 [SutProviderCustomize]

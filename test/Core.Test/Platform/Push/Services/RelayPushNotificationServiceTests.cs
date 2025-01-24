@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.Push.Internal;
+namespace Bit.Core.Test.Platform.Push.Services;
 
 public class RelayPushNotificationServiceTests
 {

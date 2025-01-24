@@ -9,7 +9,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Platform.Push.Internal;
+namespace Bit.Core.Test.Platform.Push.Services;
 
 [SutProviderCustomize]
 public class MultiServicePushNotificationServiceTests
