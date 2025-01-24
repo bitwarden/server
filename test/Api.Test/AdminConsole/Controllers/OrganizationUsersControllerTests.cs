@@ -127,8 +127,8 @@ public class OrganizationUsersControllerTests
         OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        var providerUserRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        providerUserRepository.GetByIdAsync(orgId).Returns(new Organization { UsePolicies = true });
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = true });
 
         var policy = new Policy
         {
@@ -137,6 +137,7 @@ public class OrganizationUsersControllerTests
         };
         var userService = sutProvider.GetDependency<IUserService>();
         userService.GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+
 
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
         policyRepository.GetByOrganizationIdTypeAsync(orgId,
@@ -151,8 +152,8 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IOrganizationService>().Received(1)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
-
         await userService.Received(1).GetUserByPrincipalAsync(default);
+        await applicationCacheService.Received(1).GetOrganizationAbilityAsync(orgId);
         await policyRepository.Received(1).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
 
     }
@@ -163,8 +164,8 @@ public class OrganizationUsersControllerTests
         OrganizationUserAcceptRequestModel model, User user, SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        var providerUserRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        providerUserRepository.GetByIdAsync(orgId).Returns(new Organization { UsePolicies = false });
+        var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
+        applicationCacheService.GetOrganizationAbilityAsync(orgId).Returns(new OrganizationAbility { UsePolicies = false });
 
         var policy = new Policy
         {
@@ -185,10 +186,11 @@ public class OrganizationUsersControllerTests
         await userService.Received(1).GetUserByPrincipalAsync(default);
         await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
             .AcceptOrgUserByEmailTokenAsync(orgUserId, user, model.Token, userService);
-
         await sutProvider.GetDependency<IOrganizationService>().Received(0)
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+
         await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        await applicationCacheService.Received(1).GetOrganizationAbilityAsync(orgId);
     }
 
     [Theory]

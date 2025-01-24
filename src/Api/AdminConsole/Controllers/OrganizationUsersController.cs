@@ -328,9 +328,9 @@ public class OrganizationUsersController : Controller
 
     private async Task<bool> ShouldHandleResetPasswordAsync(Guid orgId)
     {
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
 
-        if (organization is not { UsePolicies: true })
+        if (organizationAbility is not { UsePolicies: true })
         {
             return false;
         }
