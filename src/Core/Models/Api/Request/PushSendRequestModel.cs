@@ -13,12 +13,16 @@ public class PushSendRequestModel : IValidatableObject
     public required PushType Type { get; set; }
     public required object Payload { get; set; }
     public ClientType? ClientType { get; set; }
+    public string? InstallationId { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (string.IsNullOrWhiteSpace(UserId) && string.IsNullOrWhiteSpace(OrganizationId))
+        if (string.IsNullOrWhiteSpace(UserId) &&
+            string.IsNullOrWhiteSpace(OrganizationId) &&
+            string.IsNullOrWhiteSpace(InstallationId))
         {
-            yield return new ValidationResult($"{nameof(UserId)} or {nameof(OrganizationId)} is required.");
+            yield return new ValidationResult(
+                $"{nameof(UserId)} or {nameof(OrganizationId)} or {nameof(InstallationId)} is required.");
         }
     }
 }

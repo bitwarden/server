@@ -1,13 +1,15 @@
 ﻿#nullable enable
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Platform.Push.Internal.Test;
+namespace Bit.Core.Test.Platform.Push.Services;
 
 [SutProviderCustomize]
 public class MultiServicePushNotificationServiceTests
@@ -74,5 +76,23 @@ public class MultiServicePushNotificationServiceTests
             .First()
             .Received(1)
             .SendPayloadToOrganizationAsync(organizationId, type, payload, identifier, deviceId, clientType);
+    }
+
+    [Theory]
+    [BitAutoData([null, null])]
+    [BitAutoData(ClientType.All, null)]
+    [BitAutoData([null, "test device id"])]
+    [BitAutoData(ClientType.All, "test device id")]
+    public async Task SendPayloadToInstallationAsync_Message_Sent(ClientType? clientType, string? deviceId,
+        string installationId, PushType type, object payload, string identifier,
+        SutProvider<MultiServicePushNotificationService> sutProvider)
+    {
+        await sutProvider.Sut.SendPayloadToInstallationAsync(installationId, type, payload, identifier, deviceId,
+            clientType);
+
+        await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
+            .First()
+            .Received(1)
+            .SendPayloadToInstallationAsync(installationId, type, payload, identifier, deviceId, clientType);
     }
 }

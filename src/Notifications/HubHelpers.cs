@@ -93,40 +93,45 @@ public static class HubHelpers
                 var orgStatusNotification =
                     JsonSerializer.Deserialize<PushNotificationData<OrganizationStatusPushNotification>>(
                         notificationJson, _deserializerOptions);
-                await hubContext.Clients.Group($"Organization_{orgStatusNotification.Payload.OrganizationId}")
-                    .SendAsync("ReceiveMessage", orgStatusNotification, cancellationToken);
+                await hubContext.Clients.Group(NotificationsHub.GetOrganizationGroup(orgStatusNotification.Payload.OrganizationId))
+                    .SendAsync(_receiveMessageMethod, orgStatusNotification, cancellationToken);
                 break;
             case PushType.SyncOrganizationCollectionSettingChanged:
                 var organizationCollectionSettingsChangedNotification =
                     JsonSerializer.Deserialize<PushNotificationData<OrganizationStatusPushNotification>>(
                         notificationJson, _deserializerOptions);
-                await hubContext.Clients.Group($"Organization_{organizationCollectionSettingsChangedNotification.Payload.OrganizationId}")
-                    .SendAsync("ReceiveMessage", organizationCollectionSettingsChangedNotification, cancellationToken);
+                await hubContext.Clients.Group(NotificationsHub.GetOrganizationGroup(organizationCollectionSettingsChangedNotification.Payload.OrganizationId))
+                    .SendAsync(_receiveMessageMethod, organizationCollectionSettingsChangedNotification, cancellationToken);
                 break;
-            case PushType.SyncNotification:
-            case PushType.SyncNotificationStatus:
-                var syncNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<NotificationPushNotification>>(
-                        notificationJson, _deserializerOptions);
-                if (syncNotification.Payload.UserId.HasValue)
+            case PushType.Notification:
+            case PushType.NotificationStatus:
+                var notificationData = JsonSerializer.Deserialize<PushNotificationData<NotificationPushNotification>>(
+                    notificationJson, _deserializerOptions);
+                if (notificationData.Payload.InstallationId.HasValue)
                 {
-                    if (syncNotification.Payload.ClientType == ClientType.All)
+                    await hubContext.Clients.Group(NotificationsHub.GetInstallationGroup(
+                            notificationData.Payload.InstallationId.Value, notificationData.Payload.ClientType))
+                        .SendAsync(_receiveMessageMethod, notificationData, cancellationToken);
+                }
+                else if (notificationData.Payload.UserId.HasValue)
+                {
+                    if (notificationData.Payload.ClientType == ClientType.All)
                     {
-                        await hubContext.Clients.User(syncNotification.Payload.UserId.ToString())
-                            .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
+                        await hubContext.Clients.User(notificationData.Payload.UserId.ToString())
+                            .SendAsync(_receiveMessageMethod, notificationData, cancellationToken);
                     }
                     else
                     {
                         await hubContext.Clients.Group(NotificationsHub.GetUserGroup(
-                                syncNotification.Payload.UserId.Value, syncNotification.Payload.ClientType))
-                            .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
+                                notificationData.Payload.UserId.Value, notificationData.Payload.ClientType))
+                            .SendAsync(_receiveMessageMethod, notificationData, cancellationToken);
                     }
                 }
-                else if (syncNotification.Payload.OrganizationId.HasValue)
+                else if (notificationData.Payload.OrganizationId.HasValue)
                 {
                     await hubContext.Clients.Group(NotificationsHub.GetOrganizationGroup(
-                            syncNotification.Payload.OrganizationId.Value, syncNotification.Payload.ClientType))
-                        .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
+                            notificationData.Payload.OrganizationId.Value, notificationData.Payload.ClientType))
+                        .SendAsync(_receiveMessageMethod, notificationData, cancellationToken);
                 }
 
                 break;
