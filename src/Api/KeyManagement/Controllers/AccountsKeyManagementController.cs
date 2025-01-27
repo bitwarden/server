@@ -91,7 +91,7 @@ public class AccountsKeyManagementController : Controller
 
 
     [HttpPost("rotate-user-account-keys")]
-    public async Task RotateUserAccountKeys([FromBody] RotateUserAccountKeysAndDataRequestModel model)
+    public async Task RotateUserAccountKeysAsync([FromBody] RotateUserAccountKeysAndDataRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -117,7 +117,6 @@ public class AccountsKeyManagementController : Controller
         };
 
         var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);
-
         if (result.Succeeded)
         {
             return;

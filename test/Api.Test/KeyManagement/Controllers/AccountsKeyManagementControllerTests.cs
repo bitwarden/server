@@ -2,7 +2,9 @@
 using System.Security.Claims;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Controllers;
+using Bit.Api.KeyManagement.Models.Request.Accounts;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
@@ -107,21 +109,42 @@ public class AccountsKeyManagementControllerTests
     [Theory]
     [BitAutoData]
     public async Task RotateUserAccountKeysSuccess(SutProvider<AccountsKeyManagementController> sutProvider,
-        RotateUserAccountKeysRequestModel data, User user)
+        RotateUserAccountKeysAndDataRequestModel data, User user)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
             .Returns(IdentityResult.Success);
-        await sutProvider.Sut.RotateUserAccountKeys(data);
-        await sutProvider.GetDependency<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.Ciphers));
-        await sutProvider.GetDependency<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.Folders));
-        await sutProvider.GetDependency<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.Sends));
+        await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.EmergencyAccessUnlockData));
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.EmergencyAccessUnlockData));
         await sutProvider.GetDependency<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>>().Received(1)
-            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.OrganizationAccountRecoveryUnlockData));
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.OrganizationAccountRecoveryUnlockData));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountUnlockData.PasskeyUnlockData));
+
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountData.Ciphers));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountData.Folders));
+        await sutProvider.GetDependency<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>>>().Received(1)
+            .ValidateAsync(Arg.Any<User>(), Arg.Is(data.AccountData.Sends));
+
+        await sutProvider.GetDependency<IRotateUserAccountKeysCommand>().Received(1)
+            .RotateUserAccountKeysAsync(Arg.Is(user), Arg.Is<RotateUserAccountKeysData>(d =>
+                d.OldMasterKeyAuthenticationHash == data.OldMasterKeyAuthenticationHash
+
+                && d.MasterPasswordUnlockData.KdfType == data.AccountUnlockData.MasterPasswordUnlockData.KdfType
+                && d.MasterPasswordUnlockData.KdfIterations == data.AccountUnlockData.MasterPasswordUnlockData.KdfIterations
+                && d.MasterPasswordUnlockData.KdfMemory == data.AccountUnlockData.MasterPasswordUnlockData.KdfMemory
+                && d.MasterPasswordUnlockData.KdfParallelism == data.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism
+                && d.MasterPasswordUnlockData.Email == data.AccountUnlockData.MasterPasswordUnlockData.Email
+
+                && d.MasterPasswordUnlockData.MasterKeyAuthenticationHash == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyAuthenticationHash
+                && d.MasterPasswordUnlockData.MasterKeyEncryptedUserKey == data.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey
+
+                && d.AccountPublicKey == data.AccountKeys.AccountPublicKey
+                && d.UserKeyEncryptedAccountPrivateKey == data.AccountKeys.UserKeyEncryptedAccountPrivateKey
+            ));
     }
 }
