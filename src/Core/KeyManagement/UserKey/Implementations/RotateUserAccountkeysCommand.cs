@@ -66,7 +66,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new ArgumentNullException(nameof(user));
         }
 
-        if (!await _userService.CheckPasswordAsync(user, model.OldMasterKeyServerAuthenticationHash))
+        if (!await _userService.CheckPasswordAsync(user, model.OldMasterkeyAuthenticationHash))
         {
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
@@ -83,15 +83,15 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new InvalidOperationException("The provided master password unlock data is not valid for this user.");
         }
         if (
-            !model.AccountPublicKey == user.PublicKey
+            model.AccountPublicKey != user.PublicKey
         )
         {
-            throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during rotation.");
+            throw new InvalidOperationException("The provided account public key does not match the user's current public key, and changing the account asymmetric keypair is currently not supported during key rotation.");
         }
 
         user.Key = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey;
         user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
-        user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordUnlockData.MasterKeyRemoteAuthenticationHash);
+        user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordUnlockData.MasterKeyAuthenticationHash);
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
         if (model.Ciphers.Any())

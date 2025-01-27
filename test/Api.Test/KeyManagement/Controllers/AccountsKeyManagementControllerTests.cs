@@ -3,7 +3,6 @@ using System.Security.Claims;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.KeyManagement.Controllers;
-using Bit.Api.KeyManagement.Models.Request.Accounts;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;
@@ -108,7 +107,7 @@ public class AccountsKeyManagementControllerTests
     [Theory]
     [BitAutoData]
     public async Task RotateUserAccountKeysSuccess(SutProvider<AccountsKeyManagementController> sutProvider,
-        RotateUserAccountKeysModel data, User user)
+        RotateUserAccountKeysRequestModel data, User user)
     {
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())

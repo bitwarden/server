@@ -9,7 +9,7 @@ namespace Bit.Core.KeyManagement.Models.Data;
 public class RotateUserAccountKeysData
 {
     // Authentication for this requests
-    public string OldMasterKeyServerAuthenticationHash { get; set; }
+    public string OldMasterkeyAuthenticationHash { get; set; }
 
     // Other keys encrypted by the userkey
     public string UserKeyEncryptedAccountPrivateKey { get; set; }

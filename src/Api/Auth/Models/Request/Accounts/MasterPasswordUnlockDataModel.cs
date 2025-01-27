@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.Models.Data;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 
@@ -16,7 +17,7 @@ public class MasterPasswordUnlockDataModel : IValidatableObject
     public string Email { get; set; }
     [Required]
     [StringLength(300)]
-    public string MasterKeyServerAuthenticationHash { get; set; }
+    public string MasterKeyAuthenticationHash { get; set; }
     [Required]
     public string MasterKeyEncryptedUserKey { get; set; }
     [StringLength(50)]
@@ -42,6 +43,24 @@ public class MasterPasswordUnlockDataModel : IValidatableObject
         {
             yield return new ValidationResult("Invalid KdfType", new[] { nameof(KdfType) });
         }
+    }
+
+    public MasterPasswordUnlockData ToUnlockData()
+    {
+        var data = new MasterPasswordUnlockData
+        {
+            KdfType = KdfType,
+            KdfIterations = KdfIterations,
+            KdfMemory = KdfMemory,
+            KdfParallelism = KdfParallelism,
+
+            Email = Email,
+
+            MasterKeyAuthenticationHash = MasterKeyAuthenticationHash,
+            MasterKeyEncryptedUserKey = MasterKeyEncryptedUserKey,
+            MasterPasswordHint = MasterPasswordHint
+        };
+        return data;
     }
 
 }

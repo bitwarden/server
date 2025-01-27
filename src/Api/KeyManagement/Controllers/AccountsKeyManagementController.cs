@@ -91,7 +91,7 @@ public class AccountsKeyManagementController : Controller
 
 
     [HttpPost("rotate-user-account-keys")]
-    public async Task RotateUserAccountKeys([FromBody] RotateUserAccountKeysModel model)
+    public async Task RotateUserAccountKeys([FromBody] RotateUserAccountKeysAndDataRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -99,29 +99,22 @@ public class AccountsKeyManagementController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var unlockData = new MasterPasswordUnlockData
-        {
-            KdfType = model.MasterPasswordUnlockData.KdfType,
-            KdfIterations = model.MasterPasswordUnlockData.KdfIterations,
-            KdfMemory = model.MasterPasswordUnlockData.KdfMemory,
-            KdfParallelism = model.MasterPasswordUnlockData.KdfParallelism,
-            Email = model.MasterPasswordUnlockData.Email,
-            MasterKeyRemoteAuthenticationHash = model.MasterPasswordUnlockData.MasterKeyServerAuthenticationHash,
-            MasterKeyEncryptedUserKey = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey,
-            MasterPasswordHint = model.MasterPasswordUnlockData.MasterPasswordHint
-        };
-
         var dataModel = new RotateUserAccountKeysData
         {
-            MasterPasswordUnlockData = unlockData,
-            OldMasterKeyServerAuthenticationHash = model.OldMasterKeyServerAuthenticationHash,
-            UserKeyEncryptedAccountPrivateKey = model.UserKeyEncryptedAccountPrivateKey,
-            Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-            Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessUnlockData),
-            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.OrganizationAccountRecoveryUnlockData),
-            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.PasskeyPrfUnlockData)
+            OldMasterkeyAuthenticationHash = model.OldMasterkeyAuthenticationHash,
+
+            UserKeyEncryptedAccountPrivateKey = model.AccountKeys.UserKeyEncryptedAccountPrivateKey,
+            AccountPublicKey = model.AccountKeys.AccountPublicKey,
+
+            MasterPasswordUnlockData = model.AccountUnlockData.MasterPasswordUnlockData.ToUnlockData(),
+            EmergencyAccesses = await _emergencyAccessValidator.ValidateAsync(user, model.AccountUnlockData.EmergencyAccessUnlockData),
+            OrganizationUsers = await _organizationUserValidator.ValidateAsync(user, model.AccountUnlockData.OrganizationAccountRecoveryUnlockData),
+            WebAuthnKeys = await _webauthnKeyValidator.ValidateAsync(user, model.AccountUnlockData.PasskeyUnlockData),
+
+            Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
+            Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+
         };
 
         var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);

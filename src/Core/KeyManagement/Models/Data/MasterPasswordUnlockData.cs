@@ -11,7 +11,7 @@ public class MasterPasswordUnlockData
     public int? KdfParallelism { get; set; }
 
     public string Email { get; set; }
-    public string MasterKeyRemoteAuthenticationHash { get; set; }
+    public string MasterKeyAuthenticationHash { get; set; }
     public string MasterKeyEncryptedUserKey { get; set; }
     public string MasterPasswordHint { get; set; }
 

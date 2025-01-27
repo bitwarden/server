@@ -18,7 +18,7 @@ public class RotateUserAccountKeysCommandTests
         RotateUserAccountKeysData model)
     {
         user.Email = model.MasterPasswordUnlockData.Email;
-        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyServerAuthenticationHash)
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterkeyAuthenticationHash)
             .Returns(false);
 
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);
@@ -40,7 +40,7 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfIterations = 3;
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
-        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyServerAuthenticationHash)
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterkeyAuthenticationHash)
             .Returns(true);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
     }
@@ -59,7 +59,7 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfIterations = 600000;
         model.MasterPasswordUnlockData.KdfMemory = null;
         model.MasterPasswordUnlockData.KdfParallelism = null;
-        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyServerAuthenticationHash)
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterkeyAuthenticationHash)
             .Returns(true);
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
     }
@@ -79,7 +79,7 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
 
-        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyServerAuthenticationHash)
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterkeyAuthenticationHash)
             .Returns(true);
 
         var result = await sutProvider.Sut.RotateUserAccountKeysAsync(user, model);

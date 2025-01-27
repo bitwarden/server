@@ -8,28 +8,12 @@ using Bit.Api.Vault.Models.Request;
 
 namespace Bit.Api.KeyManagement.Models.Request.Accounts;
 
-public class RotateUserAccountKeysModel
+public class UnlockDataRequestModel
 {
-    // Authentication for this requests
-    [Required]
-    public string OldMasterKeyServerAuthenticationHash { get; set; }
-
     // All methods to get to the userkey
     [Required]
     public MasterPasswordUnlockDataModel MasterPasswordUnlockData { get; set; }
     public IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessUnlockData { get; set; }
     public IEnumerable<ResetPasswordWithOrgIdRequestModel> OrganizationAccountRecoveryUnlockData { get; set; }
-    public IEnumerable<WebAuthnLoginRotateKeyRequestModel> PasskeyPrfUnlockData { get; set; }
-
-    // Other keys encrypted by the userkey
-    [Required]
-    public string UserKeyEncryptedAccountPrivateKey { get; set; }
-    [Required]
-    public string AccountPublicKey { get; set; }
-
-    // User vault data encrypted by the userkey
-    public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
-    public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
-    public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
-
+    public IEnumerable<WebAuthnLoginRotateKeyRequestModel> PasskeyUnlockData { get; set; }
 }
