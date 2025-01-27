@@ -47,7 +47,6 @@ public class OrganizationLicenseClaimsFactory : ILicenseClaimsFactory<Organizati
             new(nameof(OrganizationLicenseConstants.LimitCollectionCreationDeletion),
                 (entity.LimitCollectionCreation || entity.LimitCollectionDeletion).ToString()),
             new(nameof(OrganizationLicenseConstants.AllowAdminAccessToAllCollectionItems), entity.AllowAdminAccessToAllCollectionItems.ToString()),
-            new(nameof(OrganizationLicenseConstants.LimitItemDeletion), entity.LimitItemDeletion.ToString()),
             new(nameof(OrganizationLicenseConstants.Issued), DateTime.UtcNow.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Expires), expires.ToString(CultureInfo.InvariantCulture)),
             new(nameof(OrganizationLicenseConstants.Refresh), refresh.ToString(CultureInfo.InvariantCulture)),
