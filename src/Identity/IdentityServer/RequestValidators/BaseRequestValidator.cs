@@ -183,13 +183,10 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // 5. Force legacy users to the web for migration
-        if (FeatureService.IsEnabled(FeatureFlagKeys.BlockLegacyUsers))
+        if (UserService.IsLegacyUser(user) && request.ClientId != "web")
         {
-            if (UserService.IsLegacyUser(user) && request.ClientId != "web")
-            {
-                await FailAuthForLegacyUserAsync(user, context);
-                return;
-            }
+            await FailAuthForLegacyUserAsync(user, context);
+            return;
         }
 
         await BuildSuccessResultAsync(user, context, validatorContext.Device, returnRememberMeToken);
