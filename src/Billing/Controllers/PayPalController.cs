@@ -47,8 +47,8 @@ public class PayPalController : Controller
     [HttpPost("ipn")]
     public async Task<IActionResult> PostIpn()
     {
-        var key = HttpContext.Request.Query.ContainsKey("key")
-            ? HttpContext.Request.Query["key"].ToString()
+        var key = HttpContext.Request.Query.TryGetValue("key", out var keyValue)
+            ? keyValue.ToString()
             : null;
 
         if (string.IsNullOrEmpty(key))
