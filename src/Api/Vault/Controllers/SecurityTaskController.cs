@@ -1,10 +1,12 @@
-﻿using Bit.Api.Models.Response;
+using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +25,8 @@ public class SecurityTaskController : Controller
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
     private readonly IGetSecurityTasksNotificationDetailsQuery _getSecurityTasksNotificationDetailsQuery;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IMailService _mailService;
 
 
     public SecurityTaskController(
@@ -31,7 +35,9 @@ public class SecurityTaskController : Controller
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
         ICreateManyTasksCommand createManyTasksCommand,
-        IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery)
+        IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
+        IOrganizationRepository organizationRepository,
+        IMailService mailService)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
@@ -39,6 +45,8 @@ public class SecurityTaskController : Controller
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
         _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
+        _organizationRepository = organizationRepository;
+        _mailService = mailService;
     }
 
     /// <summary>
@@ -91,7 +99,11 @@ public class SecurityTaskController : Controller
         [FromBody] BulkCreateSecurityTasksRequestModel model)
     {
         var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
+
         var userTaskCount = await _getSecurityTasksNotificationDetailsQuery.GetNotificationDetailsByManyIds(orgId, securityTasks);
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
+
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
     }
