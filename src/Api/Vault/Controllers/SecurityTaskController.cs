@@ -103,6 +103,13 @@ public class SecurityTaskController : Controller
         var userTaskCount = await _getSecurityTasksNotificationDetailsQuery.GetNotificationDetailsByManyIds(orgId, securityTasks);
         var organization = await _organizationRepository.GetByIdAsync(orgId);
         await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
+        foreach (var task in userTaskCount)
+        {
+            await _pushService.PushSyncSecurityTaskCreateAsync(task.UserId);
+        }
+
+        var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
+        return new ListResponseModel<SecurityTasksResponseModel>(response);
 
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
