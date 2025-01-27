@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Bit.Core.Enums;
@@ -181,7 +182,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, string templateBody,
+    private KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, [StringSyntax(StringSyntaxAttribute.Json)] string templateBody,
         string userId, string identifier)
     {
         var fullTemplateId = $"template:{templateId}";
