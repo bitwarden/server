@@ -1,0 +1,33 @@
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
+
+namespace Bit.Core.KeyManagement.Models.Data;
+
+public class MasterPasswordUnlockData
+{
+    public KdfType KdfType { get; set; }
+    public int KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
+
+    public string Email { get; set; }
+    public string MasterKeyRemoteAuthenticationHash { get; set; }
+    public string MasterKeyEncryptedUserKey { get; set; }
+    public string MasterPasswordHint { get; set; }
+
+    public bool ValidateForUser(User user)
+    {
+        if (KdfType != user.Kdf || KdfMemory != user.KdfMemory || KdfParallelism != user.KdfParallelism || KdfIterations != user.KdfIterations)
+        {
+            return false;
+        }
+        else if (Email != user.Email)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
+        }
+    }
+}

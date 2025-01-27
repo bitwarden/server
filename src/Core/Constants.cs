@@ -164,6 +164,7 @@ public static class FeatureFlagKeys
     public const string Argon2Default = "argon2-default";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string UserkeyRotationV2 = "userkey-rotation-v2";
     public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
     public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
 
