@@ -5,7 +5,7 @@ namespace Bit.Api.KeyManagement.Models.Request.Accounts;
 public class RotateUserAccountKeysAndDataRequestModel
 {
     [Required]
-    public string OldMasterkeyAuthenticationHash { get; set; }
+    public string OldMasterKeyAuthenticationHash { get; set; }
     [Required]
     public UnlockDataRequestModel AccountUnlockData { get; set; }
     [Required]

@@ -101,7 +101,7 @@ public class AccountsKeyManagementController : Controller
 
         var dataModel = new RotateUserAccountKeysData
         {
-            OldMasterkeyAuthenticationHash = model.OldMasterkeyAuthenticationHash,
+            OldMasterKeyAuthenticationHash = model.OldMasterKeyAuthenticationHash,
 
             UserKeyEncryptedAccountPrivateKey = model.AccountKeys.UserKeyEncryptedAccountPrivateKey,
             AccountPublicKey = model.AccountKeys.AccountPublicKey,
@@ -114,7 +114,6 @@ public class AccountsKeyManagementController : Controller
             Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
-
         };
 
         var result = await _rotateUserAccountKeysCommand.RotateUserAccountKeysAsync(user, dataModel);

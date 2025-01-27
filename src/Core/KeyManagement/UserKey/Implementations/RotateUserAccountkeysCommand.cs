@@ -66,7 +66,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
             throw new ArgumentNullException(nameof(user));
         }
 
-        if (!await _userService.CheckPasswordAsync(user, model.OldMasterkeyAuthenticationHash))
+        if (!await _userService.CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash))
         {
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
