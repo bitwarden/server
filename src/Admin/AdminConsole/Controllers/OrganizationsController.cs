@@ -5,6 +5,7 @@ using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
@@ -56,7 +57,7 @@ public class OrganizationsController : Controller
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
     private readonly IProviderBillingService _providerBillingService;
-    private readonly IFeatureService _featureService;
+    private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
     private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
@@ -84,7 +85,8 @@ public class OrganizationsController : Controller
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
         IProviderBillingService providerBillingService,
-        IFeatureService featureService, IPricingClient pricingClient)
+        IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
+        IPricingClient pricingClient)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -110,7 +112,7 @@ public class OrganizationsController : Controller
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
         _providerBillingService = providerBillingService;
-        _featureService = featureService;
+        _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
         _pricingClient = pricingClient;
     }
 
@@ -326,7 +328,7 @@ public class OrganizationsController : Controller
                 var organization = await _organizationRepository.GetByIdAsync(id);
                 if (organization != null)
                 {
-                    await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+                    await _organizationInitiateDeleteCommand.InitiateDeleteAsync(organization, model.AdminEmail);
                     TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
                 }
             }
