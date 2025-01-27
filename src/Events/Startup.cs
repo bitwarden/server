@@ -93,6 +93,7 @@ public class Startup
 
             if (CoreHelpers.SettingHasValue(globalSettings.RabbitMqHttpPostUrl))
             {
+                services.AddHttpClient(RabbitMqEventHttpPostListener.HttpClientName);
                 services.AddHostedService<Core.Services.RabbitMqEventHttpPostListener>();
             }
         }
