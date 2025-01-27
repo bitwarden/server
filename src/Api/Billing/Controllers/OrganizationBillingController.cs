@@ -282,7 +282,7 @@ public class OrganizationBillingController(
         var plan = StaticStore.GetPlan(model.PlanType);
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
-        await organizationBillingService.Finalize(sale);
+        await organizationBillingService.Finalize(sale, true);
 
         return TypedResults.Ok();
     }
