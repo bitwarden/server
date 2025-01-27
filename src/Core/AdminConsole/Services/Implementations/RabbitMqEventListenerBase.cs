@@ -1,5 +1,4 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Hosting;
