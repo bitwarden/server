@@ -11,10 +11,4 @@ public class TaxInfo
     public string BillingAddressState { get; set; }
     public string BillingAddressPostalCode { get; set; }
     public string BillingAddressCountry { get; set; } = "US";
-
-    public bool HasTaxId
-    {
-        get => !string.IsNullOrWhiteSpace(TaxIdNumber) &&
-            !string.IsNullOrWhiteSpace(TaxIdType);
-    }
 }
