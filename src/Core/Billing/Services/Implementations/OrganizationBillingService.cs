@@ -31,7 +31,7 @@ public class OrganizationBillingService(
     ISubscriberService subscriberService,
     ITaxService taxService) : IOrganizationBillingService
 {
-    public async Task Finalize(OrganizationSale sale, bool isSubscriptionRestarted = false)
+    public async Task Finalize(OrganizationSale sale)
     {
         var (organization, customerSetup, subscriptionSetup) = sale;
 
@@ -39,7 +39,7 @@ public class OrganizationBillingService(
             ? await CreateCustomerAsync(organization, customerSetup)
             : await subscriberService.GetCustomerOrThrow(organization, new CustomerGetOptions { Expand = ["tax"] });
 
-        var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup, isSubscriptionRestarted);
+        var subscription = await CreateSubscriptionAsync(organization.Id, customer, subscriptionSetup);
 
         if (subscription.Status is StripeConstants.SubscriptionStatus.Trialing or StripeConstants.SubscriptionStatus.Active)
         {
@@ -297,8 +297,7 @@ public class OrganizationBillingService(
     private async Task<Subscription> CreateSubscriptionAsync(
         Guid organizationId,
         Customer customer,
-        SubscriptionSetup subscriptionSetup,
-        bool isSubscriptionRestarted)
+        SubscriptionSetup subscriptionSetup)
     {
         var plan = subscriptionSetup.Plan;
 
@@ -371,7 +370,7 @@ public class OrganizationBillingService(
                 ["organizationId"] = organizationId.ToString()
             },
             OffSession = true,
-            TrialPeriodDays = isSubscriptionRestarted ? 0 : plan.TrialPeriodDays
+            TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);

@@ -24,7 +24,7 @@ public interface IOrganizationBillingService
     /// await organizationBillingService.Finalize(sale);
     /// </code>
     /// </example>
-    Task Finalize(OrganizationSale sale, bool isSubscriptionRestarted = false);
+    Task Finalize(OrganizationSale sale);
 
     /// <summary>
     /// Retrieve metadata about the organization represented bsy the provided <paramref name="organizationId"/>.
