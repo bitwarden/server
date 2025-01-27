@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 
@@ -18,6 +19,8 @@ public class SsoRequirement
                 .ExcludeProviders()
                 // TODO: confirm minStatus - maybe confirmed?
                 .ExcludeRevokedAndInvitedUsers()
-                .Any(up => !up.IsAdminType() || globalSettings.Sso.EnforceSsoPolicyForAllUsers)
+                .Any(up =>
+                    up.OrganizationUserType is not OrganizationUserType.Owner and not OrganizationUserType.Admin ||
+                    globalSettings.Sso.EnforceSsoPolicyForAllUsers)
         };
 }
