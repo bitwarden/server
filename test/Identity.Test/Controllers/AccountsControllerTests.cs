@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿using System.Reflection;
+using System.Text;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
@@ -11,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -42,6 +45,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly GlobalSettings _globalSettings;
 
 
     public AccountsControllerTests()
@@ -57,6 +61,7 @@ public class AccountsControllerTests : IDisposable
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
+        _globalSettings = Substitute.For<GlobalSettings>();
 
         _sut = new AccountsController(
             _currentContext,
@@ -69,7 +74,8 @@ public class AccountsControllerTests : IDisposable
             _sendVerificationEmailForRegistrationCommand,
             _referenceEventService,
             _featureService,
-            _registrationEmailVerificationTokenDataFactory
+            _registrationEmailVerificationTokenDataFactory,
+            _globalSettings
         );
     }
 
@@ -95,14 +101,47 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
+    public async Task PostPrelogin_WhenUserDoesNotExistAndNoDefaultKdfHmacKeySet_ShouldDefaultToPBKDF()
     {
+        SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
         Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostPrelogin_WhenUserDoesNotExistAndDefaultKdfHmacKeyIsSet_ShouldComputeHmacAndReturnExpectedKdf(string email)
+    {
+        // Arrange:
+        var defaultKey = Encoding.UTF8.GetBytes("my-secret-key");
+        SetDefaultKdfHmacKey(defaultKey);
+
+        _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+
+        var fieldInfo = typeof(AccountsController).GetField("_defaultKdfResults", BindingFlags.NonPublic | BindingFlags.Static);
+        if (fieldInfo == null)
+            throw new InvalidOperationException("Field '_defaultKdfResults' not found.");
+
+        var defaultKdfResults = (List<UserKdfInformation>)fieldInfo.GetValue(null)!;
+
+        var expectedIndex = GetExpectedKdfIndex(email, defaultKey, defaultKdfResults);
+        var expectedKdf = defaultKdfResults[expectedIndex];
+
+        // Act
+        var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = email });
+
+        // Assert: Ensure the returned KDF matches the expected one from the computed hash
+        Assert.Equal(expectedKdf.Kdf, response.Kdf);
+        Assert.Equal(expectedKdf.KdfIterations, response.KdfIterations);
+        if (expectedKdf.Kdf == KdfType.Argon2id)
+        {
+            Assert.Equal(expectedKdf.KdfMemory, response.KdfMemory);
+            Assert.Equal(expectedKdf.KdfParallelism, response.KdfParallelism);
+        }
     }
 
     [Fact]
@@ -484,6 +523,28 @@ public class AccountsControllerTests : IDisposable
         ));
     }
 
+    private void SetDefaultKdfHmacKey(byte[]? newKey)
+    {
+        var fieldInfo = typeof(AccountsController).GetField("_defaultKdfHmacKey", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (fieldInfo == null)
+        {
+            throw new InvalidOperationException("Field '_defaultKdfHmacKey' not found.");
+        }
 
+        fieldInfo.SetValue(_sut, newKey);
+    }
 
+    private int GetExpectedKdfIndex(string email, byte[] defaultKey, List<UserKdfInformation> defaultKdfResults)
+    {
+        // Compute the HMAC hash of the email
+        var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+        using var hmac = new System.Security.Cryptography.HMACSHA256(defaultKey);
+        var hmacHash = hmac.ComputeHash(hmacMessage);
+
+        // Convert the hash to a number and calculate the index
+        var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
+        var hashFirst8Bytes = hashHex.Substring(0, 16);
+        var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+        return (int)(Math.Abs(hashNumber) % defaultKdfResults.Count);
+    }
 }

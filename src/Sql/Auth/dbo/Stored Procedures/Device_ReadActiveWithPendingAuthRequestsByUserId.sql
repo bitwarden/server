@@ -10,18 +10,21 @@ BEGIN
         AR.Id as AuthRequestId,
         AR.CreationDate as AuthRequestCreationDate
     FROM dbo.DeviceView D
-             LEFT JOIN (
-        SELECT TOP 1 -- Take only the top record sorted by auth request creation date
-                     Id,
-                     CreationDate,
-                     RequestDeviceIdentifier
+    LEFT JOIN (
+        SELECT 
+            Id,
+            CreationDate,
+            RequestDeviceIdentifier,
+            Approved,
+            ROW_NUMBER() OVER (PARTITION BY RequestDeviceIdentifier ORDER BY CreationDate DESC) as rn
         FROM dbo.AuthRequestView
-        WHERE Type IN (0, 1) -- Include only AuthenticateAndUnlock and Unlock types, excluding Admin Approval (type 2)
-          AND CreationDate >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE()) -- Ensure the request hasn't expired
-          AND Approved IS NULL -- Include only requests that haven't been acknowledged or approved
-        ORDER BY CreationDate DESC
-    ) AR ON D.Identifier = AR.RequestDeviceIdentifier
+        WHERE Type IN (0, 1)  -- AuthenticateAndUnlock and Unlock types only
+            AND CreationDate >= DATEADD(MINUTE, -@ExpirationMinutes, GETUTCDATE()) -- Ensure the request hasn't expired
+            AND UserId = @UserId --  Requests for this user only
+    ) AR -- This join will get the most recent request per device, regardless of approval status 
+    ON D.Identifier = AR.RequestDeviceIdentifier AND AR.rn = 1 AND AR.Approved IS NULL  -- Get only the most recent unapproved request per device
     WHERE
-        D.UserId = @UserId
+        D.UserId = @UserId -- Include only devices for this user
       AND D.Active = 1; -- Include only active devices
 END;
+

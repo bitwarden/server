@@ -1,0 +1,18 @@
+{
+  "recommendations": [
+    "nick-rudenko.back-n-forth",
+    "streetsidesoftware.code-spell-checker",
+    "MS-vsliveshare.vsliveshare",
+
+    "mhutchie.git-graph",
+    "donjayamanne.githistory",
+    "eamodio.gitlens",
+
+    "jakebathman.mysql-syntax",
+    "ckolkman.vscode-postgres",
+
+    "ms-dotnettools.csharp",
+    "formulahendry.dotnet-test-explorer",
+    "adrianwilczynski.user-secrets"
+  ]
+}

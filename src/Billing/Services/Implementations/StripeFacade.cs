@@ -10,7 +10,6 @@ public class StripeFacade : IStripeFacade
     private readonly InvoiceService _invoiceService = new();
     private readonly PaymentMethodService _paymentMethodService = new();
     private readonly SubscriptionService _subscriptionService = new();
-    private readonly TaxRateService _taxRateService = new();
     private readonly DiscountService _discountService = new();
 
     public async Task<Charge> GetCharge(
@@ -98,13 +97,6 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _subscriptionService.CancelAsync(subscriptionId, options, requestOptions, cancellationToken);
-
-    public async Task<TaxRate> GetTaxRate(
-        string taxRateId,
-        TaxRateGetOptions options = null,
-        RequestOptions requestOptions = null,
-        CancellationToken cancellationToken = default) =>
-        await _taxRateService.GetAsync(taxRateId, options, requestOptions, cancellationToken);
 
     public async Task<Discount> DeleteCustomerDiscount(
         string customerId,

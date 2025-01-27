@@ -80,12 +80,6 @@ public interface IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
 
-    Task<TaxRate> GetTaxRate(
-        string taxRateId,
-        TaxRateGetOptions options = null,
-        RequestOptions requestOptions = null,
-        CancellationToken cancellationToken = default);
-
     Task<Discount> DeleteCustomerDiscount(
         string customerId,
         RequestOptions requestOptions = null,

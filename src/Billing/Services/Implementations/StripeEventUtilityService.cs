@@ -296,7 +296,7 @@ public class StripeEventUtilityService : IStripeEventUtilityService
             btObjIdField = "provider_id";
             btObjId = providerId.Value;
         }
-        var btInvoiceAmount = invoice.AmountDue / 100M;
+        var btInvoiceAmount = Math.Round(invoice.AmountDue / 100M, 2);
 
         var existingTransactions = organizationId.HasValue
             ? await _transactionRepository.GetManyByOrganizationIdAsync(organizationId.Value)
@@ -318,26 +318,34 @@ public class StripeEventUtilityService : IStripeEventUtilityService
         Result<Braintree.Transaction> transactionResult;
         try
         {
-            transactionResult = await _btGateway.Transaction.SaleAsync(
-                new Braintree.TransactionRequest
+            var transactionRequest = new Braintree.TransactionRequest
+            {
+                Amount = btInvoiceAmount,
+                CustomerId = customer.Metadata["btCustomerId"],
+                Options = new Braintree.TransactionOptionsRequest
                 {
-                    Amount = btInvoiceAmount,
-                    CustomerId = customer.Metadata["btCustomerId"],
-                    Options = new Braintree.TransactionOptionsRequest
+                    SubmitForSettlement = true,
+                    PayPal = new Braintree.TransactionOptionsPayPalRequest
                     {
-                        SubmitForSettlement = true,
-                        PayPal = new Braintree.TransactionOptionsPayPalRequest
-                        {
-                            CustomField =
-                                $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
-                        }
-                    },
-                    CustomFields = new Dictionary<string, string>
-                    {
-                        [btObjIdField] = btObjId.ToString(),
-                        ["region"] = _globalSettings.BaseServiceUri.CloudRegion
+                        CustomField =
+                            $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
                     }
-                });
+                },
+                CustomFields = new Dictionary<string, string>
+                {
+                    [btObjIdField] = btObjId.ToString(),
+                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
+                }
+            };
+
+            _logger.LogInformation("Creating Braintree transaction with Amount: {Amount}, CustomerId: {CustomerId}, " +
+                "CustomField: {CustomField}, CustomFields: {@CustomFields}",
+                transactionRequest.Amount,
+                transactionRequest.CustomerId,
+                transactionRequest.Options.PayPal.CustomField,
+                transactionRequest.CustomFields);
+
+            transactionResult = await _btGateway.Transaction.SaleAsync(transactionRequest);
         }
         catch (NotFoundException e)
         {
@@ -345,9 +353,19 @@ public class StripeEventUtilityService : IStripeEventUtilityService
                 "Attempted to make a payment with Braintree, but customer did not exist for the given btCustomerId present on the Stripe metadata");
             throw;
         }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Exception occurred while trying to pay invoice with Braintree");
+            throw;
+        }
 
         if (!transactionResult.IsSuccess())
         {
+            _logger.LogWarning("Braintree transaction failed. Error: {ErrorMessage}, Transaction Status: {Status}, Validation Errors: {ValidationErrors}",
+                transactionResult.Message,
+                transactionResult.Target?.Status,
+                string.Join(", ", transactionResult.Errors.DeepAll().Select(e => $"Code: {e.Code}, Message: {e.Message}, Attribute: {e.Attribute}")));
+
             if (invoice.AttemptCount < 4)
             {
                 await _mailService.SendPaymentFailedAsync(customer.Email, btInvoiceAmount, true);

@@ -41,7 +41,7 @@ public class PoliciesController : Controller
     /// </remarks>
     /// <param name="type">The type of policy to be retrieved.</param>
     [HttpGet("{type}")]
-    [ProducesResponseType(typeof(GroupResponseModel), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(PolicyResponseModel), (int)HttpStatusCode.OK)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(PolicyType type)
     {

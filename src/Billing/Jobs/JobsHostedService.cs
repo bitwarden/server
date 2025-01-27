@@ -32,5 +32,6 @@ public class JobsHostedService : BaseJobsHostedService
     public static void AddJobsServices(IServiceCollection services)
     {
         services.AddTransient<AliveJob>();
+        services.AddTransient<SubscriptionCancellationJob>();
     }
 }

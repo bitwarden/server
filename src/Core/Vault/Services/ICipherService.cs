@@ -1,5 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Vault.Entities;
+﻿using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Vault.Services;
@@ -28,10 +27,6 @@ public interface ICipherService
     Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> ciphers, Guid organizationId,
         IEnumerable<Guid> collectionIds, Guid sharingUserId);
     Task SaveCollectionsAsync(Cipher cipher, IEnumerable<Guid> collectionIds, Guid savingUserId, bool orgAdmin);
-    Task ImportCiphersAsync(List<Folder> folders, List<CipherDetails> ciphers,
-        IEnumerable<KeyValuePair<int, int>> folderRelationships);
-    Task ImportCiphersAsync(List<Collection> collections, List<CipherDetails> ciphers,
-        IEnumerable<KeyValuePair<int, int>> collectionRelationships, Guid importingUserId);
     Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
     Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
@@ -39,5 +34,4 @@ public interface ICipherService
     Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId);
     Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);
-    Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationCiphers(Guid userId, Guid organizationId);
 }

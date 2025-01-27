@@ -104,6 +104,12 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
 
     /// <summary>
+    /// If set to true, members can only delete items when they have a Can Manage permission over the collection.
+    /// If set to false, members can delete items when they have a Can Manage OR Can Edit permission over the collection.
+    /// </summary>
+    public bool LimitItemDeletion { get; set; }
+
+    /// <summary>
     /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
     /// </summary>
     public bool UseRiskInsights { get; set; }

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -175,34 +174,5 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogOrganizationUserEventAsync<OrganizationUser>(default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsAsync_WithViewAllCollectionsTrue_ReturnsAllOrganizationCollections(
-        Collection collection, Guid organizationId, Guid userId, SutProvider<CollectionService> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organizationId)
-            .Returns(new List<Collection> { collection });
-        sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organizationId).Returns(true);
-
-        var result = await sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId);
-
-        Assert.Single(result);
-        Assert.Equal(collection, result.First());
-
-        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task GetOrganizationCollectionsAsync_WithViewAssignedCollectionsFalse_ThrowsBadRequestException(
-        Guid organizationId, SutProvider<CollectionService> sutProvider)
-    {
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId));
-
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
     }
 }

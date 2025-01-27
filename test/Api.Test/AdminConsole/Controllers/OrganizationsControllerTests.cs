@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
@@ -52,6 +53,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
+    private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
     private readonly OrganizationsController _sut;
 
     public OrganizationsControllerTests()
@@ -75,6 +77,7 @@ public class OrganizationsControllerTests : IDisposable
         _orgDeleteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgDeleteTokenable>>();
         _removeOrganizationUserCommand = Substitute.For<IRemoveOrganizationUserCommand>();
         _cloudOrganizationSignUpCommand = Substitute.For<ICloudOrganizationSignUpCommand>();
+        _organizationDeleteCommand = Substitute.For<IOrganizationDeleteCommand>();
 
         _sut = new OrganizationsController(
             _organizationRepository,
@@ -95,7 +98,8 @@ public class OrganizationsControllerTests : IDisposable
             _providerBillingService,
             _orgDeleteTokenDataFactory,
             _removeOrganizationUserCommand,
-            _cloudOrganizationSignUpCommand);
+            _cloudOrganizationSignUpCommand,
+            _organizationDeleteCommand);
     }
 
     public void Dispose()
@@ -226,6 +230,6 @@ public class OrganizationsControllerTests : IDisposable
         await _providerBillingService.Received(1)
             .ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
 
-        await _organizationService.Received(1).DeleteAsync(organization);
+        await _organizationDeleteCommand.Received(1).DeleteAsync(organization);
     }
 }

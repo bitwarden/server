@@ -43,7 +43,9 @@ public interface ICurrentContext
     Task<bool> AccessEventLogs(Guid orgId);
     Task<bool> AccessImportExport(Guid orgId);
     Task<bool> AccessReports(Guid orgId);
+    [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> EditAnyCollection(Guid orgId);
+    [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> ViewAllCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);

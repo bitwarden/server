@@ -17,6 +17,7 @@ public enum Permission
     User_Billing_View,
     User_Billing_Edit,
     User_Billing_LaunchGateway,
+    User_NewDeviceException_Edit,
 
     Org_List_View,
     Org_OrgInformation_View,
@@ -24,6 +25,7 @@ public enum Permission
     Org_CheckEnabledBox,
     Org_BusinessInformation_View,
     Org_InitiateTrial,
+    Org_RequestDelete,
     Org_Delete,
     Org_BillingInformation_View,
     Org_BillingInformation_DownloadInvoice,

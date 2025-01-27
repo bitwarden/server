@@ -12,20 +12,20 @@
     {
       "groupName": "dockerfile minor",
       "matchManagers": ["dockerfile"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchUpdateTypes": ["minor"]
     },
     {
       "groupName": "docker-compose minor",
       "matchManagers": ["docker-compose"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchUpdateTypes": ["minor"]
     },
     {
-      "groupName": "gh minor",
+      "groupName": "github-action minor",
       "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch"]
+      "matchUpdateTypes": ["minor"]
     },
     {
-      "matchManagers": ["github-actions", "dockerfile", "docker-compose"],
+      "matchManagers": ["dockerfile", "docker-compose"],
       "commitMessagePrefix": "[deps] BRE:"
     },
     {
