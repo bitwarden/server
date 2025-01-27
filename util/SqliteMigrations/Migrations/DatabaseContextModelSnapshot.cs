@@ -89,6 +89,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("LimitItemDeletion")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
 

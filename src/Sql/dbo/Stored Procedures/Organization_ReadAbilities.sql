@@ -24,7 +24,8 @@ BEGIN
         [LimitCollectionCreation],
         [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
-        [UseRiskInsights]
+        [UseRiskInsights],
+        [LimitItemDeletion]
     FROM
         [dbo].[Organization]
 END

@@ -101,6 +101,12 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
+    /* Admin Console Team */
+    public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
+    public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
+    public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
+    public const string IntegrationPage = "pm-14505-admin-console-integration-page";
+
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string ItemShare = "item-share";
@@ -117,7 +123,6 @@ public static class FeatureFlagKeys
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
-    public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
     public const string SSHAgent = "ssh-agent";
@@ -129,23 +134,19 @@ public static class FeatureFlagKeys
     public const string DelayFido2PageScriptInitWithinMv2 = "delay-fido2-page-script-init-within-mv2";
     public const string NativeCarouselFlow = "native-carousel-flow";
     public const string NativeCreateAccountFlow = "native-create-account-flow";
-    public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
     public const string NotificationRefresh = "notification-refresh";
-    public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
     public const string StorageReseedRefactor = "storage-reseed-refactor";
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
-    public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
-    public const string IntegrationPage = "pm-14505-admin-console-integration-page";
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
@@ -153,15 +154,17 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
-    public const string PM12443RemovePagingLogic = "pm-12443-remove-paging-logic";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
     public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
+    public const string Argon2Default = "argon2-default";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
+    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
+    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
 
     public static List<string> GetAllKeys()
     {

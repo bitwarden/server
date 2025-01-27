@@ -2,7 +2,6 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
-using Bit.Core;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -139,11 +138,6 @@ public class OrganizationBillingController(
     [HttpGet("payment-method")]
     public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -168,11 +162,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -199,11 +188,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -229,11 +213,6 @@ public class OrganizationBillingController(
     [HttpGet("tax-information")]
     public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -258,11 +237,6 @@ public class OrganizationBillingController(
         [FromRoute] Guid organizationId,
         [FromBody] TaxInformationRequestBody requestBody)
     {
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -292,11 +266,6 @@ public class OrganizationBillingController(
             throw new UnauthorizedAccessException();
         }
 
-        if (!featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-        {
-            return Error.NotFound();
-        }
-
         if (!await currentContext.EditPaymentMethods(organizationId))
         {
             return Error.Unauthorized();
@@ -310,6 +279,9 @@ public class OrganizationBillingController(
         }
         var organizationSignup = model.ToOrganizationSignup(user);
         var sale = OrganizationSale.From(organization, organizationSignup);
+        var plan = StaticStore.GetPlan(model.PlanType);
+        sale.Organization.PlanType = plan.Type;
+        sale.Organization.Plan = plan.Name;
         await organizationBillingService.Finalize(sale);
 
         return TypedResults.Ok();
