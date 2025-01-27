@@ -69,7 +69,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
-
     public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
