@@ -73,7 +73,7 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
 
             await connection.ExecuteAsync(
                 $"[{Schema}].[{Table}_CreateMany]",
-                new {SecurityTasksJson = tasksJson},
+                new { SecurityTasksJson = tasksJson },
                 commandType: CommandType.StoredProcedure);
         }
 
