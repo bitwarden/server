@@ -47,6 +47,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         ProductTierType = organization.PlanType.GetProductTier();
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UseRiskInsights = organization.UseRiskInsights;
     }
