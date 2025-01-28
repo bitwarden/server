@@ -6,37 +6,31 @@ namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
 public class KeysRequestModel
 {
+    [Required]
     public string PublicKey { get; set; }
     [Required]
     public string EncryptedPrivateKey { get; set; }
 
     public User ToUser(User existingUser)
     {
-        if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && string.IsNullOrWhiteSpace(existingUser.PrivateKey) && !string.IsNullOrWhiteSpace(PublicKey) && !string.IsNullOrWhiteSpace(EncryptedPrivateKey))
+        if (string.IsNullOrWhiteSpace(PublicKey) || string.IsNullOrWhiteSpace(EncryptedPrivateKey))
+        {
+            throw new InvalidOperationException("Public and private keys are required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(existingUser.PublicKey) && string.IsNullOrWhiteSpace(existingUser.PrivateKey))
         {
             existingUser.PublicKey = PublicKey;
             existingUser.PrivateKey = EncryptedPrivateKey;
+            return existingUser;
         }
-
-        if (!string.IsNullOrWhiteSpace(PublicKey) || !string.IsNullOrWhiteSpace(EncryptedPrivateKey))
+        else if (PublicKey == existingUser.PublicKey && CoreHelpers.FixedTimeEquals(EncryptedPrivateKey, existingUser.PrivateKey))
         {
-            if (string.IsNullOrWhiteSpace(PublicKey))
-            {
-                throw new InvalidOperationException("Must set both public and private key(s) at the same time, received only private key.");
-            }
-            else if (string.IsNullOrWhiteSpace(EncryptedPrivateKey))
-            {
-                throw new InvalidOperationException("Must set both public and private key(s) at the same time, received only public key.");
-            }
-            else
-            {
-                if (!(PublicKey == existingUser.PublicKey && CoreHelpers.FixedTimeEquals(EncryptedPrivateKey, existingUser.PrivateKey)))
-                {
-                    throw new InvalidOperationException("Cannot replace existing key(s) with new key(s).");
-                }
-            }
+            return existingUser;
         }
-
-        return existingUser;
+        else
+        {
+            throw new InvalidOperationException("Cannot replace existing key(s) with new key(s).");
+        }
     }
 }
