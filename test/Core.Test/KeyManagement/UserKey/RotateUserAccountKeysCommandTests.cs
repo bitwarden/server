@@ -112,6 +112,4 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.Equal(IdentityResult.Success, result);
     }
-
-
 }
