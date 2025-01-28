@@ -146,6 +146,7 @@ public class SelfHostedOrganizationDetails : Organization
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
             LimitCollectionCreation = LimitCollectionCreation,
             LimitCollectionDeletion = LimitCollectionDeletion,
+            LimitItemDeletion = LimitItemDeletion,
             AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems,
             Status = Status
         };
