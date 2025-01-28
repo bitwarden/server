@@ -4,6 +4,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -113,13 +114,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var dbContext = GetDatabaseContext(scope);
 
+        var disallowedPlanTypes = new List<PlanType>
+        {
+            PlanType.Free,
+            PlanType.Custom,
+            PlanType.FamiliesAnnually2019,
+            PlanType.FamiliesAnnually
+        };
+
         var query =
             from o in dbContext.Organizations
-            where
-                ((o.PlanType >= PlanType.TeamsMonthly2019 && o.PlanType <= PlanType.EnterpriseAnnually2019) ||
-                 (o.PlanType >= PlanType.TeamsMonthly2020 && o.PlanType <= PlanType.EnterpriseAnnually)) &&
-                !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
-                (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+            where o.PlanType.NotIn(disallowedPlanTypes) &&
+                  !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                  (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
 
         if (string.IsNullOrWhiteSpace(ownerEmail))
