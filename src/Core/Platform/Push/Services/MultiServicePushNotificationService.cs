@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -131,20 +132,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId));
-        return Task.FromResult(0);
-    }
-
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId));
-        return Task.FromResult(0);
-    }
-
     public Task PushSyncOrganizationStatusAsync(Organization organization)
     {
         PushToServices((s) => s.PushSyncOrganizationStatusAsync(organization));
@@ -155,6 +142,26 @@ public class MultiServicePushNotificationService : IPushNotificationService
     {
         PushToServices(s => s.PushSyncOrganizationCollectionManagementSettingsAsync(organization));
         return Task.CompletedTask;
+    }
+
+    public Task PushSyncNotificationAsync(Notification notification)
+    {
+        PushToServices((s) => s.PushSyncNotificationAsync(notification));
+        return Task.CompletedTask;
+    }
+
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null)
+    {
+        PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId, clientType));
+        return Task.FromResult(0);
+    }
+
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null)
+    {
+        PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId, clientType));
+        return Task.FromResult(0);
     }
 
     private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
