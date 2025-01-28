@@ -1,10 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
 
-public class SendRequirement
+public class SendRequirement : IRequirement
 {
     public bool DisableSend { get; init; }
     public bool DisableHideEmail { get; init; }
