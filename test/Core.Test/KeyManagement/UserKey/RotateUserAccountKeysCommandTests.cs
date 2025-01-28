@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.KeyManagement.UserFeatures.UserKey;
+namespace Bit.Core.Test.KeyManagement.UserKey;
 
 [SutProviderCustomize]
 public class RotateUserAccountKeysCommandTests
@@ -64,6 +64,30 @@ public class RotateUserAccountKeysCommandTests
         await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
     }
 
+
+    [Theory, BitAutoData]
+    public async Task RejectsPublicKeyChange(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
+        RotateUserAccountKeysData model)
+    {
+        user.PublicKey = "old-public";
+        user.Kdf = Enums.KdfType.Argon2id;
+        user.KdfIterations = 3;
+        user.KdfMemory = 64;
+        user.KdfParallelism = 4;
+
+        model.AccountPublicKey = "new-public";
+        model.MasterPasswordUnlockData.Email = user.Email;
+        model.MasterPasswordUnlockData.KdfType = Enums.KdfType.Argon2id;
+        model.MasterPasswordUnlockData.KdfIterations = 3;
+        model.MasterPasswordUnlockData.KdfMemory = 64;
+        model.MasterPasswordUnlockData.KdfParallelism = 4;
+
+        sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(user, model));
+    }
+
     [Theory, BitAutoData]
     public async Task RotatesCorrectly(SutProvider<RotateUserAccountKeysCommand> sutProvider, User user,
         RotateUserAccountKeysData model)
@@ -86,5 +110,6 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.Equal(IdentityResult.Success, result);
     }
+
 
 }
