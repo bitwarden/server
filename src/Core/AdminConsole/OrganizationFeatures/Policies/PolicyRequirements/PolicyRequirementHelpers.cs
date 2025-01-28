@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 public static class PolicyRequirementHelpers
 {

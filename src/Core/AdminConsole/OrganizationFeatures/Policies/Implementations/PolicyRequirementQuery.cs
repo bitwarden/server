@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
@@ -14,7 +15,7 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
 {
     private readonly IPolicyRepository _policyRepository;
 
-    private readonly Dictionary<Type, Func<IEnumerable<OrganizationUserPolicyDetails>, IRequirement>> _registry = new();
+    private readonly Dictionary<Type, CreateRequirement<IRequirement>> _registry = new();
 
     public PolicyRequirementQuery(IGlobalSettings globalSettings, IPolicyRepository policyRepository)
     {
@@ -30,13 +31,13 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     private Task<IEnumerable<OrganizationUserPolicyDetails>> GetPolicyDetails(Guid userId) =>
         _policyRepository.GetPolicyDetailsByUserId(userId);
 
-    private void Register<T>(Func<IEnumerable<OrganizationUserPolicyDetails>, T> factory) where T : IRequirement
+    private void Register<T>(CreateRequirement<T> factory) where T : IRequirement
     {
         IRequirement Converted(IEnumerable<OrganizationUserPolicyDetails> up) => factory(up);
         _registry.Add(typeof(T), Converted);
     }
 
-    private Func<IEnumerable<OrganizationUserPolicyDetails>, T> GetRequirementFactory<T>() where T : IRequirement
+    private CreateRequirement<T> GetRequirementFactory<T>() where T : IRequirement
     {
         if (!_registry.TryGetValue(typeof(T), out var factory))
         {

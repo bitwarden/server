@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -36,6 +36,7 @@ public class SendService : ISendService
     private readonly IReferenceEventService _referenceEventService;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
 
     public SendService(
@@ -50,7 +51,8 @@ public class SendService : ISendService
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _sendRepository = sendRepository;
         _userRepository = userRepository;
@@ -64,6 +66,7 @@ public class SendService : ISendService
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task SaveSendAsync(Send send)
@@ -291,20 +294,15 @@ public class SendService : ISendService
             return;
         }
 
-        var anyDisableSendPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value,
-            PolicyType.DisableSend);
-        if (anyDisableSendPolicies)
+        var sendRequirement = await _policyRequirementQuery.GetAsync<SendRequirement>(userId.Value);
+        if (sendRequirement.DisableSend)
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
         }
 
-        if (send.HideEmail.GetValueOrDefault())
+        if (send.HideEmail.GetValueOrDefault() && sendRequirement.DisableHideEmail)
         {
-            var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
-            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
-            {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
-            }
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }
     }
 

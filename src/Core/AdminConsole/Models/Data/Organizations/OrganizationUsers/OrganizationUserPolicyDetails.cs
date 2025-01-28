@@ -14,6 +14,7 @@ public class OrganizationUserPolicyDetails
     public PolicyType PolicyType { get; set; }
 
     public bool PolicyEnabled { get; set; }
+    public string PolicyData { get; set; }
 
     public OrganizationUserType OrganizationUserType { get; set; }
 
@@ -22,7 +23,6 @@ public class OrganizationUserPolicyDetails
     public string OrganizationUserPermissionsData { get; set; }
 
     public bool IsProvider { get; set; }
-    private string PolicyData { get; set; }
 
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
     {

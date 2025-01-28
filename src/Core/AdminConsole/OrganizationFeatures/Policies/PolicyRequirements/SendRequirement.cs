@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 public class SendRequirement : IRequirement
 {

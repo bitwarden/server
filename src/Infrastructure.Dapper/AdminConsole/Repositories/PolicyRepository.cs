@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
@@ -53,6 +54,19 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
         {
             var results = await connection.QueryAsync<Policy>(
                 $"[{Schema}].[{Table}_ReadByUserId]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetPolicyDetailsByUserId(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
+                $"[{Schema}].[PolicyDetails_ReadByUserId]",
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 

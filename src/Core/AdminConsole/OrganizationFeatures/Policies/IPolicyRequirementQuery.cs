@@ -1,9 +1,8 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
 public interface IPolicyRequirementQuery
 {
-    Task<SingleOrganizationRequirement> GetSingleOrganizationRequirementAsync(Guid userId);
-    Task<SendRequirement> GetSendRequirementAsync(Guid userId);
+    Task<T> GetAsync<T>(Guid userId) where T : IRequirement;
 }
