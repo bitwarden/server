@@ -248,6 +248,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             {
                 OrganizationId = organization.Id,
                 LimitCollectionCreation = organization.LimitCollectionCreation,
-                LimitCollectionDeletion = organization.LimitCollectionDeletion
+                LimitCollectionDeletion = organization.LimitCollectionDeletion,
+                LimitItemDeletion = organization.LimitItemDeletion
             }, false);
 }
