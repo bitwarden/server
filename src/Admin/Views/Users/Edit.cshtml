@@ -3,6 +3,7 @@
 @inject Bit.Core.Services.IFeatureService FeatureService
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject IWebHostEnvironment HostingEnvironment
+@inject Microsoft.Extensions.Logging.ILogger<Bit.Admin.Controllers.UsersController> Logger
 @model UserEditModel
 @{
     ViewData["Title"] = "User: " + Model.User.Email;
@@ -23,6 +24,10 @@
     var canLaunchGateway = AccessControlService.UserHasPermission(Permission.User_Billing_LaunchGateway);
     var canUpgradePremium = AccessControlService.UserHasPermission(Permission.User_UpgradePremium);
     var canDeleteUser = AccessControlService.UserHasPermission(Permission.User_Delete);
+
+    Logger.LogInformation("Does user have permission to edit new device exception? {value}", AccessControlService.UserHasPermission(Permission.User_NewDeviceException_Edit));
+    Logger.LogInformation("Is new device verification enabled? {value}", GlobalSettings.EnableNewDeviceVerification);
+    Logger.LogInformation("Is new device verification feature enabled? {value}", FeatureService.IsEnabled(Bit.Core.FeatureFlagKeys.NewDeviceVerification));
 }
 
 @section Scripts {
