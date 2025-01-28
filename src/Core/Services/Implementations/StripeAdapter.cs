@@ -9,7 +9,6 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.SubscriptionService _subscriptionService;
     private readonly Stripe.InvoiceService _invoiceService;
     private readonly Stripe.PaymentMethodService _paymentMethodService;
-    private readonly Stripe.TaxRateService _taxRateService;
     private readonly Stripe.TaxIdService _taxIdService;
     private readonly Stripe.ChargeService _chargeService;
     private readonly Stripe.RefundService _refundService;
@@ -27,7 +26,6 @@ public class StripeAdapter : IStripeAdapter
         _subscriptionService = new Stripe.SubscriptionService();
         _invoiceService = new Stripe.InvoiceService();
         _paymentMethodService = new Stripe.PaymentMethodService();
-        _taxRateService = new Stripe.TaxRateService();
         _taxIdService = new Stripe.TaxIdService();
         _chargeService = new Stripe.ChargeService();
         _refundService = new Stripe.RefundService();
@@ -194,16 +192,6 @@ public class StripeAdapter : IStripeAdapter
     public Task<Stripe.Plan> PlanGetAsync(string id, Stripe.PlanGetOptions options = null)
     {
         return _planService.GetAsync(id, options);
-    }
-
-    public Task<Stripe.TaxRate> TaxRateCreateAsync(Stripe.TaxRateCreateOptions options)
-    {
-        return _taxRateService.CreateAsync(options);
-    }
-
-    public Task<Stripe.TaxRate> TaxRateUpdateAsync(string id, Stripe.TaxRateUpdateOptions options)
-    {
-        return _taxRateService.UpdateAsync(id, options);
     }
 
     public Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options)
