@@ -730,8 +730,7 @@ public class AccountsController : Controller
                 BillingAddressCity = model.City,
                 BillingAddressState = model.State,
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-                TaxIdNumber = model.TaxId
+                BillingAddressPostalCode = model.PostalCode
             });
     }
 
