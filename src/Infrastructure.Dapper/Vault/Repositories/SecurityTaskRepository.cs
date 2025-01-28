@@ -62,20 +62,13 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
             task.SetNewId();
         }
 
-        var tasksByType = tasksList.GroupBy(t => t.Type);
+        var tasksJson = JsonSerializer.Serialize(tasksList);
+
         await using var connection = new SqlConnection(ConnectionString);
-
-        foreach (var tasksGroup in tasksByType)
-        {
-            if (!tasksGroup.Any()) continue;
-
-            var tasksJson = JsonSerializer.Serialize(tasksGroup);
-
-            await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_CreateMany]",
-                new { SecurityTasksJson = tasksJson },
-                commandType: CommandType.StoredProcedure);
-        }
+        await connection.ExecuteAsync(
+            $"[{Schema}].[{Table}_CreateMany]",
+            new {SecurityTasksJson = tasksJson},
+            commandType: CommandType.StoredProcedure);
 
         return tasksList;
     }
