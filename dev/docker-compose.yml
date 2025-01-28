@@ -84,6 +84,20 @@ services:
     profiles:
       - idp
 
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq_data
+    profiles:
+      - rabbitmq
+
   reverse-proxy:
     image: nginx:alpine
     container_name: reverse-proxy
@@ -99,3 +113,4 @@ volumes:
   mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:
+  rabbitmq_data:
