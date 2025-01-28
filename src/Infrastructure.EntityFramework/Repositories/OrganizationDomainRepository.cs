@@ -46,27 +46,17 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var domains = await dbContext.OrganizationDomains
-            .Where(x => x.VerifiedDate == null
-                        && x.JobRunCount != 3
-                        && x.NextRunDate.Year == date.Year
-                        && x.NextRunDate.Month == date.Month
-                        && x.NextRunDate.Day == date.Day
-                        && x.NextRunDate.Hour == date.Hour)
-            .AsNoTracking()
+        var start36HoursWindow = date.AddHours(-36);
+        var end36HoursWindow = date;
+
+        var pastDomains = await dbContext.OrganizationDomains
+            .Where(x => x.NextRunDate >= start36HoursWindow
+                       && x.NextRunDate <= end36HoursWindow
+                       && x.VerifiedDate == null
+                       && x.JobRunCount != 3)
             .ToListAsync();
 
-        //Get records that have ignored/failed by the background service
-        var pastDomains = dbContext.OrganizationDomains
-            .AsEnumerable()
-            .Where(x => (date - x.NextRunDate).TotalHours > 36
-                        && x.VerifiedDate == null
-                        && x.JobRunCount != 3)
-            .ToList();
-
-        var results = domains.Union(pastDomains);
-
-        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(results);
+        return Mapper.Map<List<Core.Entities.OrganizationDomain>>(pastDomains);
     }
 
     public async Task<OrganizationDomainSsoDetailsData?> GetOrganizationDomainSsoDetailsAsync(string email)
