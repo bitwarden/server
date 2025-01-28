@@ -8,6 +8,9 @@ namespace Bit.Core.Services;
 public class RabbitMqEventRepositoryListener : RabbitMqEventListenerBase
 {
     private readonly IEventWriteService _eventWriteService;
+    private readonly string _queueName;
+
+    protected override string QueueName => _queueName;
 
     public RabbitMqEventRepositoryListener(
         IEventRepository eventRepository,
@@ -16,9 +19,8 @@ public class RabbitMqEventRepositoryListener : RabbitMqEventListenerBase
         : base(logger, globalSettings)
     {
         _eventWriteService = new RepositoryEventWriteService(eventRepository);
+        _queueName = globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName;
     }
-
-    protected override string QueueName => "events-write-queue";
 
     protected override Task HandleMessageAsync(EventMessage eventMessage)
     {

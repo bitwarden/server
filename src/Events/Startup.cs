@@ -84,14 +84,14 @@ public class Startup
         }
 
         // Optional RabbitMQ Listeners
-        if (CoreHelpers.SettingHasValue(globalSettings.RabbitMq.HostName) &&
-            CoreHelpers.SettingHasValue(globalSettings.RabbitMq.Username) &&
-            CoreHelpers.SettingHasValue(globalSettings.RabbitMq.Password) &&
-            CoreHelpers.SettingHasValue(globalSettings.RabbitMq.ExchangeName))
+        if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
         {
             services.AddHostedService<Core.Services.RabbitMqEventRepositoryListener>();
 
-            if (CoreHelpers.SettingHasValue(globalSettings.RabbitMqHttpPostUrl))
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HttpPostUrl))
             {
                 services.AddHttpClient(RabbitMqEventHttpPostListener.HttpClientName);
                 services.AddHostedService<Core.Services.RabbitMqEventHttpPostListener>();

@@ -9,8 +9,9 @@ public class RabbitMqEventHttpPostListener : RabbitMqEventListenerBase
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _httpPostUrl;
+    private readonly string _queueName;
 
-    protected override string QueueName => "events-httpPost-queue";
+    protected override string QueueName => _queueName;
 
     public const string HttpClientName = "EventHttpPostListenerHttpClient";
 
@@ -21,8 +22,10 @@ public class RabbitMqEventHttpPostListener : RabbitMqEventListenerBase
         : base(logger, globalSettings)
     {
         _httpClientFactory = httpClientFactory;
-        _httpPostUrl = globalSettings.RabbitMqHttpPostUrl;
+        _httpPostUrl = globalSettings.EventLogging.RabbitMq.HttpPostUrl;
+        _queueName = globalSettings.EventLogging.RabbitMq.HttpPostQueueName;
     }
+
     protected override async Task HandleMessageAsync(EventMessage eventMessage)
     {
         using var httpClient = _httpClientFactory.CreateClient(HttpClientName);

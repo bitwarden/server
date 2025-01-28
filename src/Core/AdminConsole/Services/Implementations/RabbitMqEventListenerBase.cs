@@ -24,11 +24,11 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
     {
         _factory = new ConnectionFactory
         {
-            HostName = globalSettings.RabbitMq.HostName,
-            UserName = globalSettings.RabbitMq.Username,
-            Password = globalSettings.RabbitMq.Password
+            HostName = globalSettings.EventLogging.RabbitMq.HostName,
+            UserName = globalSettings.EventLogging.RabbitMq.Username,
+            Password = globalSettings.EventLogging.RabbitMq.Password
         };
-        _exchangeName = globalSettings.RabbitMq.ExchangeName;
+        _exchangeName = globalSettings.EventLogging.RabbitMq.ExchangeName;
         _logger = logger;
     }
 
@@ -37,21 +37,24 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
         _connection = await _factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
-        await _channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout);
+        await _channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
         await _channel.QueueDeclareAsync(queue: QueueName,
-                                         durable: false,
+                                         durable: true,
                                          exclusive: false,
                                          autoDelete: false,
                                          arguments: null,
                                          cancellationToken: cancellationToken);
-        await _channel.QueueBindAsync(queue: QueueName, exchange: _exchangeName, routingKey: "");
+        await _channel.QueueBindAsync(queue: QueueName,
+                                      exchange: _exchangeName,
+                                      routingKey: string.Empty,
+                                      cancellationToken: cancellationToken);
         await base.StartAsync(cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var consumer = new AsyncEventingBasicConsumer(_channel);
-        consumer.ReceivedAsync += async (model, eventArgs) =>
+        consumer.ReceivedAsync += async (_, eventArgs) =>
         {
             try
             {

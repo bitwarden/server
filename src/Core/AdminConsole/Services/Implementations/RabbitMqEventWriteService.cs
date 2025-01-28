@@ -14,11 +14,11 @@ public class RabbitMqEventWriteService : IEventWriteService
     {
         _factory = new ConnectionFactory
         {
-            HostName = globalSettings.RabbitMq.HostName,
-            UserName = globalSettings.RabbitMq.Username,
-            Password = globalSettings.RabbitMq.Password
+            HostName = globalSettings.EventLogging.RabbitMq.HostName,
+            UserName = globalSettings.EventLogging.RabbitMq.Username,
+            Password = globalSettings.EventLogging.RabbitMq.Password
         };
-        _exchangeName = globalSettings.RabbitMq.ExchangeName;
+        _exchangeName = globalSettings.EventLogging.RabbitMq.ExchangeName;
 
         _lazyConnection = new Lazy<Task<IConnection>>(CreateConnectionAsync);
     }
@@ -28,7 +28,7 @@ public class RabbitMqEventWriteService : IEventWriteService
         var connection = await _lazyConnection.Value;
         using var channel = await connection.CreateChannelAsync();
 
-        await channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout);
+        await channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
 
         var body = JsonSerializer.SerializeToUtf8Bytes(e);
 
@@ -39,7 +39,7 @@ public class RabbitMqEventWriteService : IEventWriteService
     {
         var connection = await _lazyConnection.Value;
         using var channel = await connection.CreateChannelAsync();
-        await channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout);
+        await channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
 
         foreach (var e in events)
         {
