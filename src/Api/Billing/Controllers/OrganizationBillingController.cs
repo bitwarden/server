@@ -282,6 +282,7 @@ public class OrganizationBillingController(
         var plan = StaticStore.GetPlan(model.PlanType);
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
+        sale.SubscriptionSetup.SkipTrial = true;
         await organizationBillingService.Finalize(sale);
 
         return TypedResults.Ok();
