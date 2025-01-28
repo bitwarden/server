@@ -545,7 +545,7 @@ public class AccountsControllerTests : IDisposable
             .Returns(Task.FromResult(IdentityResult.Success));
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
     }
 
 
