@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
@@ -175,6 +176,21 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             var result = await connection.QueryAsync<Organization>(
                 "[dbo].[Organization_ReadByClaimedUserEmailDomain]",
                 new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return result.ToList();
+        }
+    }
+
+    public async Task<ICollection<Organization>> GetAddableToProviderByUserIdAsync(
+        Guid userId,
+        ProviderType providerType)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                $"[{Schema}].[{Table}_ReadAddableToProviderByUserId]",
+                new { UserId = userId, ProviderType = providerType },
                 commandType: CommandType.StoredProcedure);
 
             return result.ToList();

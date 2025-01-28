@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Models.Business;
 using Stripe;
@@ -10,6 +11,11 @@ namespace Bit.Core.Billing.Services;
 
 public interface IProviderBillingService
 {
+    Task AddExistingOrganization(
+        Provider provider,
+        Organization organization,
+        string key);
+
     /// <summary>
     /// Changes the assigned provider plan for the provider.
     /// </summary>
@@ -34,6 +40,10 @@ public interface IProviderBillingService
     /// <returns>The provider's client invoice report as a byte array.</returns>
     Task<byte[]> GenerateClientInvoiceReport(
         string invoiceId);
+
+    Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(
+        Provider provider,
+        Guid userId);
 
     /// <summary>
     /// Scales the <paramref name="provider"/>'s seats for the specified <paramref name="planType"/> using the provided <paramref name="seatAdjustment"/>.
