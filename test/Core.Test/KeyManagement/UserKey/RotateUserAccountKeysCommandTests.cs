@@ -103,6 +103,8 @@ public class RotateUserAccountKeysCommandTests
         model.MasterPasswordUnlockData.KdfMemory = 64;
         model.MasterPasswordUnlockData.KdfParallelism = 4;
 
+        model.AccountPublicKey = user.PublicKey;
+
         sutProvider.GetDependency<IUserService>().CheckPasswordAsync(user, model.OldMasterKeyAuthenticationHash)
             .Returns(true);
 
