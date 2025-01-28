@@ -17,7 +17,6 @@ public class FreshdeskController : Controller
     private readonly BillingSettings _billingSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ILogger<FreshdeskController> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -25,7 +24,6 @@ public class FreshdeskController : Controller
     public FreshdeskController(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         IOptions<BillingSettings> billingSettings,
         ILogger<FreshdeskController> logger,
         GlobalSettings globalSettings,
@@ -34,7 +32,6 @@ public class FreshdeskController : Controller
         _billingSettings = billingSettings?.Value;
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _logger = logger;
         _globalSettings = globalSettings;
         _httpClientFactory = httpClientFactory;
