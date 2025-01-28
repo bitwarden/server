@@ -19,7 +19,7 @@ public class ProviderEditModel : ProviderViewModel, IValidatableObject
         IEnumerable<ProviderOrganizationOrganizationDetails> organizations,
         IReadOnlyCollection<ProviderPlan> providerPlans,
         string gatewayCustomerUrl = null,
-        string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations)
+        string gatewaySubscriptionUrl = null) : base(provider, providerUsers, organizations, providerPlans)
     {
         Name = provider.DisplayName();
         BusinessName = provider.DisplayBusinessName();
