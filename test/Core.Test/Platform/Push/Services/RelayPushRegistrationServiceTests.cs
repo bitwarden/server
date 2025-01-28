@@ -1,9 +1,10 @@
-﻿using Bit.Core.Settings;
+﻿using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Platform.Push.Internal.Test;
+namespace Bit.Core.Test.Platform.Push.Internal;
 
 public class RelayPushRegistrationServiceTests
 {

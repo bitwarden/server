@@ -1,11 +1,12 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Platform.Push.Internal;
+using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Platform.Push.Internal.Test;
+namespace Bit.Core.Test.Platform.Push.Internal;
 
 public class RelayPushNotificationServiceTests
 {

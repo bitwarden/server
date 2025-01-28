@@ -133,12 +133,10 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
     [InlineData(null, null, "2", 10)]
     [InlineData(10, null, "2", 10)]
     [InlineData(10, 2, "3", 10)]
-    [InlineData(10, 3, null, 0)]
-    [InlineData(15, null, "2", 15)]
-    [InlineData(15, 2, null, 5)]
-    [InlineData(20, null, "2", 20)]
-    [InlineData(20, 2, null, 0)]
-    [InlineData(1000, null, null, 20)]
+    [InlineData(10, 3, null, 4)]
+    [InlineData(24, null, "2", 24)]
+    [InlineData(24, 2, null, 0)]
+    [InlineData(1000, null, null, 24)]
     public async Task ListAsync_PaginationFilter_ReturnsNextPageOfNotificationsCorrectOrder(
         int? pageSize, int? pageNumber, string? expectedContinuationToken, int expectedCount)
     {
@@ -505,11 +503,12 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
                 userPartOrOrganizationNotificationWithStatuses
             }
             .SelectMany(n => n)
+            .Where(n => n.Item1.ClientType is ClientType.All or ClientType.Web)
             .ToList();
     }
 
     private async Task<List<Notification>> CreateNotificationsAsync(Guid? userId = null, Guid? organizationId = null,
-        int numberToCreate = 5)
+        int numberToCreate = 3)
     {
         var priorities = Enum.GetValues<Priority>();
         var clientTypes = Enum.GetValues<ClientType>();
@@ -570,13 +569,9 @@ public class NotificationsControllerTests : IClassFixture<ApiApplicationFactory>
                 DeletedDate = DateTime.UtcNow - TimeSpan.FromMinutes(_random.Next(3600))
             });
 
-        return
-        [
-            (notifications[0], readDateNotificationStatus),
-            (notifications[1], deletedDateNotificationStatus),
-            (notifications[2], readDateAndDeletedDateNotificationStatus),
-            (notifications[3], null),
-            (notifications[4], null)
-        ];
+        List<NotificationStatus> statuses =
+            [readDateNotificationStatus, deletedDateNotificationStatus, readDateAndDeletedDateNotificationStatus];
+
+        return notifications.Select(n => (n, statuses.Find(s => s.NotificationId == n.Id))).ToList();
     }
 }

@@ -1,10 +1,11 @@
-﻿using Bit.Core.Settings;
+﻿using Bit.Core.Platform.Push;
+using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Platform.Push.Internal.Test;
+namespace Bit.Core.Test.Platform.Push.Internal;
 
 public class NotificationsApiPushNotificationServiceTests
 {
