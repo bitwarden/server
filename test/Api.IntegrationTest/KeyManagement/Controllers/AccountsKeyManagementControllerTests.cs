@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Request.Accounts;
 using Bit.Api.KeyManagement.Models.Requests;
+using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Auth.Entities;
@@ -219,16 +220,37 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
                 },
             },
         ];
-        request.AccountData.Folders = [];
-        request.AccountData.Sends = [];
+        request.AccountData.Folders = [
+            new FolderWithIdRequestModel
+            {
+                Id = Guid.NewGuid(),
+                Name = _mockEncryptedString,
+            },
+        ];
+        request.AccountData.Sends = [
+            new SendWithIdRequestModel
+            {
+                Id = Guid.NewGuid(),
+                Name = _mockEncryptedString,
+                Key = _mockEncryptedString,
+                Disabled = false,
+                DeletionDate = DateTime.UtcNow.AddDays(1),
+            },
+        ];
         request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
         request.AccountUnlockData.PasskeyUnlockData = [];
         request.AccountUnlockData.EmergencyAccessUnlockData = [];
         request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        var rsp = await response.Content.ReadAsStringAsync();
-        Console.WriteLine(rsp);
         response.EnsureSuccessStatusCode();
+
+        var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(userNewState);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.Email, userNewState.Email);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfType, userNewState.Kdf);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfIterations, userNewState.KdfIterations);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfMemory, userNewState.KdfMemory);
+        Assert.Equal(request.AccountUnlockData.MasterPasswordUnlockData.KdfParallelism, userNewState.KdfParallelism);
     }
 }
