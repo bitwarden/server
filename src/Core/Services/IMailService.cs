@@ -14,6 +14,7 @@ public interface IMailService
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
     Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
