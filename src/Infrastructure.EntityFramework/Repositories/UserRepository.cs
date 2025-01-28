@@ -194,6 +194,51 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     }
 
+
+    public async Task UpdateUserKeyAndEncryptedDataV2Async(Core.Entities.User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Update user
+            var userEntity = await dbContext.Users.FindAsync(user.Id);
+            if (userEntity == null)
+            {
+                throw new ArgumentException("User not found", nameof(user));
+            }
+
+            userEntity.SecurityStamp = user.SecurityStamp;
+            userEntity.Key = user.Key;
+            userEntity.MasterPassword = user.MasterPassword;
+            userEntity.PrivateKey = user.PrivateKey;
+            userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
+            userEntity.AccountRevisionDate = user.AccountRevisionDate;
+            userEntity.RevisionDate = user.RevisionDate;
+
+            await dbContext.SaveChangesAsync();
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                // connection and transaction aren't used in EF
+                await action();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+    }
+
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
