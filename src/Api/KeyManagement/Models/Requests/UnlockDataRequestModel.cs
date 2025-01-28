@@ -3,8 +3,6 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Tools.Models.Request;
-using Bit.Api.Vault.Models.Request;
 
 namespace Bit.Api.KeyManagement.Models.Request.Accounts;
 
