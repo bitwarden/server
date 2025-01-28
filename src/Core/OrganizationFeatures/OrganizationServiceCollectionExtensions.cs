@@ -53,6 +53,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
+        services.AddOrganizationDeleteCommands();
         services.AddOrganizationEnableCommands();
         services.AddOrganizationAuthCommands();
         services.AddOrganizationUserCommands();
@@ -62,6 +63,12 @@ public static class OrganizationServiceCollectionExtensions
 
     private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
         services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+
+    private static void AddOrganizationDeleteCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationDeleteCommand, OrganizationDeleteCommand>();
+        services.AddScoped<IOrganizationInitiateDeleteCommand, OrganizationInitiateDeleteCommand>();
+    }
 
     private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
         services.AddScoped<IOrganizationEnableCommand, OrganizationEnableCommand>();

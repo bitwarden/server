@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -68,7 +67,6 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
-    private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
@@ -106,7 +104,6 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
@@ -139,7 +136,6 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
-        _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
@@ -688,44 +684,6 @@ public class OrganizationService : IOrganizationService
 
             throw;
         }
-    }
-
-    public async Task InitiateDeleteAsync(Organization organization, string orgAdminEmail)
-    {
-        var orgAdmin = await _userRepository.GetByEmailAsync(orgAdminEmail);
-        if (orgAdmin == null)
-        {
-            throw new BadRequestException("Org admin not found.");
-        }
-        var orgAdminOrgUser = await _organizationUserRepository.GetDetailsByUserAsync(orgAdmin.Id, organization.Id);
-        if (orgAdminOrgUser == null || orgAdminOrgUser.Status != OrganizationUserStatusType.Confirmed ||
-            (orgAdminOrgUser.Type != OrganizationUserType.Admin && orgAdminOrgUser.Type != OrganizationUserType.Owner))
-        {
-            throw new BadRequestException("Org admin not found.");
-        }
-        var token = _orgDeleteTokenDataFactory.Protect(new OrgDeleteTokenable(organization, 1));
-        await _mailService.SendInitiateDeleteOrganzationEmailAsync(orgAdminEmail, organization, token);
-    }
-
-    public async Task DeleteAsync(Organization organization)
-    {
-        await ValidateDeleteOrganizationAsync(organization);
-
-        if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            try
-            {
-                var eop = !organization.ExpirationDate.HasValue ||
-                    organization.ExpirationDate.Value >= DateTime.UtcNow;
-                await _paymentService.CancelSubscriptionAsync(organization, eop);
-                await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.DeleteAccount, organization, _currentContext));
-            }
-            catch (GatewayException) { }
-        }
-
-        await _organizationRepository.DeleteAsync(organization);
-        await _applicationCacheService.DeleteOrganizationAbilityAsync(organization.Id);
     }
 
     public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
@@ -1954,15 +1912,6 @@ public class OrganizationService : IOrganizationService
         }
 
         return true;
-    }
-
-    private async Task ValidateDeleteOrganizationAsync(Organization organization)
-    {
-        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
-        {
-            throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
-        }
     }
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId)

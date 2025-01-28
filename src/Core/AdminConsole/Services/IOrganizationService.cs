@@ -28,8 +28,6 @@ public interface IOrganizationService
     /// </summary>
     Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
-    Task InitiateDeleteAsync(Organization organization, string orgAdminEmail);
-    Task DeleteAsync(Organization organization);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);

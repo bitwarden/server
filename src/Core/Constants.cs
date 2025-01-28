@@ -106,6 +106,7 @@ public static class FeatureFlagKeys
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
+    public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
@@ -137,7 +138,6 @@ public static class FeatureFlagKeys
     public const string NotificationBarAddLoginImprovements = "notification-bar-add-login-improvements";
     public const string BlockBrowserInjectionsByDomain = "block-browser-injections-by-domain";
     public const string NotificationRefresh = "notification-refresh";
-    public const string AC2476_DeprecateStripeSourcesAPI = "AC-2476-deprecate-stripe-sources-api";
     public const string PersistPopupView = "persist-popup-view";
     public const string CipherKeyEncryption = "cipher-key-encryption";
     public const string EnableNewCardCombinedExpiryAutofill = "enable-new-card-combined-expiry-autofill";
@@ -166,6 +166,7 @@ public static class FeatureFlagKeys
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
     public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
+    public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
 
     public static List<string> GetAllKeys()
     {
