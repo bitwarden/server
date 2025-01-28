@@ -167,6 +167,8 @@ public static class FeatureFlagKeys
     public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
     public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
     public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
+    public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
+    public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
 
     public static List<string> GetAllKeys()
     {
