@@ -5,7 +5,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Vault.Entities;
 using Dapper;
 
 #nullable enable
