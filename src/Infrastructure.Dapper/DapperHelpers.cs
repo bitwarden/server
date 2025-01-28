@@ -154,18 +154,6 @@ public static class DapperHelpers
         ]
     );
 
-    private static readonly DataTableBuilder<SecurityTask> _securityTaskTypeTableBuilder = new(
-        [
-            st => st.Id,
-            st => st.OrganizationId,
-            st => st.CipherId,
-            st => st.Type,
-            st => st.Status,
-            st => st.CreationDate,
-            st => st.RevisionDate,
-        ]
-    );
-
     public static DataTable ToGuidIdArrayTVP(this IEnumerable<Guid> ids)
     {
         return ids.ToArrayTVP("GuidId");
@@ -222,13 +210,6 @@ public static class DapperHelpers
     {
         var table = _organizationSponsorshipTableBuilder.Build(organizationSponsorships ?? []);
         table.SetTypeName("[dbo].[OrganizationSponsorshipType]");
-        return table;
-    }
-
-    public static DataTable ToTvp(this IEnumerable<SecurityTask> securityTasks)
-    {
-        var table = _securityTaskTypeTableBuilder.Build(securityTasks ?? []);
-        table.SetTypeName("[dbo].[SecurityTaskType]");
         return table;
     }
 
