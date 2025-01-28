@@ -36,7 +36,7 @@ public class EventsController : Controller
     /// If no filters are provided, it will return the last 30 days of event for the organization.
     /// </remarks>
     [HttpGet]
-    [ProducesResponseType(typeof(ListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(PagedListResponseModel<EventResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List([FromQuery] EventFilterRequestModel request)
     {
         var dateRange = request.ToDateRange();
@@ -65,7 +65,7 @@ public class EventsController : Controller
         }
 
         var eventResponses = result.Data.Select(e => new EventResponseModel(e));
-        var response = new ListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
+        var response = new PagedListResponseModel<EventResponseModel>(eventResponses, result.ContinuationToken);
         return new JsonResult(response);
     }
 }
