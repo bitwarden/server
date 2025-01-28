@@ -31,7 +31,6 @@ public class ProviderBillingService(
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
-    IOrganizationUserRepository organizationUserRepository,
     IPaymentService paymentService,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -306,21 +305,9 @@ public class ProviderBillingService(
             throw new UnauthorizedAccessException();
         }
 
-        var owned = (await Task.WhenAll(
-                (await organizationUserRepository.GetManyByUserAsync(userId))
-                .Where(organizationUser => organizationUser is { Type: OrganizationUserType.Owner, Status: OrganizationUserStatusType.Confirmed })
-                .Select(organizationUser => organizationRepository.GetByIdAsync(organizationUser.OrganizationId))))
-            .Where(organization => organization is
-            {
-                Enabled: true,
-                GatewayCustomerId: not null and not "",
-                GatewaySubscriptionId: not null and not "",
-                Seats: > 0,
-                Status: OrganizationStatusType.Created,
-                UseSecretsManager: false
-            } && HasApplicablePlan(provider, organization));
+        var candidates = await organizationRepository.GetAddableToProviderByUserIdAsync(userId, provider.Type);
 
-        var active = (await Task.WhenAll(owned.Select(async organization =>
+        var active = (await Task.WhenAll(candidates.Select(async organization =>
             {
                 var subscription = await subscriberService.GetSubscription(organization);
                 return (organization, subscription);
@@ -369,8 +356,8 @@ public class ProviderBillingService(
             {
                 return localOrganization.PlanType switch
                 {
-                    var planType when IsEnterprise(planType) => "Enterprise",
-                    var planType when IsTeams(planType) => "Teams",
+                    var planType when PlanConstants.EnterprisePlanTypes.Contains(planType) => "Enterprise",
+                    var planType when PlanConstants.TeamsPlanTypes.Contains(planType) => "Teams",
                     _ => throw new BillingException()
                 };
             }
@@ -758,19 +745,6 @@ public class ProviderBillingService(
         return providerPlan;
     }
 
-    private static bool IsEnterprise(PlanType planType) => planType.ToString().Contains("Enterprise");
-    private static bool IsTeams(PlanType planType) => planType.ToString().Contains("Teams");
-
-    private static bool HasApplicablePlan(
-        Provider provider,
-        Organization organization)
-        => provider.Type switch
-        {
-            ProviderType.Msp => IsEnterprise(organization.PlanType) || IsTeams(organization.PlanType),
-            ProviderType.MultiOrganizationEnterprise => IsEnterprise(organization.PlanType),
-            _ => false
-        };
-
     private async Task<PlanType> GetManagedPlanTypeAsync(
         Provider provider,
         Organization organization)
@@ -782,8 +756,8 @@ public class ProviderBillingService(
 
         return organization.PlanType switch
         {
-            var planType when IsTeams(planType) => PlanType.TeamsMonthly,
-            var planType when IsEnterprise(planType) => PlanType.EnterpriseMonthly,
+            var planType when PlanConstants.TeamsPlanTypes.Contains(planType) => PlanType.TeamsMonthly,
+            var planType when PlanConstants.EnterprisePlanTypes.Contains(planType) => PlanType.EnterpriseMonthly,
             _ => throw new BillingException()
         };
     }

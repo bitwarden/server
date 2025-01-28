@@ -1,9 +1,12 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -292,6 +295,41 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                               && od.VerifiedDate != null
                               && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
                         select o;
+
+            return await query.ToArrayAsync();
+        }
+    }
+
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetAddableToProviderByUserIdAsync(
+        Guid userId,
+        ProviderType providerType)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var planTypes = providerType switch
+            {
+                ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
+                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                _ => []
+            };
+
+            var query =
+                from organizationUser in dbContext.OrganizationUsers
+                join organization in dbContext.Organizations on organizationUser.OrganizationId equals organization.Id
+                where
+                    organizationUser.UserId == userId &&
+                    organizationUser.Type == OrganizationUserType.Owner &&
+                    organizationUser.Status == OrganizationUserStatusType.Confirmed &&
+                    organization.Enabled &&
+                    organization.GatewayCustomerId != null &&
+                    organization.GatewaySubscriptionId != null &&
+                    organization.Seats > 0 &&
+                    organization.Status == OrganizationStatusType.Created &&
+                    !organization.UseSecretsManager &&
+                    organization.PlanType.In(planTypes)
+                select organization;
 
             return await query.ToArrayAsync();
         }
