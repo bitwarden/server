@@ -18,7 +18,7 @@ public class MasterPasswordUnlockDataModel : IValidatableObject
     public required string MasterKeyAuthenticationHash { get; set; }
     public required string MasterKeyEncryptedUserKey { get; set; }
     [StringLength(50)]
-    public required string MasterPasswordHint { get; set; }
+    public string? MasterPasswordHint { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

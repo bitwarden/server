@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.KeyManagement.Models.Data;
@@ -10,10 +11,10 @@ public class MasterPasswordUnlockData
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
 
-    public string Email { get; set; }
-    public string MasterKeyAuthenticationHash { get; set; }
-    public string MasterKeyEncryptedUserKey { get; set; }
-    public string MasterPasswordHint { get; set; }
+    public required string Email { get; set; }
+    public required string MasterKeyAuthenticationHash { get; set; }
+    public required string MasterKeyEncryptedUserKey { get; set; }
+    public string? MasterPasswordHint { get; set; }
 
     public bool ValidateForUser(User user)
     {

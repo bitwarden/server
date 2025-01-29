@@ -262,25 +262,33 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         connection.Open();
 
         await using var transaction = connection.BeginTransaction();
-        if (user.AccountRevisionDate == null)
+        try
         {
-            user.AccountRevisionDate = user.RevisionDate;
+            if (user.AccountRevisionDate == null)
+            {
+                user.AccountRevisionDate = user.RevisionDate;
+            }
+
+            ProtectData(user);
+            await connection.ExecuteAsync(
+                $"[{Schema}].[{Table}_Update]",
+                user,
+                transaction: transaction,
+                commandType: CommandType.StoredProcedure);
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                await action(connection, transaction);
+            }
+            transaction.Commit();
         }
-
-        ProtectData(user);
-        await connection.ExecuteAsync(
-            $"[{Schema}].[{Table}_Update]",
-            user,
-            transaction: transaction,
-            commandType: CommandType.StoredProcedure);
-
-        //  Update re-encrypted data
-        foreach (var action in updateDataActions)
+        catch
         {
-            await action(connection, transaction);
+            connection.Close();
+            UnprotectData(user);
+            throw;
         }
-        transaction.Commit();
-
         connection.Close();
         UnprotectData(user);
     }
