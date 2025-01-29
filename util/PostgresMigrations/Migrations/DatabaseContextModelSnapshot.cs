@@ -96,6 +96,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("LimitCollectionDeletion")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("LimitItemDeletion")
+                        .HasColumnType("boolean");
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 

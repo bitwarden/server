@@ -97,5 +97,6 @@ public interface IMailService
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
     Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
+    Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
 }
 
