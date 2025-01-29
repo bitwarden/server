@@ -89,7 +89,7 @@ public class Startup
             CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
             CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
         {
-            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("Persistent");
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
             services.AddHostedService<RabbitMqEventRepositoryListener>();
 
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HttpPostUrl))

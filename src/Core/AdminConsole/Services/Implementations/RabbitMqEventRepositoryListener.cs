@@ -13,7 +13,7 @@ public class RabbitMqEventRepositoryListener : RabbitMqEventListenerBase
     protected override string QueueName => _queueName;
 
     public RabbitMqEventRepositoryListener(
-        [FromKeyedServices("Persistent")] IEventWriteService eventWriteService,
+        [FromKeyedServices("persistent")] IEventWriteService eventWriteService,
         ILogger<RabbitMqEventListenerBase> logger,
         GlobalSettings globalSettings)
         : base(logger, globalSettings)
