@@ -7,7 +7,7 @@ namespace Bit.Core.Services;
 
 public class RabbitMqEventHttpPostListener : RabbitMqEventListenerBase
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly HttpClient _httpClient;
     private readonly string _httpPostUrl;
     private readonly string _queueName;
 
@@ -21,16 +21,15 @@ public class RabbitMqEventHttpPostListener : RabbitMqEventListenerBase
         GlobalSettings globalSettings)
         : base(logger, globalSettings)
     {
-        _httpClientFactory = httpClientFactory;
+        _httpClient = httpClientFactory.CreateClient(HttpClientName);
         _httpPostUrl = globalSettings.EventLogging.RabbitMq.HttpPostUrl;
         _queueName = globalSettings.EventLogging.RabbitMq.HttpPostQueueName;
     }
 
     protected override async Task HandleMessageAsync(EventMessage eventMessage)
     {
-        using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
         var content = JsonContent.Create(eventMessage);
-        var response = await httpClient.PostAsync(_httpPostUrl, content);
+        var response = await _httpClient.PostAsync(_httpPostUrl, content);
         response.EnsureSuccessStatusCode();
     }
 }
