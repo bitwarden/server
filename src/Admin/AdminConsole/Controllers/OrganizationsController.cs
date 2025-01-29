@@ -421,6 +421,11 @@ public class OrganizationsController : Controller
 
     private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
+        if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
+        {
+            organization.Name = WebUtility.HtmlEncode(model.Name);
+        }
+
         if (_accessControlService.UserHasPermission(Permission.Org_CheckEnabledBox))
         {
             organization.Enabled = model.Enabled;
