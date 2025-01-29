@@ -26,7 +26,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IPushNotificationService _pushService;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     public DeleteManagedOrganizationUserAccountCommand(
         IUserService userService,
@@ -38,8 +37,8 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IReferenceEventService referenceEventService,
         IPushNotificationService pushService,
-        IOrganizationRepository organizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository
+        )
     {
         _userService = userService;
         _eventService = eventService;
@@ -50,31 +49,12 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _referenceEventService = referenceEventService;
         _pushService = pushService;
-        _organizationRepository = organizationRepository;
         _providerUserRepository = providerUserRepository;
     }
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (organizationUser == null || organizationUser.OrganizationId != organizationId)
-        {
-            throw new NotFoundException("Member not found.");
-        }
-
-        var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, new[] { organizationUserId });
-        var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true);
-
-        await ValidateDeleteUserAsync(organizationId, organizationUser, deletingUserId, managementStatus, hasOtherConfirmedOwners);
-
-        var user = await _userRepository.GetByIdAsync(organizationUser.UserId!.Value);
-        if (user == null)
-        {
-            throw new NotFoundException("Member not found.");
-        }
-
-        await _userService.DeleteAsync(user);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Deleted);
+        await DeleteManyUsersAsync(organizationId, new[] { organizationUserId }, deletingUserId);
     }
 
     public async Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
@@ -105,7 +85,8 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                     throw new NotFoundException("Member not found.");
                 }
 
-                await ValidateUserMembershipAndPremiumAsync(user);
+                await ValidateUserAsync(user);
+                await CancelPremiumAsync(user);
 
                 results.Add((orgUserId, string.Empty));
             }
@@ -197,46 +178,42 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     }
 
-    private async Task ValidateUserMembershipAndPremiumAsync(User user)
+    private async Task ValidateUserAsync(User user)
     {
-        // Check if user is the only owner of any organizations.
+        await EnsureUserIsNotSoleOrganizationOwnerAsync(user);
+        await EnsureUserIsNotSoleProviderOwnerAsync(user);
+    }
+
+    private async Task CancelPremiumAsync(User user)
+    {
+        if (string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
+        {
+            return;
+        }
+        try
+        {
+            await _userService.CancelPremiumAsync(user);
+        }
+        catch (GatewayException) { }
+    }
+
+    private async Task EnsureUserIsNotSoleOrganizationOwnerAsync(User user)
+    {
         var onlyOwnerCount = await _organizationUserRepository.GetCountByOnlyOwnerAsync(user.Id);
         if (onlyOwnerCount > 0)
         {
             throw new BadRequestException("Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.");
         }
 
-        var orgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed);
-        if (orgs.Count == 1)
-        {
-            var org = await _organizationRepository.GetByIdAsync(orgs.First().OrganizationId);
-            if (org != null && (!org.Enabled || string.IsNullOrWhiteSpace(org.GatewaySubscriptionId)))
-            {
-                var orgCount = await _organizationUserRepository.GetCountByOrganizationIdAsync(org.Id);
-                if (orgCount <= 1)
-                {
-                    await _organizationRepository.DeleteAsync(org);
-                }
-                else
-                {
-                    throw new BadRequestException("Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.");
-                }
-            }
-        }
+    }
 
+
+    private async Task EnsureUserIsNotSoleProviderOwnerAsync(User user)
+    {
         var onlyOwnerProviderCount = await _providerUserRepository.GetCountByOnlyOwnerAsync(user.Id);
         if (onlyOwnerProviderCount > 0)
         {
             throw new BadRequestException("Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.GatewaySubscriptionId))
-        {
-            try
-            {
-                await _userService.CancelPremiumAsync(user);
-            }
-            catch (GatewayException) { }
         }
     }
 }
