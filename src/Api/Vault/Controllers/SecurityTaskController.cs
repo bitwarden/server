@@ -2,6 +2,7 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -27,6 +28,7 @@ public class SecurityTaskController : Controller
     private readonly IGetSecurityTasksNotificationDetailsQuery _getSecurityTasksNotificationDetailsQuery;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
+    private readonly IPushNotificationService _pushService;
 
 
     public SecurityTaskController(
@@ -37,7 +39,8 @@ public class SecurityTaskController : Controller
         ICreateManyTasksCommand createManyTasksCommand,
         IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
         IOrganizationRepository organizationRepository,
-        IMailService mailService)
+        IMailService mailService,
+        IPushNotificationService pushService)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
@@ -47,6 +50,7 @@ public class SecurityTaskController : Controller
         _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
         _organizationRepository = organizationRepository;
         _mailService = mailService;
+        _pushService = pushService;
     }
 
     /// <summary>
