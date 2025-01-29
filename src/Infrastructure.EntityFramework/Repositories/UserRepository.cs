@@ -170,6 +170,17 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             entity.SecurityStamp = user.SecurityStamp;
             entity.Key = user.Key;
+
+            entity.Kdf = user.Kdf;
+            entity.KdfIterations = user.KdfIterations;
+            entity.KdfMemory = user.KdfMemory;
+            entity.KdfParallelism = user.KdfParallelism;
+
+            entity.Email = user.Email;
+
+            entity.MasterPassword = user.MasterPassword;
+            entity.MasterPasswordHint = user.MasterPasswordHint;
+
             entity.PrivateKey = user.PrivateKey;
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
