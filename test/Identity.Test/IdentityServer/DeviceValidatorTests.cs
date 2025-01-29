@@ -251,7 +251,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewUserNewDeviceLogin_DoesNotSendEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsync_NewUserNewDeviceLogin_DoesNotSendNewDeviceLoginEmail_ReturnsTrue(
     CustomValidatorRequestContext context,
     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -275,7 +275,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsynce_DisableEmailTrue_DoesNotSendEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsynce_DisableNewDeviceLoginEmailTrue_DoesNotSendNewDeviceEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
