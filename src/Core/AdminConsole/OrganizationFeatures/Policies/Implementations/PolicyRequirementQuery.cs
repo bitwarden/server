@@ -32,9 +32,6 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     /// </summary>
     private class PolicyRequirementRegistry
     {
-        /// <summary>
-        /// A dictionary associating a Policy Requirement's type with its factory function.
-        /// </summary>
         private readonly Dictionary<Type, CreateRequirement<IPolicyRequirement>> _registry = new();
 
         public void Add<T>(CreateRequirement<T> factory) where T : IPolicyRequirement
