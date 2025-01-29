@@ -1,4 +1,5 @@
-CREATE PROCEDURE [dbo].[SecurityTask_CreateMany]
+-- SecurityTask_CreateMany
+CREATE OR ALTER PROCEDURE [dbo].[SecurityTask_CreateMany]
     @SecurityTasksJson NVARCHAR(MAX)
 AS
 BEGIN
@@ -33,15 +34,13 @@ BEGIN
     FROM OPENJSON(@SecurityTasksJson) ST
 
     INSERT INTO [dbo].[SecurityTask]
-    (
-        [Id],
-        [OrganizationId],
-        [CipherId],
-        [Type],
-        [Status],
-        [CreationDate],
-        [RevisionDate]
-    )
+    ([Id],
+     [OrganizationId],
+     [CipherId],
+     [Type],
+     [Status],
+     [CreationDate],
+     [RevisionDate])
     SELECT [Id],
            [OrganizationId],
            [CipherId],
@@ -53,3 +52,4 @@ BEGIN
 
     DROP TABLE #TempSecurityTasks
 END
+GO

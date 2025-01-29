@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -61,12 +62,12 @@ public class SecurityTaskRepository : Repository<SecurityTask, Guid>, ISecurityT
             task.SetNewId();
         }
 
-        var securityTasksTvp = tasksList.ToTvp();
-        await using var connection = new SqlConnection(ConnectionString);
+        var tasksJson = JsonSerializer.Serialize(tasksList);
 
-        var results = await connection.ExecuteAsync(
+        await using var connection = new SqlConnection(ConnectionString);
+        await connection.ExecuteAsync(
             $"[{Schema}].[{Table}_CreateMany]",
-            new { SecurityTasksInput = securityTasksTvp },
+            new { SecurityTasksJson = tasksJson },
             commandType: CommandType.StoredProcedure);
 
         return tasksList;
