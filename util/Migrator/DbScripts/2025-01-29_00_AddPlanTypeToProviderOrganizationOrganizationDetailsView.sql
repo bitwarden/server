@@ -1,4 +1,5 @@
-﻿CREATE VIEW [dbo].[ProviderOrganizationOrganizationDetailsView]
+-- Add column 'PlanType'
+CREATE OR AlTER VIEW [dbo].[ProviderOrganizationOrganizationDetailsView]
 AS
 SELECT
     PO.[Id],
@@ -17,5 +18,6 @@ SELECT
     O.[Status]
 FROM
     [dbo].[ProviderOrganization] PO
-LEFT JOIN
+        LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
+GO

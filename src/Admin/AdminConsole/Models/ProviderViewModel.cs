@@ -21,32 +21,39 @@ public class ProviderViewModel
         ProviderAdmins = providerUsers.Where(u => u.Type == ProviderUserType.ProviderAdmin);
         ProviderOrganizations = organizations.Where(o => o.ProviderId == provider.Id);
 
-        var usedEnterpriseSeats = ProviderOrganizations.Where(po => po.Plan.Contains("Enterprise")).Sum(po => po.OccupiedSeats);
-        var usedTeamsSeats = ProviderOrganizations.Where(po => po.Plan.Contains("Teams")).Sum(po => po.OccupiedSeats);
-
-        const string teamsSubscription = "Teams Subscription";
-        const string enterpriseSubscription = "Enterprise Subscription";
-
         if (Provider.Type == ProviderType.Msp)
         {
-            var teamsProviderPlan = providerPlans.First(plan => plan.PlanType == PlanType.TeamsMonthly);
-            if (teamsProviderPlan.IsConfigured())
+            var usedTeamsSeats = ProviderOrganizations.Where(po => po.PlanType == PlanType.TeamsMonthly)
+                .Sum(po => po.OccupiedSeats) ?? 0;
+            var teamsProviderPlan = providerPlans.FirstOrDefault(plan => plan.PlanType == PlanType.TeamsMonthly);
+            if (teamsProviderPlan != null && teamsProviderPlan.IsConfigured())
             {
-                ProviderPlanViewModels.Add(new ProviderPlanViewModel(teamsSubscription, teamsProviderPlan, usedTeamsSeats!.Value));
+                ProviderPlanViewModels.Add(new ProviderPlanViewModel("Teams (Monthly) Subscription", teamsProviderPlan, usedTeamsSeats));
             }
 
-            var enterpriseProviderPlan = providerPlans.First(plan => plan.PlanType == PlanType.EnterpriseMonthly);
-            if (enterpriseProviderPlan.IsConfigured())
+            var usedEnterpriseSeats = ProviderOrganizations.Where(po => po.PlanType == PlanType.EnterpriseMonthly)
+                .Sum(po => po.OccupiedSeats) ?? 0;
+            var enterpriseProviderPlan = providerPlans.FirstOrDefault(plan => plan.PlanType == PlanType.EnterpriseMonthly);
+            if (enterpriseProviderPlan != null && enterpriseProviderPlan.IsConfigured())
             {
-                ProviderPlanViewModels.Add(new ProviderPlanViewModel(enterpriseSubscription, enterpriseProviderPlan, usedEnterpriseSeats!.Value));
+                ProviderPlanViewModels.Add(new ProviderPlanViewModel("Enterprise (Monthly) Subscription", enterpriseProviderPlan, usedEnterpriseSeats));
             }
         }
         else if (Provider.Type == ProviderType.MultiOrganizationEnterprise)
         {
-            var enterpriseProviderPlan = providerPlans.First();
-            if (enterpriseProviderPlan.IsConfigured())
+            var usedEnterpriseSeats = ProviderOrganizations.Where(po => po.PlanType == PlanType.EnterpriseMonthly)
+                .Sum(po => po.OccupiedSeats).GetValueOrDefault(0);
+            var enterpriseProviderPlan = providerPlans.FirstOrDefault();
+            if (enterpriseProviderPlan != null && enterpriseProviderPlan.IsConfigured())
             {
-                ProviderPlanViewModels.Add(new ProviderPlanViewModel(enterpriseSubscription, enterpriseProviderPlan, usedEnterpriseSeats!.Value));
+                var planLabel = enterpriseProviderPlan.PlanType switch
+                {
+                    PlanType.EnterpriseMonthly => "Enterprise (Monthly) Subscription",
+                    PlanType.EnterpriseAnnually => "Enterprise (Annually) Subscription",
+                    _ => string.Empty
+                };
+
+                ProviderPlanViewModels.Add(new ProviderPlanViewModel(planLabel, enterpriseProviderPlan, usedEnterpriseSeats));
             }
         }
     }
@@ -70,11 +77,11 @@ public class ProviderViewModel
             ProviderPlan providerPlan,
             int usedSeats)
         {
-            var purchasedSeats = providerPlan.SeatMinimum!.Value + providerPlan.PurchasedSeats!.Value;
+            var purchasedSeats = providerPlan.SeatMinimum ?? 0 + providerPlan.PurchasedSeats ?? 0;
 
             Name = name;
             PurchasedSeats = purchasedSeats;
-            AssignedSeats = providerPlan.AllocatedSeats!.Value;
+            AssignedSeats = providerPlan.AllocatedSeats ?? 0;
             UsedSeats = usedSeats;
             RemainingSeats = purchasedSeats - AssignedSeats;
         }
