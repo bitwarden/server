@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
-    @Name NVARCHAR(50),
+    @Name NVARCHAR(55),
     @OwnerEmail NVARCHAR(256),
     @Skip INT = 0,
     @Take INT = 25
@@ -25,7 +25,7 @@ BEGIN
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
             AND (U.[Email] LIKE @OwnerLikeSearch)
-        ORDER BY O.[CreationDate] DESC
+        ORDER BY O.[CreationDate] DESC, O.[Id]
         OFFSET @Skip ROWS
         FETCH NEXT @Take ROWS ONLY
     END
@@ -39,7 +39,7 @@ BEGIN
             O.[PlanType] NOT IN (0, 1, 6, 7) -- Not 'Free', 'Custom' or 'Families'
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
-        ORDER BY O.[CreationDate] DESC
+        ORDER BY O.[CreationDate] DESC, O.[Id]
         OFFSET @Skip ROWS
         FETCH NEXT @Take ROWS ONLY
     END

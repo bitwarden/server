@@ -159,7 +159,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     select o;
         }
 
-        return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        return await query.OrderByDescending(o => o.CreationDate).ThenByDescending(o => o.Id).Skip(skip).Take(take).ToArrayAsync();
     }
 
     public async Task UpdateStorageAsync(Guid id)
