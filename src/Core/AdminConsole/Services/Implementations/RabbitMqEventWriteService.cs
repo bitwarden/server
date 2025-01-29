@@ -4,7 +4,7 @@ using Bit.Core.Settings;
 using RabbitMQ.Client;
 
 namespace Bit.Core.Services;
-public class RabbitMqEventWriteService : IEventWriteService
+public class RabbitMqEventWriteService : IEventWriteService, IAsyncDisposable
 {
     private readonly ConnectionFactory _factory;
     private readonly Lazy<Task<IConnection>> _lazyConnection;
@@ -46,6 +46,15 @@ public class RabbitMqEventWriteService : IEventWriteService
             var body = JsonSerializer.SerializeToUtf8Bytes(e);
 
             await channel.BasicPublishAsync(exchange: _exchangeName, routingKey: string.Empty, body: body);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_lazyConnection.IsValueCreated)
+        {
+            var connection = await _lazyConnection.Value;
+            await connection.DisposeAsync();
         }
     }
 
