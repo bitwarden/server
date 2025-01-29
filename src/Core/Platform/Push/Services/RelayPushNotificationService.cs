@@ -280,6 +280,6 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
     public async Task PushSyncSecurityTaskCreateAsync(Guid userId)
     {
-        await PushUserAsync(userId, PushType.SyncSecurityTasksCreated);
+        await PushUserAsync(userId, PushType.SyncNotification);
     }
 }

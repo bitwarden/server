@@ -253,6 +253,6 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
 
     public async Task PushSyncSecurityTaskCreateAsync(Guid userId)
     {
-        await PushUserAsync(userId, PushType.SyncSecurityTasksCreated);
+        await PushUserAsync(userId, PushType.SyncNotification);
     }
 }
