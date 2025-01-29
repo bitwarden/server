@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -7,11 +6,11 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
 
-public class SsoRequirement : IRequirement
+public class SsoPolicyRequirement : IPolicyRequirement
 {
     public bool RequireSso { get; init; }
 
-    public static SsoRequirement Create(
+    public static SsoPolicyRequirement Create(
         IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails,
         ISsoSettings ssoSettings)
         => new()

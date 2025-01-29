@@ -14,6 +14,7 @@ public class OrganizationUserPolicyDetails
     public PolicyType PolicyType { get; set; }
 
     public bool PolicyEnabled { get; set; }
+
     public string PolicyData { get; set; }
 
     public OrganizationUserType OrganizationUserType { get; set; }

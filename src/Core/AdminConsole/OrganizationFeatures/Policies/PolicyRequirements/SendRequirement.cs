@@ -1,23 +1,22 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public class SendRequirement : IRequirement
+public class SendPolicyRequirement : IPolicyRequirement
 {
     public bool DisableSend { get; init; }
     public bool DisableHideEmail { get; init; }
 
-    public static SendRequirement Create(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails)
+    public static SendPolicyRequirement Create(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails)
     {
         var filteredPolicies = userPolicyDetails
             .ExcludeOwnersAndAdmins()
             .ExcludeRevokedAndInvitedUsers()
             .ToList();
 
-        return new SendRequirement
+        return new SendPolicyRequirement
         {
             DisableSend = filteredPolicies
                 .GetPolicyType(PolicyType.DisableSend)

@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -11,11 +10,11 @@ public enum SingleOrganizationRequirementResult
     RequiredByOtherOrganization = 3
 }
 
-public class SingleOrganizationRequirement : IRequirement
+public class SingleOrganizationPolicyRequirement : IPolicyRequirement
 {
     private IEnumerable<OrganizationUserPolicyDetails> PolicyDetails { get; }
 
-    public SingleOrganizationRequirement(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails)
+    public SingleOrganizationPolicyRequirement(IEnumerable<OrganizationUserPolicyDetails> userPolicyDetails)
     {
         PolicyDetails = userPolicyDetails
             .GetPolicyType(PolicyType.SingleOrg)
