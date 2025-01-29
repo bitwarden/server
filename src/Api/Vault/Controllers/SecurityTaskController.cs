@@ -1,4 +1,4 @@
-using Bit.Api.Models.Response;
+﻿using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
@@ -111,9 +111,6 @@ public class SecurityTaskController : Controller
         {
             await _pushService.PushSyncSecurityTaskCreateAsync(task.UserId);
         }
-
-        var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
-        return new ListResponseModel<SecurityTasksResponseModel>(response);
 
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
