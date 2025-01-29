@@ -162,7 +162,7 @@ public class RevokeNonCompliantOrganizationUserCommandTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
-            .RevokeManyByIdAsync(Arg.Any<IEnumerable<Guid>>());
+            .RevokeManyByIdAsync(Arg.Is<IEnumerable<Guid>>(x => x.Count() == 1 && x.Contains(userToRevoke.Id)));
 
         Assert.True(result.Success);
 

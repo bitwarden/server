@@ -9,6 +9,7 @@ public record OrganizationMetadataResponse(
     bool IsSubscriptionUnpaid,
     bool HasSubscription,
     bool HasOpenInvoice,
+    bool IsSubscriptionCanceled,
     DateTime? InvoiceDueDate,
     DateTime? InvoiceCreatedDate,
     DateTime? SubPeriodEndDate)
@@ -21,6 +22,7 @@ public record OrganizationMetadataResponse(
             metadata.IsSubscriptionUnpaid,
             metadata.HasSubscription,
             metadata.HasOpenInvoice,
+            metadata.IsSubscriptionCanceled,
             metadata.InvoiceDueDate,
             metadata.InvoiceCreatedDate,
             metadata.SubPeriodEndDate);

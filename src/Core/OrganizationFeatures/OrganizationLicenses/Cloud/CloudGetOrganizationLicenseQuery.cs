@@ -15,17 +15,20 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
     private readonly IPaymentService _paymentService;
     private readonly ILicensingService _licensingService;
     private readonly IProviderRepository _providerRepository;
+    private readonly IFeatureService _featureService;
 
     public CloudGetOrganizationLicenseQuery(
         IInstallationRepository installationRepository,
         IPaymentService paymentService,
         ILicensingService licensingService,
-        IProviderRepository providerRepository)
+        IProviderRepository providerRepository,
+        IFeatureService featureService)
     {
         _installationRepository = installationRepository;
         _paymentService = paymentService;
         _licensingService = licensingService;
         _providerRepository = providerRepository;
+        _featureService = featureService;
     }
 
     public async Task<OrganizationLicense> GetLicenseAsync(Organization organization, Guid installationId,
@@ -38,11 +41,13 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
         }
 
         var subscriptionInfo = await GetSubscriptionAsync(organization);
-
-        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version)
+        var license = new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
+        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
         {
-            Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo)
-        };
+            license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
+        }
+
+        return license;
     }
 
     private async Task<SubscriptionInfo> GetSubscriptionAsync(Organization organization)
