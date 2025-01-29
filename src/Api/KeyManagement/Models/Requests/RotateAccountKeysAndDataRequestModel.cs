@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.KeyManagement.Models.Request.Accounts;
+namespace Bit.Api.KeyManagement.Models.Request;
 
 public class RotateUserAccountKeysAndDataRequestModel
 {
