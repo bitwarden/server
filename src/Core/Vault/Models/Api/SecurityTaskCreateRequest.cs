@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Bit.Core.Vault.Enums;
+﻿using Bit.Core.Vault.Enums;
 
 namespace Bit.Core.Vault.Models.Api;
 
