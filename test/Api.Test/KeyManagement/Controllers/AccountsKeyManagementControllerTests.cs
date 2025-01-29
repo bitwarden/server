@@ -146,4 +146,28 @@ public class AccountsKeyManagementControllerTests
                 && d.UserKeyEncryptedAccountPrivateKey == data.AccountKeys.UserKeyEncryptedAccountPrivateKey
             ));
     }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeyNoUser_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data)
+    {
+        User? user = null;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Success);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.RotateUserAccountKeysAsync(data));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RotateUserKeyWrongData_Throws(SutProvider<AccountsKeyManagementController> sutProvider,
+        RotateUserAccountKeysAndDataRequestModel data, User user, IdentityErrorDescriber _identityErrorDescriber)
+    {
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
+        sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
+            .Returns(IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch()));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RotateUserAccountKeysAsync(data));
+    }
 }
