@@ -362,22 +362,24 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             if (dbContext.Database.IsSqlite())
             {
                 userTasksCount = (await query.ToListAsync())
-                    .GroupBy(c => new { c.UserId, c.TaskCount })
+                    .GroupBy(c => new { c.UserId, c.TaskCount, c.Email })
                     .Select(g => new UserSecurityTasksCount
                     {
                         UserId = g.Key.UserId,
                         TaskCount = g.Key.TaskCount,
+                        Email = g.Key.Email
                     }).ToList();
             }
             else
             {
                 var groupByQuery = from p in query
-                                   group p by new { p.UserId, p.TaskCount }
+                                   group p by new { p.UserId, p.TaskCount, p.Email }
                     into g
                                    select new UserSecurityTasksCount
                                    {
                                        UserId = g.Key.UserId,
                                        TaskCount = g.Key.TaskCount,
+                                       Email = g.Key.Email
                                    };
                 userTasksCount = await groupByQuery.ToListAsync();
             }

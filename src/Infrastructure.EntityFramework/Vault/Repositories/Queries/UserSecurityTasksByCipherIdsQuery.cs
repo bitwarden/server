@@ -17,29 +17,55 @@ public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTasksCount>
 
     public IQueryable<UserSecurityTasksCount> Run(DatabaseContext dbContext)
     {
+        var baseCiphers =
+            from c in dbContext.Ciphers
+            where _cipherIds.Contains(c.Id)
+            join o in dbContext.Organizations
+                on c.OrganizationId equals o.Id
+            where o.Id == _organizationId && o.Enabled
+            select c;
+
         var userPermissions =
-            from c in dbContext.Ciphers.Where(c => _cipherIds.Contains(c.Id))
-            join cc in dbContext.CollectionCiphers on c.Id equals cc.CipherId
-            join cu in dbContext.CollectionUsers on cc.CollectionId equals cu.CollectionId
-            join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
-            where ou.OrganizationId == _organizationId && cu.Manage == true
+            from c in baseCiphers
+            join cc in dbContext.CollectionCiphers
+                on c.Id equals cc.CipherId
+            join cu in dbContext.CollectionUsers
+                on cc.CollectionId equals cu.CollectionId
+            join ou in dbContext.OrganizationUsers
+                on cu.OrganizationUserId equals ou.Id
+            where ou.OrganizationId == _organizationId
+                && cu.Manage == true
             select new { ou.UserId, c.Id };
 
         var groupPermissions =
-            from c in dbContext.Ciphers.Where(c => _cipherIds.Contains(c.Id))
-            join cc in dbContext.CollectionCiphers on c.Id equals cc.CipherId
-            join cg in dbContext.CollectionGroups on cc.CollectionId equals cg.CollectionId
-            join gu in dbContext.GroupUsers on cg.GroupId equals gu.GroupId
-            join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
-            where ou.OrganizationId == _organizationId && cg.Manage == true
+            from c in baseCiphers
+            join cc in dbContext.CollectionCiphers
+                on c.Id equals cc.CipherId
+            join cg in dbContext.CollectionGroups
+                on cc.CollectionId equals cg.CollectionId
+            join gu in dbContext.GroupUsers
+                on cg.GroupId equals gu.GroupId
+            join ou in dbContext.OrganizationUsers
+                on gu.OrganizationUserId equals ou.Id
+            where ou.OrganizationId == _organizationId
+                && cg.Manage == true
+                && !userPermissions.Any(up => up.Id == c.Id && up.UserId == ou.UserId)
             select new { ou.UserId, c.Id };
 
         return userPermissions.Union(groupPermissions)
-            .GroupBy(x => x.UserId)
+            .Join(
+                dbContext.Users,
+                p => p.UserId,
+                u => u.Id,
+                (p, u) => new { p.UserId, p.Id, u.Email }
+            )
+            .GroupBy(x => new { x.UserId, x.Email })
             .Select(g => new UserSecurityTasksCount
             {
-                UserId = (Guid)g.Key,
+                UserId = (Guid)g.Key.UserId,
+                Email = g.Key.Email,
                 TaskCount = g.Select(x => x.Id).Distinct().Count()
-            });
+            })
+            .OrderByDescending(x => x.TaskCount);
     }
 }
