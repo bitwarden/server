@@ -79,7 +79,7 @@ public class HandlebarsMailService : IMailService
         ProductTierType productTier,
         IEnumerable<ProductType> products)
     {
-        var message = CreateDefaultMessage("Verify your emails", email);
+        var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
         {
             IsExistingUser = isExistingUser,
