@@ -15,7 +15,7 @@ public class ProviderPlanViewModel
         ProviderPlan providerPlan,
         int usedSeats)
     {
-        var purchasedSeats = providerPlan.SeatMinimum ?? 0 + providerPlan.PurchasedSeats ?? 0;
+        var purchasedSeats = (providerPlan.SeatMinimum ?? 0) + (providerPlan.PurchasedSeats ?? 0);
 
         Name = name;
         PurchasedSeats = purchasedSeats;
