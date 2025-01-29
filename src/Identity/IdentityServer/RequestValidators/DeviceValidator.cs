@@ -91,8 +91,8 @@ public class DeviceValidator(
         await _deviceService.SaveAsync(requestDevice);
         context.Device = requestDevice;
 
-        if(!_globalSettings.DisableEmailNewDevice)
-        {  
+        if (!_globalSettings.DisableEmailNewDevice)
+        {
             await SendNewDeviceLoginEmail(context.User, requestDevice);
         }
 
