@@ -7,7 +7,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
-using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
