@@ -1,11 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace Bit.Api.KeyManagement.Models.Request;
+﻿#nullable enable
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class AccountKeysRequestModel
 {
-    [Required]
-    public string UserKeyEncryptedAccountPrivateKey { get; set; }
-    [Required]
-    public string AccountPublicKey { get; set; }
+    public required string UserKeyEncryptedAccountPrivateKey { get; set; }
+    public required string AccountPublicKey { get; set; }
 }
