@@ -106,6 +106,7 @@ public static class FeatureFlagKeys
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
+    public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
@@ -165,6 +166,10 @@ public static class FeatureFlagKeys
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
     public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
     public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
+    public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
+    public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
+    public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
+    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
     public static List<string> GetAllKeys()
     {
