@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirementQueries;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
