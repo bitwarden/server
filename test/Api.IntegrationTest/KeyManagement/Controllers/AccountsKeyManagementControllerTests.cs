@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.KeyManagement.Models.Request.Accounts;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models;
