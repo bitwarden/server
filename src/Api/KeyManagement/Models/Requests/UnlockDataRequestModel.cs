@@ -4,7 +4,7 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 
-namespace Bit.Api.KeyManagement.Models.Request;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class UnlockDataRequestModel
 {

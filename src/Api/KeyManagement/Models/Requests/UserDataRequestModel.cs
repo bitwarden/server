@@ -2,7 +2,7 @@
 using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
-namespace Bit.Api.KeyManagement.Models.Request;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class AccountDataRequestModel
 {

@@ -1,7 +1,5 @@
 ﻿#nullable enable
-using Bit.Api.KeyManagement.Models.Requests;
-
-namespace Bit.Api.KeyManagement.Models.Request;
+namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class RotateUserAccountKeysAndDataRequestModel
 {
