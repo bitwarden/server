@@ -85,28 +85,17 @@ public class DeviceValidator(
             }
         }
 
-        // At this point we have established either new device verification is not required or the NewDeviceOtp is valid
+        // At this point we have established either new device verification is not required or the NewDeviceOtp is valid,
+        // so we save the device to the database and proceed with authentication
         requestDevice.UserId = context.User.Id;
         await _deviceService.SaveAsync(requestDevice);
         context.Device = requestDevice;
 
-        // backwards compatibility -- If NewDeviceVerification not enabled send the new login emails
-        // PM-13340: removal Task; remove entire if block emails should no longer be sent
-        if (!_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification))
-        {
-            // This ensures the user doesn't receive a "new device" email on the first login
-            var now = DateTime.UtcNow;
-            if (now - context.User.CreationDate > TimeSpan.FromMinutes(10))
-            {
-                var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
-                    .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
-                if (!_globalSettings.DisableEmailNewDevice)
-                {
-                    await _mailService.SendNewDeviceLoggedInEmail(context.User.Email, deviceType, now,
-                        _currentContext.IpAddress);
-                }
-            }
+        if(!_globalSettings.DisableEmailNewDevice)
+        {  
+            await SendNewDeviceLoginEmail(context.User, requestDevice);
         }
+
         return true;
     }
 
@@ -172,6 +161,19 @@ public class DeviceValidator(
 
         // if we get to here then we need to send a new device verification email
         return DeviceValidationResultType.NewDeviceVerificationRequired;
+    }
+
+    private async Task SendNewDeviceLoginEmail(User user, Device requestDevice)
+    {
+        // Ensure that the user doesn't receive a "new device" email on the first login
+        var now = DateTime.UtcNow;
+        if (now - user.CreationDate > TimeSpan.FromMinutes(10))
+        {
+            var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
+                .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+            await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
+                _currentContext.IpAddress);
+        }
     }
 
     public async Task<Device> GetKnownDeviceAsync(User user, Device device)
