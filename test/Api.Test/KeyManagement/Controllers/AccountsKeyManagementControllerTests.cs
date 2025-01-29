@@ -4,7 +4,6 @@ using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.KeyManagement.Controllers;
-using Bit.Api.KeyManagement.Models.Request.Accounts;
 using Bit.Api.KeyManagement.Models.Requests;
 using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Tools.Models.Request;

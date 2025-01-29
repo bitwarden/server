@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
 
@@ -6,22 +8,17 @@ namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class MasterPasswordUnlockDataModel : IValidatableObject
 {
-    [Required]
-    public KdfType KdfType { get; set; }
-    [Required]
-    public int KdfIterations { get; set; }
+    public required KdfType KdfType { get; set; }
+    public required int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
 
-    [Required]
-    public string Email { get; set; }
-    [Required]
+    public required string Email { get; set; }
     [StringLength(300)]
-    public string MasterKeyAuthenticationHash { get; set; }
-    [Required]
-    public string MasterKeyEncryptedUserKey { get; set; }
+    public required string MasterKeyAuthenticationHash { get; set; }
+    public required string MasterKeyEncryptedUserKey { get; set; }
     [StringLength(50)]
-    public string MasterPasswordHint { get; set; }
+    public required string MasterPasswordHint { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
