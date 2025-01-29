@@ -45,7 +45,7 @@ public class DatabaseDataAttribute : DataAttribute
                     .WithSkip("Not Enabled");
             }
 
-            theory
+            theory = theory
                 .WithTrait("DbType", customizationContext.Database.Type.ToString())
                 .WithTestDisplayName($"{testMethod.Name}[{customizationContext.Database.Name ?? customizationContext.Database.Type.ToString()}]");
 
