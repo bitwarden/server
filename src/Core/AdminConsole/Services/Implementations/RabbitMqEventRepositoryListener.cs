@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -13,12 +13,12 @@ public class RabbitMqEventRepositoryListener : RabbitMqEventListenerBase
     protected override string QueueName => _queueName;
 
     public RabbitMqEventRepositoryListener(
-        IEventRepository eventRepository,
+        [FromKeyedServices("Persistent")] IEventWriteService eventWriteService,
         ILogger<RabbitMqEventListenerBase> logger,
         GlobalSettings globalSettings)
         : base(logger, globalSettings)
     {
-        _eventWriteService = new RepositoryEventWriteService(eventRepository);
+        _eventWriteService = eventWriteService;
         _queueName = globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName;
     }
 
