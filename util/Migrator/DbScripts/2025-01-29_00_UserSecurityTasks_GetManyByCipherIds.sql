@@ -64,6 +64,5 @@ BEGIN
     INNER JOIN [dbo].[User] U ON U.[Id] = P.[UserId]
     WHERE P.[Manage] = 1
     GROUP BY P.[UserId], U.[Email]
-    ORDER BY TaskCount DESC
 END
 GO
