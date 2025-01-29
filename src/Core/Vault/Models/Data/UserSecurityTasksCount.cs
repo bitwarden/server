@@ -18,6 +18,5 @@ public class UserSecurityTasksCount
     /// <summary>
     /// The number of actionable security tasks for the respective users.
     /// </summary>
-    public int TaskCount
-    { get; set; }
+    public int TaskCount { get; set; }
 }
