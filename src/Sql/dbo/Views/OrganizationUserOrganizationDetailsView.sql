@@ -49,7 +49,8 @@ SELECT
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
-    O.[UseRiskInsights]
+    O.[UseRiskInsights],
+    O.[LimitItemDeletion]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
