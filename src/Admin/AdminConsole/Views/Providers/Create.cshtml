@@ -12,11 +12,6 @@
     var providerTypes = Enum.GetValues<ProviderType>()
         .OrderBy(x => x.GetDisplayAttribute().Order)
         .ToList();
-
-    if (!FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-    {
-        providerTypes.Remove(ProviderType.MultiOrganizationEnterprise);
-    }
 }
 
 <h1>Create Provider</h1>
