@@ -54,6 +54,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSignUpCommands();
         services.AddOrganizationDeleteCommands();
+        services.AddOrganizationDisableCommands();
         services.AddOrganizationAuthCommands();
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
@@ -68,6 +69,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationDeleteCommand, OrganizationDeleteCommand>();
         services.AddScoped<IOrganizationInitiateDeleteCommand, OrganizationInitiateDeleteCommand>();
     }
+
+    private static void AddOrganizationDisableCommands(this IServiceCollection services) =>
+        services.AddScoped<IOrganizationDisableCommand, OrganizationDisableCommand>();
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
     {
