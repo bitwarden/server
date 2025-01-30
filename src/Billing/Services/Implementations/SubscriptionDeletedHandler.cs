@@ -7,20 +7,17 @@ namespace Bit.Billing.Services.Implementations;
 public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
 {
     private readonly IStripeEventService _stripeEventService;
-    private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
 
     public SubscriptionDeletedHandler(
         IStripeEventService stripeEventService,
-        IOrganizationService organizationService,
         IUserService userService,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationDisableCommand organizationDisableCommand)
     {
         _stripeEventService = stripeEventService;
-        _organizationService = organizationService;
         _userService = userService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationDisableCommand = organizationDisableCommand;
