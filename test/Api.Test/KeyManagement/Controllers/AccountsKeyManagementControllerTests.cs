@@ -168,6 +168,14 @@ public class AccountsKeyManagementControllerTests
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         sutProvider.GetDependency<IRotateUserAccountKeysCommand>().RotateUserAccountKeysAsync(Arg.Any<User>(), Arg.Any<RotateUserAccountKeysData>())
             .Returns(IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch()));
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RotateUserAccountKeysAsync(data));
+        try
+        {
+            await sutProvider.Sut.RotateUserAccountKeysAsync(data);
+            Assert.Fail("Should have thrown");
+        }
+        catch (BadRequestException ex)
+        {
+            Assert.NotEmpty(ex.ModelState.Values);
+        }
     }
 }
