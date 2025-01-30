@@ -204,50 +204,41 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
 
-        try
+        // Update user
+        var userEntity = await dbContext.Users.FindAsync(user.Id);
+        if (userEntity == null)
         {
-            // Update user
-            var userEntity = await dbContext.Users.FindAsync(user.Id);
-            if (userEntity == null)
-            {
-                throw new ArgumentException("User not found", nameof(user));
-            }
-
-            userEntity.SecurityStamp = user.SecurityStamp;
-            userEntity.Key = user.Key;
-            userEntity.PrivateKey = user.PrivateKey;
-
-            userEntity.Kdf = user.Kdf;
-            userEntity.KdfIterations = user.KdfIterations;
-            userEntity.KdfMemory = user.KdfMemory;
-            userEntity.KdfParallelism = user.KdfParallelism;
-
-            userEntity.Email = user.Email;
-
-            userEntity.MasterPassword = user.MasterPassword;
-            userEntity.MasterPasswordHint = user.MasterPasswordHint;
-
-            userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
-            userEntity.AccountRevisionDate = user.AccountRevisionDate;
-            userEntity.RevisionDate = user.RevisionDate;
-
-            await dbContext.SaveChangesAsync();
-
-            //  Update re-encrypted data
-            foreach (var action in updateDataActions)
-            {
-                // connection and transaction aren't used in EF
-                await action();
-            }
-
-            await transaction.CommitAsync();
-        }
-        catch
-        {
-            await transaction.RollbackAsync();
-            throw;
+            throw new ArgumentException("User not found", nameof(user));
         }
 
+        userEntity.SecurityStamp = user.SecurityStamp;
+        userEntity.Key = user.Key;
+        userEntity.PrivateKey = user.PrivateKey;
+
+        userEntity.Kdf = user.Kdf;
+        userEntity.KdfIterations = user.KdfIterations;
+        userEntity.KdfMemory = user.KdfMemory;
+        userEntity.KdfParallelism = user.KdfParallelism;
+
+        userEntity.Email = user.Email;
+
+        userEntity.MasterPassword = user.MasterPassword;
+        userEntity.MasterPasswordHint = user.MasterPasswordHint;
+
+        userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
+        userEntity.AccountRevisionDate = user.AccountRevisionDate;
+        userEntity.RevisionDate = user.RevisionDate;
+
+        await dbContext.SaveChangesAsync();
+
+        //  Update re-encrypted data
+        foreach (var action in updateDataActions)
+        {
+            // connection and transaction aren't used in EF
+            await action();
+        }
+
+        await transaction.CommitAsync();
     }
 
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
