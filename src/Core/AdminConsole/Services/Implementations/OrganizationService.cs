@@ -1304,7 +1304,7 @@ public class OrganizationService : IOrganizationService
         var subscription = await _paymentService.GetSubscriptionAsync(organization);
         if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
         {
-            return (false, "Cannot autoscale with a canceled subscription.");
+            return (false, "You do not have an active subscription. Reinstate your subscription to make changes");
         }
 
         return (true, failureReason);
