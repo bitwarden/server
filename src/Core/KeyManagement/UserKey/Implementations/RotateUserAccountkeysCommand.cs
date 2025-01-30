@@ -92,6 +92,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         user.Key = model.MasterPasswordUnlockData.MasterKeyEncryptedUserKey;
         user.PrivateKey = model.UserKeyEncryptedAccountPrivateKey;
         user.MasterPassword = _passwordHasher.HashPassword(user, model.MasterPasswordUnlockData.MasterKeyAuthenticationHash);
+        user.MasterPasswordHint = model.MasterPasswordUnlockData.MasterPasswordHint;
 
         List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
         if (model.Ciphers.Any())
