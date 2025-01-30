@@ -171,16 +171,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.SecurityStamp = user.SecurityStamp;
             entity.Key = user.Key;
 
-            entity.Kdf = user.Kdf;
-            entity.KdfIterations = user.KdfIterations;
-            entity.KdfMemory = user.KdfMemory;
-            entity.KdfParallelism = user.KdfParallelism;
-
-            entity.Email = user.Email;
-
-            entity.MasterPassword = user.MasterPassword;
-            entity.MasterPasswordHint = user.MasterPasswordHint;
-
             entity.PrivateKey = user.PrivateKey;
             entity.LastKeyRotationDate = user.LastKeyRotationDate;
             entity.AccountRevisionDate = user.AccountRevisionDate;
@@ -225,8 +215,18 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             userEntity.SecurityStamp = user.SecurityStamp;
             userEntity.Key = user.Key;
-            userEntity.MasterPassword = user.MasterPassword;
             userEntity.PrivateKey = user.PrivateKey;
+
+            userEntity.Kdf = user.Kdf;
+            userEntity.KdfIterations = user.KdfIterations;
+            userEntity.KdfMemory = user.KdfMemory;
+            userEntity.KdfParallelism = user.KdfParallelism;
+
+            userEntity.Email = user.Email;
+
+            userEntity.MasterPassword = user.MasterPassword;
+            userEntity.MasterPasswordHint = user.MasterPasswordHint;
+
             userEntity.LastKeyRotationDate = user.LastKeyRotationDate;
             userEntity.AccountRevisionDate = user.AccountRevisionDate;
             userEntity.RevisionDate = user.RevisionDate;
