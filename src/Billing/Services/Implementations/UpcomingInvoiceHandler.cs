@@ -1,10 +1,9 @@
 ﻿using Bit.Billing.Constants;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Stripe;
 using Event = Stripe.Event;
 
@@ -21,6 +20,7 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
     private readonly IValidateSponsorshipCommand _validateSponsorshipCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IPricingClient _pricingClient;
 
     public UpcomingInvoiceHandler(
         ILogger<StripeEventProcessor> logger,
@@ -31,7 +31,7 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         IProviderRepository providerRepository,
         IValidateSponsorshipCommand validateSponsorshipCommand,
         IOrganizationRepository organizationRepository,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService, IPricingClient pricingClient)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -42,6 +42,7 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         _validateSponsorshipCommand = validateSponsorshipCommand;
         _organizationRepository = organizationRepository;
         _stripeEventUtilityService = stripeEventUtilityService;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
@@ -92,7 +93,14 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
 
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
 
-            if (organization == null || !OrgPlanForInvoiceNotifications(organization))
+            if (organization == null)
+            {
+                return;
+            }
+
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            if (!plan.IsAnnual)
             {
                 return;
             }
@@ -172,6 +180,4 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
 
         return await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
     }
-
-    private static bool OrgPlanForInvoiceNotifications(Organization org) => StaticStore.GetPlan(org.PlanType).IsAnnual;
 }

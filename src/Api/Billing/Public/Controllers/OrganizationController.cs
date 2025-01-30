@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.Billing.Public.Models;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -21,19 +22,22 @@ public class OrganizationController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly ILogger<OrganizationController> _logger;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        ILogger<OrganizationController> logger)
+        ILogger<OrganizationController> logger,
+        IPricingClient pricingClient)
     {
         _organizationService = organizationService;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _logger = logger;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
@@ -140,7 +144,8 @@ public class OrganizationController : Controller
             return "Organization has no access to Secrets Manager.";
         }
 
-        var secretsManagerUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+        var secretsManagerUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization, plan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(secretsManagerUpdate);
 
         return string.Empty;
