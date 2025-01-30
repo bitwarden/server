@@ -2,7 +2,10 @@
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
-using Bit.Core.Platform.Push;
+using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Commands.Interfaces;
+using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -27,8 +30,7 @@ public class SecurityTaskController : Controller
     private readonly IGetSecurityTasksNotificationDetailsQuery _getSecurityTasksNotificationDetailsQuery;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
-    private readonly IPushNotificationService _pushService;
-
+    private readonly ICreateNotificationCommand _createNotificationCommand;
 
     public SecurityTaskController(
         IUserService userService,
@@ -39,7 +41,7 @@ public class SecurityTaskController : Controller
         IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
         IOrganizationRepository organizationRepository,
         IMailService mailService,
-        IPushNotificationService pushService)
+        ICreateNotificationCommand createNotificationCommand)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
@@ -49,7 +51,7 @@ public class SecurityTaskController : Controller
         _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
         _organizationRepository = organizationRepository;
         _mailService = mailService;
-        _pushService = pushService;
+        _createNotificationCommand = createNotificationCommand;
     }
 
     /// <summary>
@@ -108,7 +110,14 @@ public class SecurityTaskController : Controller
         await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
         foreach (var task in userTaskCount)
         {
-            await _pushService.PushSyncSecurityTaskCreateAsync(task.UserId);
+            var notification = new Notification
+            {
+                UserId = task.UserId,
+                OrganizationId = orgId,
+                Priority = Priority.Informational,
+                ClientType = ClientType.Browser,
+            };
+            await _createNotificationCommand.CreateAsync(notification);
         }
 
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
