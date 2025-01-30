@@ -259,7 +259,7 @@ public class GlobalSettings : IGlobalSettings
 
     public class EventLoggingSettings
     {
-        public RabbitMqSettings RabbitMq { get; set; }
+        public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
 
         public class RabbitMqSettings
         {
