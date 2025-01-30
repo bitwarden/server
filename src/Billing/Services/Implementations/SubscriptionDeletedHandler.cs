@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Services;
 using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
@@ -9,17 +10,20 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IOrganizationDisableCommand _organizationDisableCommand;
 
     public SubscriptionDeletedHandler(
         IStripeEventService stripeEventService,
         IOrganizationService organizationService,
         IUserService userService,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService,
+        IOrganizationDisableCommand organizationDisableCommand)
     {
         _stripeEventService = stripeEventService;
         _organizationService = organizationService;
         _userService = userService;
         _stripeEventUtilityService = stripeEventUtilityService;
+        _organizationDisableCommand = organizationDisableCommand;
     }
 
     /// <summary>
@@ -41,7 +45,7 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
 
         if (organizationId.HasValue && subscription is not { CancellationDetails.Comment: providerMigrationCancellationComment })
         {
-            await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
         }
         else if (userId.HasValue)
         {
