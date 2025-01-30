@@ -99,13 +99,6 @@ public static class HubHelpers
                 await hubContext.Clients.Group($"Organization_{organizationCollectionSettingsChangedNotification.Payload.OrganizationId}")
                     .SendAsync("ReceiveMessage", organizationCollectionSettingsChangedNotification, cancellationToken);
                 break;
-            case PushType.SyncNotification:
-                var securityTaskNotification =
-                                  JsonSerializer.Deserialize<PushNotificationData<UserPushNotification>>(
-                                          notificationJson, _deserializerOptions);
-                await hubContext.Clients.User(securityTaskNotification.Payload.UserId.ToString())
-                    .SendAsync("ReceiveMessage", securityTaskNotification, cancellationToken);
-                break;
             default:
                 break;
         }

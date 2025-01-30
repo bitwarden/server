@@ -30,5 +30,4 @@ public interface IPushNotificationService
         string deviceId = null);
     Task PushSyncOrganizationStatusAsync(Organization organization);
     Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization);
-    Task PushSyncSecurityTaskCreateAsync(Guid userId);
 }
