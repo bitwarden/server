@@ -250,9 +250,4 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
                 LimitCollectionCreation = organization.LimitCollectionCreation,
                 LimitCollectionDeletion = organization.LimitCollectionDeletion
             }, false);
-
-    public async Task PushSyncSecurityTaskCreateAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncNotification);
-    }
 }

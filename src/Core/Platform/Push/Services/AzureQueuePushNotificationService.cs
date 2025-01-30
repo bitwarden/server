@@ -174,11 +174,6 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
-    public async Task PushSyncSecurityTaskCreateAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncNotification);
-    }
-
     private async Task PushSendAsync(Send send, PushType type)
     {
         if (send.UserId.HasValue)

@@ -184,11 +184,6 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         await PushAuthRequestAsync(authRequest, PushType.AuthRequestResponse);
     }
 
-    public async Task PushSyncSecurityTaskCreateAsync(Guid userId)
-    {
-        await PushUserAsync(userId, PushType.SyncNotification);
-    }
-
     private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
     {
         var message = new AuthRequestPushNotification
