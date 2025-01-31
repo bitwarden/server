@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[GroupUser_UpdateUsers]
+﻿CREATE PROCEDURE [dbo].[GroupUser_AddUsers]
     @GroupId UNIQUEIDENTIFIER,
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY
 AS

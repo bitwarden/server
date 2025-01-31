@@ -195,7 +195,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                "[dbo].[GroupUser_UpsertUsers]",
+                "[dbo].[GroupUser_AddUsers]",
                 new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
         }
