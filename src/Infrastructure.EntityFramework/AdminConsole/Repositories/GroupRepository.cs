@@ -163,8 +163,10 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
-    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id)
+    public async Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id, bool useReadOnlyReplica = false)
     {
+        // EF is only used for self-hosted so read-only replica parameter is ignored
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
@@ -249,6 +251,29 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                          !organizationUserIds.Contains(gu.OrganizationUserId)
                          select gu;
             dbContext.RemoveRange(delete);
+            await dbContext.SaveChangesAsync();
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(orgId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var orgId = (await dbContext.Groups.FindAsync(groupId)).OrganizationId;
+            var insert = from ou in dbContext.OrganizationUsers
+                         where organizationUserIds.Contains(ou.Id) &&
+                             ou.OrganizationId == orgId &&
+                             !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
+                         select new GroupUser
+                         {
+                             GroupId = groupId,
+                             OrganizationUserId = ou.Id,
+                         };
+            await dbContext.AddRangeAsync(insert);
+
             await dbContext.SaveChangesAsync();
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(orgId);
             await dbContext.SaveChangesAsync();
