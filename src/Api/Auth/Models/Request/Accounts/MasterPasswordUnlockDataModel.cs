@@ -18,7 +18,7 @@ public class MasterPasswordUnlockDataModel : IValidatableObject
     public required string Email { get; set; }
     [StringLength(300)]
     public required string MasterKeyAuthenticationHash { get; set; }
-    public required string MasterKeyEncryptedUserKey { get; set; }
+    [EncryptedString] public required string MasterKeyEncryptedUserKey { get; set; }
     [StringLength(50)]
     public string? MasterPasswordHint { get; set; }
 
