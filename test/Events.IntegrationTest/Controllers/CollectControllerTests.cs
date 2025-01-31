@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Bit.Core.Enums;
 using Bit.Events.Models;
 
