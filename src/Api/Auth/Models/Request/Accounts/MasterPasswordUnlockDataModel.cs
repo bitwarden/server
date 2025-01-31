@@ -13,6 +13,8 @@ public class MasterPasswordUnlockDataModel : IValidatableObject
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
 
+    [StrictEmailAddress]
+    [StringLength(256)]
     public required string Email { get; set; }
     [StringLength(300)]
     public required string MasterKeyAuthenticationHash { get; set; }
