@@ -309,7 +309,7 @@ public class OrganizationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permission.Org_Delete)]
+    [RequirePermission(Permission.Org_RequestDelete)]
     public async Task<IActionResult> DeleteInitiation(Guid id, OrganizationInitiateDeleteModel model)
     {
         if (!ModelState.IsValid)
