@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using System.ComponentModel.DataAnnotations;
+
 namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class RotateUserAccountKeysAndDataRequestModel

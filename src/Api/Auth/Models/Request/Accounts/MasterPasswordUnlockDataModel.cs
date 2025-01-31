@@ -3,6 +3,7 @@
 using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
 

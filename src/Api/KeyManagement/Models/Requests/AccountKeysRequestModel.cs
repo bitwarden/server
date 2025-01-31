@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using Bit.Core.Utilities;
+
 namespace Bit.Api.KeyManagement.Models.Requests;
 
 public class AccountKeysRequestModel
