@@ -28,8 +28,6 @@ public class OrganizationDisableCommand : IOrganizationDisableCommand
 
             await _organizationRepository.ReplaceAsync(organization);
             await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-
-            // TODO: send email to owners?
         }
     }
 }
