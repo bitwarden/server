@@ -285,11 +285,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
         catch
         {
-            connection.Close();
             UnprotectData(user);
             throw;
         }
-        connection.Close();
         UnprotectData(user);
     }
 
