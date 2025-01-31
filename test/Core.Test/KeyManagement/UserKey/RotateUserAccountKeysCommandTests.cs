@@ -25,9 +25,9 @@ public class RotateUserAccountKeysCommandTests
 
         Assert.NotEqual(IdentityResult.Success, result);
     }
-  [Theory, BitAutoData]
+    [Theory, BitAutoData]
     public async Task ThrowsWhenUserIsNull(SutProvider<RotateUserAccountKeysCommand> sutProvider,
-        RotateUserAccountKeysData model)
+          RotateUserAccountKeysData model)
     {
         await Assert.ThrowsAsync<ArgumentNullException>(async () => await sutProvider.Sut.RotateUserAccountKeysAsync(null, model));
     }
