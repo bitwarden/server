@@ -87,7 +87,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
             case PatchOps.Add when
                 operation.Path?.ToLowerInvariant() == PatchPaths.Members:
                 {
-                    await AddMembersAsync(group, GetOperationValueIds(operation.Value).ToHashSet());
+                    await AddMembersAsync(group, GetOperationValueIds(operation.Value));
                     break;
                 }
 
@@ -122,20 +122,19 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
         }
     }
 
-    private async Task AddMembersAsync(Group group, HashSet<Guid> usersToAdd)
+    private async Task AddMembersAsync(Group group, List<Guid> usersToAdd)
     {
         // Azure Entra ID is known to send redundant "add" requests for each existing member every time any member
-        // is removed. To avoid excessive load on the database we detect these and return early.
+        // is removed. To avoid excessive load on the database, we check against the high availability replica and
+        // return early if they already exist.
         var groupMembers = await _groupRepository.GetManyUserIdsByIdAsync(group.Id, useReadOnlyReplica: true);
-        if (usersToAdd.IsSubsetOf(groupMembers))
+        if (usersToAdd.ToHashSet().IsSubsetOf(groupMembers))
         {
             _logger.LogDebug("Ignoring duplicate SCIM request to add members {Members} to group {Group}", usersToAdd, group.Id);
             return;
         }
 
-        // TODO: don't use the results of the previous query, just write a new upsert operation
-        var updatedMembers = groupMembers.Concat(usersToAdd).ToHashSet();
-        await _groupRepository.UpdateUsersAsync(group.Id, updatedMembers);
+        await _groupRepository.AddGroupUsersByIdAsync(group.Id, usersToAdd);
     }
 
     private List<Guid> GetOperationValueIds(JsonElement objArray)

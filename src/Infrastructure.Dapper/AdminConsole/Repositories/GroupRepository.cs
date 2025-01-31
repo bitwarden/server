@@ -190,6 +190,17 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         }
     }
 
+    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteAsync(
+                "[dbo].[GroupUser_UpsertUsers]",
+                new { GroupId = groupId, OrganizationUserIds = organizationUserIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public async Task DeleteManyAsync(IEnumerable<Guid> groupIds)
     {
         using (var connection = new SqlConnection(ConnectionString))

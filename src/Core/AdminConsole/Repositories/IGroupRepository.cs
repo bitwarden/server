@@ -28,6 +28,13 @@ public interface IGroupRepository : IRepository<Group, Guid>
     Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
+    /// <summary>
+    /// Update a group's members. Replaces all members currently in the group.
+    /// </summary>
     Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
+    /// <summary>
+    /// Add members to a group. Ignores members that are already in the group.
+    /// </summary>
+    Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
     Task DeleteManyAsync(IEnumerable<Guid> groupIds);
 }

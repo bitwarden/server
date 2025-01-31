@@ -257,6 +257,29 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
         }
     }
 
+    public async Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var orgId = (await dbContext.Groups.FindAsync(groupId)).OrganizationId;
+            var insert = from ou in dbContext.OrganizationUsers
+                         where organizationUserIds.Contains(ou.Id) &&
+                             ou.OrganizationId == orgId &&
+                             !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
+                         select new GroupUser
+                         {
+                             GroupId = groupId,
+                             OrganizationUserId = ou.Id,
+                         };
+            await dbContext.AddRangeAsync(insert);
+
+            await dbContext.SaveChangesAsync();
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(orgId);
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
     public async Task DeleteManyAsync(IEnumerable<Guid> groupIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
