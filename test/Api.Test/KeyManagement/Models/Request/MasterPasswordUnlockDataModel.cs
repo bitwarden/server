@@ -36,6 +36,8 @@ public class MasterPasswordUnlockDataModelTests
     [InlineData(KdfType.PBKDF2_SHA256, 5000, 0, null)]
     [InlineData(KdfType.PBKDF2_SHA256, 5000, null, 0)]
     [InlineData(KdfType.PBKDF2_SHA256, 5000, 0, 0)]
+    [InlineData((KdfType)2, 100000, null, null)]
+    [InlineData((KdfType)2, 2, 64, 4)]
     public void Validate_Failure(KdfType kdfType, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var model = new MasterPasswordUnlockDataModel
