@@ -250,6 +250,18 @@ public class ProvidersController : Controller
         return View(provider);
     }
 
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var provider = await GetEditModel(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        return RedirectToAction("Edit", new { id });
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [SelfHosted(NotSelfHostedOnly = true)]
