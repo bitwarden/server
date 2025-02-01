@@ -1,6 +1,5 @@
 ﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
-using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -107,7 +106,7 @@ public class OrganizationSponsorshipsController : Controller
     {
         var isFreeFamilyPolicyEnabled = false;
         var (isValid, sponsorship) = await _validateRedemptionTokenCommand.ValidateRedemptionTokenAsync(sponsorshipToken, (await CurrentUser).Email);
-        if (isValid && _featureService.IsEnabled(FeatureFlagKeys.DisableFreeFamiliesSponsorship) && sponsorship.SponsoringOrganizationId.HasValue)
+        if (isValid && sponsorship.SponsoringOrganizationId.HasValue)
         {
             var policy = await _policyRepository.GetByOrganizationIdTypeAsync(sponsorship.SponsoringOrganizationId.Value,
                 PolicyType.FreeFamiliesSponsorshipPolicy);
