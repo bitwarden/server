@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -186,18 +185,14 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
-    public async Task CanEditCiphersAsAdminAsync_Providers(
-        bool restrictProviders, Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
+    [BitAutoData]
+    public async Task CannotEditCiphersAsAdminAsync_Providers(Cipher cipher, CurrentContextOrganization organization, Guid userId, SutProvider<CiphersController> sutProvider
     )
     {
         cipher.OrganizationId = organization.Id;
 
-        // Simulate that the user is a provider for the organization
-        sutProvider.GetDependency<ICurrentContext>().EditAnyCollection(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organization.Id).Returns(true);
+        // Simulate that the user is a provider for the organization (i.e. not a member, so there is no organization available)
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns((CurrentContextOrganization)null);
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -209,22 +204,10 @@ public class CiphersControllerTests
             Id = organization.Id,
             AllowAdminAccessToAllCollectionItems = false
         });
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(restrictProviders);
 
-        // Non restricted providers should succeed
-        if (!restrictProviders)
-        {
-            await sutProvider.Sut.DeleteAdmin(cipher.Id.ToString());
-            await sutProvider.GetDependency<ICipherService>().ReceivedWithAnyArgs()
-                .DeleteAsync(default, default);
-        }
-        else // Otherwise, they should fail
-        {
-            await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipher.Id.ToString()));
-            await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
-                .DeleteAsync(default, default);
-        }
-
-        await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
+        // Providers should not be allowed to edit ciphers as Admin
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAdmin(cipher.Id.ToString()));
+        await sutProvider.GetDependency<ICipherService>().DidNotReceiveWithAnyArgs()
+            .DeleteAsync(default, default);
     }
 }
