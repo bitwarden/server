@@ -2,27 +2,26 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddOptionalNotifificationType : Migration
 {
     /// <inheritdoc />
-    public partial class AddOptionalNotifificationType : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte>(
-                name: "Type",
-                table: "Notification",
-                type: "INTEGER",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<byte>(
+            name: "Type",
+            table: "Notification",
+            type: "INTEGER",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Type",
-                table: "Notification");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "Type",
+            table: "Notification");
     }
 }

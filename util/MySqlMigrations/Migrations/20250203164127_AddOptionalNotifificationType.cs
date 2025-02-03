@@ -2,27 +2,26 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddOptionalNotifificationType : Migration
 {
     /// <inheritdoc />
-    public partial class AddOptionalNotifificationType : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte>(
-                name: "Type",
-                table: "Notification",
-                type: "tinyint unsigned",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<byte>(
+            name: "Type",
+            table: "Notification",
+            type: "tinyint unsigned",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Type",
-                table: "Notification");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "Type",
+            table: "Notification");
     }
 }

@@ -2,27 +2,26 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddOptionalNotifificationType : Migration
 {
     /// <inheritdoc />
-    public partial class AddOptionalNotifificationType : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte>(
-                name: "Type",
-                table: "Notification",
-                type: "smallint",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<byte>(
+            name: "Type",
+            table: "Notification",
+            type: "smallint",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Type",
-                table: "Notification");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "Type",
+            table: "Notification");
     }
 }
