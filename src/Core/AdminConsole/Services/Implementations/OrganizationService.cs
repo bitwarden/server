@@ -1294,17 +1294,17 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        var subscription = await _paymentService.GetSubscriptionAsync(organization);
+        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
+        {
+            return (false, "You do not have an active subscription. Reinstate your subscription to make changes");
+        }
+
         if (organization.Seats.HasValue &&
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
             return (false, $"Seat limit has been reached.");
-        }
-
-        var subscription = await _paymentService.GetSubscriptionAsync(organization);
-        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
-        {
-            return (false, "You do not have an active subscription. Reinstate your subscription to make changes");
         }
 
         return (true, failureReason);
