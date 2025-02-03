@@ -14,19 +14,22 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
     private readonly ICurrentContext _currentContext;
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly ILogger<CustomerUpdatedHandler> _logger;
 
     public CustomerUpdatedHandler(
         IOrganizationRepository organizationRepository,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IStripeEventService stripeEventService,
-        IStripeEventUtilityService stripeEventUtilityService)
+        IStripeEventUtilityService stripeEventUtilityService,
+        ILogger<CustomerUpdatedHandler> logger)
     {
         _organizationRepository = organizationRepository ?? throw new ArgumentNullException(nameof(organizationRepository));
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -37,17 +40,20 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
     {
         if (parsedEvent == null)
         {
+            _logger.LogError("Parsed event was null in CustomerUpdatedHandler");
             throw new ArgumentNullException(nameof(parsedEvent));
         }
 
         if (_stripeEventService == null)
         {
+            _logger.LogError("StripeEventService was not initialized in CustomerUpdatedHandler");
             throw new InvalidOperationException($"{nameof(_stripeEventService)} is not initialized");
         }
 
         var customer = await _stripeEventService.GetCustomer(parsedEvent, true, ["subscriptions"]);
         if (customer?.Subscriptions == null || !customer.Subscriptions.Any())
         {
+            _logger.LogWarning("Customer or subscriptions were null or empty in CustomerUpdatedHandler. Customer ID: {CustomerId}", customer?.Id);
             return;
         }
 
@@ -55,11 +61,13 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 
         if (subscription.Metadata == null)
         {
+            _logger.LogWarning("Subscription metadata was null in CustomerUpdatedHandler. Subscription ID: {SubscriptionId}", subscription.Id);
             return;
         }
 
         if (_stripeEventUtilityService == null)
         {
+            _logger.LogError("StripeEventUtilityService was not initialized in CustomerUpdatedHandler");
             throw new InvalidOperationException($"{nameof(_stripeEventUtilityService)} is not initialized");
         }
 
@@ -67,11 +75,13 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 
         if (!organizationId.HasValue)
         {
+            _logger.LogWarning("Organization ID was not found in subscription metadata. Subscription ID: {SubscriptionId}", subscription.Id);
             return;
         }
 
         if (_organizationRepository == null)
         {
+            _logger.LogError("OrganizationRepository was not initialized in CustomerUpdatedHandler");
             throw new InvalidOperationException($"{nameof(_organizationRepository)} is not initialized");
         }
 
@@ -79,6 +89,7 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 
         if (organization == null)
         {
+            _logger.LogWarning("Organization not found. Organization ID: {OrganizationId}", organizationId.Value);
             return;
         }
 
@@ -87,11 +98,13 @@ public class CustomerUpdatedHandler : ICustomerUpdatedHandler
 
         if (_referenceEventService == null)
         {
+            _logger.LogError("ReferenceEventService was not initialized in CustomerUpdatedHandler");
             throw new InvalidOperationException($"{nameof(_referenceEventService)} is not initialized");
         }
 
         if (_currentContext == null)
         {
+            _logger.LogError("CurrentContext was not initialized in CustomerUpdatedHandler");
             throw new InvalidOperationException($"{nameof(_currentContext)} is not initialized");
         }
 
