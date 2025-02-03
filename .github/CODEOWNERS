@@ -63,8 +63,6 @@ src/EventsProcessor @bitwarden/team-admin-console-dev
 **/Billing @bitwarden/team-billing-dev
 src/Admin/Controllers/ToolsController.cs @bitwarden/team-billing-dev
 src/Admin/Views/Tools @bitwarden/team-billing-dev
-src/Admin/AdminConsole/Models/ProviderViewModel.cs @bitwarden/team-billing-dev
-src/Admin/AdminConsole/Views/Providers/ProviderPlans.cshtml @bitwarden/team-billing-dev
 
 # Platform team
 .github/workflows/build.yml @bitwarden/team-platform-dev

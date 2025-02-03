@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Admin.Billing.Models;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Billing.Entities;

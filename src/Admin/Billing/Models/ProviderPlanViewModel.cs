@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Billing.Entities;
 
-namespace Bit.Admin.AdminConsole.Models;
+namespace Bit.Admin.Billing.Models;
 
 public class ProviderPlanViewModel
 {
