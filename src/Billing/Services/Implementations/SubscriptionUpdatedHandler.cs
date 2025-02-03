@@ -1,6 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -24,6 +25,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -35,7 +37,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationEnableCommand organizationEnableCommand)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -47,6 +50,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
         _featureService = featureService;
+        _organizationEnableCommand = organizationEnableCommand;
     }
 
     /// <summary>
@@ -90,7 +94,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
-                    await _organizationService.EnableAsync(organizationId.Value);
+                    await _organizationEnableCommand.EnableAsync(organizationId.Value);
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
                     await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
                     break;
