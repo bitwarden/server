@@ -733,4 +733,25 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
     }
+
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        where ou.OrganizationId == organizationId &&
+                            ou.Type == role &&
+                            ou.Status == OrganizationUserStatusType.Confirmed
+                        select new OrganizationUserUserDetails
+                        {
+                            Id = ou.Id,
+                            Email = ou.Email ?? u.Email,
+                            Permissions = ou.Permissions
+                        };
+            return await query.ToListAsync();
+        }
+    }
 }

@@ -297,10 +297,34 @@ public class AuthRequestService : IAuthRequestService
             return;
         }
 
-        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
+        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
+
+        await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
+            adminEmails,
             organizationUser.OrganizationId,
+            user.Email,
+            user.Name);
+    }
+
+    /// <summary>
+    /// Returns a list of emails for admins and custom users with the ManageResetPassword permission.
+    /// </summary>
+    /// <param name="organizationId">The organization to search within</param>
+    private async Task<List<string>> GetAdminAndAccountRecoveryEmailsAsync(Guid organizationId)
+    {
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
+            organizationId,
             OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-        await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(adminEmails, organizationUser.OrganizationId, user.Email, user.Name);
+
+        var customUsers = await _organizationUserRepository.GetManyDetailsByRoleAsync(
+            organizationId,
+            OrganizationUserType.Custom);
+
+        return admins.Select(a => a.Email)
+            .Concat(customUsers
+                .Where(a => a.GetPermissions().ManageResetPassword)
+                .Select(a => a.Email))
+            .Distinct()
+            .ToList();
     }
 }

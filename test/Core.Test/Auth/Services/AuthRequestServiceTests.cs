@@ -7,11 +7,13 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -347,14 +349,24 @@ public class AuthRequestServiceTests
         User user,
         OrganizationUser organizationUser1,
         OrganizationUserUserDetails admin1,
+        OrganizationUserUserDetails customUser1,
         OrganizationUser organizationUser2,
         OrganizationUserUserDetails admin2,
-        OrganizationUserUserDetails admin3)
+        OrganizationUserUserDetails admin3,
+        OrganizationUserUserDetails customUser2)
     {
         createModel.Type = AuthRequestType.AdminApproval;
         user.Email = createModel.Email;
         organizationUser1.UserId = user.Id;
         organizationUser2.UserId = user.Id;
+        customUser1.Permissions = CoreHelpers.ClassToJsonData(new Permissions
+        {
+            ManageResetPassword = false,
+        });
+        customUser2.Permissions = CoreHelpers.ClassToJsonData(new Permissions
+        {
+            ManageResetPassword = true,
+        });
 
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications)
@@ -393,11 +405,25 @@ public class AuthRequestServiceTests
             ]);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByRoleAsync(organizationUser1.OrganizationId, OrganizationUserType.Custom)
+            .Returns(
+            [
+                customUser1,
+            ]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyByMinimumRoleAsync(organizationUser2.OrganizationId, OrganizationUserType.Admin)
             .Returns(
             [
                 admin2,
                 admin3,
+            ]);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByRoleAsync(organizationUser2.OrganizationId, OrganizationUserType.Custom)
+            .Returns(
+            [
+                customUser2,
             ]);
 
         sutProvider.GetDependency<IAuthRequestRepository>()
@@ -435,7 +461,9 @@ public class AuthRequestServiceTests
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
             .SendDeviceApprovalRequestedNotificationEmailAsync(
-                Arg.Is<IEnumerable<string>>(emails => emails.Count() == 2 && emails.Contains(admin2.Email) && emails.Contains(admin3.Email)),
+                Arg.Is<IEnumerable<string>>(emails => emails.Count() == 3 &&
+                                                      emails.Contains(admin2.Email) && emails.Contains(admin3.Email) &&
+                                                      emails.Contains(customUser2.Email)),
                 organizationUser2.OrganizationId,
                 user.Email,
                 user.Name);
