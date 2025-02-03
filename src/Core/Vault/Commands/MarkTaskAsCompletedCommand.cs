@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
-using Bit.Core.Vault.Authorization;
+using Bit.Core.Vault.Authorization.SecurityTasks;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
