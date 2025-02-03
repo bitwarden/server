@@ -325,7 +325,17 @@ public static class ServiceCollectionExtensions
         }
         else if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+            {
+                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
         }
         else
         {
