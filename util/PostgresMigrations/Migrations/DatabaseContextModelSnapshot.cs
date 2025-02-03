@@ -1684,6 +1684,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<byte?>("Type")
+                        .HasColumnType("smallint");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 

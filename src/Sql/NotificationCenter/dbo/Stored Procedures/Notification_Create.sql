@@ -7,6 +7,7 @@ CREATE PROCEDURE [dbo].[Notification_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
+    @Type TINYINT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -22,6 +23,7 @@ BEGIN
         [OrganizationId],
         [Title],
         [Body],
+        [Type],
         [CreationDate],
         [RevisionDate]
         )
@@ -34,6 +36,7 @@ BEGIN
         @OrganizationId,
         @Title,
         @Body,
+        @Type,
         @CreationDate,
         @RevisionDate
         )
