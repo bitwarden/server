@@ -974,7 +974,6 @@ public class AccountsController : Controller
         await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
     }
 
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
