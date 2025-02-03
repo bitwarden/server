@@ -3,7 +3,6 @@ using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -133,11 +132,6 @@ public class ProvidersController : Controller
     [HttpGet("providers/create/multi-organization-enterprise")]
     public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-        {
-            return RedirectToAction("Create");
-        }
-
         return View(new CreateMultiOrganizationEnterpriseProviderModel
         {
             OwnerEmail = ownerEmail,
@@ -211,10 +205,6 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-        {
-            return RedirectToAction("Create");
-        }
         await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
             provider,
             model.OwnerEmail,
