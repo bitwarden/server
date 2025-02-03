@@ -356,11 +356,20 @@ public class OrganizationBillingService(
             }
         }
 
+        var customerHasTaxInfo = customer is
+        {
+            Address:
+            {
+                Country: not null and not "",
+                PostalCode: not null and not ""
+            }
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported
+                Enabled = customerHasTaxInfo
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,

@@ -22,6 +22,7 @@ public enum Permission
     Org_List_View,
     Org_OrgInformation_View,
     Org_GeneralDetails_View,
+    Org_Name_Edit,
     Org_CheckEnabledBox,
     Org_BusinessInformation_View,
     Org_InitiateTrial,

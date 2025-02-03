@@ -2,6 +2,7 @@
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
@@ -1165,6 +1166,23 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);
         message.Category = "FamiliesForEnterpriseRemovedFromFamilyUser";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    {
+        var templateName = _globalSettings.SelfHosted ?
+            "AdminConsole.SelfHostNotifyAdminDeviceApprovalRequested" :
+            "AdminConsole.NotifyAdminDeviceApprovalRequested";
+        var message = CreateDefaultMessage("Review SSO login request for new device", adminEmails);
+        var model = new DeviceApprovalRequestedViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            UserNameRequestingAccess = GetUserIdentifier(email, userName),
+            OrganizationId = organizationId,
+        };
+        await AddMessageContentAsync(message, templateName, model);
+        message.Category = "DeviceApprovalRequested";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

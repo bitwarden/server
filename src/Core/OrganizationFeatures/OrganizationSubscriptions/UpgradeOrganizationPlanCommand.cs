@@ -224,27 +224,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            if (_featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-            {
-                var sale = OrganizationSale.From(organization, upgrade);
-                await _organizationBillingService.Finalize(sale);
-            }
-            else
-            {
-                try
-                {
-                    paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                        newPlan, upgrade);
-                    success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
-                }
-                catch
-                {
-                    await _paymentService.CancelAndRecoverChargesAsync(organization);
-                    organization.GatewayCustomerId = null;
-                    await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-                    throw;
-                }
-            }
+            var sale = OrganizationSale.From(organization, upgrade);
+            await _organizationBillingService.Finalize(sale);
         }
         else
         {
