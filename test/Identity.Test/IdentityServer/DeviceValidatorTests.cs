@@ -227,7 +227,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewDeviceVerificationFeatureFlagFalse_SendsEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsync_ExistingUserNewDeviceLogin_SendNewDeviceLoginEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -237,8 +237,6 @@ public class DeviceValidatorTests
         _globalSettings.DisableEmailNewDevice = false;
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(false);
         // set user creation to more than 10 minutes ago
         context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromMinutes(11);
 
@@ -253,7 +251,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewDeviceVerificationFeatureFlagFalse_NewUser_DoesNotSendEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsync_NewUserNewDeviceLogin_DoesNotSendNewDeviceLoginEmail_ReturnsTrue(
     CustomValidatorRequestContext context,
     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -263,8 +261,6 @@ public class DeviceValidatorTests
         _globalSettings.DisableEmailNewDevice = false;
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(false);
         // set user creation to less than 10 minutes ago
         context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromMinutes(9);
 
@@ -279,7 +275,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewDeviceVerificationFeatureFlagFalse_DisableEmailTrue_DoesNotSendEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsynce_DisableNewDeviceLoginEmailTrue_DoesNotSendNewDeviceEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -289,8 +285,6 @@ public class DeviceValidatorTests
         _globalSettings.DisableEmailNewDevice = true;
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(false);
 
         // Act
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
