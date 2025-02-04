@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
