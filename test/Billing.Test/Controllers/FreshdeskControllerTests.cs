@@ -206,6 +206,7 @@ public class FreshdeskControllerTests
 
         // mocking Onyx api response given a ticket description
         var mockOnyxHttpMessageHandler = Substitute.ForPartsOf<MockHttpMessageHandler>();
+        onyxResponse.ErrorMsg = string.Empty;
         var mockOnyxResponse = new HttpResponseMessage(System.Net.HttpStatusCode.OK)
         {
             Content = new StringContent(JsonSerializer.Serialize(onyxResponse))
