@@ -61,7 +61,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     public async Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
     {
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
-        var users = await GetUsers(orgUsers);
+        var users = await GetUsersAsync(orgUsers);
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
         var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
 
@@ -99,7 +99,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             }
         }
 
-        await HandleUserDeletions(userDeletionResults);
+        await HandleUserDeletionsAsync(userDeletionResults);
 
         await LogDeletedOrganizationUsersAsync(userDeletionResults);
 
@@ -108,7 +108,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             .ToList();
     }
 
-    private async Task<IEnumerable<User>> GetUsers(ICollection<OrganizationUser> orgUsers)
+    private async Task<IEnumerable<User>> GetUsersAsync(ICollection<OrganizationUser> orgUsers)
     {
         var userIds = orgUsers
          .Where(orgUser => orgUser.UserId.HasValue)
@@ -131,14 +131,14 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         await EnsureUserIsNotSoleOrganizationOwnerAsync(user);
         await EnsureUserIsNotSoleProviderOwnerAsync(user);
     }
-    private void EnsureUserStatusIsNotInvited(OrganizationUser orgUser)
+    private static void EnsureUserStatusIsNotInvited(OrganizationUser orgUser)
     {
         if (!orgUser.UserId.HasValue || orgUser.Status == OrganizationUserStatusType.Invited)
         {
             throw new BadRequestException("You cannot delete a member with Invited status.");
         }
     }
-    private void PreventSelfDeletion(OrganizationUser orgUser, Guid? deletingUserId)
+    private static void PreventSelfDeletion(OrganizationUser orgUser, Guid? deletingUserId)
     {
         if (!(orgUser.UserId.HasValue && deletingUserId.HasValue))
         {
@@ -163,7 +163,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
     }
 
-    private void PreventOrganizationSoleOwnerDeletion(OrganizationUser orgUser, bool hasOtherConfirmedOwners)
+    private static void PreventOrganizationSoleOwnerDeletion(OrganizationUser orgUser, bool hasOtherConfirmedOwners)
     {
         if (orgUser.Type != OrganizationUserType.Owner)
         {
@@ -176,7 +176,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         }
     }
 
-    private void EnsureUserIsManagedByOrganization(OrganizationUser orgUser, IDictionary<Guid, bool> managementStatus)
+    private static void EnsureUserIsManagedByOrganization(OrganizationUser orgUser, IDictionary<Guid, bool> managementStatus)
     {
         if (!managementStatus.TryGetValue(orgUser.Id, out var isManaged) || !isManaged)
         {
@@ -218,7 +218,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             await _eventService.LogOrganizationUserEventsAsync(events);
         }
     }
-    private async Task HandleUserDeletions(List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, string? ErrorMessage)> userDeletionResults)
+    private async Task HandleUserDeletionsAsync(List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, string? ErrorMessage)> userDeletionResults)
     {
         var usersToDelete = userDeletionResults
             .Where(result =>
