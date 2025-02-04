@@ -179,18 +179,19 @@ public class FreshdeskController : Controller
 
         // create the onyx `answer-with-citation` request
         var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(ticketInfo.DescriptionText);
-        var onyxRequest = new HttpRequestMessage(
-                            HttpMethod.Post,
+        var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
                             string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
         {
             Content = JsonContent.Create(onyxRequestModel, mediaType: new MediaTypeHeaderValue("application/json")),
         };
-        var (onyxResponse, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
+        var (_, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
 
         // the CallOnyxApi will return a null if we have an error response
-        if (onyxJsonResponse?.Answer == null)
+        if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
         {
-            return BadRequest("Failed to get a valid response from Onyx API");
+            return BadRequest(
+                string.Format("Failed to get a valid response from Onyx API. Response: {0}",
+                            JsonSerializer.Serialize(onyxJsonResponse ?? new OnyxAnswerWithCitationResponseModel())));
         }
 
         // add the answer as a note to the ticket
@@ -230,7 +231,12 @@ public class FreshdeskController : Controller
             Content = JsonContent.Create(noteBody),
         };
 
-        await CallFreshdeskApiAsync(noteRequest);
+        var addNoteResponse = await CallFreshdeskApiAsync(noteRequest);
+        if (addNoteResponse.StatusCode != System.Net.HttpStatusCode.OK)
+        {
+            _logger.LogError("Error adding note to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
+                            ticketId, addNoteResponse.ToString());
+        }
     }
 
     private async Task<FreshdeskViewTicketModel> ExtractTicketInfoFromResponse(HttpResponseMessage getTicketResponse)
@@ -243,7 +249,6 @@ public class FreshdeskController : Controller
                 options: new System.Text.Json.JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true,
-                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower,
                 });
 
             return ticketInfo;
@@ -296,8 +301,8 @@ public class FreshdeskController : Controller
         var responseJson = JsonSerializer.Deserialize<T>(responseStr, options: new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
+
         return (response, responseJson);
     }
 
