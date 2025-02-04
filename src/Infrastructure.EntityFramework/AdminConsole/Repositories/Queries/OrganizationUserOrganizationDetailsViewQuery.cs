@@ -68,6 +68,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         SmServiceAccounts = o.SmServiceAccounts,
                         LimitCollectionCreation = o.LimitCollectionCreation,
                         LimitCollectionDeletion = o.LimitCollectionDeletion,
+                        LimitItemDeletion = o.LimitItemDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
                         UseRiskInsights = o.UseRiskInsights,
                     };
