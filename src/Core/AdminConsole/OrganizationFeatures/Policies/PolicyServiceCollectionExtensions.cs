@@ -12,6 +12,7 @@ public static class PolicyServiceCollectionExtensions
     {
         services.AddScoped<IPolicyService, PolicyService>();
         services.AddScoped<ISavePolicyCommand, SavePolicyCommand>();
+        services.AddScoped<IPolicyRequirementQuery, PolicyRequirementQuery>();
 
         services.AddScoped<IPolicyValidator, TwoFactorAuthenticationPolicyValidator>();
         services.AddScoped<IPolicyValidator, SingleOrgPolicyValidator>();
