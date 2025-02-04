@@ -121,4 +121,27 @@ public class OrganizationEnableCommandTests
             .Received(1)
             .UpsertOrganizationAbilityAsync(organization);
     }
+
+    [Theory, BitAutoData]
+    public async Task EnableAsync_WithoutExpiration_DoesNotUpdateRevisionDate(
+        Organization organization,
+        SutProvider<OrganizationEnableCommand> sutProvider)
+    {
+        organization.Enabled = false;
+        var originalRevisionDate = organization.RevisionDate;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        await sutProvider.Sut.EnableAsync(organization.Id);
+
+        Assert.True(organization.Enabled);
+        Assert.Equal(originalRevisionDate, organization.RevisionDate);
+        await sutProvider.GetDependency<IOrganizationRepository>()
+            .Received(1)
+            .ReplaceAsync(organization);
+        await sutProvider.GetDependency<IApplicationCacheService>()
+            .Received(1)
+            .UpsertOrganizationAbilityAsync(organization);
+    }
 }

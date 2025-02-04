@@ -3,15 +3,9 @@
 public interface IOrganizationEnableCommand
 {
     /// <summary>
-    /// Enables an organization if it is currently disabled.
+    /// Enables an organization that is currently disabled and has a gateway configured.
     /// </summary>
     /// <param name="organizationId">The unique identifier of the organization to enable.</param>
-    Task EnableAsync(Guid organizationId);
-
-    /// <summary>
-    /// Enables an organization with a specified expiration date if it is currently disabled and has a gateway configured.
-    /// </summary>
-    /// <param name="organizationId">The unique identifier of the organization to enable.</param>
-    /// <param name="expirationDate">The optional expiration date when the organization's subscription will expire.</param>
-    Task EnableAsync(Guid organizationId, DateTime? expirationDate);
+    /// <param name="expirationDate">When provided, sets the date the organization's subscription will expire. If not provided, no expiration date will be set.</param>
+    Task EnableAsync(Guid organizationId, DateTime? expirationDate = null);
 }

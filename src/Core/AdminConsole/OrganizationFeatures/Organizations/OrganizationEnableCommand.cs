@@ -17,29 +17,23 @@ public class OrganizationEnableCommand : IOrganizationEnableCommand
         _organizationRepository = organizationRepository;
     }
 
-    public async Task EnableAsync(Guid organizationId)
+    public async Task EnableAsync(Guid organizationId, DateTime? expirationDate = null)
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization is { Enabled: false })
+        if (organization is null || organization.Enabled || expirationDate is not null && organization.Gateway is null)
         {
-            organization.Enabled = true;
-
-            await _organizationRepository.ReplaceAsync(organization);
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+            return;
         }
-    }
 
-    public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
-    {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization is { Enabled: false, Gateway: not null })
+        organization.Enabled = true;
+
+        if (expirationDate is not null && organization.Gateway is not null)
         {
-            organization.Enabled = true;
             organization.ExpirationDate = expirationDate;
             organization.RevisionDate = DateTime.UtcNow;
-
-            await _organizationRepository.ReplaceAsync(organization);
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         }
+
+        await _organizationRepository.ReplaceAsync(organization);
+        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
     }
 }
