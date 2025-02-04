@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.StaticStore;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -124,28 +125,8 @@ public class CloudOrganizationSignUpCommand(
         }
         else if (plan.Type != PlanType.Free)
         {
-            if (featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI))
-            {
-                var sale = OrganizationSale.From(organization, signup);
-                await organizationBillingService.Finalize(sale);
-            }
-            else
-            {
-                if (signup.PaymentMethodType != null)
-                {
-                    await paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                        signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.TaxInfo, signup.IsFromProvider, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
-                }
-                else
-                {
-                    await paymentService.PurchaseOrganizationNoPaymentMethod(organization, plan, signup.AdditionalSeats,
-                        signup.PremiumAccessAddon, signup.AdditionalSmSeats.GetValueOrDefault(),
-                        signup.AdditionalServiceAccounts.GetValueOrDefault(), signup.IsFromSecretsManagerTrial);
-                }
-
-            }
+            var sale = OrganizationSale.From(organization, signup);
+            await organizationBillingService.Finalize(sale);
         }
 
         var ownerId = signup.IsFromProvider ? default : signup.Owner.Id;

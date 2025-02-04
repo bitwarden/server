@@ -1,6 +1,6 @@
 ﻿using Bit.Core.NotificationHub;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

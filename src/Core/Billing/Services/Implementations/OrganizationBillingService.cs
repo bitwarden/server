@@ -69,7 +69,7 @@ public class OrganizationBillingService(
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
-                false, false, false, null, null, null);
+                false, false, false, false, null, null, null);
         }
 
         var customer = await subscriberService.GetCustomer(organization,
@@ -79,6 +79,7 @@ public class OrganizationBillingService(
 
         var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
         var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
+        var isSubscriptionCanceled = IsSubscriptionCanceled(subscription);
         var hasSubscription = true;
         var openInvoice = await HasOpenInvoiceAsync(subscription);
         var hasOpenInvoice = openInvoice.HasOpenInvoice;
@@ -87,7 +88,7 @@ public class OrganizationBillingService(
         var subPeriodEndDate = subscription?.CurrentPeriodEnd;
 
         return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
+            isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, isSubscriptionCanceled, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
     }
 
     public async Task UpdatePaymentMethod(
@@ -355,11 +356,20 @@ public class OrganizationBillingService(
             }
         }
 
+        var customerHasTaxInfo = customer is
+        {
+            Address:
+            {
+                Country: not null and not "",
+                PostalCode: not null and not ""
+            }
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported
+                Enabled = customerHasTaxInfo
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
@@ -436,6 +446,16 @@ public class OrganizationBillingService(
         return invoice?.Status == "open"
             ? (true, invoice.Created, invoice.DueDate)
             : (false, null, null);
+    }
+
+    private static bool IsSubscriptionCanceled(Subscription subscription)
+    {
+        if (subscription == null)
+        {
+            return false;
+        }
+
+        return subscription.Status == "canceled";
     }
     #endregion
 }

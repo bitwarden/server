@@ -1150,7 +1150,7 @@ public class CiphersController : Controller
 
     [HttpDelete("{id}/attachment/{attachmentId}")]
     [HttpPost("{id}/attachment/{attachmentId}/delete")]
-    public async Task DeleteAttachment(Guid id, string attachmentId)
+    public async Task<DeleteAttachmentResponseData> DeleteAttachment(Guid id, string attachmentId)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
@@ -1159,7 +1159,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
+        return await _cipherService.DeleteAttachmentAsync(cipher, attachmentId, userId, false);
     }
 
     [HttpDelete("{id}/attachment/{attachmentId}/admin")]

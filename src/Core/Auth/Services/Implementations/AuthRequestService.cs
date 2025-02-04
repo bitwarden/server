@@ -7,10 +7,12 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -26,6 +28,9 @@ public class AuthRequestService : IAuthRequestService
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IMailService _mailService;
+    private readonly IFeatureService _featureService;
+    private readonly ILogger<AuthRequestService> _logger;
 
     public AuthRequestService(
         IAuthRequestRepository authRequestRepository,
@@ -35,7 +40,10 @@ public class AuthRequestService : IAuthRequestService
         ICurrentContext currentContext,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IOrganizationUserRepository organizationRepository)
+        IOrganizationUserRepository organizationRepository,
+        IMailService mailService,
+        IFeatureService featureService,
+        ILogger<AuthRequestService> logger)
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -45,6 +53,9 @@ public class AuthRequestService : IAuthRequestService
         _pushNotificationService = pushNotificationService;
         _eventService = eventService;
         _organizationUserRepository = organizationRepository;
+        _mailService = mailService;
+        _featureService = featureService;
+        _logger = logger;
     }
 
     public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
@@ -131,6 +142,8 @@ public class AuthRequestService : IAuthRequestService
             {
                 var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
                 firstAuthRequest ??= createdAuthRequest;
+
+                await NotifyAdminsOfDeviceApprovalRequestAsync(organizationUser, user);
             }
 
             // I know this won't be null because I have already validated that at least one organization exists
@@ -274,5 +287,20 @@ public class AuthRequestService : IAuthRequestService
     private static bool IsDateExpired(DateTime savedDate, TimeSpan allowedLifetime)
     {
         return DateTime.UtcNow > savedDate.Add(allowedLifetime);
+    }
+
+    private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
+        {
+            _logger.LogWarning("Skipped sending device approval notification to admins - feature flag disabled");
+            return;
+        }
+
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
+            organizationUser.OrganizationId,
+            OrganizationUserType.Admin);
+        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+        await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(adminEmails, organizationUser.OrganizationId, user.Email, user.Name);
     }
 }
