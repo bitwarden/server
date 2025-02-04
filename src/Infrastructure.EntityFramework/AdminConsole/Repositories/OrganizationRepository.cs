@@ -117,13 +117,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var dbContext = GetDatabaseContext(scope);
 
+        var disallowedPlanTypes = new List<PlanType>
+        {
+            PlanType.Free,
+            PlanType.Custom,
+            PlanType.FamiliesAnnually2019,
+            PlanType.FamiliesAnnually
+        };
+
         var query =
             from o in dbContext.Organizations
-            where
-                ((o.PlanType >= PlanType.TeamsMonthly2019 && o.PlanType <= PlanType.EnterpriseAnnually2019) ||
-                 (o.PlanType >= PlanType.TeamsMonthly2020 && o.PlanType <= PlanType.EnterpriseAnnually)) &&
-                !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
-                (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+            where o.PlanType.NotIn(disallowedPlanTypes) &&
+                  !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                  (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
 
         if (string.IsNullOrWhiteSpace(ownerEmail))
@@ -155,7 +161,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     select o;
         }
 
-        return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        return await query.OrderByDescending(o => o.CreationDate).ThenByDescending(o => o.Id).Skip(skip).Take(take).ToArrayAsync();
     }
 
     public async Task UpdateStorageAsync(Guid id)
