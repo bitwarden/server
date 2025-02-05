@@ -26,6 +26,7 @@ public class NoopMailService : IMailService
     }
 
     public Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
