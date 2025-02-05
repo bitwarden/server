@@ -232,7 +232,7 @@ public class FreshdeskController : Controller
         };
 
         var addNoteResponse = await CallFreshdeskApiAsync(noteRequest);
-        if (addNoteResponse.StatusCode != System.Net.HttpStatusCode.OK)
+        if (addNoteResponse.StatusCode != System.Net.HttpStatusCode.Created)
         {
             _logger.LogError("Error adding note to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
                             ticketId, addNoteResponse.ToString());
