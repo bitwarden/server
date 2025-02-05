@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <GenerateUserSecretsAttribute>false</GenerateUserSecretsAttribute>
@@ -70,6 +70,11 @@
     <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
     <PackageReference Include="Quartz.Extensions.DependencyInjection" Version="3.13.1" />
     <PackageReference Include="RabbitMQ.Client" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Pinned transitive dependencies">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
   </ItemGroup>
 
   <ItemGroup>
