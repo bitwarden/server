@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json.Serialization;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -23,6 +24,7 @@ public class ProviderOrganizationOrganizationDetails
     public int? OccupiedSeats { get; set; }
     public int? Seats { get; set; }
     public string Plan { get; set; }
+    public PlanType PlanType { get; set; }
     public OrganizationStatusType Status { get; set; }
 
     /// <summary>

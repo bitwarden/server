@@ -235,7 +235,8 @@ public class ProvidersController : Controller
 
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderViewModel(provider, users, providerOrganizations));
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        return View(new ProviderViewModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
