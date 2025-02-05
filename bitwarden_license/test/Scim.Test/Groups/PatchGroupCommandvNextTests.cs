@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -20,7 +21,8 @@ public class PatchGroupCommandvNextTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, IEnumerable<Guid> userIds)
+    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider,
+        Organization organization, Group group, IEnumerable<Guid> userIds)
     {
         group.OrganizationId = organization.Id;
 
@@ -40,7 +42,11 @@ public class PatchGroupCommandvNextTests
 
         await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => userIds.Contains(id))));
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(
+            group.Id,
+            Arg.Is<IEnumerable<Guid>>(arg =>
+                arg.Count() == userIds.Count() &&
+                arg.ToHashSet().SetEquals(userIds)));
     }
 
     [Theory]
@@ -54,11 +60,11 @@ public class PatchGroupCommandvNextTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
-                new ScimPatchModel.OperationModel
+                new()
                 {
                     Op = "replace",
                     Path = "displayname",
@@ -84,11 +90,11 @@ public class PatchGroupCommandvNextTests
             .GetByIdAsync(organization.Id)
             .Returns(organization);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
-                new ScimPatchModel.OperationModel
+                new()
                 {
                     Op = "replace",
                     Value = JsonDocument.Parse($"{{\"displayName\":\"{displayName}\"}}").RootElement
@@ -110,14 +116,14 @@ public class PatchGroupCommandvNextTests
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IGroupRepository>()
-            .GetManyUserIdsByIdAsync(group.Id)
+            .GetManyUserIdsByIdAsync(group.Id, true)
             .Returns(existingMembers);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
-                new ScimPatchModel.OperationModel
+                new()
                 {
                     Op = "add",
                     Path = $"members[value eq \"{userId}\"]",
@@ -128,7 +134,45 @@ public class PatchGroupCommandvNextTests
 
         await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).AddGroupUsersByIdAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Append(userId).Contains(id))));
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).AddGroupUsersByIdAsync(
+            group.Id,
+            Arg.Is<IEnumerable<Guid>>(arg => arg.Single() == userId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddSingleMember_ReturnsEarlyIfAlreadyInGroup(
+        SutProvider<PatchGroupCommandvNext> sutProvider,
+        Organization organization,
+        Group group,
+        ICollection<Guid> existingMembers)
+    {
+        // User being added is already in group
+        var userId = existingMembers.First();
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyUserIdsByIdAsync(group.Id, true)
+            .Returns(existingMembers);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = $"members[value eq \"{userId}\"]",
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        await sutProvider.GetDependency<IGroupRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .AddGroupUsersByIdAsync(default, default);
     }
 
     [Theory]
@@ -138,14 +182,14 @@ public class PatchGroupCommandvNextTests
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IGroupRepository>()
-            .GetManyUserIdsByIdAsync(group.Id)
+            .GetManyUserIdsByIdAsync(group.Id, true)
             .Returns(existingMembers);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
-                new ScimPatchModel.OperationModel
+                new()
                 {
                     Op = "add",
                     Path = $"members",
@@ -157,7 +201,99 @@ public class PatchGroupCommandvNextTests
 
         await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).AddGroupUsersByIdAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Concat(userIds).Contains(id))));
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).AddGroupUsersByIdAsync(
+            group.Id,
+            Arg.Is<IEnumerable<Guid>>(arg =>
+                arg.Count() == userIds.Count &&
+                arg.ToHashSet().SetEquals(userIds)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddListMembers_IgnoresDuplicatesInRequest(
+        SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group,
+        ICollection<Guid> existingMembers)
+    {
+        // Create 3 userIds
+        var fixture = new Fixture { RepeatCount = 3 };
+        var userIds = fixture.CreateMany<Guid>().ToList();
+
+        // Copy the list and add a duplicate
+        var userIdsWithDuplicate = userIds.Append(userIds.First()).ToList();
+        Assert.Equal(4, userIdsWithDuplicate.Count);
+
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyUserIdsByIdAsync(group.Id, true)
+            .Returns(existingMembers);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = $"members",
+                    Value = JsonDocument.Parse(JsonSerializer
+                        .Serialize(userIdsWithDuplicate
+                            .Select(uid => new { value = uid })
+                            .ToArray())).RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).AddGroupUsersByIdAsync(
+            group.Id,
+            Arg.Is<IEnumerable<Guid>>(arg =>
+                arg.Count() == 3 &&
+                arg.ToHashSet().SetEquals(userIds)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_AddListMembers_SuccessIfOnlySomeUsersAreInGroup(
+        SutProvider<PatchGroupCommandvNext> sutProvider,
+        Organization organization, Group group,
+        ICollection<Guid> existingMembers,
+        ICollection<Guid> userIds)
+    {
+        // A user is already in the group, but some still need to be added
+        userIds.Add(existingMembers.First());
+
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetManyUserIdsByIdAsync(group.Id, true)
+            .Returns(existingMembers);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "add",
+                    Path = $"members",
+                    Value = JsonDocument.Parse(JsonSerializer.Serialize(userIds.Select(uid => new { value = uid }).ToArray())).RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        await sutProvider.GetDependency<IGroupRepository>()
+            .Received(1)
+            .AddGroupUsersByIdAsync(
+                group.Id,
+                Arg.Is<IEnumerable<Guid>>(arg =>
+                    arg.Count() == userIds.Count &&
+                    arg.ToHashSet().SetEquals(userIds)));
     }
 
     [Theory]
@@ -186,8 +322,10 @@ public class PatchGroupCommandvNextTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers)
+    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider,
+        Organization organization, Group group, ICollection<Guid> existingMembers)
     {
+        List<Guid> usersToRemove = [existingMembers.First(), existingMembers.Skip(1).First()];
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IGroupRepository>()
@@ -198,11 +336,11 @@ public class PatchGroupCommandvNextTests
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
-                new ScimPatchModel.OperationModel
+                new()
                 {
                     Op = "remove",
                     Path = $"members",
-                    Value = JsonDocument.Parse(JsonSerializer.Serialize(existingMembers.Select(uid => new { value = uid }).ToArray())).RootElement
+                    Value = JsonDocument.Parse(JsonSerializer.Serialize(usersToRemove.Select(uid => new { value = uid }).ToArray())).RootElement
                 }
             },
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -210,7 +348,14 @@ public class PatchGroupCommandvNextTests
 
         await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1).UpdateUsersAsync(group.Id, Arg.Is<IEnumerable<Guid>>(arg => arg.All(id => existingMembers.Contains(id))));
+        var expectedRemainingUsers = existingMembers.Skip(2).ToList();
+        await sutProvider.GetDependency<IGroupRepository>()
+            .Received(1)
+            .UpdateUsersAsync(
+                group.Id,
+                Arg.Is<IEnumerable<Guid>>(arg =>
+                    arg.Count() == expectedRemainingUsers.Count &&
+                    arg.ToHashSet().SetEquals(expectedRemainingUsers)));
     }
 
     [Theory]
