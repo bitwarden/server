@@ -112,7 +112,6 @@ public static class FeatureFlagKeys
     /* Tools Team */
     public const string ItemShare = "item-share";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
-    public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
@@ -155,7 +154,6 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
-    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
