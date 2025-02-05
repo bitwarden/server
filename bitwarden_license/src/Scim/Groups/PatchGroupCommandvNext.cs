@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
@@ -58,6 +59,10 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
                 {
                     group.Name = operation.Value.GetString();
                     var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
+                    if (organization == null)
+                    {
+                        throw new NotFoundException();
+                    }
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     break;
                 }
@@ -69,6 +74,10 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
                 {
                     group.Name = displayNameProperty.GetString();
                     var organization = await _organizationRepository.GetByIdAsync(group.OrganizationId);
+                    if (organization == null)
+                    {
+                        throw new NotFoundException();
+                    }
                     await _updateGroupCommand.UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
                     break;
                 }
