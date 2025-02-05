@@ -18,6 +18,9 @@ namespace Bit.Scim.IntegrationTest.Factories;
 
 public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 {
+    public const int InitialGroupCount = 3;
+    public const int InitialGroupUsersCount = 2;
+
     public readonly new TestServer Server;
 
     public static readonly Guid TestUserId1 = Guid.Parse("2e8173db-8e8d-4de1-ac38-91b15c6d8dcb");
