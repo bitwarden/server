@@ -107,10 +107,16 @@ public static class FeatureFlagKeys
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
+    public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
+
+    /* Tools Team */
+    public const string ItemShare = "item-share";
+    public const string GeneratorToolsModernization = "generator-tools-modernization";
+    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
+    public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
-    public const string ItemShare = "item-share";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
@@ -120,7 +126,6 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
-    public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
@@ -145,13 +150,10 @@ public static class FeatureFlagKeys
     public const string TrialPayment = "PM-8163-trial-payment";
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string PM12275_MultiOrganizationEnterprises = "pm-12275-multi-organization-enterprises";
-    public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
-    public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
-    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
@@ -169,6 +171,8 @@ public static class FeatureFlagKeys
     public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
+    public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
+    public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string AndroidMutualTls = "mutual-tls";
 
     public static List<string> GetAllKeys()

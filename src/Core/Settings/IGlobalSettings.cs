@@ -27,4 +27,5 @@ public interface IGlobalSettings
     string DatabaseProvider { get; set; }
     GlobalSettings.SqlSettings SqlServer { get; set; }
     string DevelopmentDirectory { get; set; }
+    GlobalSettings.EventLoggingSettings EventLogging { get; set; }
 }
