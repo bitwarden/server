@@ -63,7 +63,7 @@ public class CloudGetOrganizationLicenseQueryTests
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(installationId, result.InstallationId);
         Assert.Equal(licenseSignature, result.SignatureBytes);
-        Assert.Null(result.Token);
+        Assert.Equal(string.Empty, result.Token);
     }
 
     [Theory]
