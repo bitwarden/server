@@ -1678,6 +1678,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
+                    b.Property<byte?>("Type")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");
 
