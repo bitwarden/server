@@ -288,11 +288,7 @@ public class OrganizationBillingController(
         if (organizationSignup.PaymentMethodType != null)
         {
             var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
-            var taxInformation = new TaxInformation(organizationSignup.TaxInfo.BillingAddressCountry,
-                organizationSignup.TaxInfo.BillingAddressPostalCode, organizationSignup.TaxInfo.TaxIdNumber,
-                organizationSignup.TaxInfo.TaxIdType, organizationSignup.TaxInfo.BillingAddressLine1,
-                organizationSignup.TaxInfo.BillingAddressLine2, organizationSignup.TaxInfo.BillingAddressCity,
-                organizationSignup.TaxInfo.BillingAddressState);
+            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
             await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
         }
 
