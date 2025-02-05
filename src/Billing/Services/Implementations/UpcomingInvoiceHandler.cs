@@ -167,6 +167,7 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
 
         var subscriptionUpdateOptions = new SubscriptionUpdateOptions
         {
+            DefaultTaxRates = [],
             AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
         };
 
