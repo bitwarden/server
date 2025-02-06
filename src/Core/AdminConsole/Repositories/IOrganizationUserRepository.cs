@@ -60,4 +60,12 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId);
 
     Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds);
+
+    /// <summary>
+    /// Returns a list of OrganizationUsersUserDetails with the specified role.
+    /// </summary>
+    /// <param name="organizationId">The organization to search within</param>
+    /// <param name="role">The role to search for</param>
+    /// <returns>A list of OrganizationUsersUserDetails with the specified role</returns>
+    Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role);
 }
