@@ -13,7 +13,7 @@ public static class SubscriptionCreateOptionsExtensions
     public static bool EnableAutomaticTax(this SubscriptionCreateOptions options, Customer customer)
     {
         // We might only need to check the automatic tax status.
-        if (!customer.HasTaxLocationVerified() && string.IsNullOrWhiteSpace(customer?.Address.Country))
+        if (!customer.HasTaxLocationVerified() && string.IsNullOrWhiteSpace(customer.Address?.Country))
         {
             return false;
         }
