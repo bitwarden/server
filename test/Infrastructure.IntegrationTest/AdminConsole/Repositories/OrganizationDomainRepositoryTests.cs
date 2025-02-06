@@ -3,7 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationDomainRepositoryTests
 {
