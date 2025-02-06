@@ -266,8 +266,18 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        try
+        {
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
+            throw new BadRequestException(ModelState);
+        }
+
         var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            model.ToUser(user),
+            user,
             model.MasterPasswordHash,
             model.Key,
             model.OrgIdentifier);
