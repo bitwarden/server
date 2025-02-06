@@ -35,7 +35,7 @@ public class HttpPostEventHandlerTests
         clientFactory.CreateClient(HttpPostEventHandler.HttpClientName).Returns(_httpClient);
 
         var globalSettings = new GlobalSettings();
-        globalSettings.EventLogging.RabbitMq.HttpPostUrl = _httpPostUrl;
+        globalSettings.EventLogging.HttpPostUrl = _httpPostUrl;
 
         return new SutProvider<HttpPostEventHandler>()
             .SetDependency(globalSettings)
