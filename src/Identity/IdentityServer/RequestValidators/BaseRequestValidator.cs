@@ -77,8 +77,8 @@ public abstract class BaseRequestValidator<T> where T : class
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
-        // 1. we need to check if the user is a bot and if their master password hash is correct
-        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
+        // 1. We need to check if the user is a bot and if their master password hash is correct
+        var isBot = validatorContext.CaptchaResponse?.IsBot ?? false; // we don't do captchas anymore, can I remove this?
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
         if (!valid || isBot)
@@ -112,6 +112,8 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // 3. Check if 2FA is required
+
+
         (validatorContext.TwoFactorRequired, var twoFactorOrganization) = await _twoFactorAuthenticationValidator.RequiresTwoFactorAsync(user, request);
         // This flag is used to determine if the user wants a rememberMe token sent when authentication is successful
         var returnRememberMeToken = false;
@@ -171,6 +173,8 @@ public abstract class BaseRequestValidator<T> where T : class
             {
                 returnRememberMeToken = true;
             }
+
+            await _userService.RemoveTwoFactorProviderAsync(user);
         }
 
         // 4. Check if the user is logging in from a new device

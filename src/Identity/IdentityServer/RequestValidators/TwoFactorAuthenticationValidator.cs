@@ -160,9 +160,14 @@ public class TwoFactorAuthenticationValidator(
             case TwoFactorProviderType.Email:
             case TwoFactorProviderType.Duo:
             case TwoFactorProviderType.YubiKey:
-            case TwoFactorProviderType.WebAuthn:
             case TwoFactorProviderType.Remember:
+            case TwoFactorProviderType.WebAuthn:
+            case TwoFactorProviderType.RecoveryCode:
+                // The intent of this check is to make sure that the user is using a 2FA provider that is enabled and allowed by their premium status.
+                // The exception for Remember & Recovery code is because these are "special" 2FA types that aren't ever explicitly enabled by a user, so
+                // we can't check the user's 2FA providers to see if they're enabled. We just have to check if the token is valid.
                 if (type != TwoFactorProviderType.Remember &&
+                    type != TwoFactorProviderType.RecoveryCode &&
                     !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
                 {
                     return false;

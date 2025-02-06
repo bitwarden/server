@@ -22,7 +22,6 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
     Task SendTwoFactorEmailAsync(User user);
-    Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
@@ -41,8 +40,6 @@ public interface IUserService
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);
     Task UpdateTwoFactorProviderAsync(User user, TwoFactorProviderType type, bool setEnabled = true, bool logEvent = true);
     Task DisableTwoFactorProviderAsync(User user, TwoFactorProviderType type);
-    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
-    Task<string> GenerateUserTokenAsync(User user, string tokenProvider, string purpose);
     Task<IdentityResult> DeleteAsync(User user);
     Task<IdentityResult> DeleteAsync(User user, string token);
     Task SendDeleteConfirmationAsync(string email);
@@ -55,9 +52,7 @@ public interface IUserService
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
     Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
-    Task EnablePremiumAsync(User user, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
-    Task DisablePremiumAsync(User user, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
@@ -90,6 +85,14 @@ public interface IUserService
     Task ToggleNewDeviceVerificationException(Guid userId);
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
+
+    /// <summary>
+    /// This method is for managing the policies on a user during the
+    /// recovery code process when removing a 2fa method.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    public Task<bool> RemoveTwoFactorProviderAsync(User user);
 
     /// <summary>
     /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.

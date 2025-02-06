@@ -315,7 +315,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return;
         }
 
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
+        var token = await GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
@@ -868,29 +868,40 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
+    // public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
+    // {
+    //     var user = await _userRepository.GetByEmailAsync(email);
+    //     if (user == null)
+    //     {
+    //         // No user exists. Do we want to send an email telling them this in the future?
+    //         return false;
+    //     }
+    //
+    //     if (!await VerifySecretAsync(user, secret))
+    //     {
+    //         return false;
+    //     }
+    //
+    //     if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
+    //     {
+    //         return false;
+    //     }
+    //
+    //     user.TwoFactorProviders = null;
+    //     user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+    //     await SaveUserAsync(user);
+    //     await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
+    //     await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+    //     await CheckPoliciesOnTwoFactorRemovalAsync(user);
+    //
+    //     return true;
+    // }
+
+    public async Task<bool> RemoveTwoFactorProviderAsync(User user)
     {
-        var user = await _userRepository.GetByEmailAsync(email);
-        if (user == null)
-        {
-            // No user exists. Do we want to send an email telling them this in the future?
-            return false;
-        }
-
-        if (!await VerifySecretAsync(user, secret))
-        {
-            return false;
-        }
-
-        if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
-        {
-            return false;
-        }
-
         user.TwoFactorProviders = null;
         user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
         await SaveUserAsync(user);
-        await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
         await CheckPoliciesOnTwoFactorRemovalAsync(user);
 
@@ -1151,6 +1162,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     {
         if (user == null)
         {
+            Logger.LogWarning($"User {user.Id} does not exist when checking password.");
             return false;
         }
 
@@ -1360,7 +1372,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
+    public void RemoveTwoFactorProvider()
+    {
+
+    }
+
+    public async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
 

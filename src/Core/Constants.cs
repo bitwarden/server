@@ -171,6 +171,7 @@ public static class FeatureFlagKeys
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
+    public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
 
     public static List<string> GetAllKeys()
     {
