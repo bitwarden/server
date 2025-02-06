@@ -8,7 +8,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Vali
 
 public class PasswordManagerInviteUserValidationTests
 {
-
     [Theory]
     [BitAutoData]
     public void Validate_OrganizationDoesNotHaveSeatsLimit_ShouldReturnValidResult(Organization organization)
