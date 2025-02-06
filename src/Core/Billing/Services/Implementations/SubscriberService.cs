@@ -661,11 +661,21 @@ public class SubscriberService(
             }
         }
 
-        await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
-            new SubscriptionUpdateOptions
-            {
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-            });
+        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        {
+            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                new SubscriptionUpdateOptions
+                {
+                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                });
+        }
+
+        return;
+
+        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
+            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
+               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
+               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
     }
 
     public async Task VerifyBankAccount(
