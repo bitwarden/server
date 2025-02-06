@@ -16,7 +16,7 @@ BEGIN
 
     -- Insert
     INSERT INTO
-        [dbo].[GroupUser]
+        [dbo].[GroupUser] (GroupId, OrganizationUserId)
     SELECT
         @GroupId,
         [Source].[Id]

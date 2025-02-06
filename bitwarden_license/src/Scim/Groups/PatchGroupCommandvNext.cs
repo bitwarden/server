@@ -85,7 +85,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
             // Add a single member
             case PatchOps.Add when
                 !string.IsNullOrWhiteSpace(operation.Path) &&
-                operation.Path.ToLowerInvariant().StartsWith("members[value eq ") &&
+                operation.Path.StartsWith("members[value eq ", StringComparison.OrdinalIgnoreCase) &&
                 TryGetOperationPathId(operation.Path, out var addId):
                 {
                     await AddMembersAsync(group, [addId]);
@@ -103,7 +103,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
             // Remove a single member
             case PatchOps.Remove when
                 !string.IsNullOrWhiteSpace(operation.Path) &&
-                operation.Path.ToLowerInvariant().StartsWith("members[value eq ") &&
+                operation.Path.StartsWith("members[value eq ", StringComparison.OrdinalIgnoreCase) &&
                 TryGetOperationPathId(operation.Path, out var removeId):
                 {
                     await _groupService.DeleteUserAsync(group, removeId, EventSystemUser.SCIM);
@@ -146,7 +146,7 @@ public class PatchGroupCommandvNext : IPatchGroupCommandvNext
         await _groupRepository.AddGroupUsersByIdAsync(group.Id, usersToAdd);
     }
 
-    private HashSet<Guid> GetOperationValueIds(JsonElement objArray)
+    private static HashSet<Guid> GetOperationValueIds(JsonElement objArray)
     {
         var ids = new HashSet<Guid>();
         foreach (var obj in objArray.EnumerateArray())
