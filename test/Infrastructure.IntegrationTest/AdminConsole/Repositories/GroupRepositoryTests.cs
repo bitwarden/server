@@ -64,4 +64,66 @@ public class GroupRepositoryTests
         var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
         Assert.Equal(orgUserIds!.Order(), actual.Order());
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task AddGroupUsersByIdAsync_IgnoresUsersNotInOrganization(
+        IGroupRepository groupRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateTestUserAsync("user1");
+        var user2 = await userRepository.CreateTestUserAsync("user2");
+        var user3 = await userRepository.CreateTestUserAsync("user3");
+
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user1);
+        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user2);
+
+        // User3 belongs to a different org
+        var otherOrg = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser3 = await organizationUserRepository.CreateTestOrganizationUserAsync(otherOrg, user3);
+
+        var orgUserIds = new List<Guid>([orgUser1.Id, orgUser2.Id, orgUser3.Id]);
+        var group = await groupRepository.CreateTestGroupAsync(org);
+
+        // Act
+        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds);
+
+        // Assert
+        var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
+        Assert.Equal(2, actual.Count);
+        Assert.Contains(orgUser1.Id, actual);
+        Assert.Contains(orgUser2.Id, actual);
+        Assert.DoesNotContain(orgUser3.Id, actual);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task AddGroupUsersByIdAsync_IgnoresDuplicateUsers(
+        IGroupRepository groupRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateTestUserAsync("user1");
+        var user2 = await userRepository.CreateTestUserAsync("user2");
+
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user1);
+        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user2);
+
+        var orgUserIds = new List<Guid>([orgUser1.Id, orgUser2.Id, orgUser2.Id]); // duplicate orgUser2
+        var group = await groupRepository.CreateTestGroupAsync(org);
+
+        // Act
+        await groupRepository.AddGroupUsersByIdAsync(group.Id, orgUserIds);
+
+        // Assert
+        var actual = await groupRepository.GetManyUserIdsByIdAsync(group.Id);
+        Assert.Equal(2, actual.Count);
+        Assert.Contains(orgUser1.Id, actual);
+        Assert.Contains(orgUser2.Id, actual);
+    }
 }

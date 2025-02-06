@@ -17,7 +17,7 @@ BEGIN
     -- Insert
     INSERT INTO
         [dbo].[GroupUser] (GroupId, OrganizationUserId)
-    SELECT
+    SELECT DISTINCT
         @GroupId,
         [Source].[Id]
     FROM
