@@ -1,7 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -164,17 +164,12 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
         var customerGetOptions = new CustomerGetOptions { Expand = ["tax"] };
         var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
 
-        if (subscription.AutomaticTax.Enabled ||
-            customer.Tax?.AutomaticTax != StripeConstants.AutomaticTaxStatus.Supported)
+        var subscriptionUpdateOptions = new SubscriptionUpdateOptions();
+
+        if (!subscriptionUpdateOptions.EnableAutomaticTax(customer, subscription))
         {
             return subscription;
         }
-
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
-        {
-            DefaultTaxRates = [],
-            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-        };
 
         return await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
     }
