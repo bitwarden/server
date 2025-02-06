@@ -1,9 +1,16 @@
-﻿CREATE PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
+-- Drop existing SPROC
+IF OBJECT_ID('[dbo].[Organization_UnassignedToProviderSearch]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
+    END
+GO
+
+CREATE PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
     @Name NVARCHAR(55),
     @OwnerEmail NVARCHAR(256),
     @Skip INT = 0,
     @Take INT = 25
-WITH RECOMPILE
+    WITH RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -44,3 +51,4 @@ BEGIN
         FETCH NEXT @Take ROWS ONLY
     END
 END
+GO
