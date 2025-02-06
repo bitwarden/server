@@ -16,7 +16,7 @@ public class HttpPostEventHandler : IEventMessageHandler
         GlobalSettings globalSettings)
     {
         _httpClient = httpClientFactory.CreateClient(HttpClientName);
-        _httpPostUrl = globalSettings.EventLogging.RabbitMq.HttpPostUrl;
+        _httpPostUrl = globalSettings.EventLogging.HttpPostUrl;
     }
 
     public async Task HandleEventAsync(EventMessage eventMessage)

@@ -98,7 +98,7 @@ public class Startup
                     provider.GetRequiredService<GlobalSettings>(),
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
 
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HttpPostUrl))
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.HttpPostUrl))
             {
                 services.AddSingleton<HttpPostEventHandler>();
                 services.AddHttpClient(HttpPostEventHandler.HttpClientName);

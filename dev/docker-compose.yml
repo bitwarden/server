@@ -109,6 +109,21 @@ services:
     profiles:
       - proxy
 
+  servicebusemulator:
+    container_name: "servicebus-emulator"
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    pull_policy: always
+    volumes:
+      - "./servicebusemulator_config.json:/ServiceBus_Emulator/ConfigFiles/Config.json"
+    ports:
+      - "5672:5672"
+    environment:
+      SQL_SERVER: mssql
+      MSSQL_SA_PASSWORD: "${MSSQL_PASSWORD}"
+      ACCEPT_EULA: "Y"
+    profiles:
+      - servicebus
+
 volumes:
   mssql_dev_data:
   postgres_dev_data:

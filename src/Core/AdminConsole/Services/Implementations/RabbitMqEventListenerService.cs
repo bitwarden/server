@@ -7,7 +7,7 @@ using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 
-public class RabbitMqEventListenerService : EventLoggingListenerService
+public class RabbitMqEventListenerService : EventLoggingListenerService, IAsyncDisposable
 {
     private IChannel _channel;
     private IConnection _connection;
@@ -83,10 +83,10 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
         await base.StopAsync(cancellationToken);
     }
 
-    public override void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        _channel.Dispose();
-        _connection.Dispose();
+        await _channel.DisposeAsync();
+        await _connection.DisposeAsync();
         base.Dispose();
     }
 }
