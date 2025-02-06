@@ -80,6 +80,7 @@ public class OrganizationEditModel : OrganizationViewModel
         Use2fa = org.Use2fa;
         UseApi = org.UseApi;
         UseSecretsManager = org.UseSecretsManager;
+        UseRiskInsights = org.UseRiskInsights;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
@@ -143,7 +144,9 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
     [Display(Name = "Secrets Manager")]
-    public bool UseSecretsManager { get; set; }
+    public new bool UseSecretsManager { get; set; }
+    [Display(Name = "Risk Insights")]
+    public new bool UseRiskInsights { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
@@ -181,7 +184,6 @@ public class OrganizationEditModel : OrganizationViewModel
      */
     public object GetPlansHelper() =>
         StaticStore.Plans
-            .Where(p => p.SupportsSecretsManager)
             .Select(p =>
             {
                 var plan = new
@@ -285,6 +287,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.Use2fa = Use2fa;
         existingOrganization.UseApi = UseApi;
         existingOrganization.UseSecretsManager = UseSecretsManager;
+        existingOrganization.UseRiskInsights = UseRiskInsights;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;

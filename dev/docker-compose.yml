@@ -59,7 +59,7 @@ services:
     container_name: bw-mysql
     ports:
       - "3306:3306"
-    command: 
+    command:
       - --default-authentication-plugin=mysql_native_password
       - --innodb-print-all-deadlocks=ON
     environment:
@@ -84,19 +84,19 @@ services:
     profiles:
       - idp
 
-  open-ldap:
-    image: osixia/openldap:1.5.0
-    command: --copy-service
-    environment:
-      LDAP_ORGANISATION: "Bitwarden"
-      LDAP_DOMAIN: "bitwarden.com"
-    volumes:
-      - ./directory.ldif:/container/service/slapd/assets/config/bootstrap/ldif/output.ldif
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
     ports:
-      - "389:389"
-      - "636:636"
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq_data
     profiles:
-      - ldap
+      - rabbitmq
 
   reverse-proxy:
     image: nginx:alpine
@@ -113,3 +113,4 @@ volumes:
   mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:
+  rabbitmq_data:

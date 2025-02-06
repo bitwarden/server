@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Text.Json;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -98,7 +98,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
             return results
                 .GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(og => og.Edit).First())
+                .Select(g => g.OrderByDescending(og => og.Edit).ThenByDescending(og => og.ViewPassword).First())
                 .ToList();
         }
     }
@@ -306,6 +306,20 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 $"[{Schema}].[Cipher_DeleteByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<ICollection<OrganizationCipherPermission>> GetCipherPermissionsForOrganizationAsync(
+        Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationCipherPermission>(
+                $"[{Schema}].[CipherOrganizationPermissions_GetManyByOrganizationId]",
+                new { OrganizationId = organizationId, UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
         }
     }
 

@@ -69,4 +69,5 @@ public class OrganizationViewModel
     public int ServiceAccountsCount { get; set; }
     public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
+    public bool UseRiskInsights => Organization.UseRiskInsights;
 }

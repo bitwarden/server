@@ -48,6 +48,12 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = identityData;
                 Identity = new CipherIdentityModel(identityData);
                 break;
+            case CipherType.SSHKey:
+                var sshKeyData = JsonSerializer.Deserialize<CipherSSHKeyData>(cipher.Data);
+                Data = sshKeyData;
+                cipherData = sshKeyData;
+                SSHKey = new CipherSSHKeyModel(sshKeyData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -76,6 +82,7 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherSSHKeyModel SSHKey { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
     public IEnumerable<AttachmentResponseModel> Attachments { get; set; }
@@ -155,6 +162,13 @@ public class CipherMiniDetailsResponseModel : CipherMiniResponseModel
     public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
         GlobalSettings globalSettings, bool orgUseTotp, string obj = "cipherMiniDetails")
         : base(cipher, globalSettings, orgUseTotp, obj)
+    {
+        CollectionIds = cipher.CollectionIds ?? new List<Guid>();
+    }
+
+    public CipherMiniDetailsResponseModel(CipherOrganizationDetailsWithCollections cipher,
+        GlobalSettings globalSettings, string obj = "cipherMiniDetails")
+        : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
     {
         CollectionIds = cipher.CollectionIds ?? new List<Guid>();
     }

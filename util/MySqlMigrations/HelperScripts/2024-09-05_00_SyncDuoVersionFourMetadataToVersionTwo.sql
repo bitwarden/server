@@ -5,9 +5,9 @@ SET
 	U.TwoFactorProviders = JSON_SET(
         JSON_SET(
             U.TwoFactorProviders, '$."2".MetaData.ClientSecret',
-	JSON_UNQUOTE(U.TwoFactorProviders ->'$."2".MetaData.SKey')),
+	JSON_UNQUOTE(JSON_EXTRACT(U.TwoFactorProviders,'$."2".MetaData.SKey'))),
 	'$."2".MetaData.ClientId',
-	JSON_UNQUOTE(U.TwoFactorProviders -> '$."2".MetaData.IKey'))
+	JSON_UNQUOTE(JSON_EXTRACT(U.TwoFactorProviders,'$."2".MetaData.IKey')))
 WHERE
 	JSON_CONTAINS(TwoFactorProviders,
 	'{"2":{}}')
@@ -20,9 +20,9 @@ SET
 	o.TwoFactorProviders = JSON_SET(
         JSON_SET(
             o.TwoFactorProviders, '$."6".MetaData.ClientSecret',
-	JSON_UNQUOTE(o.TwoFactorProviders ->'$."6".MetaData.SKey')),
+	JSON_UNQUOTE(JSON_EXTRACT(o.TwoFactorProviders,'$."6".MetaData.SKey'))),
 	'$."6".MetaData.ClientId',
-	JSON_UNQUOTE(o.TwoFactorProviders -> '$."6".MetaData.IKey'))
+	JSON_UNQUOTE(JSON_EXTRACT(o.TwoFactorProviders,'$."6".MetaData.IKey')))
 WHERE
 	JSON_CONTAINS(o.TwoFactorProviders,
 	'{"6":{}}')

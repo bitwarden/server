@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿using System.Diagnostics;
+using System.Text;
+using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
@@ -14,6 +16,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -43,6 +46,41 @@ public class AccountsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
 
+    private readonly byte[] _defaultKdfHmacKey = null;
+    private static readonly List<UserKdfInformation> _defaultKdfResults =
+    [
+        // The first result (index 0) should always return the "normal" default.
+        new()
+        {
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+        },
+        // We want more weight for this default, so add it again
+        new()
+        {
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
+        },
+        // Add some other possible defaults...
+        new()
+        {
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 100_000,
+        },
+        new()
+        {
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 5_000,
+        },
+        new()
+        {
+            Kdf = KdfType.Argon2id,
+            KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
+            KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
+            KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
+        }
+    ];
+
     public AccountsController(
         ICurrentContext currentContext,
         ILogger<AccountsController> logger,
@@ -54,7 +92,8 @@ public class AccountsController : Controller
         ISendVerificationEmailForRegistrationCommand sendVerificationEmailForRegistrationCommand,
         IReferenceEventService referenceEventService,
         IFeatureService featureService,
-        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory
+        IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        GlobalSettings globalSettings
         )
     {
         _currentContext = currentContext;
@@ -68,6 +107,11 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+
+        if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
+        {
+            _defaultKdfHmacKey = Encoding.UTF8.GetBytes(globalSettings.KdfDefaultHashKey);
+        }
     }
 
     [HttpPost("register")]
@@ -81,7 +125,6 @@ public class AccountsController : Controller
         return await ProcessRegistrationResult(identityResult, user, delaysEnabled: true);
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/send-verification-email")]
     public async Task<IActionResult> PostRegisterSendVerificationEmail([FromBody] RegisterSendVerificationEmailRequestModel model)
     {
@@ -105,7 +148,6 @@ public class AccountsController : Controller
         return NoContent();
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/verification-email-clicked")]
     public async Task<IActionResult> PostRegisterVerificationEmailClicked([FromBody] RegisterVerificationEmailClickedRequestModel model)
     {
@@ -138,7 +180,6 @@ public class AccountsController : Controller
 
     }
 
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("register/finish")]
     public async Task<RegisterResponseModel> PostRegisterFinish([FromBody] RegisterFinishRequestModel model)
     {
@@ -149,40 +190,44 @@ public class AccountsController : Controller
         IdentityResult identityResult = null;
         var delaysEnabled = !_featureService.IsEnabled(FeatureFlagKeys.EmailVerificationDisableTimingDelays);
 
-        if (!string.IsNullOrEmpty(model.OrgInviteToken) && model.OrganizationUserId.HasValue)
+        switch (model.GetTokenType())
         {
-            identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
-                model.OrgInviteToken, model.OrganizationUserId);
+            case RegisterFinishTokenType.EmailVerification:
+                identityResult =
+                    await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
+                        model.EmailVerificationToken);
 
-            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.OrganizationInvite:
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
+                    model.OrgInviteToken, model.OrganizationUserId);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
+                identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.EmergencyAccessInvite:
+                Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
+                identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
+                    model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+            case RegisterFinishTokenType.ProviderInvite:
+                Debug.Assert(model.ProviderUserId.HasValue);
+                identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
+                    model.ProviderInviteToken, model.ProviderUserId.Value);
+
+                return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
+                break;
+
+            default:
+                throw new BadRequestException("Invalid registration finish request");
         }
-
-        if (!string.IsNullOrEmpty(model.OrgSponsoredFreeFamilyPlanToken))
-        {
-            identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
-
-            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-        }
-
-        if (!string.IsNullOrEmpty(model.AcceptEmergencyAccessInviteToken) && model.AcceptEmergencyAccessId.HasValue)
-        {
-            identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
-                model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
-
-            return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-        }
-
-        if (string.IsNullOrEmpty(model.EmailVerificationToken))
-        {
-            throw new BadRequestException("Invalid registration finish request");
-        }
-
-        identityResult =
-            await _registerUserCommand.RegisterUserViaEmailVerificationToken(user, model.MasterPasswordHash,
-                model.EmailVerificationToken);
-
-        return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-
     }
 
     private async Task<RegisterResponseModel> ProcessRegistrationResult(IdentityResult result, User user, bool delaysEnabled)
@@ -212,11 +257,7 @@ public class AccountsController : Controller
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
         if (kdfInformation == null)
         {
-            kdfInformation = new UserKdfInformation
-            {
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
-            };
+            kdfInformation = GetDefaultKdf(model.Email);
         }
         return new PreloginResponseModel(kdfInformation);
     }
@@ -234,5 +275,27 @@ public class AccountsController : Controller
             Options = options,
             Token = token
         };
+    }
+
+    private UserKdfInformation GetDefaultKdf(string email)
+    {
+        if (_defaultKdfHmacKey == null)
+        {
+            return _defaultKdfResults[0];
+        }
+        else
+        {
+            // Compute the HMAC hash of the email
+            var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+            using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
+            var hmacHash = hmac.ComputeHash(hmacMessage);
+            // Convert the hash to a number
+            var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
+            var hashFirst8Bytes = hashHex.Substring(0, 16);
+            var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+            // Find the default KDF value for this hash number
+            var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
+            return _defaultKdfResults[hashIndex];
+        }
     }
 }

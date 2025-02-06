@@ -29,7 +29,7 @@ public class PaymentHistoryServiceTests
         var result = await paymentHistoryService.GetInvoiceHistoryAsync(subscriber);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotEmpty(result);
         Assert.Single(result);
         await stripeAdapter.Received(1).InvoiceListAsync(Arg.Any<StripeInvoiceListOptions>());
     }
@@ -47,7 +47,7 @@ public class PaymentHistoryServiceTests
         var result = await paymentHistoryService.GetInvoiceHistoryAsync(null);
 
         // Assert
-        Assert.Null(result);
+        Assert.Empty(result);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class PaymentHistoryServiceTests
         var result = await paymentHistoryService.GetTransactionHistoryAsync(subscriber);
 
         // Assert
-        Assert.NotNull(result);
+        Assert.NotEmpty(result);
         Assert.Single(result);
         await transactionRepository.Received(1).GetManyByOrganizationIdAsync(subscriber.Id, Arg.Any<int>(), Arg.Any<DateTime?>());
     }
@@ -84,6 +84,6 @@ public class PaymentHistoryServiceTests
         var result = await paymentHistoryService.GetTransactionHistoryAsync(null);
 
         // Assert
-        Assert.Null(result);
+        Assert.Empty(result);
     }
 }

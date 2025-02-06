@@ -43,7 +43,8 @@ public class PutGroupCommand : IPutGroupCommand
 
     private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model)
     {
-        if (_scimContext.RequestScimProvider != ScimProviderType.Okta)
+        if (_scimContext.RequestScimProvider != ScimProviderType.Okta &&
+            _scimContext.RequestScimProvider != ScimProviderType.Ping)
         {
             return;
         }

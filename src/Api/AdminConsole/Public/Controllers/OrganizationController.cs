@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Bit.Api.AdminConsole.Public.Models.Request;
-using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -38,7 +37,7 @@ public class OrganizationController : Controller
     /// </remarks>
     /// <param name="model">The request model.</param>
     [HttpPost("import")]
-    [ProducesResponseType(typeof(MemberResponseModel), (int)HttpStatusCode.OK)]
+    [ProducesResponseType(typeof(OkResult), (int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     public async Task<IActionResult> Import([FromBody] OrganizationImportRequestModel model)
     {

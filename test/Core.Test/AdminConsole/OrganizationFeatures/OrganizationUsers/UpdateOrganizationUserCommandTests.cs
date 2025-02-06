@@ -1,7 +1,9 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -143,6 +145,7 @@ public class UpdateOrganizationUserCommandTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Type = OrganizationUserType.Admin;
         newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -158,6 +161,10 @@ public class UpdateOrganizationUserCommandTests
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(guid => new Group { Id = guid, OrganizationId = oldUserData.OrganizationId }).ToList());
 
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(newUserData.Id)
+            .Returns(0);
+
         await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
 
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
@@ -169,9 +176,34 @@ public class UpdateOrganizationUserCommandTests
         await organizationService.Received(1).ValidateOrganizationCustomPermissionsEnabledAsync(
             newUserData.OrganizationId,
             newUserData.Type);
-        await organizationService.Received(1).HasConfirmedOwnersExceptAsync(
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1).HasConfirmedOwnersExceptAsync(
             newUserData.OrganizationId,
             Arg.Is<IEnumerable<Guid>>(i => i.Contains(newUserData.Id)));
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task UpdateUserAsync_WhenUpdatingUserToAdminOrOwner_WithUserAlreadyAdminOfAnotherFreeOrganization_Throws(
+        OrganizationUserType userType,
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        Organization organization,
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.Free;
+        newUserData.Type = userType;
+
+        Setup(sutProvider, organization, newUserData, oldUserData);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(newUserData.UserId!.Value)
+            .Returns(1);
+
+        // Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, null, null, null));
+        Assert.Contains("User can only be an admin of one free organization.", exception.Message);
     }
 
     private void Setup(SutProvider<UpdateOrganizationUserCommand> sutProvider, Organization organization,
@@ -187,7 +219,7 @@ public class UpdateOrganizationUserCommandTests
         newUser.UserId = oldUser.UserId;
         newUser.OrganizationId = oldUser.OrganizationId = organization.Id;
         organizationUserRepository.GetByIdAsync(oldUser.Id).Returns(oldUser);
-        organizationService
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(
                 oldUser.OrganizationId,
                 Arg.Is<IEnumerable<Guid>>(i => i.Contains(oldUser.Id)))

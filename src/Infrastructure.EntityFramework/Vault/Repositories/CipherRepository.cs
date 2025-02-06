@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -299,6 +299,52 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var query = dbContext.Ciphers.Where(c => c.DeletedDate < deletedDateBefore);
             dbContext.RemoveRange(query);
             await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task<ICollection<OrganizationCipherPermission>>
+        GetCipherPermissionsForOrganizationAsync(Guid organizationId, Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherOrganizationPermissionsQuery(organizationId, userId).Run(dbContext);
+
+            ICollection<OrganizationCipherPermission> permissions;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                permissions = (await query.ToListAsync())
+                    .GroupBy(c => new { c.Id, c.OrganizationId })
+                    .Select(g => new OrganizationCipherPermission
+                    {
+                        Id = g.Key.Id,
+                        OrganizationId = g.Key.OrganizationId,
+                        Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.Id, p.OrganizationId }
+                    into g
+                                   select new OrganizationCipherPermission
+                                   {
+                                       Id = g.Key.Id,
+                                       OrganizationId = g.Key.OrganizationId,
+                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                                       ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                                       Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                                       Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                                   };
+                permissions = await groupByQuery.ToListAsync();
+            }
+
+            return permissions;
         }
     }
 

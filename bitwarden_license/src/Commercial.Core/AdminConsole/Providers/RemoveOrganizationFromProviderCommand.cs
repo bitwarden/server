@@ -1,7 +1,6 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -27,6 +26,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
     private readonly ISubscriberService _subscriberService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -37,7 +37,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IStripeAdapter stripeAdapter,
         IFeatureService featureService,
         IProviderBillingService providerBillingService,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     {
         _eventService = eventService;
         _mailService = mailService;
@@ -48,6 +49,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _featureService = featureService;
         _providerBillingService = providerBillingService;
         _subscriberService = subscriberService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -63,7 +65,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             throw new BadRequestException("Failed to remove organization. Please contact support.");
         }
 
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 Array.Empty<Guid>(),
                 includeProvider: false))
@@ -98,11 +100,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (isConsolidatedBillingEnabled &&
-            provider.Status == ProviderStatusType.Billable &&
-            organization.Status == OrganizationStatusType.Managed &&
+        if (provider.IsBillable() &&
+            organization.IsValidClient() &&
             !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
             await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions

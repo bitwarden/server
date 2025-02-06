@@ -9,18 +9,15 @@ namespace Bit.Scim.Users;
 
 public class PatchUserCommand : IPatchUserCommand
 {
-    private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly ILogger<PatchUserCommand> _logger;
 
     public PatchUserCommand(
-        IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         ILogger<PatchUserCommand> logger)
     {
-        _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _logger = logger;
@@ -74,7 +71,7 @@ public class PatchUserCommand : IPatchUserCommand
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
             return true;
         }
         else if (!active && orgUser.Status != OrganizationUserStatusType.Revoked)

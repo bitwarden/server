@@ -1,8 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿namespace Bit.Admin.Models;
 
-namespace Bit.Admin.Models;
-
-public class UsersModel : PagedModel<User>
+public class UsersModel : PagedModel<UserViewModel>
 {
     public string Email { get; set; }
     public string Action { get; set; }

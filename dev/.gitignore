@@ -5,7 +5,6 @@ secrets.json
 # Docker container configurations
 .env
 authsources.php
-directory.ldif
 
 # Development certificates
 identity_server_dev.crt

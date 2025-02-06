@@ -9,7 +9,7 @@ namespace Bit.Core.Billing.Services;
 public interface IOrganizationBillingService
 {
     /// <summary>
-    /// <para>Establishes the billing configuration for a Bitwarden <see cref="Organization"/> using the provided <paramref name="sale"/>.</para>
+    /// <para>Establishes the Stripe entities necessary for a Bitwarden <see cref="Organization"/> using the provided <paramref name="sale"/>.</para>
     /// <para>
     /// The method first checks to see if the
     /// provided <see cref="OrganizationSale.Organization"/> already has a Stripe <see cref="Stripe.Customer"/> using the <see cref="Organization.GatewayCustomerId"/>.
@@ -17,7 +17,7 @@ public interface IOrganizationBillingService
     /// for the created or existing customer using the provided <see cref="OrganizationSale.SubscriptionSetup"/>.
     /// </para>
     /// </summary>
-    /// <param name="sale">The purchase details necessary to establish the Stripe entities responsible for billing the organization.</param>
+    /// <param name="sale">The data required to establish the Stripe entities responsible for billing the organization.</param>
     /// <example>
     /// <code>
     /// var sale = OrganizationSale.From(organization, organizationSignup);

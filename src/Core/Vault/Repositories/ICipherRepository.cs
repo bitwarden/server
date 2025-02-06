@@ -1,5 +1,5 @@
-﻿using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -38,6 +38,16 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
+
+    /// <summary>
+    /// Low-level query to get all cipher permissions for a user in an organization. DOES NOT consider the user's
+    /// organization role, any collection management settings on the organization, or special unassigned cipher
+    /// permissions.
+    ///
+    /// Recommended to use <see cref="IGetCipherPermissionsForUserQuery"/> instead to handle those cases.
+    /// </summary>
+    Task<ICollection<OrganizationCipherPermission>> GetCipherPermissionsForOrganizationAsync(Guid organizationId,
+        Guid userId);
 
     /// <summary>
     /// Updates encrypted data for ciphers during a key rotation

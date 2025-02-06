@@ -229,13 +229,13 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .Returns(organizationDomain);
-        sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().VerifyOrganizationDomainAsync(organizationDomain)
+        sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().UserVerifyOrganizationDomainAsync(organizationDomain)
             .Returns(new OrganizationDomain());
 
         var result = await sutProvider.Sut.Verify(organizationDomain.OrganizationId, organizationDomain.Id);
 
         await sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().Received(1)
-            .VerifyOrganizationDomainAsync(organizationDomain);
+            .UserVerifyOrganizationDomainAsync(organizationDomain);
         Assert.IsType<OrganizationDomainResponseModel>(result);
     }
 
@@ -315,5 +315,27 @@ public class OrganizationDomainControllerTests
         var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
 
         Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetVerifiedOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
+        OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(Array.Empty<VerifiedOrganizationDomainSsoDetail>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrgDomainSsoDetails(model));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetVerifiedOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
+        OrganizationDomainSsoDetailsRequestModel model, IEnumerable<VerifiedOrganizationDomainSsoDetail> ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetVerifiedOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
+
+        var result = await sutProvider.Sut.GetVerifiedOrgDomainSsoDetailsAsync(model);
+
+        Assert.IsType<VerifiedOrganizationDomainSsoDetailsResponseModel>(result);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
@@ -33,6 +34,7 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationService _organizationService;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -46,7 +48,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         IPasswordHasher<User> passwordHasher,
         GlobalSettings globalSettings,
         IOrganizationService organizationService,
-        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer)
+        IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -60,6 +63,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _globalSettings = globalSettings;
         _organizationService = organizationService;
         _dataProtectorTokenizer = dataProtectorTokenizer;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
     }
 
     public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -341,7 +345,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         {
             if (o.Type != OrganizationUserType.Owner)
             {
-                await _organizationService.RemoveUserAsync(o.OrganizationId, grantor.Id);
+                await _removeOrganizationUserCommand.RemoveUserAsync(o.OrganizationId, grantor.Id);
             }
         }
     }

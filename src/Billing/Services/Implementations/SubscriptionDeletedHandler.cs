@@ -32,12 +32,14 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
         var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
+        const string providerMigrationCancellationComment = "Cancelled as part of provider migration to Consolidated Billing";
+
         if (!subCanceled)
         {
             return;
         }
 
-        if (organizationId.HasValue)
+        if (organizationId.HasValue && subscription is not { CancellationDetails.Comment: providerMigrationCancellationComment })
         {
             await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
         }

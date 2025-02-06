@@ -1,7 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Entities;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
@@ -42,96 +41,64 @@ public class ProviderEventService(
             case HandledStripeWebhook.InvoiceCreated:
                 {
                     var clients =
-                        (await providerOrganizationRepository.GetManyDetailsByProviderAsync(parsedProviderId))
-                        .Where(providerOrganization => providerOrganization.Status == OrganizationStatusType.Managed);
+                        await providerOrganizationRepository.GetManyDetailsByProviderAsync(parsedProviderId);
 
                     var providerPlans = await providerPlanRepository.GetByProviderId(parsedProviderId);
 
-                    var enterpriseProviderPlan =
-                        providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.EnterpriseMonthly);
+                    var invoiceItems = new List<ProviderInvoiceItem>();
 
-                    var teamsProviderPlan =
-                        providerPlans.FirstOrDefault(providerPlan => providerPlan.PlanType == PlanType.TeamsMonthly);
-
-                    if (enterpriseProviderPlan == null || !enterpriseProviderPlan.IsConfigured() ||
-                        teamsProviderPlan == null || !teamsProviderPlan.IsConfigured())
+                    foreach (var client in clients)
                     {
-                        logger.LogError("Provider {ProviderID} is missing or has misconfigured provider plans", parsedProviderId);
+                        if (client.Status != OrganizationStatusType.Managed)
+                        {
+                            continue;
+                        }
 
-                        throw new Exception("Cannot record invoice line items for Provider with missing or misconfigured provider plans");
+                        var plan = StaticStore.Plans.Single(x => x.Name == client.Plan && providerPlans.Any(y => y.PlanType == x.Type));
+
+                        var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+
+                        var discountedSeatPrice = plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
+
+                        invoiceItems.Add(new ProviderInvoiceItem
+                        {
+                            ProviderId = parsedProviderId,
+                            InvoiceId = invoice.Id,
+                            InvoiceNumber = invoice.Number,
+                            ClientId = client.OrganizationId,
+                            ClientName = client.OrganizationName,
+                            PlanName = client.Plan,
+                            AssignedSeats = client.Seats ?? 0,
+                            UsedSeats = client.OccupiedSeats ?? 0,
+                            Total = (client.Seats ?? 0) * discountedSeatPrice
+                        });
                     }
 
-                    var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-
-                    var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-
-                    var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
-
-                    var discountedEnterpriseSeatPrice = enterprisePlan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
-
-                    var discountedTeamsSeatPrice = teamsPlan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
-
-                    var invoiceItems = clients.Select(client => new ProviderInvoiceItem
+                    foreach (var providerPlan in providerPlans.Where(x => x.PurchasedSeats is null or 0))
                     {
-                        ProviderId = parsedProviderId,
-                        InvoiceId = invoice.Id,
-                        InvoiceNumber = invoice.Number,
-                        ClientId = client.OrganizationId,
-                        ClientName = client.OrganizationName,
-                        PlanName = client.Plan,
-                        AssignedSeats = client.Seats ?? 0,
-                        UsedSeats = client.OccupiedSeats ?? 0,
-                        Total = client.Plan == enterprisePlan.Name
-                            ? (client.Seats ?? 0) * discountedEnterpriseSeatPrice
-                            : (client.Seats ?? 0) * discountedTeamsSeatPrice
-                    }).ToList();
+                        var plan = StaticStore.GetPlan(providerPlan.PlanType);
 
-                    if (enterpriseProviderPlan.PurchasedSeats is null or 0)
-                    {
-                        var enterpriseClientSeats = invoiceItems
-                            .Where(item => item.PlanName == enterprisePlan.Name)
+                        var clientSeats = invoiceItems
+                            .Where(item => item.PlanName == plan.Name)
                             .Sum(item => item.AssignedSeats);
 
-                        var unassignedEnterpriseSeats = enterpriseProviderPlan.SeatMinimum - enterpriseClientSeats ?? 0;
+                        var unassignedSeats = providerPlan.SeatMinimum - clientSeats ?? 0;
 
-                        if (unassignedEnterpriseSeats > 0)
+                        var discountedPercentage = (100 - (invoice.Discount?.Coupon?.PercentOff ?? 0)) / 100;
+
+                        var discountedSeatPrice = plan.PasswordManager.ProviderPortalSeatPrice * discountedPercentage;
+
+                        invoiceItems.Add(new ProviderInvoiceItem
                         {
-                            invoiceItems.Add(new ProviderInvoiceItem
-                            {
-                                ProviderId = parsedProviderId,
-                                InvoiceId = invoice.Id,
-                                InvoiceNumber = invoice.Number,
-                                ClientName = "Unassigned seats",
-                                PlanName = enterprisePlan.Name,
-                                AssignedSeats = unassignedEnterpriseSeats,
-                                UsedSeats = 0,
-                                Total = unassignedEnterpriseSeats * discountedEnterpriseSeatPrice
-                            });
-                        }
-                    }
-
-                    if (teamsProviderPlan.PurchasedSeats is null or 0)
-                    {
-                        var teamsClientSeats = invoiceItems
-                            .Where(item => item.PlanName == teamsPlan.Name)
-                            .Sum(item => item.AssignedSeats);
-
-                        var unassignedTeamsSeats = teamsProviderPlan.SeatMinimum - teamsClientSeats ?? 0;
-
-                        if (unassignedTeamsSeats > 0)
-                        {
-                            invoiceItems.Add(new ProviderInvoiceItem
-                            {
-                                ProviderId = parsedProviderId,
-                                InvoiceId = invoice.Id,
-                                InvoiceNumber = invoice.Number,
-                                ClientName = "Unassigned seats",
-                                PlanName = teamsPlan.Name,
-                                AssignedSeats = unassignedTeamsSeats,
-                                UsedSeats = 0,
-                                Total = unassignedTeamsSeats * discountedTeamsSeatPrice
-                            });
-                        }
+                            ProviderId = parsedProviderId,
+                            InvoiceId = invoice.Id,
+                            InvoiceNumber = invoice.Number,
+                            ClientName = "Unassigned seats",
+                            PlanName = plan.Name,
+                            AssignedSeats = unassignedSeats,
+                            UsedSeats = 0,
+                            Total = unassignedSeats * discountedSeatPrice
+                        });
                     }
 
                     await Task.WhenAll(invoiceItems.Select(providerInvoiceItemRepository.CreateAsync));
