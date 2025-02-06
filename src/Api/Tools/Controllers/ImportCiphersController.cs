@@ -64,8 +64,9 @@ public class ImportCiphersController : Controller
         [FromBody] ImportOrganizationCiphersRequestModel model)
     {
         if (!_globalSettings.SelfHosted &&
-            (model.Ciphers.Count() > 7000 || model.CollectionRelationships.Count() > 14000 ||
-                model.Collections.Count() > 2000))
+            (model.Ciphers.Count() > _globalSettings.ImportCiphersLimitation.CiphersLimit ||
+             model.CollectionRelationships.Count() > _globalSettings.ImportCiphersLimitation.CollectionRelationshipsLimit ||
+             model.Collections.Count() > _globalSettings.ImportCiphersLimitation.CollectionsLimit))
         {
             throw new BadRequestException("You cannot import this much data at once.");
         }
