@@ -567,4 +567,17 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             new { OrganizationUserIds = JsonSerializer.Serialize(organizationUserIds), Status = OrganizationUserStatusType.Revoked },
             commandType: CommandType.StoredProcedure);
     }
+
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationUserUserDetails>(
+                "[dbo].[OrganizationUser_ReadManyDetailsByRole]",
+                new { OrganizationId = organizationId, Role = role },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
