@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Models.Sales;
+﻿using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Entities;
 
 namespace Bit.Core.Billing.Services;
@@ -27,4 +28,9 @@ public interface IPremiumUserBillingService
     /// </code>
     /// </example>
     Task Finalize(PremiumUserSale sale);
+
+    Task UpdatePaymentMethod(
+        User user,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        TaxInformation taxInformation);
 }

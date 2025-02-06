@@ -53,6 +53,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
     public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
+    public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -69,6 +70,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+    public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
     public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
@@ -253,6 +255,44 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _jobSchedulerConnectionString;
             set => _jobSchedulerConnectionString = value.Trim('"');
+        }
+    }
+
+    public class EventLoggingSettings
+    {
+        public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+
+        public class RabbitMqSettings
+        {
+            private string _hostName;
+            private string _username;
+            private string _password;
+            private string _exchangeName;
+
+            public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
+            public virtual string HttpPostQueueName { get; set; } = "events-httpPost-queue";
+            public virtual string HttpPostUrl { get; set; }
+
+            public string HostName
+            {
+                get => _hostName;
+                set => _hostName = value.Trim('"');
+            }
+            public string Username
+            {
+                get => _username;
+                set => _username = value.Trim('"');
+            }
+            public string Password
+            {
+                get => _password;
+                set => _password = value.Trim('"');
+            }
+            public string ExchangeName
+            {
+                get => _exchangeName;
+                set => _exchangeName = value.Trim('"');
+            }
         }
     }
 
@@ -480,6 +520,13 @@ public class GlobalSettings : IGlobalSettings
         public string MerchantId { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
+    }
+
+    public class ImportCiphersLimitationSettings
+    {
+        public int CiphersLimit { get; set; }
+        public int CollectionRelationshipsLimit { get; set; }
+        public int CollectionsLimit { get; set; }
     }
 
     public class BitPaySettings
