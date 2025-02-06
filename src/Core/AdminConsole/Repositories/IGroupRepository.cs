@@ -34,8 +34,8 @@ public interface IGroupRepository : IRepository<Group, Guid>
     /// </summary>
     Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
     /// <summary>
-    /// Add members to a group. Ignores members that are already in the group.
-    /// Ignores members that do not belong to the same organization as the group.
+    /// Add members to a group. Gracefully ignores members that are already in the group,
+    /// duplicate organizationUserIds, and organizationUsers who are not part of the organization.
     /// </summary>
     Task AddGroupUsersByIdAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
     Task DeleteManyAsync(IEnumerable<Guid> groupIds);
