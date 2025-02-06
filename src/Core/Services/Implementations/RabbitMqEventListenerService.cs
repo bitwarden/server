@@ -1,26 +1,26 @@
 ﻿using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 
-public abstract class RabbitMqEventListenerBase : BackgroundService
+public class RabbitMqEventListenerService : EventLoggingListenerService
 {
     private IChannel _channel;
     private IConnection _connection;
     private readonly string _exchangeName;
     private readonly ConnectionFactory _factory;
-    private readonly ILogger<RabbitMqEventListenerBase> _logger;
+    private readonly ILogger<RabbitMqEventListenerService> _logger;
+    private readonly string _queueName;
 
-    protected abstract string QueueName { get; }
-
-    protected RabbitMqEventListenerBase(
-        ILogger<RabbitMqEventListenerBase> logger,
-        GlobalSettings globalSettings)
+    public RabbitMqEventListenerService(
+        IEventMessageHandler handler,
+        ILogger<RabbitMqEventListenerService> logger,
+        GlobalSettings globalSettings,
+        string queueName) : base(handler)
     {
         _factory = new ConnectionFactory
         {
@@ -30,6 +30,7 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
         };
         _exchangeName = globalSettings.EventLogging.RabbitMq.ExchangeName;
         _logger = logger;
+        _queueName = queueName;
     }
 
     public override async Task StartAsync(CancellationToken cancellationToken)
@@ -38,13 +39,13 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
         await _channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
-        await _channel.QueueDeclareAsync(queue: QueueName,
+        await _channel.QueueDeclareAsync(queue: _queueName,
                                          durable: true,
                                          exclusive: false,
                                          autoDelete: false,
                                          arguments: null,
                                          cancellationToken: cancellationToken);
-        await _channel.QueueBindAsync(queue: QueueName,
+        await _channel.QueueBindAsync(queue: _queueName,
                                       exchange: _exchangeName,
                                       routingKey: string.Empty,
                                       cancellationToken: cancellationToken);
@@ -59,7 +60,7 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
             try
             {
                 var eventMessage = JsonSerializer.Deserialize<EventMessage>(eventArgs.Body.Span);
-                await HandleMessageAsync(eventMessage);
+                await _handler.HandleEventAsync(eventMessage);
             }
             catch (Exception ex)
             {
@@ -67,7 +68,7 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
             }
         };
 
-        await _channel.BasicConsumeAsync(QueueName, autoAck: true, consumer: consumer, cancellationToken: stoppingToken);
+        await _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -88,6 +89,4 @@ public abstract class RabbitMqEventListenerBase : BackgroundService
         _connection.Dispose();
         base.Dispose();
     }
-
-    protected abstract Task HandleMessageAsync(EventMessage eventMessage);
 }
