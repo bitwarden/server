@@ -41,8 +41,6 @@ using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
 
-#nullable enable
-
 namespace Bit.Core.Test.Services;
 
 [SutProviderCustomize]
