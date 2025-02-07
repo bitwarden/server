@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -46,6 +45,10 @@ public class SingleOrganizationPolicyRequirement : IPolicyRequirement
         return SingleOrganizationRequirementResult.Ok;
     }
 
-    public SingleOrganizationRequirementResult CanBeRestoredToOrganization(Guid organizationId) =>
-        CanJoinOrganization(organizationId);
+    public SingleOrganizationRequirementResult CanBeRestoredToOrganization(Guid organizationId)
+        => CanJoinOrganization(organizationId);
+
+    public bool CanCreateOrganization()
+        // Check for other orgs the user might already be a member of (accepted or confirmed status only)
+        => PolicyDetails.ExcludeRevokedAndInvitedUsers().Any();
 }

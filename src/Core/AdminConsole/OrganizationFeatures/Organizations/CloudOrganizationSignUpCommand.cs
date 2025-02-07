@@ -1,5 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
@@ -45,8 +47,13 @@ public class CloudOrganizationSignUpCommand(
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
-    IDeviceRepository deviceRepository) : ICloudOrganizationSignUpCommand
+    IDeviceRepository deviceRepository,
+    IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
 {
+    public const string ErrorBlockedBySingleOrganizationPolicy =
+        "You may not create an organization. You belong to an organization " +
+        "which has a policy that prohibits you from being a member of any other organization.";
+
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
         var plan = StaticStore.GetPlan(signup.Plan);
@@ -63,9 +70,13 @@ public class CloudOrganizationSignUpCommand(
             ValidateSecretsManagerPlan(plan, signup);
         }
 
-        if (!signup.IsFromProvider)
+        if (!signup.IsFromProvider && !featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
+        }
+        else if (featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateSignUpPoliciesAsync_vNext(signup.Owner.Id);
         }
 
         var organization = new Organization
@@ -255,6 +266,16 @@ public class CloudOrganizationSignUpCommand(
         {
             throw new BadRequestException("You may not create an organization. You belong to an organization " +
                                           "which has a policy that prohibits you from being a member of any other organization.");
+        }
+    }
+
+    private async Task ValidateSignUpPoliciesAsync_vNext(Guid ownerId)
+    {
+        var singleOrganizationRequirement =
+            await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
+        if (!singleOrganizationRequirement.CanCreateOrganization())
+        {
+            throw new BadRequestException(ErrorBlockedBySingleOrganizationPolicy);
         }
     }
 

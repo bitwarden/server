@@ -13,6 +13,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.Helpers;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
@@ -140,7 +141,7 @@ public class AcceptOrgUserCommandTests
         User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.PolicyRequirements);
         ArrangeOrgUser(orgUser, user, org);
 
         // Make organization they are trying to join have the single org policy
@@ -194,7 +195,7 @@ public class AcceptOrgUserCommandTests
         User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.PolicyRequirements);
         ArrangeOrgUser(orgUser, user, org);
 
         // Mock that user is part of an org that has the single org policy
@@ -254,7 +255,7 @@ public class AcceptOrgUserCommandTests
         User user, Organization org, OrganizationUser orgUser)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.PolicyRequirements);
         sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SingleOrganizationPolicyRequirement>(user.Id).Returns(
             SingleOrganizationPolicyRequirement.Create([]));
         ArrangeOrgUser(orgUser, user, org);
