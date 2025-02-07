@@ -7,7 +7,7 @@ using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 
-public class RabbitMqEventListenerService : EventLoggingListenerService, IAsyncDisposable
+public class RabbitMqEventListenerService : EventLoggingListenerService
 {
     private IChannel _channel;
     private IConnection _connection;
@@ -38,7 +38,10 @@ public class RabbitMqEventListenerService : EventLoggingListenerService, IAsyncD
         _connection = await _factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
-        await _channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
+        await _channel.ExchangeDeclareAsync(exchange: _exchangeName,
+                                            type: ExchangeType.Fanout,
+                                            durable: true,
+                                            cancellationToken: cancellationToken);
         await _channel.QueueDeclareAsync(queue: _queueName,
                                          durable: true,
                                          exclusive: false,
@@ -78,15 +81,15 @@ public class RabbitMqEventListenerService : EventLoggingListenerService, IAsyncD
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _channel.CloseAsync();
-        await _connection.CloseAsync();
+        await _channel.CloseAsync(cancellationToken);
+        await _connection.CloseAsync(cancellationToken);
         await base.StopAsync(cancellationToken);
     }
 
-    public async ValueTask DisposeAsync()
+    public override void Dispose()
     {
-        await _channel.DisposeAsync();
-        await _connection.DisposeAsync();
+        _channel.Dispose();
+        _connection.Dispose();
         base.Dispose();
     }
 }

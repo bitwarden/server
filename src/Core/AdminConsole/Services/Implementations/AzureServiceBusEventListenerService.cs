@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
 
-public class AzureServiceBusEventListenerService : EventLoggingListenerService, IAsyncDisposable
+public class AzureServiceBusEventListenerService : EventLoggingListenerService
 {
     private readonly ILogger<AzureServiceBusEventListenerService> _logger;
     private readonly ServiceBusClient _client;
@@ -39,7 +39,7 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService, 
             return Task.CompletedTask;
         };
 
-        await _processor.StartProcessingAsync();
+        await _processor.StartProcessingAsync(stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -49,14 +49,14 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService, 
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _processor.StopProcessingAsync();
+        await _processor.StopProcessingAsync(cancellationToken);
         await base.StopAsync(cancellationToken);
     }
 
-    public async ValueTask DisposeAsync()
+    public override void Dispose()
     {
-        await _processor.DisposeAsync();
-        await _client.DisposeAsync();
+        _processor.DisposeAsync().GetAwaiter().GetResult();
+        _client.DisposeAsync().GetAwaiter().GetResult();
         base.Dispose();
     }
 }
