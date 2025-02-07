@@ -82,6 +82,35 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        // Optional RabbitMQ Listeners
+        if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+        {
+            services.AddSingleton<EventRepositoryHandler>();
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
+            services.AddSingleton<IHostedService>(provider =>
+                new RabbitMqEventListenerService(
+                    provider.GetRequiredService<EventRepositoryHandler>(),
+                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                    provider.GetRequiredService<GlobalSettings>(),
+                    globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
+
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HttpPostUrl))
+            {
+                services.AddSingleton<HttpPostEventHandler>();
+                services.AddHttpClient(HttpPostEventHandler.HttpClientName);
+
+                services.AddSingleton<IHostedService>(provider =>
+                    new RabbitMqEventListenerService(
+                        provider.GetRequiredService<HttpPostEventHandler>(),
+                        provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                        provider.GetRequiredService<GlobalSettings>(),
+                        globalSettings.EventLogging.RabbitMq.HttpPostQueueName));
+            }
+        }
     }
 
     public void Configure(
