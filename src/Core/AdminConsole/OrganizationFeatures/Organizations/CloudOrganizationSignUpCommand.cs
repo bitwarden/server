@@ -50,9 +50,6 @@ public class CloudOrganizationSignUpCommand(
     IDeviceRepository deviceRepository,
     IPolicyRequirementQuery policyRequirementQuery) : ICloudOrganizationSignUpCommand
 {
-    public const string ErrorBlockedBySingleOrganizationPolicy =
-        "You may not create an organization. You belong to an organization " +
-        "which has a policy that prohibits you from being a member of any other organization.";
 
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
@@ -275,7 +272,7 @@ public class CloudOrganizationSignUpCommand(
             await policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(ownerId);
         if (!singleOrganizationRequirement.CanCreateOrganization())
         {
-            throw new BadRequestException(ErrorBlockedBySingleOrganizationPolicy);
+            throw new BadRequestException(SingleOrganizationPolicyRequirement.ErrorCannotCreateOrganization);
         }
     }
 

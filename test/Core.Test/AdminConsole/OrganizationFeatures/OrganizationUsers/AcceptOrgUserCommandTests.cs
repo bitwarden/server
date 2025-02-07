@@ -162,7 +162,8 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal(AcceptOrgUserCommand.ErrorBlockedByThisSingleOrganizationPolicy, exception.Message);
+        Assert.Equal(SingleOrganizationPolicyRequirement.ErrorCannotJoinBlockedByThisOrganization,
+            exception.Message);
     }
 
     [Theory]
@@ -217,7 +218,8 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal(AcceptOrgUserCommand.ErrorBlockedByOtherSingleOrganizationPolicy, exception.Message);
+        Assert.Equal(SingleOrganizationPolicyRequirement.ErrorCannotJoinBlockedByOtherOrganization,
+            exception.Message);
     }
 
     [Theory]

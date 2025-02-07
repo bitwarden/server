@@ -291,6 +291,6 @@ public class CloudICloudOrganizationSignUpCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Equal(CloudOrganizationSignUpCommand.ErrorBlockedBySingleOrganizationPolicy, exception.Message);
+        Assert.Equal(SingleOrganizationPolicyRequirement.ErrorCannotCreateOrganization, exception.Message);
     }
 }

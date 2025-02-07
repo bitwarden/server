@@ -56,9 +56,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _featureService = featureService;
     }
 
-    public const string ErrorBlockedByThisSingleOrganizationPolicy = "You may not join this organization until you leave or remove all other organizations.";
-    public const string ErrorBlockedByOtherSingleOrganizationPolicy = "You cannot join this organization because you are a member of another organization which forbids it";
-
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
         IUserService userService)
     {
@@ -250,9 +247,9 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         switch (singleOrganizationRequirement.CanJoinOrganization(orgUser.OrganizationId))
         {
             case SingleOrganizationRequirementResult.BlockedByThisOrganization:
-                throw new BadRequestException(ErrorBlockedByThisSingleOrganizationPolicy);
+                throw new BadRequestException(SingleOrganizationPolicyRequirement.ErrorCannotJoinBlockedByThisOrganization);
             case SingleOrganizationRequirementResult.BlockedByOtherOrganization:
-                throw new BadRequestException(ErrorBlockedByOtherSingleOrganizationPolicy);
+                throw new BadRequestException(SingleOrganizationPolicyRequirement.ErrorCannotJoinBlockedByOtherOrganization);
             case SingleOrganizationRequirementResult.Ok:
             default:
                 break;
