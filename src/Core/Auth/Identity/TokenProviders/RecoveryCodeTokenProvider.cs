@@ -44,20 +44,23 @@ public class RecoveryCodeTokenProvider : IUserTwoFactorTokenProvider<User>
 
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
-        var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
-        var cachedValue = await _distributedCache.GetAsync(cacheKey);
-        if (cachedValue == null)
-        {
-            return false;
-        }
+        // var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
+        // var cachedValue = await _distributedCache.GetAsync(cacheKey);
+        // if (cachedValue == null)
+        // {
+        //     return false;
+        // }
+        //
+        // var code = Encoding.UTF8.GetString(cachedValue);
+        // var valid = string.Equals(token, code);
+        // if (valid)
+        // {
+        //     await _distributedCache.RemoveAsync(cacheKey);
+        // }
+        //
+        // return valid;
 
-        var code = Encoding.UTF8.GetString(cachedValue);
-        var valid = string.Equals(token, code);
-        if (valid)
-        {
-            await _distributedCache.RemoveAsync(cacheKey);
-        }
-
-        return valid;
+        var processedToken = token.Replace(" ", string.Empty).ToLower();
+        return string.Equals(processedToken, user.TwoFactorRecoveryCode);
     }
 }
