@@ -1,29 +1,27 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddOptionalNotifificationTaskId : Migration
 {
     /// <inheritdoc />
-    public partial class AddOptionalNotifificationTaskId : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<Guid>(
-                name: "TaskId",
-                table: "Notification",
-                type: "TEXT",
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<Guid>(
+            name: "TaskId",
+            table: "Notification",
+            type: "TEXT",
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "TaskId",
-                table: "Notification");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "TaskId",
+            table: "Notification");
     }
 }
