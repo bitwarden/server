@@ -5,7 +5,7 @@
     <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
     <ANCMPreConfiguredForIIS>true</ANCMPreConfiguredForIIS>
     <!-- Temp exclusions until warnings are fixed -->
-    <!-- <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8604</WarningsNotAsErrors> -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8604</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
