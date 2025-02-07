@@ -1,18 +1,37 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Validation;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Validation;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Validation;
 
 public class InviteUserPaymentValidationTests
 {
+    [Theory]
+    [BitAutoData]
+    public void Validate_WhenPlanIsFree_ReturnsValidResponse(Organization organization)
+    {
+        organization.PlanType = PlanType.Free;
+
+        var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
+        {
+            SubscriptionStatus = StripeConstants.SubscriptionStatus.Active,
+            ProductTierType = OrganizationDto.FromOrganization(organization).Plan.ProductTier
+        });
+
+        Assert.IsType<Valid<PaymentSubscriptionDto>>(result);
+    }
 
     [Fact]
     public void Validate_WhenSubscriptionIsCanceled_ReturnsInvalidResponse()
     {
         var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
         {
-            SubscriptionStatus = StripeConstants.SubscriptionStatus.Canceled
+            SubscriptionStatus = StripeConstants.SubscriptionStatus.Canceled,
+            ProductTierType = ProductTierType.Enterprise
         });
 
         Assert.IsType<Invalid<PaymentSubscriptionDto>>(result);
@@ -24,7 +43,8 @@ public class InviteUserPaymentValidationTests
     {
         var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
         {
-            SubscriptionStatus = StripeConstants.SubscriptionStatus.Active
+            SubscriptionStatus = StripeConstants.SubscriptionStatus.Active,
+            ProductTierType = ProductTierType.Enterprise
         });
 
         Assert.IsType<Valid<PaymentSubscriptionDto>>(result);
