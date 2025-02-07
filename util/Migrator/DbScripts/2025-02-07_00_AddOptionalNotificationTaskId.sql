@@ -1,8 +1,8 @@
 -- Add optional Type column to Notification table
-IF COL_LENGTH('[dbo].[Notification]', 'Type') IS NULL
+IF COL_LENGTH('[dbo].[Notification]', 'TaskId') IS NULL
 BEGIN
     ALTER TABLE [dbo].[Notification]
-    ADD [Type] TINYINT NULL
+        ADD [TaskId] UNIQUEIDENTIFIER NULL
 END
 GO
 
@@ -16,7 +16,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Notification_Create]
     @OrganizationId UNIQUEIDENTIFIER,
     @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
-    @Type TINYINT = NULL,
+    @TaskId UNIQUEIDENTIFIER = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -32,7 +32,7 @@ BEGIN
         [OrganizationId],
         [Title],
         [Body],
-        [Type],
+        [TaskId],
         [CreationDate],
         [RevisionDate]
     )
@@ -45,7 +45,7 @@ BEGIN
        @OrganizationId,
        @Title,
        @Body,
-       @Type,
+       @TaskId,
        @CreationDate,
        @RevisionDate
    )
@@ -61,7 +61,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Notification_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
-    @Type TINYINT = NULL,
+    @TaskId UNIQUEIDENTIFIER = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -76,7 +76,7 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Title] = @Title,
         [Body] = @Body,
-        [Type] = @Type,
+        [TaskId] = @TaskId,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE [Id] = @Id

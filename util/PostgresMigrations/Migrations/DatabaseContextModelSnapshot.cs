@@ -1680,12 +1680,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
-
-                    b.Property<byte?>("Type")
-                        .HasColumnType("smallint");
 
                     b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");

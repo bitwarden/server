@@ -8,7 +8,7 @@ CREATE TABLE [dbo].[Notification]
     [OrganizationId] UNIQUEIDENTIFIER NULL,
     [Title] NVARCHAR (256) NULL,
     [Body] NVARCHAR (MAX) NULL,
-    [Type] TINYINT NULL,
+    [TaskId] UNIQUEIDENTIFIER NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,
     CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),

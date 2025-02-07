@@ -1674,12 +1674,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("Title")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
-
-                    b.Property<byte?>("Type")
-                        .HasColumnType("tinyint unsigned");
 
                     b.Property<Guid?>("UserId")
                         .HasColumnType("char(36)");

@@ -18,7 +18,7 @@ public class Notification : ITableObject<Guid>
     [MaxLength(256)]
     public string? Title { get; set; }
     public string? Body { get; set; }
-    public NotificationType? Type { get; set; }
+    public Guid? TaskId { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
 
