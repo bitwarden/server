@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -11,6 +12,13 @@ namespace Bit.Core.Billing.Extensions;
 public static class BillingExtensions
 {
     public static bool IsBillable(this Provider provider) =>
+        provider is
+        {
+            Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
+            Status: ProviderStatusType.Billable
+        };
+
+    public static bool IsBillable(this ProviderDto provider) =>
         provider is
         {
             Type: ProviderType.Msp or ProviderType.MultiOrganizationEnterprise,
