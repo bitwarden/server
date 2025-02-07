@@ -10,14 +10,12 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     private readonly IPolicyRepository _policyRepository;
     private readonly PolicyRequirementRegistry _policyRequirements = new();
 
-    public PolicyRequirementQuery(IGlobalSettings globalSettings, IPolicyRepository policyRepository)
+    public PolicyRequirementQuery(IPolicyRepository policyRepository)
     {
         _policyRepository = policyRepository;
 
         // Register Policy Requirement factory functions below
-        _policyRequirements.Add(SendPolicyRequirement.Create);
-        _policyRequirements.Add(up
-            => SsoPolicyRequirement.Create(up, globalSettings.Sso));
+        _policyRequirements.Add(SingleOrganizationPolicyRequirement.Create);
     }
 
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
