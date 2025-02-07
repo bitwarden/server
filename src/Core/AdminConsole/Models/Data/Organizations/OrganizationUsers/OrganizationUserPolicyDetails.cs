@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserPolicyDetails
 {
-    public Guid OrganizationUserId { get; set; }
+    public Guid? OrganizationUserId { get; set; }
 
     public Guid OrganizationId { get; set; }
 
