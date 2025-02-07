@@ -7,9 +7,9 @@ CREATE PROCEDURE [dbo].[Notification_Update]
     @OrganizationId UNIQUEIDENTIFIER,
     @Title NVARCHAR(256),
     @Body NVARCHAR(MAX),
-    @TaskId UNIQUEIDENTIFIER = NULL,
     @CreationDate DATETIME2(7),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @TaskId UNIQUEIDENTIFIER = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -22,8 +22,8 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Title] = @Title,
         [Body] = @Body,
-        [TaskId] = @TaskId,
         [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
+        [RevisionDate] = @RevisionDate,
+        [TaskId]       = @TaskId
     WHERE [Id] = @Id
 END

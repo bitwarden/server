@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250207182157_AddOptionalNotifificationTaskId")]
+    [Migration("20250207204735_AddOptionalNotifificationTaskId")]
     partial class AddOptionalNotifificationTaskId
     {
         /// <inheritdoc />
@@ -1682,6 +1682,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("OrganizationId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
+                    b.HasIndex("TaskId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
@@ -2623,11 +2626,17 @@ namespace Bit.SqliteMigrations.Migrations
                         .WithMany()
                         .HasForeignKey("OrganizationId");
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", "Task")
+                        .WithMany()
+                        .HasForeignKey("TaskId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Task");
 
                     b.Navigation("User");
                 });
