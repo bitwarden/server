@@ -397,17 +397,6 @@ public class TwoFactorController : Controller
         return response;
     }
 
-    // [HttpPost("recover")]
-    // [AllowAnonymous]
-    // public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)
-    // {
-    //     if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode))
-    //     {
-    //         await Task.Delay(2000);
-    //         throw new BadRequestException(string.Empty, "Invalid information. Try again.");
-    //     }
-    // }
-
     [Obsolete("Leaving this for backwards compatibility on clients")]
     [HttpGet("get-device-verification-settings")]
     public Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()

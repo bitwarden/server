@@ -177,7 +177,6 @@ public static class FeatureFlagKeys
     public const string AndroidMutualTls = "mutual-tls";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
 
-
     public static List<string> GetAllKeys()
     {
         return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
