@@ -868,15 +868,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task<bool> RemoveTwoFactorProviderAsync(User user)
+    public async Task RemoveTwoFactorProviderAsync(User user)
     {
         user.TwoFactorProviders = null;
         user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
         await SaveUserAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
         await CheckPoliciesOnTwoFactorRemovalAsync(user);
-
-        return true;
     }
 
     public async Task<Tuple<bool, string>> SignUpPremiumAsync(User user, string paymentToken,

@@ -1,65 +1,40 @@
-﻿using System.Text;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Core.Auth.Identity.TokenProviders;
 
+/// <summary>
+/// We are repurposing the TwoFactorTokenProvider workflow to handle Recovery Codes
+/// being sent in because it is the easiest way identified to handle allowing a user
+/// to successfully go through the login process while providing their Recovery Code.
+///
+/// Originally, submitting your recovery code would land you on the login screen,
+/// but with the approach of using a TwoFactorTokenProvider we don't have to embed
+/// logic jankily in other parts of the recovery code process to get them logged in,
+/// we can treat Recovery Codes as just another 2FA method. This means that some of
+/// the functionality will not be needed in the same way it's needed for other 2FA
+/// methods.
+/// </summary>
 public class RecoveryCodeTokenProvider : IUserTwoFactorTokenProvider<User>
 {
-    private const string CacheKeyFormat = "RecoveryCodeToken_{0}_{1}_{2}";
-
-    private readonly IDistributedCache _distributedCache;
-    private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
-
-    public RecoveryCodeTokenProvider(
-        [FromKeyedServices("persistent")]
-        IDistributedCache distributedCache)
-    {
-        _distributedCache = distributedCache;
-        _distributedCacheEntryOptions = new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-        };
-    }
-
     public virtual Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         return Task.FromResult(!string.IsNullOrEmpty(user.TwoFactorRecoveryCode));
     }
 
+    /// <summary>
+    /// This function shouldn't get called because we are not using recovery codes
+    /// the typical 2FA flow.
+    /// </summary>
     public virtual async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
     {
-        if (user.TwoFactorRecoveryCode == null)
-        {
-            throw new ArgumentNullException(nameof(user.TwoFactorRecoveryCode));
-        }
-
-        var code = user.TwoFactorRecoveryCode;
-        var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
-        await _distributedCache.SetAsync(cacheKey, Encoding.UTF8.GetBytes(code), _distributedCacheEntryOptions);
-        return code;
+        // What is a better way to build a response to exit out of this?
+        throw new Exception("This should not have been called.");
     }
 
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
-        // var cacheKey = string.Format(CacheKeyFormat, user.Id, user.SecurityStamp, purpose);
-        // var cachedValue = await _distributedCache.GetAsync(cacheKey);
-        // if (cachedValue == null)
-        // {
-        //     return false;
-        // }
-        //
-        // var code = Encoding.UTF8.GetString(cachedValue);
-        // var valid = string.Equals(token, code);
-        // if (valid)
-        // {
-        //     await _distributedCache.RemoveAsync(cacheKey);
-        // }
-        //
-        // return valid;
-
+        // Is there a proper way (cryptographic approach) to prep the token to be compared?
         var processedToken = token.Replace(" ", string.Empty).ToLower();
         return string.Equals(processedToken, user.TwoFactorRecoveryCode);
     }

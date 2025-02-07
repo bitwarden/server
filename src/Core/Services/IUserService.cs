@@ -91,8 +91,7 @@ public interface IUserService
     /// recovery code process when removing a 2fa method.
     /// </summary>
     /// <param name="user"></param>
-    /// <returns></returns>
-    public Task<bool> RemoveTwoFactorProviderAsync(User user);
+    public Task RemoveTwoFactorProviderAsync(User user);
 
     /// <summary>
     /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
