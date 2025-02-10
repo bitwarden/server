@@ -1663,6 +1663,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("RevisionDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("TaskId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -1674,6 +1677,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasAnnotation("SqlServer:Clustered", true);
 
                     b.HasIndex("OrganizationId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
+                    b.HasIndex("TaskId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
                     b.HasIndex("UserId")
@@ -2617,11 +2623,17 @@ namespace Bit.SqliteMigrations.Migrations
                         .WithMany()
                         .HasForeignKey("OrganizationId");
 
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.SecurityTask", "Task")
+                        .WithMany()
+                        .HasForeignKey("TaskId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
 
                     b.Navigation("Organization");
+
+                    b.Navigation("Task");
 
                     b.Navigation("User");
                 });

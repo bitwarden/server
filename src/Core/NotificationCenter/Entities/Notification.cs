@@ -20,6 +20,7 @@ public class Notification : ITableObject<Guid>
     public string? Body { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
+    public Guid? TaskId { get; set; }
 
     public void SetNewId()
     {
