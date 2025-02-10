@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Divergic.Logging.Xunit;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -577,14 +576,14 @@ public class PayPalControllerTests
     {
         var statusCodeActionResult = (IStatusCodeActionResult)result;
 
-        statusCodeActionResult.StatusCode.Should().Be(statusCode);
+        Assert.Equal(statusCode, statusCodeActionResult.StatusCode);
     }
 
     private static void Logged(ICacheLogger logger, LogLevel logLevel, string message)
     {
-        logger.Last.Should().NotBeNull();
-        logger.Last!.LogLevel.Should().Be(logLevel);
-        logger.Last!.Message.Should().Be(message);
+        Assert.NotNull(logger.Last);
+        Assert.Equal(logLevel, logger.Last!.LogLevel);
+        Assert.Equal(message, logger.Last!.Message);
     }
 
     private static void LoggedError(ICacheLogger logger, string message)

@@ -1272,17 +1272,17 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        var subscription = await _paymentService.GetSubscriptionAsync(organization);
+        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
+        {
+            return (false, "You do not have an active subscription. Reinstate your subscription to make changes");
+        }
+
         if (organization.Seats.HasValue &&
             organization.MaxAutoscaleSeats.HasValue &&
             organization.MaxAutoscaleSeats.Value < organization.Seats.Value + seatsToAdd)
         {
             return (false, $"Seat limit has been reached.");
-        }
-
-        var subscription = await _paymentService.GetSubscriptionAsync(organization);
-        if (subscription?.Subscription?.Status == StripeConstants.SubscriptionStatus.Canceled)
-        {
-            return (false, "Cannot autoscale with a canceled subscription.");
         }
 
         return (true, failureReason);
@@ -1929,6 +1929,11 @@ public class OrganizationService : IOrganizationService
 
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        {
+            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+        }
     }
 
     public async Task RevokeUserAsync(OrganizationUser organizationUser,
@@ -1936,6 +1941,11 @@ public class OrganizationService : IOrganizationService
     {
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        {
+            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+        }
     }
 
     private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
@@ -2001,6 +2011,10 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.RevokeAsync(organizationUser.Id);
                 organizationUser.Status = OrganizationUserStatusType.Revoked;
                 await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
+                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+                {
+                    await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+                }
 
                 result.Add(Tuple.Create(organizationUser, ""));
             }
@@ -2028,12 +2042,22 @@ public class OrganizationService : IOrganizationService
 
         await RepositoryRestoreUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        {
+            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+        }
     }
 
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
         await RepositoryRestoreUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        {
+            await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+        }
     }
 
     private async Task RepositoryRestoreUserAsync(OrganizationUser organizationUser)
@@ -2125,6 +2149,10 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                 organizationUser.Status = status;
                 await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+                {
+                    await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
+                }
 
                 result.Add(Tuple.Create(organizationUser, ""));
             }
