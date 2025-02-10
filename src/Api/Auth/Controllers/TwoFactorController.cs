@@ -463,8 +463,6 @@ public class TwoFactorController : Controller
             throw new BadRequestException(name, $"{name} is invalid.");
         }
 
-        // Why are we doing this? is it to throttle? Could I turn this into an attribute we put
-        // functions instead so we have a better way to tag functions we want to throttle?
         await Task.Delay(500);
     }
 

@@ -17,6 +17,13 @@ namespace Bit.Core.Auth.Identity.TokenProviders;
 /// </summary>
 public class RecoveryCodeTokenProvider : IUserTwoFactorTokenProvider<User>
 {
+    /// <summary>
+    /// Hijack the can generate two factor token to repurpose it to check
+    /// if the user has a two factor recovery code on their account.
+    /// </summary>
+    /// <param name="manager"></param>
+    /// <param name="user"></param>
+    /// <returns></returns>
     public virtual Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         return Task.FromResult(!string.IsNullOrEmpty(user.TwoFactorRecoveryCode));
@@ -28,13 +35,11 @@ public class RecoveryCodeTokenProvider : IUserTwoFactorTokenProvider<User>
     /// </summary>
     public virtual async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
     {
-        // What is a better way to build a response to exit out of this?
         throw new Exception("This should not have been called.");
     }
 
     public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
-        // Is there a proper way (cryptographic approach) to prep the token to be compared?
         var processedToken = token.Replace(" ", string.Empty).ToLower();
         return Task.FromResult(string.Equals(processedToken, user.TwoFactorRecoveryCode));
     }

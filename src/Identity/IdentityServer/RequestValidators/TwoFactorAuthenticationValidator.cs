@@ -154,8 +154,9 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
-        // These cases we want to always return false, U2f is deprecated and OrganizationDuo is...?
-        if (type == TwoFactorProviderType.U2f || type == TwoFactorProviderType.OrganizationDuo)
+        // These cases we want to always return false, U2f is deprecated and OrganizationDuo uses a different
+        // flow than the other two factor providers so we don't want to return true.
+        if (type is TwoFactorProviderType.U2f or TwoFactorProviderType.OrganizationDuo)
         {
             return false;
         }
@@ -174,8 +175,8 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
-        return await _userManager.VerifyTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(type), token);
+        return await _userManager.VerifyTwoFactorTokenAsync(
+            user, CoreHelpers.CustomProviderName(type), token);
     }
 
     private async Task<List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>> GetEnabledTwoFactorProvidersAsync(

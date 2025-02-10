@@ -78,8 +78,6 @@ public abstract class BaseRequestValidator<T> where T : class
         CustomValidatorRequestContext validatorContext)
     {
         // 1. We need to check if the user is a bot and if their master password hash is correct.
-
-        // We don't do captchas anymore right? Can I remove code associated with the captcha response?
         var isBot = validatorContext.CaptchaResponse?.IsBot ?? false;
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
