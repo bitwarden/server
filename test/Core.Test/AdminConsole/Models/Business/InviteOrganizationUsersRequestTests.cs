@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -50,4 +50,6 @@ public class InviteOrganizationUsersRequestTests
         Assert.Contains(validEmail, invite.Emails);
         Assert.Contains(validCollectionConfiguration.Id, invite.AccessibleCollections);
     }
+
+    // TODO Add more tests.
 }
