@@ -32,10 +32,10 @@ public class RecoveryCodeTokenProvider : IUserTwoFactorTokenProvider<User>
         throw new Exception("This should not have been called.");
     }
 
-    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    public Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
         // Is there a proper way (cryptographic approach) to prep the token to be compared?
         var processedToken = token.Replace(" ", string.Empty).ToLower();
-        return string.Equals(processedToken, user.TwoFactorRecoveryCode);
+        return Task.FromResult(string.Equals(processedToken, user.TwoFactorRecoveryCode));
     }
 }
