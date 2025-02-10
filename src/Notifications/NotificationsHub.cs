@@ -29,14 +29,13 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, GetUserGroup(currentContext.UserId.Value, clientType));
         }
 
-        if (currentContext.InstallationId.HasValue)
+        if (_globalSettings.Installation.Id != Guid.Empty)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId,
-                GetInstallationGroup(currentContext.InstallationId.Value));
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetInstallationGroup(_globalSettings.Installation.Id));
             if (clientType != ClientType.All)
             {
                 await Groups.AddToGroupAsync(Context.ConnectionId,
-                    GetInstallationGroup(currentContext.InstallationId.Value, clientType));
+                    GetInstallationGroup(_globalSettings.Installation.Id, clientType));
             }
         }
 
@@ -68,14 +67,14 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
                 GetUserGroup(currentContext.UserId.Value, clientType));
         }
 
-        if (currentContext.InstallationId.HasValue)
+        if (_globalSettings.Installation.Id != Guid.Empty)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId,
-                GetInstallationGroup(currentContext.InstallationId.Value));
+                GetInstallationGroup(_globalSettings.Installation.Id));
             if (clientType != ClientType.All)
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId,
-                    GetInstallationGroup(currentContext.InstallationId.Value, clientType));
+                    GetInstallationGroup(_globalSettings.Installation.Id, clientType));
             }
         }
 
