@@ -120,7 +120,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         return users;
     }
 
-    private async Task ValidateDeleteUserAsync(Guid organizationId, OrganizationUser orgUser, User user, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus, bool hasOtherConfirmedOwners)
+    private async Task ValidateAsync(Guid organizationId, OrganizationUser orgUser, User user, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus, bool hasOtherConfirmedOwners)
     {
         EnsureUserStatusIsNotInvited(orgUser);
         PreventSelfDeletion(orgUser, deletingUserId);
