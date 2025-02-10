@@ -38,9 +38,8 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
             {
                 _logger.LogError(
                     exception,
-                    "An error occured while processing message: {MessageId}, with Body: {Body}",
-                    args.Message.MessageId,
-                    args.Message.Body
+                    "An error occured while processing message: {MessageId}",
+                    args.Message.MessageId
                 );
             }
         };

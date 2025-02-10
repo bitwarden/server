@@ -24,10 +24,7 @@
             "Name": "event-logging",
             "Subscriptions": [
               {
-                "Name": "events-write-subscription",
-              },
-              {
-                "Name": "events-webhook-subscription",
+                "Name": "events-write-subscription"
               }
             ]
           }
