@@ -140,7 +140,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     }
     private static void PreventSelfDeletion(OrganizationUser orgUser, Guid? deletingUserId)
     {
-        if (!(orgUser.UserId.HasValue && deletingUserId.HasValue))
+        if (!orgUser.UserId.HasValue || !deletingUserId.HasValue)
         {
             return;
         }
