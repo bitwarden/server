@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Settings;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
@@ -15,7 +14,6 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
         _policyRepository = policyRepository;
 
         // Register Policy Requirement factory functions below
-        _policyRequirements.Add(SingleOrganizationPolicyRequirement.Create);
     }
 
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement

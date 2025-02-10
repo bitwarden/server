@@ -1,6 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Billing.Enums;
@@ -15,7 +13,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 {
@@ -27,8 +25,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
-    private readonly IFeatureService _featureService;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -38,9 +34,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IPolicyService policyService,
         IMailService mailService,
         IUserRepository userRepository,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IPolicyRequirementQuery policyRequirementQuery,
-        IFeatureService featureService)
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
     {
 
         // TODO: remove data protector when old token validation removed
@@ -52,8 +46,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _mailService = mailService;
         _userRepository = userRepository;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
-        _policyRequirementQuery = policyRequirementQuery;
-        _featureService = featureService;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
@@ -180,35 +172,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             }
         }
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
-        {
-            await EnforcePolicies_vNext(user, orgUser, userService);
-        }
-        else
-        {
-            await EnforcePolicies(user, orgUser, userService);
-        }
-
-        orgUser.Status = OrganizationUserStatusType.Accepted;
-        orgUser.UserId = user.Id;
-        orgUser.Email = null;
-
-        await _organizationUserRepository.ReplaceAsync(orgUser);
-
-        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-
-        if (adminEmails.Count > 0)
-        {
-            var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
-            await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
-        }
-
-        return orgUser;
-    }
-
-    private async Task EnforcePolicies(User user, OrganizationUser orgUser, IUserService userService)
-    {
+        // Enforce Single Organization Policy of organization user is trying to join
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
         var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
@@ -237,34 +201,23 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
                 throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
         }
-    }
 
-    private async Task EnforcePolicies_vNext(User user, OrganizationUser orgUser, IUserService userService)
-    {
-        var singleOrganizationRequirement =
-            await _policyRequirementQuery.GetAsync<SingleOrganizationPolicyRequirement>(user.Id);
+        orgUser.Status = OrganizationUserStatusType.Accepted;
+        orgUser.UserId = user.Id;
+        orgUser.Email = null;
 
-        switch (singleOrganizationRequirement.CanJoinOrganization(orgUser.OrganizationId))
+        await _organizationUserRepository.ReplaceAsync(orgUser);
+
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
+        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+
+        if (adminEmails.Count > 0)
         {
-            case SingleOrganizationRequirementResult.BlockedByThisOrganization:
-                throw new BadRequestException(SingleOrganizationPolicyRequirement.ErrorCannotJoinBlockedByThisOrganization);
-            case SingleOrganizationRequirementResult.BlockedByOtherOrganization:
-                throw new BadRequestException(SingleOrganizationPolicyRequirement.ErrorCannotJoinBlockedByOtherOrganization);
-            case SingleOrganizationRequirementResult.Ok:
-            default:
-                break;
+            var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
+            await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
         }
 
-        // TODO: this will be rewritten once a requirement is added
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await userService.TwoFactorIsEnabledAsync(user))
-        {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
-            }
-        }
+        return orgUser;
     }
+
 }

@@ -1,8 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
@@ -11,9 +8,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Test.AdminConsole.Helpers;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
@@ -262,35 +257,5 @@ public class CloudICloudOrganizationSignUpCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpOrganizationAsync(signup));
         Assert.Contains("You can only be an admin of one free organization.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UserIsBlockedBySingleOrganizationPolicy_ThrowsAsync(OrganizationSignup signup, SutProvider<CloudOrganizationSignUpCommand> sutProvider)
-    {
-        signup.Plan = PlanType.EnterpriseAnnually;
-        signup.AdditionalSeats = 1;
-        signup.PaymentMethodType = PaymentMethodType.Card;
-        signup.PremiumAccessAddon = false;
-        signup.UseSecretsManager = false;
-        signup.IsFromProvider = false;
-
-        sutProvider.EnableFeatureFlag(FeatureFlagKeys.PolicyRequirements);
-        var singleOrganizationRequirement = SingleOrganizationPolicyRequirement.Create([
-            new OrganizationUserPolicyDetails
-            {
-                OrganizationId = Guid.NewGuid(),
-                OrganizationUserId = Guid.NewGuid(),
-                OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
-                PolicyType = PolicyType.SingleOrg,
-                PolicyEnabled = true
-            }
-        ]);
-        sutProvider.GetDependency<IPolicyRequirementQuery>()
-            .GetAsync<SingleOrganizationPolicyRequirement>(signup.Owner.Id)
-            .Returns(singleOrganizationRequirement);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SignUpOrganizationAsync(signup));
-        Assert.Equal(SingleOrganizationPolicyRequirement.ErrorCannotCreateOrganization, exception.Message);
     }
 }
