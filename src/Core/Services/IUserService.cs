@@ -86,6 +86,9 @@ public interface IUserService
 
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
+    [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
+    public Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode);
+
     /// <summary>
     /// This method removes the two factor providers on a user and regenerates
     /// a new recovery code. Also removes policies on a user for when they lose
