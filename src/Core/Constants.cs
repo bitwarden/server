@@ -108,11 +108,10 @@ public static class FeatureFlagKeys
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
+    public const string PushSyncOrgKeysOnRevokeRestore = "pm-17168-push-sync-org-keys-on-revoke-restore";
 
     /* Tools Team */
     public const string ItemShare = "item-share";
-    public const string GeneratorToolsModernization = "generator-tools-modernization";
-    public const string MemberAccessReport = "ac-2059-member-access-report";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
@@ -155,7 +154,6 @@ public static class FeatureFlagKeys
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string SecurityTasks = "security-tasks";
-    public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
@@ -174,7 +172,8 @@ public static class FeatureFlagKeys
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
     public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
-    public const string P15179_AddExistingOrgsFromProviderPortal = "PM-15179-add-existing-orgs-from-provider-portal";
+    public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
+    public const string AndroidMutualTls = "mutual-tls";
 
     public static List<string> GetAllKeys()
     {
