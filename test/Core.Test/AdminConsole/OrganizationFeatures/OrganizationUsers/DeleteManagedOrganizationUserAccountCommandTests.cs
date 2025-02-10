@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -221,6 +222,99 @@ public class DeleteManagedOrganizationUserAccountCommandTests
 
         Assert.Equal(orgUser.Id, userId);
         Assert.Contains("Member is not managed by the organization.", errorMessage);
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IEventService>().Received(0)
+            .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
+    }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyUsersAsync_WhenUserIsASoleOwner_ReturnsErrorMessage(
+        SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId.Value)))
+            .Returns(new[] { user });
+
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
+
+        const int onlyOwnerCount = 1;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(Arg.Is<Guid>(id => id == user.Id))
+            .Returns(onlyOwnerCount);
+
+        // Act
+        var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
+
+        // Assert
+        Assert.Single(result);
+
+        var userId = result.First().Item1;
+        var errorMessage = result.First().Item2;
+
+        Assert.Equal(orgUser.Id, userId);
+        Assert.Contains("Cannot delete this user because it is the sole owner of at least one organization. Please delete these organizations or upgrade another user.", errorMessage);
+        await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IEventService>().Received(0)
+            .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteManyUsersAsync_WhenUserIsASoleProvider_ReturnsErrorMessage(
+       SutProvider<DeleteManagedOrganizationUserAccountCommand> sutProvider, User user,
+       [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser orgUser)
+    {
+        // Arrange
+        orgUser.UserId = user.Id;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<OrganizationUser> { orgUser });
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser.UserId.Value)))
+            .Returns(new[] { user });
+
+        sutProvider.GetDependency<IGetOrganizationUsersManagementStatusQuery>()
+            .GetUsersOrganizationManagementStatusAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, bool> { { orgUser.Id, true } });
+
+        const int onlyOwnerCount = 0;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOnlyOwnerAsync(Arg.Is<Guid>(id => id == user.Id))
+            .Returns(onlyOwnerCount);
+
+        const int onlyOwnerProviderCount = 1;
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetCountByOnlyOwnerAsync(Arg.Is<Guid>(id => id == user.Id))
+            .Returns(onlyOwnerProviderCount);
+
+        // Act
+        var result = await sutProvider.Sut.DeleteManyUsersAsync(orgUser.OrganizationId, new[] { orgUser.Id }, null);
+
+        // Assert
+        Assert.Single(result);
+
+        var userId = result.First().Item1;
+        var errorMessage = result.First().Item2;
+
+        Assert.Equal(orgUser.Id, userId);
+        Assert.Contains("Cannot delete this user because it is the sole owner of at least one provider. Please delete these providers or upgrade another user.", errorMessage);
         await sutProvider.GetDependency<IUserService>().Received(0).DeleteAsync(Arg.Any<User>());
         await sutProvider.GetDependency<IEventService>().Received(0)
             .LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
