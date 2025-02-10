@@ -2,7 +2,6 @@
 using Bit.Billing.Services.Implementations;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.Settings;
-using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
@@ -36,10 +35,8 @@ public class StripeEventServiceTests
         var function = async () => await _stripeEventService.GetCharge(stripeEvent);
 
         // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Charge)}'");
+        var exception = await Assert.ThrowsAsync<Exception>(function);
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Charge)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(
             Arg.Any<string>(),
@@ -58,7 +55,7 @@ public class StripeEventServiceTests
         var charge = await _stripeEventService.GetCharge(stripeEvent);
 
         // Assert
-        charge.Should().BeEquivalentTo(stripeEvent.Data.Object as Charge);
+        Assert.Equivalent(stripeEvent.Data.Object as Charge, charge, true);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCharge(
             Arg.Any<string>(),
@@ -88,8 +85,8 @@ public class StripeEventServiceTests
         var charge = await _stripeEventService.GetCharge(stripeEvent, true, expand);
 
         // Assert
-        charge.Should().Be(apiCharge);
-        charge.Should().NotBeSameAs(eventCharge);
+        Assert.Equal(apiCharge, charge);
+        Assert.NotSame(eventCharge, charge);
 
         await _stripeFacade.Received().GetCharge(
             apiCharge.Id,
@@ -110,10 +107,8 @@ public class StripeEventServiceTests
         var function = async () => await _stripeEventService.GetCustomer(stripeEvent);
 
         // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Customer)}'");
+        var exception = await Assert.ThrowsAsync<Exception>(function);
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Customer)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(
             Arg.Any<string>(),
@@ -132,7 +127,7 @@ public class StripeEventServiceTests
         var customer = await _stripeEventService.GetCustomer(stripeEvent);
 
         // Assert
-        customer.Should().BeEquivalentTo(stripeEvent.Data.Object as Customer);
+        Assert.Equivalent(stripeEvent.Data.Object as Customer, customer, true);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetCustomer(
             Arg.Any<string>(),
@@ -162,8 +157,8 @@ public class StripeEventServiceTests
         var customer = await _stripeEventService.GetCustomer(stripeEvent, true, expand);
 
         // Assert
-        customer.Should().Be(apiCustomer);
-        customer.Should().NotBeSameAs(eventCustomer);
+        Assert.Equal(apiCustomer, customer);
+        Assert.NotSame(eventCustomer, customer);
 
         await _stripeFacade.Received().GetCustomer(
             apiCustomer.Id,
@@ -184,10 +179,8 @@ public class StripeEventServiceTests
         var function = async () => await _stripeEventService.GetInvoice(stripeEvent);
 
         // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Invoice)}'");
+        var exception = await Assert.ThrowsAsync<Exception>(function);
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Invoice)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(
             Arg.Any<string>(),
@@ -206,7 +199,7 @@ public class StripeEventServiceTests
         var invoice = await _stripeEventService.GetInvoice(stripeEvent);
 
         // Assert
-        invoice.Should().BeEquivalentTo(stripeEvent.Data.Object as Invoice);
+        Assert.Equivalent(stripeEvent.Data.Object as Invoice, invoice, true);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetInvoice(
             Arg.Any<string>(),
@@ -236,8 +229,8 @@ public class StripeEventServiceTests
         var invoice = await _stripeEventService.GetInvoice(stripeEvent, true, expand);
 
         // Assert
-        invoice.Should().Be(apiInvoice);
-        invoice.Should().NotBeSameAs(eventInvoice);
+        Assert.Equal(apiInvoice, invoice);
+        Assert.NotSame(eventInvoice, invoice);
 
         await _stripeFacade.Received().GetInvoice(
             apiInvoice.Id,
@@ -258,10 +251,8 @@ public class StripeEventServiceTests
         var function = async () => await _stripeEventService.GetPaymentMethod(stripeEvent);
 
         // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(PaymentMethod)}'");
+        var exception = await Assert.ThrowsAsync<Exception>(function);
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(PaymentMethod)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(
             Arg.Any<string>(),
@@ -280,7 +271,7 @@ public class StripeEventServiceTests
         var paymentMethod = await _stripeEventService.GetPaymentMethod(stripeEvent);
 
         // Assert
-        paymentMethod.Should().BeEquivalentTo(stripeEvent.Data.Object as PaymentMethod);
+        Assert.Equivalent(stripeEvent.Data.Object as PaymentMethod, paymentMethod, true);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetPaymentMethod(
             Arg.Any<string>(),
@@ -310,8 +301,8 @@ public class StripeEventServiceTests
         var paymentMethod = await _stripeEventService.GetPaymentMethod(stripeEvent, true, expand);
 
         // Assert
-        paymentMethod.Should().Be(apiPaymentMethod);
-        paymentMethod.Should().NotBeSameAs(eventPaymentMethod);
+        Assert.Equal(apiPaymentMethod, paymentMethod);
+        Assert.NotSame(eventPaymentMethod, paymentMethod);
 
         await _stripeFacade.Received().GetPaymentMethod(
             apiPaymentMethod.Id,
@@ -332,10 +323,8 @@ public class StripeEventServiceTests
         var function = async () => await _stripeEventService.GetSubscription(stripeEvent);
 
         // Assert
-        await function
-            .Should()
-            .ThrowAsync<Exception>()
-            .WithMessage($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Subscription)}'");
+        var exception = await Assert.ThrowsAsync<Exception>(function);
+        Assert.Equal($"Stripe event with ID '{stripeEvent.Id}' does not have object matching type '{nameof(Subscription)}'", exception.Message);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(
             Arg.Any<string>(),
@@ -354,7 +343,7 @@ public class StripeEventServiceTests
         var subscription = await _stripeEventService.GetSubscription(stripeEvent);
 
         // Assert
-        subscription.Should().BeEquivalentTo(stripeEvent.Data.Object as Subscription);
+        Assert.Equivalent(stripeEvent.Data.Object as Subscription, subscription, true);
 
         await _stripeFacade.DidNotReceiveWithAnyArgs().GetSubscription(
             Arg.Any<string>(),
@@ -384,8 +373,8 @@ public class StripeEventServiceTests
         var subscription = await _stripeEventService.GetSubscription(stripeEvent, true, expand);
 
         // Assert
-        subscription.Should().Be(apiSubscription);
-        subscription.Should().NotBeSameAs(eventSubscription);
+        Assert.Equal(apiSubscription, subscription);
+        Assert.NotSame(eventSubscription, subscription);
 
         await _stripeFacade.Received().GetSubscription(
             apiSubscription.Id,
@@ -417,7 +406,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
             subscription.Id,
@@ -447,7 +436,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetCharge(
             charge.Id,
@@ -475,7 +464,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetCustomer(
             invoice.CustomerId,
@@ -505,7 +494,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetInvoice(
             invoice.Id,
@@ -535,7 +524,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetPaymentMethod(
             paymentMethod.Id,
@@ -561,7 +550,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetCustomer(
             customer.Id,
@@ -592,7 +581,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeFalse();
+        Assert.False(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
             subscription.Id,
@@ -623,7 +612,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
             subscription.Id,
@@ -657,7 +646,7 @@ public class StripeEventServiceTests
         var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
 
         // Assert
-        cloudRegionValid.Should().BeTrue();
+        Assert.True(cloudRegionValid);
 
         await _stripeFacade.Received(1).GetSubscription(
             subscription.Id,

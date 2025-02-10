@@ -324,7 +324,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Post_InvalidEmail_BadRequest(string email)
+    public async Task Post_InvalidEmail_BadRequest(string? email)
     {
         var displayName = "Test User 5";
         var externalId = "UE";
