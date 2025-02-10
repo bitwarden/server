@@ -149,10 +149,10 @@ public abstract class BaseRequestValidator<T> where T : class
                 await _twoFactorAuthenticationValidator
                     .VerifyTwoFactorAsync(user, twoFactorOrganization, twoFactorProviderType, twoFactorToken);
 
-            // 3b. Response for 2FA required but request is not valid or remember token expired state
+            // 3b. Response for 2FA required but request is not valid or remember token expired state.
             if (!twoFactorTokenValid)
             {
-                // The remember me token has expired, respond back with the
+                // The remember me token has expired.
                 if (twoFactorProviderType == TwoFactorProviderType.Remember)
                 {
                     var resultDict = await _twoFactorAuthenticationValidator
@@ -188,7 +188,7 @@ public abstract class BaseRequestValidator<T> where T : class
             {
                 if (twoFactorProviderType == TwoFactorProviderType.RecoveryCode)
                 {
-                    await _userService.RemoveTwoFactorProviderAsync(user);
+                    await _userService.RefreshUser2FaAndRecoveryCodeAsync(user);
                 }
             }
         }

@@ -868,7 +868,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
-    public async Task RemoveTwoFactorProviderAsync(User user)
+    public async Task RefreshUser2FaAndRecoveryCodeAsync(User user)
     {
         user.TwoFactorProviders = null;
         user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
@@ -1339,11 +1339,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
         }
-    }
-
-    public void RemoveTwoFactorProvider()
-    {
-
     }
 
     public async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)

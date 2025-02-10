@@ -87,11 +87,12 @@ public interface IUserService
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
     /// <summary>
-    /// This method is for managing the policies on a user during the
-    /// recovery code process when removing a 2fa method.
+    /// This method removes the two factor providers on a user and regenerates
+    /// a new recovery code. Also removes policies on a user for when they lose
+    /// their 2fa status, they need to comply with their organizations policies.
     /// </summary>
     /// <param name="user"></param>
-    public Task RemoveTwoFactorProviderAsync(User user);
+    public Task RefreshUser2FaAndRecoveryCodeAsync(User user);
 
     /// <summary>
     /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
