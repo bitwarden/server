@@ -67,10 +67,10 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AccessSecretsManager = organization.AccessSecretsManager;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
         {
@@ -129,8 +129,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
     /// Indicates if the organization manages the user.
@@ -143,4 +142,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
     public bool UserIsManagedByOrganization { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

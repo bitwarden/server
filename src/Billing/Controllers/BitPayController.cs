@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 namespace Bit.Billing.Controllers;
 
 [Route("bitpay")]
+[ApiExplorerSettings(IgnoreApi = true)]
 public class BitPayController : Controller
 {
     private readonly BillingSettings _billingSettings;

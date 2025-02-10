@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="32.0.3" />
+    <PackageReference Include="CsvHelper" Version="33.0.1" />
   </ItemGroup>
 
 </Project>

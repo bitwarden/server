@@ -11,14 +11,14 @@
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
+    var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
-    var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
     var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
-    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
-                        canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
+    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
+                        canGenerateLicense || canManageStripeSubscriptions;
 }
 
 <!DOCTYPE html>
@@ -88,19 +88,19 @@
                                         @if (canPromoteAdmin)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
-                                                Promote Admin
+                                                Promote Organization Admin
+                                            </a>
+                                        }
+                                        @if (canPromoteProviderServiceUser)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteProviderServiceUser">
+                                                Promote Provider Service User
                                             </a>
                                         }
                                         @if (canGenerateLicense)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="GenerateLicense">
                                                 Generate License
-                                            </a>
-                                        }
-                                        @if (canManageTaxRates)
-                                        {
-                                            <a class="dropdown-item" asp-controller="Tools" asp-action="TaxRate">
-                                                Manage Tax Rates
                                             </a>
                                         }
                                         @if (canManageStripeSubscriptions)

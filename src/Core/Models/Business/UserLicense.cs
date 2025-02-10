@@ -1,8 +1,10 @@
 ﻿using System.Reflection;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
+using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Services;
@@ -70,6 +72,7 @@ public class UserLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
+    public string Token { get; set; }
     [JsonIgnore]
     public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
@@ -84,6 +87,7 @@ public class UserLicense : ILicense
                     !p.Name.Equals(nameof(Signature)) &&
                     !p.Name.Equals(nameof(SignatureBytes)) &&
                     !p.Name.Equals(nameof(LicenseType)) &&
+                    !p.Name.Equals(nameof(Token)) &&
                     (
                         !forHash ||
                         (
@@ -113,8 +117,47 @@ public class UserLicense : ILicense
         }
     }
 
-    public bool CanUse(User user, out string exception)
+    public bool CanUse(User user, ClaimsPrincipal claimsPrincipal, out string exception)
     {
+        if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
+        {
+            return ObsoleteCanUse(user, out exception);
+        }
+
+        var errorMessages = new StringBuilder();
+
+        if (!user.EmailVerified)
+        {
+            errorMessages.AppendLine("The user's email is not verified.");
+        }
+
+        var email = claimsPrincipal.GetValue<string>(nameof(Email));
+        if (!email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
+        {
+            errorMessages.AppendLine("The user's email does not match the license email.");
+        }
+
+        if (errorMessages.Length > 0)
+        {
+            exception = $"Invalid license. {errorMessages.ToString().TrimEnd()}";
+            return false;
+        }
+
+        exception = "";
+        return true;
+    }
+
+    /// <summary>
+    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
+    /// Instead, extend the CanUse method using the ClaimsPrincipal.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <param name="exception"></param>
+    /// <returns></returns>
+    /// <exception cref="NotSupportedException"></exception>
+    private bool ObsoleteCanUse(User user, out string exception)
+    {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         var errorMessages = new StringBuilder();
 
         if (Issued > DateTime.UtcNow)
@@ -152,22 +195,46 @@ public class UserLicense : ILicense
         return true;
     }
 
-    public bool VerifyData(User user)
+    public bool VerifyData(User user, ClaimsPrincipal claimsPrincipal)
     {
+        if (string.IsNullOrWhiteSpace(Token) || claimsPrincipal is null)
+        {
+            return ObsoleteVerifyData(user);
+        }
+
+        var licenseKey = claimsPrincipal.GetValue<string>(nameof(LicenseKey));
+        var premium = claimsPrincipal.GetValue<bool>(nameof(Premium));
+        var email = claimsPrincipal.GetValue<string>(nameof(Email));
+
+        return licenseKey == user.LicenseKey &&
+               premium == user.Premium &&
+               email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
+    }
+
+    /// <summary>
+    /// Do not extend this method. It is only here for backwards compatibility with old licenses.
+    /// Instead, extend the VerifyData method using the ClaimsPrincipal.
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    /// <exception cref="NotSupportedException"></exception>
+    private bool ObsoleteVerifyData(User user)
+    {
+        // Do not extend this method. It is only here for backwards compatibility with old licenses.
         if (Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
             return false;
         }
 
-        if (Version == 1)
+        if (Version != 1)
         {
-            return
-                user.LicenseKey != null && user.LicenseKey.Equals(LicenseKey) &&
-                user.Premium == Premium &&
-                user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
+            throw new NotSupportedException($"Version {Version} is not supported.");
         }
 
-        throw new NotSupportedException($"Version {Version} is not supported.");
+        return
+            user.LicenseKey != null && user.LicenseKey.Equals(LicenseKey) &&
+            user.Premium == Premium &&
+            user.Email.Equals(Email, StringComparison.InvariantCultureIgnoreCase);
     }
 
     public bool VerifySignature(X509Certificate2 certificate)

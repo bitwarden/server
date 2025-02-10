@@ -23,7 +23,8 @@ public class SubscriberService(
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
-    IStripeAdapter stripeAdapter) : ISubscriberService
+    IStripeAdapter stripeAdapter,
+    ITaxService taxService) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -609,44 +610,62 @@ public class SubscriberService(
             }
         });
 
-        if (!subscriber.IsUser())
+        var taxId = customer.TaxIds?.FirstOrDefault();
+
+        if (taxId != null)
         {
-            var taxId = customer.TaxIds?.FirstOrDefault();
+            await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
+        }
 
-            if (taxId != null)
+        if (string.IsNullOrWhiteSpace(taxInformation.TaxId))
+        {
+            return;
+        }
+
+        var taxIdType = taxInformation.TaxIdType;
+        if (string.IsNullOrWhiteSpace(taxIdType))
+        {
+            taxIdType = taxService.GetStripeTaxCode(taxInformation.Country,
+                taxInformation.TaxId);
+
+            if (taxIdType == null)
             {
-                await stripeAdapter.TaxIdDeleteAsync(customer.Id, taxId.Id);
-            }
-
-            var taxIdType = taxInformation.GetTaxIdType();
-
-            if (!string.IsNullOrWhiteSpace(taxInformation.TaxId) &&
-                !string.IsNullOrWhiteSpace(taxIdType))
-            {
-                await stripeAdapter.TaxIdCreateAsync(customer.Id, new TaxIdCreateOptions
-                {
-                    Type = taxIdType,
-                    Value = taxInformation.TaxId,
-                });
+                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                    taxInformation.Country,
+                    taxInformation.TaxId);
+                throw new Exceptions.BadRequestException("billingTaxIdTypeInferenceError");
             }
         }
 
-        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        try
         {
-            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
-                new SubscriptionUpdateOptions
-                {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
-                });
+            await stripeAdapter.TaxIdCreateAsync(customer.Id,
+                new TaxIdCreateOptions { Type = taxIdType, Value = taxInformation.TaxId });
+        }
+        catch (StripeException e)
+        {
+            switch (e.StripeError.Code)
+            {
+                case StripeConstants.ErrorCodes.TaxIdInvalid:
+                    logger.LogWarning("Invalid tax ID '{TaxID}' for country '{Country}'.",
+                        taxInformation.TaxId,
+                        taxInformation.Country);
+                    throw new Exceptions.BadRequestException("billingInvalidTaxIdError");
+                default:
+                    logger.LogError(e,
+                        "Error creating tax ID '{TaxId}' in country '{Country}' for customer '{CustomerID}'.",
+                        taxInformation.TaxId,
+                        taxInformation.Country,
+                        customer.Id);
+                    throw new Exceptions.BadRequestException("billingTaxIdCreationError");
+            }
         }
 
-        return;
-
-        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
-            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
-               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
-               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+        await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+            new SubscriptionUpdateOptions
+            {
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+            });
     }
 
     public async Task VerifyBankAccount(
@@ -770,6 +789,7 @@ public class SubscriberService(
             customer.Address.Country,
             customer.Address.PostalCode,
             customer.TaxIds?.FirstOrDefault()?.Value,
+            customer.TaxIds?.FirstOrDefault()?.Type,
             customer.Address.Line1,
             customer.Address.Line2,
             customer.Address.City,

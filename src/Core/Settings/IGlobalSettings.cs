@@ -14,6 +14,7 @@ public interface IGlobalSettings
     string LicenseCertificatePassword { get; set; }
     int OrganizationInviteExpirationHours { get; set; }
     bool DisableUserRegistration { get; set; }
+    bool EnableNewDeviceVerification { get; set; }
     IInstallationSettings Installation { get; set; }
     IFileStorageSettings Attachment { get; set; }
     IConnectionStringSettings Storage { get; set; }
@@ -23,5 +24,8 @@ public interface IGlobalSettings
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }
+    string DatabaseProvider { get; set; }
+    GlobalSettings.SqlSettings SqlServer { get; set; }
     string DevelopmentDirectory { get; set; }
+    GlobalSettings.EventLoggingSettings EventLogging { get; set; }
 }

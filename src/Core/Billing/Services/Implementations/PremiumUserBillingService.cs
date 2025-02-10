@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -58,6 +59,28 @@ public class PremiumUserBillingService(
         await userRepository.ReplaceAsync(user);
     }
 
+    public async Task UpdatePaymentMethod(
+        User user,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        TaxInformation taxInformation)
+    {
+        if (string.IsNullOrEmpty(user.GatewayCustomerId))
+        {
+            var customer = await CreateCustomerAsync(user,
+                new CustomerSetup { TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation });
+
+            user.Gateway = GatewayType.Stripe;
+            user.GatewayCustomerId = customer.Id;
+
+            await userRepository.ReplaceAsync(user);
+        }
+        else
+        {
+            await subscriberService.UpdatePaymentSource(user, tokenizedPaymentSource);
+            await subscriberService.UpdateTaxInformation(user, taxInformation);
+        }
+    }
+
     private async Task<Customer> CreateCustomerAsync(
         User user,
         CustomerSetup customerSetup)
@@ -82,13 +105,19 @@ public class PremiumUserBillingService(
             throw new BillingException();
         }
 
-        var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
-
         var subscriberName = user.SubscriberName();
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Address = address,
+            Address = new AddressOptions
+            {
+                Line1 = customerSetup.TaxInformation.Line1,
+                Line2 = customerSetup.TaxInformation.Line2,
+                City = customerSetup.TaxInformation.City,
+                PostalCode = customerSetup.TaxInformation.PostalCode,
+                State = customerSetup.TaxInformation.State,
+                Country = customerSetup.TaxInformation.Country,
+            },
             Description = user.Name,
             Email = user.Email,
             Expand = ["tax"],
@@ -113,8 +142,7 @@ public class PremiumUserBillingService(
             Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-            },
-            TaxIdData = taxIdData
+            }
         };
 
         var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
@@ -230,7 +258,7 @@ public class PremiumUserBillingService(
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported,
+                Enabled = true
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,

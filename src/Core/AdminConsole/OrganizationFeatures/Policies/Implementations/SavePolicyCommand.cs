@@ -42,7 +42,7 @@ public class SavePolicyCommand : ISavePolicyCommand
         _policyValidators = policyValidatorsDict;
     }
 
-    public async Task SaveAsync(PolicyUpdate policyUpdate)
+    public async Task<Policy> SaveAsync(PolicyUpdate policyUpdate)
     {
         var org = await _applicationCacheService.GetOrganizationAbilityAsync(policyUpdate.OrganizationId);
         if (org == null)
@@ -74,6 +74,8 @@ public class SavePolicyCommand : ISavePolicyCommand
 
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
+
+        return policy;
     }
 
     private async Task RunValidatorAsync(IPolicyValidator validator, PolicyUpdate policyUpdate)

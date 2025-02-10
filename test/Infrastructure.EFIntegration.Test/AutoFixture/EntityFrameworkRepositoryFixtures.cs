@@ -8,6 +8,7 @@ using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Platform;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Tools.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;

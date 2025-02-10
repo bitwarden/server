@@ -419,22 +419,32 @@ public class AccountsControllerTests : IDisposable
 
 
     [Theory]
-    [BitAutoData(true, false)]  // User has PublicKey and PrivateKey, and Keys in request are NOT null
-    [BitAutoData(true, true)]   // User has PublicKey and PrivateKey, and Keys in request are null
-    [BitAutoData(false, false)] // User has neither PublicKey nor PrivateKey, and Keys in request are NOT null
-    [BitAutoData(false, true)]  // User has neither PublicKey nor PrivateKey, and Keys in request are null
+    [BitAutoData(true, "existingPrivateKey", "existingPublicKey", true)] // allow providing existing keys in the request
+    [BitAutoData(true, null, null, true)] // allow not setting the public key when the user already has a key
+    [BitAutoData(false, "newPrivateKey", "newPublicKey", true)] // allow setting new keys when the user has no keys
+    [BitAutoData(false, null, null, true)] // allow not setting the public key when the user has no keys
+    // do not allow single key
+    [BitAutoData(false, "existingPrivateKey", null, false)]
+    [BitAutoData(false, null, "existingPublicKey", false)]
+    [BitAutoData(false, "newPrivateKey", null, false)]
+    [BitAutoData(false, null, "newPublicKey", false)]
+    [BitAutoData(true, "existingPrivateKey", null, false)]
+    [BitAutoData(true, null, "existingPublicKey", false)]
+    [BitAutoData(true, "newPrivateKey", null, false)]
+    [BitAutoData(true, null, "newPublicKey", false)]
+    // reject overwriting existing keys
+    [BitAutoData(true, "newPrivateKey", "newPublicKey", false)]
     public async Task PostSetPasswordAsync_WhenUserExistsAndSettingPasswordSucceeds_ShouldHandleKeysCorrectlyAndReturn(
-    bool hasExistingKeys,
-    bool shouldSetKeysToNull,
-    User user,
-    SetPasswordRequestModel setPasswordRequestModel)
+        bool hasExistingKeys,
+        string requestPrivateKey,
+        string requestPublicKey,
+        bool shouldSucceed,
+        User user,
+        SetPasswordRequestModel setPasswordRequestModel)
     {
         // Arrange
         const string existingPublicKey = "existingPublicKey";
-        const string existingEncryptedPrivateKey = "existingEncryptedPrivateKey";
-
-        const string newPublicKey = "newPublicKey";
-        const string newEncryptedPrivateKey = "newEncryptedPrivateKey";
+        const string existingEncryptedPrivateKey = "existingPrivateKey";
 
         if (hasExistingKeys)
         {
@@ -447,16 +457,16 @@ public class AccountsControllerTests : IDisposable
             user.PrivateKey = null;
         }
 
-        if (shouldSetKeysToNull)
+        if (requestPrivateKey == null && requestPublicKey == null)
         {
             setPasswordRequestModel.Keys = null;
         }
         else
         {
-            setPasswordRequestModel.Keys = new KeysRequestModel()
+            setPasswordRequestModel.Keys = new KeysRequestModel
             {
-                PublicKey = newPublicKey,
-                EncryptedPrivateKey = newEncryptedPrivateKey
+                EncryptedPrivateKey = requestPrivateKey,
+                PublicKey = requestPublicKey
             };
         }
 
@@ -469,43 +479,65 @@ public class AccountsControllerTests : IDisposable
             .Returns(Task.FromResult(IdentityResult.Success));
 
         // Act
-        await _sut.PostSetPasswordAsync(setPasswordRequestModel);
-
-        // Assert
-        await _setInitialMasterPasswordCommand.Received(1)
-            .SetInitialMasterPasswordAsync(
-                Arg.Is<User>(u => u == user),
-                Arg.Is<string>(s => s == setPasswordRequestModel.MasterPasswordHash),
-                Arg.Is<string>(s => s == setPasswordRequestModel.Key),
-                Arg.Is<string>(s => s == setPasswordRequestModel.OrgIdentifier));
-
-        // Additional Assertions for User object modifications
-        Assert.Equal(setPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
-        Assert.Equal(setPasswordRequestModel.Kdf, user.Kdf);
-        Assert.Equal(setPasswordRequestModel.KdfIterations, user.KdfIterations);
-        Assert.Equal(setPasswordRequestModel.KdfMemory, user.KdfMemory);
-        Assert.Equal(setPasswordRequestModel.KdfParallelism, user.KdfParallelism);
-        Assert.Equal(setPasswordRequestModel.Key, user.Key);
-
-        if (hasExistingKeys)
+        if (shouldSucceed)
         {
-            // User Keys should not be modified
-            Assert.Equal(existingPublicKey, user.PublicKey);
-            Assert.Equal(existingEncryptedPrivateKey, user.PrivateKey);
-        }
-        else if (!shouldSetKeysToNull)
-        {
-            // User had no keys so they should be set to the request model's keys
-            Assert.Equal(setPasswordRequestModel.Keys.PublicKey, user.PublicKey);
-            Assert.Equal(setPasswordRequestModel.Keys.EncryptedPrivateKey, user.PrivateKey);
+            await _sut.PostSetPasswordAsync(setPasswordRequestModel);
+            // Assert
+            await _setInitialMasterPasswordCommand.Received(1)
+                .SetInitialMasterPasswordAsync(
+                    Arg.Is<User>(u => u == user),
+                    Arg.Is<string>(s => s == setPasswordRequestModel.MasterPasswordHash),
+                    Arg.Is<string>(s => s == setPasswordRequestModel.Key),
+                    Arg.Is<string>(s => s == setPasswordRequestModel.OrgIdentifier));
+
+            // Additional Assertions for User object modifications
+            Assert.Equal(setPasswordRequestModel.MasterPasswordHint, user.MasterPasswordHint);
+            Assert.Equal(setPasswordRequestModel.Kdf, user.Kdf);
+            Assert.Equal(setPasswordRequestModel.KdfIterations, user.KdfIterations);
+            Assert.Equal(setPasswordRequestModel.KdfMemory, user.KdfMemory);
+            Assert.Equal(setPasswordRequestModel.KdfParallelism, user.KdfParallelism);
+            Assert.Equal(setPasswordRequestModel.Key, user.Key);
         }
         else
         {
-            // User had no keys and the request model's keys were null, so they should be set to null
-            Assert.Null(user.PublicKey);
-            Assert.Null(user.PrivateKey);
+            await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
         }
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_WhenUserExistsAndHasKeysAndKeysAreUpdated_ShouldThrowAsync(
+    User user,
+    SetPasswordRequestModel setPasswordRequestModel)
+    {
+        // Arrange
+        const string existingPublicKey = "existingPublicKey";
+        const string existingEncryptedPrivateKey = "existingEncryptedPrivateKey";
+
+        const string newPublicKey = "newPublicKey";
+        const string newEncryptedPrivateKey = "newEncryptedPrivateKey";
+
+        user.PublicKey = existingPublicKey;
+        user.PrivateKey = existingEncryptedPrivateKey;
+
+        setPasswordRequestModel.Keys = new KeysRequestModel()
+        {
+            PublicKey = newPublicKey,
+            EncryptedPrivateKey = newEncryptedPrivateKey
+        };
+
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
+        _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+                user,
+                setPasswordRequestModel.MasterPasswordHash,
+                setPasswordRequestModel.Key,
+                setPasswordRequestModel.OrgIdentifier)
+            .Returns(Task.FromResult(IdentityResult.Success));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostSetPasswordAsync(setPasswordRequestModel));
+    }
+
 
     [Theory]
     [BitAutoData]
@@ -525,6 +557,7 @@ public class AccountsControllerTests : IDisposable
         User user,
         SetPasswordRequestModel model)
     {
+        model.Keys = null;
         // Arrange
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult(user));
         _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(Arg.Any<User>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
@@ -561,6 +594,49 @@ public class AccountsControllerTests : IDisposable
         await _sut.Delete(new SecretVerificationRequestModel());
 
         await _userService.Received(1).DeleteAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenUserDoesNotExist_ShouldThrowUnauthorizedAccessException(
+        SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((User)null));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => _sut.SetUserVerifyDevicesAsync(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenInvalidSecret_ShouldFail(
+        User user, SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((user)));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(false));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => _sut.SetUserVerifyDevicesAsync(model));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SetVerifyDevices_WhenRequestValid_ShouldSucceed(
+        User user, SetVerifyDevicesRequestModel model)
+    {
+        // Arrange
+        user.VerifyDevices = false;
+        model.VerifyDevices = true;
+        _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(Task.FromResult((user)));
+        _userService.VerifySecretAsync(user, Arg.Any<string>()).Returns(Task.FromResult(true));
+
+        // Act
+        await _sut.SetUserVerifyDevicesAsync(model);
+
+        await _userService.Received(1).SaveUserAsync(user);
+        Assert.Equal(model.VerifyDevices, user.VerifyDevices);
     }
 
     // Below are helper functions that currently belong to this
