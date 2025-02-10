@@ -44,7 +44,7 @@ public interface ITwoFactorAuthenticationValidator
     /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
     /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
     /// <returns>boolean</returns>
-    Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
+    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
 }
 
 public class TwoFactorAuthenticationValidator(
@@ -139,7 +139,7 @@ public class TwoFactorAuthenticationValidator(
         return twoFactorResultDict;
     }
 
-    public async Task<bool> VerifyTwoFactor(
+    public async Task<bool> VerifyTwoFactorAsync(
         User user,
         Organization organization,
         TwoFactorProviderType type,
@@ -154,31 +154,28 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
-        switch (type)
+        // These cases we want to always return false, U2f is deprecated and OrganizationDuo is...?
+        if (type == TwoFactorProviderType.U2f || type == TwoFactorProviderType.OrganizationDuo)
         {
-            case TwoFactorProviderType.Authenticator:
-            case TwoFactorProviderType.Email:
-            case TwoFactorProviderType.Duo:
-            case TwoFactorProviderType.YubiKey:
-            case TwoFactorProviderType.Remember:
-            case TwoFactorProviderType.WebAuthn:
-            case TwoFactorProviderType.RecoveryCode:
-                // The intent of this check is to make sure that the user is using a 2FA provider that
-                // is enabled and allowed by their premium status. The exception for Remember &
-                // RecoveryCode is because these are "special" 2FA types that aren't ever explicitly
-                // enabled by a user, so we can't check the user's 2FA providers to see if they're
-                // enabled. We just have to check if the token is valid.
-                if (type != TwoFactorProviderType.Remember &&
-                    type != TwoFactorProviderType.RecoveryCode &&
-                    !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
-                {
-                    return false;
-                }
-                return await _userManager.VerifyTwoFactorTokenAsync(user,
-                    CoreHelpers.CustomProviderName(type), token);
-            default:
-                return false;
+            return false;
         }
+
+        // Now we are concerning the rest of the Two Factor Provider Types
+
+        // The intent of this check is to make sure that the user is using a 2FA provider that
+        // is enabled and allowed by their premium status. The exception for Remember &
+        // RecoveryCode is because these are "special" 2FA types that aren't ever explicitly
+        // enabled by a user, so we can't check the user's 2FA providers to see if they're
+        // enabled. We just have to check if the token is valid.
+        if (type != TwoFactorProviderType.Remember &&
+            type != TwoFactorProviderType.RecoveryCode &&
+            !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
+        {
+            return false;
+        }
+
+        return await _userManager.VerifyTwoFactorTokenAsync(user,
+            CoreHelpers.CustomProviderName(type), token);
     }
 
     private async Task<List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>> GetEnabledTwoFactorProvidersAsync(
