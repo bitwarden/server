@@ -10,3 +10,8 @@ public class CommandResult(IEnumerable<string> errors)
 
     public CommandResult() : this(Array.Empty<string>()) { }
 }
+
+public class CommandResult<T>(T data) : CommandResult(Array.Empty<string>())
+{
+    public T Data { get; } = data;
+}
