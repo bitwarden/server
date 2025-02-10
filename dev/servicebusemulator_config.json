@@ -27,7 +27,7 @@
                 "Name": "events-write-subscription",
               },
               {
-                "Name": "events-httpPost-subscription",
+                "Name": "events-webhook-subscription",
               }
             ]
           }

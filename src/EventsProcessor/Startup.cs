@@ -42,20 +42,20 @@ public class Startup
                 new AzureServiceBusEventListenerService(
                     provider.GetRequiredService<AzureTableStorageEventHandler>(),
                     provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
-                    provider.GetRequiredService<GlobalSettings>(),
+                    globalSettings,
                     globalSettings.EventLogging.AzureServiceBus.EventRepositorySubscriptionName));
 
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.HttpPostUrl))
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.WebhookUrl))
             {
-                services.AddSingleton<HttpPostEventHandler>();
-                services.AddHttpClient(HttpPostEventHandler.HttpClientName);
+                services.AddSingleton<WebhookEventHandler>();
+                services.AddHttpClient(WebhookEventHandler.HttpClientName);
 
                 services.AddSingleton<IHostedService>(provider =>
                     new AzureServiceBusEventListenerService(
-                        provider.GetRequiredService<HttpPostEventHandler>(),
+                        provider.GetRequiredService<WebhookEventHandler>(),
                         provider.GetRequiredService<ILogger<AzureServiceBusEventListenerService>>(),
-                        provider.GetRequiredService<GlobalSettings>(),
-                        globalSettings.EventLogging.AzureServiceBus.HttpPostSubscriptionName));
+                        globalSettings,
+                        globalSettings.EventLogging.AzureServiceBus.WebhookSubscriptionName));
             }
         }
         services.AddHostedService<AzureQueueHostedService>();

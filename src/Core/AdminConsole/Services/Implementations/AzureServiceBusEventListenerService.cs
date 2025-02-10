@@ -23,28 +23,40 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         _processor.ProcessMessageAsync += async args =>
         {
-            var eventMessage = JsonSerializer.Deserialize<EventMessage>(args.Message.Body.ToString());
+            try
+            {
+                var eventMessage = JsonSerializer.Deserialize<EventMessage>(args.Message.Body.ToString());
 
-            await _handler.HandleEventAsync(eventMessage);
-            await args.CompleteMessageAsync(args.Message);
+                await _handler.HandleEventAsync(eventMessage);
+                await args.CompleteMessageAsync(args.Message);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "An error occured while processing message: {MessageId}, with Body: {Body}",
+                    args.Message.MessageId,
+                    args.Message.Body
+                );
+            }
         };
 
         _processor.ProcessErrorAsync += args =>
         {
-            _logger.LogError(args.Exception, "An error occured while processing a message.");
+            _logger.LogError(
+                args.Exception,
+                "An error occurred. Entity Path: {EntityPath}, Error Source: {ErrorSource}",
+                args.EntityPath,
+                args.ErrorSource
+            );
             return Task.CompletedTask;
         };
 
-        await _processor.StartProcessingAsync(stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await Task.Delay(1_000, stoppingToken);
-        }
+        await _processor.StartProcessingAsync(cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

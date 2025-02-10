@@ -55,7 +55,7 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
         await base.StartAsync(cancellationToken);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         var consumer = new AsyncEventingBasicConsumer(_channel);
         consumer.ReceivedAsync += async (_, eventArgs) =>
@@ -71,12 +71,7 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
             }
         };
 
-        await _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await Task.Delay(1_000, stoppingToken);
-        }
+        await _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)

@@ -261,7 +261,7 @@ public class GlobalSettings : IGlobalSettings
     public class EventLoggingSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
-        public virtual string HttpPostUrl { get; set; }
+        public virtual string WebhookUrl { get; set; }
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
 
         public class AzureServiceBusSettings
@@ -270,7 +270,7 @@ public class GlobalSettings : IGlobalSettings
             private string _topicName;
 
             public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
-            public virtual string HttpPostSubscriptionName { get; set; } = "events-httpPost-subscription";
+            public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
 
             public string ConnectionString
             {
@@ -293,7 +293,7 @@ public class GlobalSettings : IGlobalSettings
             private string _exchangeName;
 
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
-            public virtual string HttpPostQueueName { get; set; } = "events-httpPost-queue";
+            public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
 
             public string HostName
             {

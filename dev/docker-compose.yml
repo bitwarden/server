@@ -109,8 +109,8 @@ services:
     profiles:
       - proxy
 
-  servicebusemulator:
-    container_name: "servicebus-emulator"
+  service-bus:
+    container_name: service-bus
     image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
     pull_policy: always
     volumes:
