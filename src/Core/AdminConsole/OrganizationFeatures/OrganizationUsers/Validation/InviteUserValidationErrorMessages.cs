@@ -10,4 +10,9 @@ public static class InviteUserValidationErrorMessages
     public const string CancelledSubscriptionError = "Cannot autoscale with a canceled subscription.";
     public const string NoPaymentMethodFoundError = "No payment method found.";
     public const string NoSubscriptionFoundError = "No subscription found.";
+
+    // Secrets Manager Invite Users Error Messages
+    public const string OrganizationNoSecretsManager = "Organization has no access to Secrets Manager";
+    public const string SecretsManagerSeatLimitReached = "Secrets Manager seat limit has been reached.";
+    public const string SecretsManagerCannotExceedPasswordManager = "You cannot have more Secrets Manager seats than Password Manager seats.";
 }
