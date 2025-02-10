@@ -63,8 +63,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
-        var hasOtherConfirmedOwners = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationId, orgUserIds, includeProvider: true);
-
         var userDeletionResults = new List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, string? ErrorMessage)>();
 
         foreach (var orgUserId in orgUserIds)
@@ -87,7 +85,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
                     throw new NotFoundException("Member not found.");
                 }
 
-                await ValidateDeleteUserAsync(organizationId, orgUser, user, deletingUserId, managementStatus, hasOtherConfirmedOwners);
+                await ValidateAsync(organizationId, orgUser, user, deletingUserId, managementStatus);
 
                 await CancelPremiumAsync(user);
 
@@ -115,17 +113,14 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
          .Select(orgUser => orgUser.UserId!.Value)
          .ToList();
 
-        var users = await _userRepository.GetManyAsync(userIds);
-
-        return users;
+        return await _userRepository.GetManyAsync(userIds);
     }
 
-    private async Task ValidateAsync(Guid organizationId, OrganizationUser orgUser, User user, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus, bool hasOtherConfirmedOwners)
+    private async Task ValidateAsync(Guid organizationId, OrganizationUser orgUser, User user, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus)
     {
         EnsureUserStatusIsNotInvited(orgUser);
         PreventSelfDeletion(orgUser, deletingUserId);
         EnsureUserIsManagedByOrganization(orgUser, managementStatus);
-        PreventOrganizationSoleOwnerDeletion(orgUser, hasOtherConfirmedOwners);
 
         await EnsureOnlyOwnersCanDeleteOwnersAsync(organizationId, orgUser, deletingUserId);
         await EnsureUserIsNotSoleOrganizationOwnerAsync(user);
@@ -160,19 +155,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
         if (deletingUserId.HasValue && !await _currentContext.OrganizationOwner(organizationId))
         {
             throw new BadRequestException("Only owners can delete other owners.");
-        }
-    }
-
-    private static void PreventOrganizationSoleOwnerDeletion(OrganizationUser orgUser, bool hasOtherConfirmedOwners)
-    {
-        if (orgUser.Type != OrganizationUserType.Owner)
-        {
-            return;
-        }
-
-        if (!hasOtherConfirmedOwners)
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
     }
 
@@ -234,7 +216,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     private async Task DeleteManyAsync(IEnumerable<User> users)
     {
-
         await _userRepository.DeleteManyAsync(users);
         foreach (var user in users)
         {
