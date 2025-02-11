@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 
