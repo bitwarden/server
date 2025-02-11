@@ -3,6 +3,7 @@ using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -33,6 +34,7 @@ public class PayPalControllerTests
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
+    private readonly IPremiumUserBillingService _premiumUserBillingService = Substitute.For<IPremiumUserBillingService>();
 
     private const string _defaultWebhookKey = "webhook-key";
 
@@ -544,7 +546,8 @@ public class PayPalControllerTests
             _paymentService,
             _transactionRepository,
             _userRepository,
-            _providerRepository);
+            _providerRepository,
+            _premiumUserBillingService);
 
         var httpContext = new DefaultHttpContext();
 

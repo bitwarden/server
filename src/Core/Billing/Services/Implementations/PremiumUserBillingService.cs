@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
+using Fido2NetLib.Objects;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Customer = Stripe.Customer;
@@ -27,6 +28,57 @@ public class PremiumUserBillingService(
     ISubscriberService subscriberService,
     IUserRepository userRepository) : IPremiumUserBillingService
 {
+    public async Task Credit(User user, decimal amount)
+    {
+        var customer = await subscriberService.GetCustomer(user);
+
+        // Negative credit represents a balance and all Stripe denomination is in cents.
+        var credit = (long)amount * -100;
+
+        if (customer == null)
+        {
+            var options = new CustomerCreateOptions
+            {
+                Balance = credit,
+                Description = user.Name,
+                Email = user.Email,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = user.SubscriberType(),
+                            Value = user.SubscriberName().Length <= 30
+                                ? user.SubscriberName()
+                                : user.SubscriberName()[..30]
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    ["region"] = globalSettings.BaseServiceUri.CloudRegion,
+                    ["userId"] = user.Id.ToString()
+                }
+            };
+
+            customer = await stripeAdapter.CustomerCreateAsync(options);
+
+            user.Gateway = GatewayType.Stripe;
+            user.GatewayCustomerId = customer.Id;
+            await userRepository.ReplaceAsync(user);
+        }
+        else
+        {
+            var options = new CustomerUpdateOptions
+            {
+                Balance = customer.Balance + credit
+            };
+
+            await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+        }
+    }
+
     public async Task Finalize(PremiumUserSale sale)
     {
         var (user, customerSetup, storage) = sale;
@@ -36,6 +88,37 @@ public class PremiumUserBillingService(
         var customer = string.IsNullOrEmpty(user.GatewayCustomerId)
             ? await CreateCustomerAsync(user, customerSetup)
             : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = expand });
+
+        /*
+         * If the customer was previously set up with credit, which does not require a billing location,
+         * we need to update the customer on the fly before we start the subscription.
+         */
+        if (customerSetup is
+            {
+                TokenizedPaymentSource.Type: PaymentMethodType.Credit,
+                TaxInformation: { Country: not null and not "", PostalCode: not null and not "" }
+            })
+        {
+            var options = new CustomerUpdateOptions
+            {
+                Address = new AddressOptions
+                {
+                    Line1 = customerSetup.TaxInformation.Line1,
+                    Line2 = customerSetup.TaxInformation.Line2,
+                    City = customerSetup.TaxInformation.City,
+                    PostalCode = customerSetup.TaxInformation.PostalCode,
+                    State = customerSetup.TaxInformation.State,
+                    Country = customerSetup.TaxInformation.Country,
+                },
+                Expand = ["tax"],
+                Tax = new CustomerTaxOptions
+                {
+                    ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+                }
+            };
+
+            customer = await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+        }
 
         var subscription = await CreateSubscriptionAsync(user.Id, customer, storage);
 
