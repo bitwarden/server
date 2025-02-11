@@ -1093,7 +1093,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await EnablePremiumAsync(user, expirationDate);
     }
 
-    public async Task EnablePremiumAsync(User user, DateTime? expirationDate)
+    private async Task EnablePremiumAsync(User user, DateTime? expirationDate)
     {
         if (user != null && !user.Premium && user.Gateway.HasValue)
         {
@@ -1110,7 +1110,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await DisablePremiumAsync(user, expirationDate);
     }
 
-    public async Task DisablePremiumAsync(User user, DateTime? expirationDate)
+    private async Task DisablePremiumAsync(User user, DateTime? expirationDate)
     {
         if (user != null && user.Premium)
         {

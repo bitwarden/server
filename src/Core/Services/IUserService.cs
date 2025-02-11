@@ -52,7 +52,9 @@ public interface IUserService
     Task CancelPremiumAsync(User user, bool? endOfPeriod = null);
     Task ReinstatePremiumAsync(User user);
     Task EnablePremiumAsync(Guid userId, DateTime? expirationDate);
+    Task EnablePremiumAsync(User user, DateTime? expirationDate);
     Task DisablePremiumAsync(Guid userId, DateTime? expirationDate);
+    Task DisablePremiumAsync(User user, DateTime? expirationDate);
     Task UpdatePremiumExpirationAsync(Guid userId, DateTime? expirationDate);
     Task<UserLicense> GenerateLicenseAsync(User user, SubscriptionInfo subscriptionInfo = null,
         int? version = null);
@@ -87,7 +89,7 @@ public interface IUserService
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
     [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
-    public Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode);
+    Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode);
 
     /// <summary>
     /// This method removes the two factor providers on a user and regenerates
@@ -95,7 +97,7 @@ public interface IUserService
     /// their 2fa status, they need to comply with their organizations policies.
     /// </summary>
     /// <param name="user">The user to refresh the 2FA and Recovery Code on.</param>
-    public Task RefreshUser2FaAndRecoveryCodeAsync(User user);
+    Task RefreshUser2FaAndRecoveryCodeAsync(User user);
 
     /// <summary>
     /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
