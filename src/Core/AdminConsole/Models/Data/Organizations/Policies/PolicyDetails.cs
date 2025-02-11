@@ -23,7 +23,11 @@ public class PolicyDetails
     public OrganizationUserType OrganizationUserType { get; set; }
 
     public OrganizationUserStatusType OrganizationUserStatus { get; set; }
-    public string OrganizationUserCustomPermissions { get; set; }
+    /// <summary>
+    /// Custom permissions for the organization user, if any. Use <see cref="GetOrganizationUserCustomPermissions"/>
+    /// to deserialize.
+    /// </summary>
+    public string OrganizationUserPermissionsData { get; set; }
 
     /// <summary>
     /// True if the user is also a ProviderUser for the organization, false otherwise.
@@ -33,6 +37,6 @@ public class PolicyDetails
     public T GetDataModel<T>() where T : IPolicyDataModel, new()
         => CoreHelpers.LoadClassFromJsonData<T>(PolicyData);
 
-    public Permissions GetOrganizationUserCustomPermissions
-        => CoreHelpers.LoadClassFromJsonData<Permissions>(OrganizationUserCustomPermissions);
+    public Permissions GetOrganizationUserCustomPermissions()
+        => CoreHelpers.LoadClassFromJsonData<Permissions>(OrganizationUserPermissionsData);
 }
