@@ -95,20 +95,20 @@ public class Startup
                 new RabbitMqEventListenerService(
                     provider.GetRequiredService<EventRepositoryHandler>(),
                     provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                    provider.GetRequiredService<GlobalSettings>(),
+                    globalSettings,
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
 
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HttpPostUrl))
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.WebhookUrl))
             {
-                services.AddSingleton<HttpPostEventHandler>();
-                services.AddHttpClient(HttpPostEventHandler.HttpClientName);
+                services.AddSingleton<WebhookEventHandler>();
+                services.AddHttpClient(WebhookEventHandler.HttpClientName);
 
                 services.AddSingleton<IHostedService>(provider =>
                     new RabbitMqEventListenerService(
-                        provider.GetRequiredService<HttpPostEventHandler>(),
+                        provider.GetRequiredService<WebhookEventHandler>(),
                         provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                        provider.GetRequiredService<GlobalSettings>(),
-                        globalSettings.EventLogging.RabbitMq.HttpPostQueueName));
+                        globalSettings,
+                        globalSettings.EventLogging.RabbitMq.WebhookQueueName));
             }
         }
     }
