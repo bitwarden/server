@@ -28,14 +28,13 @@ public class GetPolicyDetailsByUserIdTests
         var user = await userRepository.CreateTestUserAsync();
         var org1 = await CreateEnterpriseOrg(organizationRepository);
         var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org1, user, role: OrganizationUserType.Owner);
-        var policy1 = new Policy
+        await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org1.Id,
             Enabled = true,
             Type = PolicyType.SingleOrg,
             Data = CoreHelpers.ClassToJsonData(new TestPolicyData { BoolSetting = true, IntSetting = 5 })
-        };
-        await policyRepository.CreateAsync(policy1);
+        });
 
         // OrgUser2 - custom user of org2
         var org2 = await CreateEnterpriseOrg(organizationRepository);
@@ -51,15 +50,13 @@ public class GetPolicyDetailsByUserIdTests
             ManagePolicies = true
         });
         await organizationUserRepository.CreateAsync(orgUser2);
-
-        var policy2 = new Policy
+        await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org2.Id,
             Enabled = true,
             Type = PolicyType.SingleOrg,
             Data = CoreHelpers.ClassToJsonData(new TestPolicyData { BoolSetting = false, IntSetting = 15 })
-        };
-        await policyRepository.CreateAsync(policy2);
+        });
 
         // Act
         var policyDetails = (await policyRepository.GetPolicyDetailsByUserId(user.Id)).ToList();
@@ -118,14 +115,12 @@ public class GetPolicyDetailsByUserIdTests
             Email = user.Email  // invited users have matching Email
         };
         await organizationUserRepository.CreateAsync(orgUser);
-
-        var policy = new Policy
+        await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org.Id,
             Enabled = true,
             Type = PolicyType.SingleOrg,
-        };
-        await policyRepository.CreateAsync(policy);
+        });
 
         // Act
         var actualPolicyDetails = await policyRepository.GetPolicyDetailsByUserId(user.Id);
