@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿#nullable enable
+
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -14,21 +16,16 @@ namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 public class PolicyDetails
 {
     public Guid OrganizationUserId { get; set; }
-
     public Guid OrganizationId { get; set; }
-
     public PolicyType PolicyType { get; set; }
-    public string PolicyData { get; set; }
-
+    public string? PolicyData { get; set; }
     public OrganizationUserType OrganizationUserType { get; set; }
-
     public OrganizationUserStatusType OrganizationUserStatus { get; set; }
     /// <summary>
     /// Custom permissions for the organization user, if any. Use <see cref="GetOrganizationUserCustomPermissions"/>
     /// to deserialize.
     /// </summary>
-    public string OrganizationUserPermissionsData { get; set; }
-
+    public string? OrganizationUserPermissionsData { get; set; }
     /// <summary>
     /// True if the user is also a ProviderUser for the organization, false otherwise.
     /// </summary>
