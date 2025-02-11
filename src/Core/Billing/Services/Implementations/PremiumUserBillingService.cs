@@ -9,7 +9,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
-using Fido2NetLib.Objects;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Customer = Stripe.Customer;

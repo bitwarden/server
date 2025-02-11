@@ -387,8 +387,6 @@ public class PayPalControllerTests
 
         _userRepository.GetByIdAsync(userId).Returns(user);
 
-        _paymentService.CreditAccountAsync(user, 48M).Returns(true);
-
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
@@ -400,9 +398,7 @@ public class PayPalControllerTests
             transaction.UserId == userId &&
             transaction.Amount == 48M));
 
-        await _paymentService.Received(1).CreditAccountAsync(user, 48M);
-
-        await _userRepository.Received(1).ReplaceAsync(user);
+        await _premiumUserBillingService.Received(1).Credit(user, 48M);
 
         await _mailService.Received(1).SendAddedCreditAsync(billingEmail, 48M);
     }
