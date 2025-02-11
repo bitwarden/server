@@ -46,7 +46,8 @@ public class OrganizationSale
         var customerSetup = new CustomerSetup
         {
             Coupon = signup.IsFromProvider
-            ? StripeConstants.CouponIDs.MSPDiscount35
+            // TODO: Remove when last of the legacy providers has been migrated.
+            ? StripeConstants.CouponIDs.LegacyMSPDiscount
             : signup.IsFromSecretsManagerTrial
                 ? StripeConstants.CouponIDs.SecretsManagerStandalone
                 : null
