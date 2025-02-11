@@ -2,8 +2,6 @@
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -38,7 +36,6 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
-    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public SyncController(
         IUserService userService,
@@ -52,8 +49,7 @@ public class SyncController : Controller
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
-        IFeatureService featureService,
-        IPolicyRequirementQuery policyRequirementQuery)
+        IFeatureService featureService)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -67,7 +63,6 @@ public class SyncController : Controller
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
-        _policyRequirementQuery = policyRequirementQuery;
     }
 
     [HttpGet("")]
@@ -78,9 +73,6 @@ public class SyncController : Controller
         {
             throw new BadRequestException("User not found.");
         }
-
-        var sendReq = await _policyRequirementQuery.GetAsync<SendPolicyRequirement>(user.Id);
-        var testReq = await _policyRequirementQuery.GetAsync<TestPolicyRequirement>(user.Id);
 
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
             OrganizationUserStatusType.Confirmed);
