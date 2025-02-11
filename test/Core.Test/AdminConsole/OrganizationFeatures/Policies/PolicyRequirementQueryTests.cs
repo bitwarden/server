@@ -19,10 +19,10 @@ public class PolicyRequirementQueryTests
     public async Task GetAsync_Works(Guid userId, Guid organizationId)
     {
         var policyRepository = Substitute.For<IPolicyRepository>();
-        var factories = new List<CreateRequirement<IPolicyRequirement>>
+        var factories = new List<RequirementFactory<IPolicyRequirement>>
         {
             // In prod this cast is handled when the CreateRequirement delegate is registered in DI
-            (CreateRequirement<TestPolicyRequirement>)TestPolicyRequirement.Create
+            (RequirementFactory<TestPolicyRequirement>)TestPolicyRequirement.Create
         };
 
         var sut = new PolicyRequirementQuery(policyRepository, factories);

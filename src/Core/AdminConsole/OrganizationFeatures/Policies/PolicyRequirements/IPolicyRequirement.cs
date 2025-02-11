@@ -20,5 +20,5 @@ public interface IPolicyRequirement;
 /// See <see cref="PolicyRequirementHelpers"/> for extension methods to handle common requirements when implementing
 /// this delegate.
 /// </remarks>
-public delegate T CreateRequirement<out T>(IEnumerable<PolicyDetails> policyDetails)
+public delegate T RequirementFactory<out T>(IEnumerable<PolicyDetails> policyDetails)
     where T : IPolicyRequirement;

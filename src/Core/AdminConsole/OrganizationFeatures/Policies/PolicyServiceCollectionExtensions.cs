@@ -40,7 +40,7 @@ public static class PolicyServiceCollectionExtensions
     /// the correct type to be injected and then identified by <see cref="PolicyRequirementQuery"/> at runtime.
     /// </summary>
     /// <typeparam name="T">The specific PolicyRequirement being registered.</typeparam>
-    private static void AddPolicyRequirement<T>(this IServiceCollection serviceCollection, CreateRequirement<T> factory)
+    private static void AddPolicyRequirement<T>(this IServiceCollection serviceCollection, RequirementFactory<T> factory)
         where T : class, IPolicyRequirement
         => serviceCollection.AddPolicyRequirement(_ => factory);
 
@@ -52,7 +52,7 @@ public static class PolicyServiceCollectionExtensions
     /// </summary>
     /// <typeparam name="T">The specific PolicyRequirement being registered.</typeparam>
     private static void AddPolicyRequirement<T>(this IServiceCollection serviceCollection,
-        Func<IServiceProvider, CreateRequirement<T>> factory)
+        Func<IServiceProvider, RequirementFactory<T>> factory)
         where T : class, IPolicyRequirement
-        => serviceCollection.AddScoped<CreateRequirement<IPolicyRequirement>>(factory);
+        => serviceCollection.AddScoped<RequirementFactory<IPolicyRequirement>>(factory);
 }
