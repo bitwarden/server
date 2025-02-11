@@ -4,7 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 
-public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTasksCount>
+public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTaskCipher>
 {
     private readonly Guid _organizationId;
     private readonly IEnumerable<Guid> _cipherIds;
@@ -15,7 +15,7 @@ public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTasksCount>
         _cipherIds = cipherIds;
     }
 
-    public IQueryable<UserSecurityTasksCount> Run(DatabaseContext dbContext)
+    public IQueryable<UserSecurityTaskCipher> Run(DatabaseContext dbContext)
     {
         var baseCiphers =
             from c in dbContext.Ciphers
@@ -59,13 +59,13 @@ public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTasksCount>
                 u => u.Id,
                 (p, u) => new { p.UserId, p.Id, u.Email }
             )
-            .GroupBy(x => new { x.UserId, x.Email })
-            .Select(g => new UserSecurityTasksCount
+            .GroupBy(x => new { x.UserId, x.Email, x.Id })
+            .Select(g => new UserSecurityTaskCipher
             {
                 UserId = (Guid)g.Key.UserId,
                 Email = g.Key.Email,
-                TaskCount = g.Select(x => x.Id).Distinct().Count()
+                CipherId = g.Key.Id
             })
-            .OrderByDescending(x => x.TaskCount);
+            .OrderByDescending(x => x.Email);
     }
 }

@@ -17,7 +17,7 @@ public class GetSecurityTasksNotificationDetailsQuery : IGetSecurityTasksNotific
         _cipherRepository = cipherRepository;
     }
 
-    public async Task<ICollection<UserSecurityTasksCount>> GetNotificationDetailsByManyIds(Guid organizationId, IEnumerable<SecurityTask> tasks)
+    public async Task<ICollection<UserSecurityTaskCipher>> GetNotificationDetailsByManyIds(Guid organizationId, IEnumerable<SecurityTask> tasks)
     {
         var org = _currentContext.GetOrganization(organizationId);
         var cipherIds = tasks
@@ -30,8 +30,8 @@ public class GetSecurityTasksNotificationDetailsQuery : IGetSecurityTasksNotific
             throw new NotFoundException();
         }
 
-        var userSecurityTasks = await _cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organizationId, cipherIds);
+        var userSecurityTaskCiphers = await _cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organizationId, cipherIds);
 
-        return userSecurityTasks;
+        return userSecurityTaskCiphers;
     }
 }

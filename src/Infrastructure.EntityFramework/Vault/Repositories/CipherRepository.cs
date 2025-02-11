@@ -348,7 +348,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<ICollection<UserSecurityTasksCount>> GetUserSecurityTasksByCipherIdsAsync(
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(
         Guid organizationId, IEnumerable<Guid> cipherIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -356,35 +356,35 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var dbContext = GetDatabaseContext(scope);
             var query = new UserSecurityTasksByCipherIdsQuery(organizationId, cipherIds).Run(dbContext);
 
-            ICollection<UserSecurityTasksCount> userTasksCount;
+            ICollection<UserSecurityTaskCipher> userTaskCiphers;
 
             // SQLite does not support the GROUP BY clause
             if (dbContext.Database.IsSqlite())
             {
-                userTasksCount = (await query.ToListAsync())
-                    .GroupBy(c => new { c.UserId, c.TaskCount, c.Email })
-                    .Select(g => new UserSecurityTasksCount
+                userTaskCiphers = (await query.ToListAsync())
+                    .GroupBy(c => new { c.UserId, c.Email, c.CipherId })
+                    .Select(g => new UserSecurityTaskCipher
                     {
                         UserId = g.Key.UserId,
-                        TaskCount = g.Key.TaskCount,
-                        Email = g.Key.Email
+                        Email = g.Key.Email,
+                        CipherId = g.Key.CipherId,
                     }).ToList();
             }
             else
             {
                 var groupByQuery = from p in query
-                                   group p by new { p.UserId, p.TaskCount, p.Email }
+                                   group p by new { p.UserId, p.Email, p.CipherId }
                     into g
-                                   select new UserSecurityTasksCount
+                                   select new UserSecurityTaskCipher
                                    {
                                        UserId = g.Key.UserId,
-                                       TaskCount = g.Key.TaskCount,
+                                       CipherId = g.Key.CipherId,
                                        Email = g.Key.Email
                                    };
-                userTasksCount = await groupByQuery.ToListAsync();
+                userTaskCiphers = await groupByQuery.ToListAsync();
             }
 
-            return userTasksCount;
+            return userTaskCiphers;
         }
     }
 

@@ -58,10 +58,10 @@ BEGIN
     SELECT
         P.[UserId],
         U.[Email],
-        COUNT(DISTINCT C.[Id]) as TaskCount
+        C.[Id] as CipherId
     FROM BaseCiphers C
     INNER JOIN CombinedPermissions P ON P.CipherId = C.[Id]
     INNER JOIN [dbo].[User] U ON U.[Id] = P.[UserId]
     WHERE P.[Manage] = 1
-    GROUP BY P.[UserId], U.[Email]
+    ORDER BY U.[Email], C.[Id]
 END

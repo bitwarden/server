@@ -586,21 +586,23 @@ public class CipherRepositoryTests
             }
         });
 
-        var tasksCounts = await cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organization.Id, new List<Guid> { manageCipher1.Id, manageCipher2.Id, viewOnlyCipher.Id });
+        var userSecurityTaskCiphers = await cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organization.Id, new List<Guid> { manageCipher1.Id, manageCipher2.Id, viewOnlyCipher.Id });
 
-        Assert.NotEmpty(tasksCounts);
-        Assert.Equal(2, tasksCounts.Count);
+        Assert.NotEmpty(userSecurityTaskCiphers);
+        Assert.Equal(3, userSecurityTaskCiphers.Count);
 
-        var user1Tasks = tasksCounts.FirstOrDefault(t => t.UserId == user1.Id);
-        Assert.NotNull(user1Tasks);
-        Assert.Equal(1, user1Tasks.TaskCount);
-        Assert.Equal(user1.Email, user1Tasks.Email);
-        Assert.Equal(user1.Id, user1Tasks.UserId);
+        var user1TaskCiphers = userSecurityTaskCiphers.Where(t => t.UserId == user1.Id);
+        Assert.Single(user1TaskCiphers);
+        Assert.Equal(user1.Email, user1TaskCiphers.First().Email);
+        Assert.Equal(user1.Id, user1TaskCiphers.First().UserId);
+        Assert.Equal(manageCipher1.Id, user1TaskCiphers.First().CipherId);
 
-        var user2Tasks = tasksCounts.FirstOrDefault(t => t.UserId == user2.Id);
-        Assert.NotNull(user2Tasks);
-        Assert.Equal(2, user2Tasks.TaskCount);
-        Assert.Equal(user2.Email, user2Tasks.Email);
-        Assert.Equal(user2.Id, user2Tasks.UserId);
+        var user2TaskCiphers = userSecurityTaskCiphers.Where(t => t.UserId == user2.Id);
+        Assert.NotNull(user2TaskCiphers);
+        Assert.Equal(2, user2TaskCiphers.Count());
+        Assert.Equal(user2.Email, user2TaskCiphers.Last().Email);
+        Assert.Equal(user2.Id, user2TaskCiphers.Last().UserId);
+        Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher1.Id);
+        Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher2.Id);
     }
 }

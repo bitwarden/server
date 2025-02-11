@@ -11,6 +11,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -105,17 +106,32 @@ public class SecurityTaskController : Controller
     {
         var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
 
-        var userTaskCount = await _getSecurityTasksNotificationDetailsQuery.GetNotificationDetailsByManyIds(orgId, securityTasks);
+        var securityTaskCiphers = await _getSecurityTasksNotificationDetailsQuery.GetNotificationDetailsByManyIds(orgId, securityTasks);
+
+        // Get the number of tasks for each user
+        var userTaskCount = securityTaskCiphers.GroupBy(x => x.UserId).Select(x => new
+        UserSecurityTasksCount
+        {
+            UserId = x.Key,
+            Email = x.First().Email,
+            TaskCount = x.Count()
+        }).ToList();
+
         var organization = await _organizationRepository.GetByIdAsync(orgId);
         await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
-        foreach (var task in userTaskCount)
+
+        foreach (var userSecurityTaskCipher in securityTaskCiphers)
         {
+            // Get the associated security task for the cipher
+            var securityTask = securityTasks.First(x => x.CipherId == userSecurityTaskCipher.CipherId);
+            // Create a notification for the user with the associated task
             var notification = new Notification
             {
-                UserId = task.UserId,
+                UserId = userSecurityTaskCipher.UserId,
                 OrganizationId = orgId,
                 Priority = Priority.Informational,
                 ClientType = ClientType.Browser,
+                TaskId = securityTask.Id
             };
             await _createNotificationCommand.CreateAsync(notification);
         }

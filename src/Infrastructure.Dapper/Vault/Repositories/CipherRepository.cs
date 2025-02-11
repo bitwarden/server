@@ -323,12 +323,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<UserSecurityTasksCount>> GetUserSecurityTasksByCipherIdsAsync(
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(
         Guid organizationId, IEnumerable<Guid> cipherIds)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<UserSecurityTasksCount>(
+            var results = await connection.QueryAsync<UserSecurityTaskCipher>(
                 $"[{Schema}].[UserSecurityTasks_GetManyByCipherIds]",
                 new { OrganizationId = organizationId, CipherIds = cipherIds.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);

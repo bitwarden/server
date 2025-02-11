@@ -11,5 +11,6 @@ public interface IGetSecurityTasksNotificationDetailsQuery
     /// <param name="organizationId"></param>
     /// <param name="tasks"></param>
     /// <returns>A dictionary of UserIds and the corresponding amount of security tasks applicable to them.</returns>
-    public Task<ICollection<UserSecurityTasksCount>> GetNotificationDetailsByManyIds(Guid organizationId, IEnumerable<SecurityTask> tasks);
+    /// </summary>
+    public Task<ICollection<UserSecurityTaskCipher>> GetNotificationDetailsByManyIds(Guid organizationId, IEnumerable<SecurityTask> tasks);
 }
