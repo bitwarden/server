@@ -21,9 +21,6 @@ public class RecoveryCodeTokenProvider : IUserTwoFactorTokenProvider<User>
     /// Hijack the can generate two factor token to repurpose it to check
     /// if the user has a two factor recovery code on their account.
     /// </summary>
-    /// <param name="manager"></param>
-    /// <param name="user"></param>
-    /// <returns></returns>
     public virtual Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         return Task.FromResult(!string.IsNullOrEmpty(user.TwoFactorRecoveryCode));

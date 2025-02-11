@@ -94,7 +94,7 @@ public interface IUserService
     /// a new recovery code. Also removes policies on a user for when they lose
     /// their 2fa status, they need to comply with their organizations policies.
     /// </summary>
-    /// <param name="user"></param>
+    /// <param name="user">The user to refresh the 2FA and Recovery Code on.</param>
     public Task RefreshUser2FaAndRecoveryCodeAsync(User user);
 
     /// <summary>
