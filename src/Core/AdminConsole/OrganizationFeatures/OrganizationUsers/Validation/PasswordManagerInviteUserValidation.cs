@@ -2,6 +2,9 @@
 
 public static class PasswordManagerInviteUserValidation
 {
+
+    // TODO need to add plan validation from AdjustSeatsAsync
+
     public static ValidationResult<PasswordManagerSubscriptionUpdate> Validate(PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
         if (subscriptionUpdate.Seats is null)

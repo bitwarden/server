@@ -1,6 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -56,7 +57,8 @@ public class PostUserCommand(
                         email,
                         invite.Collections,
                         externalId, invite.Type ?? OrganizationUserType.User,
-                        invite.Permissions),
+                        invite.Permissions,
+                        invite.AccessSecretsManager),
                     OrganizationDto.FromOrganization(organization),
                     timeProvider.GetUtcNow()))).Data;
 

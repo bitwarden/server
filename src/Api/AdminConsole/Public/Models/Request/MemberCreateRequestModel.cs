@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
+using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
 
@@ -40,4 +42,13 @@ public class MemberCreateRequestModel : MemberUpdateRequestModel
 
         return invite;
     }
+
+    public OrganizationUserSingleEmailInvite ToOrganizationUserSingleEmailInvite(bool hasSecretsManager) =>
+        OrganizationUserSingleEmailInvite.Create(
+            Email,
+            Collections.Select(c => c.ToCollectionAccessSelection()).ToArray(),
+            string.Empty,
+            Type.Value,
+            Type is OrganizationUserType.Custom && Permissions is not null ? Permissions.ToData() : new Permissions(),
+            hasSecretsManager);
 }

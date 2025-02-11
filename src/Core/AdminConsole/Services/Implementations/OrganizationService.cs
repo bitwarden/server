@@ -5,7 +5,9 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -36,6 +38,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 namespace Bit.Core.Services;
 
@@ -74,6 +77,8 @@ public class OrganizationService : IOrganizationService
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
+    private readonly TimeProvider _timeProvider;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -108,7 +113,9 @@ public class OrganizationService : IOrganizationService
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationBillingService organizationBillingService,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
+        TimeProvider timeProvider)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -143,6 +150,8 @@ public class OrganizationService : IOrganizationService
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
+        _timeProvider = timeProvider;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -846,6 +855,24 @@ public class OrganizationService : IOrganizationService
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.ScimCreateUserRefactor))
+        {
+            var organization = await GetOrgById(organizationId);
+
+            var request = InviteOrganizationUsersRequest.Create(invites, OrganizationDto.FromOrganization(organization),
+                invitingUserId ?? Guid.Empty, _timeProvider.GetUtcNow());
+
+            var commandResult = await _inviteOrganizationUsersCommand.InviteOrganizationUserListAsync(request);
+
+            if (commandResult.Success)
+            {
+                return commandResult.Data?.ToList() ?? [];
+            }
+
+            return []; // TODO return more meaningful result
+        }
+
         var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
             .Select(i => i.invite.Type.Value));
 

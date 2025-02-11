@@ -2,7 +2,9 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -15,6 +17,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Mail;
@@ -39,6 +42,7 @@ using NSubstitute.ReturnsExtensions;
 using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
+using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
 
 #nullable enable
 
@@ -664,6 +668,39 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
                 info.OrganizationName == organization.Name));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task InviteUserAsync_InviteOrganizationRefactorCommandFlagIsOn_ShouldCallCommand(
+        Guid organizationId,
+        Guid performedBy,
+        string externalId,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var validEmail = "email@test.com";
+
+        var invite = new OrganizationUserInvite
+        {
+            Emails = [validEmail],
+            Collections = [],
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.ScimCreateUserRefactor)
+            .Returns(true);
+
+        var command = sutProvider.GetDependency<IInviteOrganizationUsersCommand>();
+        command.InviteOrganizationUserListAsync(Arg.Any<InviteOrganizationUsersRequest>())
+            .Returns(new CommandResult<IEnumerable<OrganizationUser>>([]));
+
+        await sutProvider.Sut.InviteUsersAsync(organizationId, performedBy, systemUser: null, [(invite, externalId)]);
+
+        command.Received(1).InviteOrganizationUserListAsync(
+            Arg.Any<InviteOrganizationUsersRequest>());
     }
 
     [Theory]

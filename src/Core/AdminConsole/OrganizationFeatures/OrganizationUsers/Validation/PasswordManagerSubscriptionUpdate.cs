@@ -33,4 +33,10 @@ public record PasswordManagerSubscriptionUpdate
     {
         return new PasswordManagerSubscriptionUpdate(organizationDto.Seats, organizationDto.MaxAutoScaleSeats, occupiedSeats, seatsToAdd);
     }
+
+    public static PasswordManagerSubscriptionUpdate Create(InviteOrganizationUserRefined refined)
+    {
+        return new PasswordManagerSubscriptionUpdate(refined.Organization.Seats, refined.Organization.MaxAutoScaleSeats,
+            refined.OccupiedPmSeats, refined.Invites.Length);
+    }
 }

@@ -154,6 +154,7 @@ public static class FeatureFlagKeys
     public const string SecurityTasks = "security-tasks";
     public const string DisableFreeFamiliesSponsorship = "PM-12274-disable-free-families-sponsorship";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
+    public const string ScimCreateUserRefactor = "scim-create-user-refactor";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
