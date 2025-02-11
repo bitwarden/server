@@ -321,7 +321,15 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+            {
+                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
         }
         else if (globalSettings.SelfHosted)
         {
