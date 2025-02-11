@@ -8,6 +8,7 @@ public class CipherDetails : CipherOrganizationDetails
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
+    public bool Manage { get; set; }
 
     public CipherDetails() { }
 
@@ -52,6 +53,7 @@ public class CipherDetailsWithCollections : CipherDetails
         FolderId = cipher.FolderId;
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
+        Manage = cipher.Manage;
         ViewPassword = cipher.ViewPassword;
 
         CollectionIds = collectionCiphersGroupDict.TryGetValue(Id, out var value)

@@ -70,6 +70,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
             FolderId = GetFolderId(_userId, c),
             Edit = true,
+            Manage = true,
             Reprompt = c.Reprompt,
             ViewPassword = true,
             OrganizationUseTotp = false,
