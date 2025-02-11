@@ -126,7 +126,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             // update cache
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // rollback saves
             // remove org users
