@@ -50,7 +50,10 @@ public static class PolicyServiceCollectionExtensions
     /// This MUST be used rather than calling AddScoped directly, because it will ensure the factory method has
     /// the correct type to be injected and then identified by <see cref="PolicyRequirementQuery"/> at runtime.
     /// </summary>
-    /// <typeparam name="T">The specific PolicyRequirement being registered.</typeparam>
+    /// <typeparam name="T">
+    /// A callback that takes IServiceProvider and returns a RequirementFactory for
+    /// your policy requirement.
+    /// </typeparam>
     private static void AddPolicyRequirement<T>(this IServiceCollection serviceCollection,
         Func<IServiceProvider, RequirementFactory<T>> factory)
         where T : class, IPolicyRequirement
