@@ -17,7 +17,8 @@ public interface IPolicyRequirement;
 /// as well as policies that should not be enforced against a user (e.g. due to the user's role or status).
 /// </summary>
 /// <remarks>
-/// See <see cref="PolicyRequirementHelpers"/> for helpful extension methods.
+/// See <see cref="PolicyRequirementHelpers"/> for extension methods to handle common requirements when implementing
+/// this delegate.
 /// </remarks>
 public delegate T CreateRequirement<out T>(IEnumerable<PolicyDetails> policyDetails)
     where T : IPolicyRequirement;
