@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [dbo].[UserCipherDetails](@UserId UNIQUEIDENTIFIER)
+CREATE OR ALTER FUNCTION [dbo].[UserCipherDetails](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 WITH [CTE] AS (
@@ -65,3 +65,51 @@ FROM
     [dbo].[CipherDetails](@UserId)
 WHERE
     [UserId] = @UserId
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_ReadByIdUserId]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+        [Id],
+        [UserId],
+        [OrganizationId],
+        [Type],
+        [Data],
+        [Attachments],
+        [CreationDate],
+        [RevisionDate],
+        [Favorite],
+        [FolderId],
+        [DeletedDate],
+        [Reprompt],
+        [Key],
+        [OrganizationUseTotp],
+        MAX ([Edit]) AS [Edit],
+        MAX ([ViewPassword]) AS [ViewPassword],
+        MAX ([Manage]) AS [Manage]
+    FROM
+        [dbo].[UserCipherDetails](@UserId)
+    WHERE
+        [Id] = @Id
+    GROUP BY
+        [Id],
+        [UserId],
+        [OrganizationId],
+        [Type],
+        [Data],
+        [Attachments],
+        [CreationDate],
+        [RevisionDate],
+        [Favorite],
+        [FolderId],
+        [DeletedDate],
+        [Reprompt],
+        [Key],
+        [OrganizationUseTotp]
+END
+GO
