@@ -13,7 +13,7 @@ public static class PolicyRequirementHelpers
 
     public static IEnumerable<PolicyDetails> ExcludeOwnersAndAdmins(
         this IEnumerable<PolicyDetails> userPolicyDetails) =>
-            userPolicyDetails.Where(x => x.OrganizationUserType != OrganizationUserType.Owner);
+            userPolicyDetails.Where(x => x.OrganizationUserType is not OrganizationUserType.Owner and not OrganizationUserType.Admin);
 
     public static IEnumerable<PolicyDetails> ExcludeProviders(
         this IEnumerable<PolicyDetails> userPolicyDetails) =>
