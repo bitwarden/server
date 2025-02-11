@@ -435,7 +435,7 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetCipherPermissions_ManageProperty_RespectsCollectionAndOwnershipRules(
+    public async Task GetCipherPermissionsForOrganizationAsync_ManageProperty_RespectsCollectionRules(
         ICipherRepository cipherRepository,
         IUserRepository userRepository,
         ICollectionCipherRepository collectionCipherRepository,
@@ -443,24 +443,97 @@ public class CipherRepositoryTests
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
     {
-        // Arrange test data
         var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
 
         var manageCipher = await CreateCipherInOrganizationCollection(
             organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
-            true, "Manage Collection");
+            hasManagePermission: true, "Manage Collection");
 
         var nonManageCipher = await CreateCipherInOrganizationCollection(
             organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
-            false, "Non-Manage Collection");
+            hasManagePermission: false, "Non-Manage Collection");
+
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+        Assert.Equal(2, permissions.Count);
+
+        var managePermission = permissions.FirstOrDefault(c => c.Id == manageCipher.Id);
+        Assert.NotNull(managePermission);
+        Assert.True(managePermission.Manage, "Collection with Manage=true should grant Manage permission");
+
+        var nonManagePermission = permissions.FirstOrDefault(c => c.Id == nonManageCipher.Id);
+        Assert.NotNull(nonManagePermission);
+        Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_ManageProperty_RespectsCollectionAndOwnershipRules(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var manageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: true, "Manage Collection");
+
+        var nonManageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: false, "Non-Manage Collection");
 
         var personalCipher = await CreatePersonalCipher(user, cipherRepository);
 
-        // Assert permissions
-        await AssertOrganizationPermissions(cipherRepository, organization, user, manageCipher, nonManageCipher);
-        await AssertUserCipherPermissionsWithOrganizations(cipherRepository, user, manageCipher, nonManageCipher, personalCipher);
-        await AssertUserCipherPermissionsWithoutOrganizations(cipherRepository, user, personalCipher);
-        await AssertIndividualCipherPermissions(cipherRepository, user, manageCipher, nonManageCipher, personalCipher);
+        var userCiphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+        Assert.Equal(3, userCiphers.Count);
+
+        var managePermission = userCiphers.FirstOrDefault(c => c.Id == manageCipher.Id);
+        Assert.NotNull(managePermission);
+        Assert.True(managePermission.Manage, "Collection with Manage=true should grant Manage permission");
+
+        var nonManagePermission = userCiphers.FirstOrDefault(c => c.Id == nonManageCipher.Id);
+        Assert.NotNull(nonManagePermission);
+        Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
+
+        var personalPermission = userCiphers.FirstOrDefault(c => c.Id == personalCipher.Id);
+        Assert.NotNull(personalPermission);
+        Assert.True(personalPermission.Manage, "Personal ciphers should always have Manage permission");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetByIdAsync_ManageProperty_RespectsCollectionAndOwnershipRules(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var manageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: true, "Manage Collection");
+
+        var nonManageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: false, "Non-Manage Collection");
+
+        var personalCipher = await CreatePersonalCipher(user, cipherRepository);
+
+        var manageDetails = await cipherRepository.GetByIdAsync(manageCipher.Id, user.Id);
+        Assert.NotNull(manageDetails);
+        Assert.True(manageDetails.Manage, "Collection with Manage=true should grant Manage permission");
+
+        var nonManageDetails = await cipherRepository.GetByIdAsync(nonManageCipher.Id, user.Id);
+        Assert.NotNull(nonManageDetails);
+        Assert.False(nonManageDetails.Manage, "Collection with Manage=false should not grant Manage permission");
+
+        var personalDetails = await cipherRepository.GetByIdAsync(personalCipher.Id, user.Id);
+        Assert.NotNull(personalDetails);
+        Assert.True(personalDetails.Manage, "Personal ciphers should always have Manage permission");
     }
 
     private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
@@ -535,80 +608,5 @@ public class CipherRepositoryTests
             UserId = user.Id,
             Data = ""
         });
-    }
-
-    private async Task AssertOrganizationPermissions(
-        ICipherRepository cipherRepository,
-        Organization organization,
-        User user,
-        Cipher manageCipher,
-        Cipher nonManageCipher)
-    {
-        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
-        Assert.Equal(2, permissions.Count);
-
-        var managePermission = permissions.FirstOrDefault(c => c.Id == manageCipher.Id);
-        Assert.NotNull(managePermission);
-        Assert.True(managePermission.Manage, "Collection with Manage=true should grant Manage permission");
-
-        var nonManagePermission = permissions.FirstOrDefault(c => c.Id == nonManageCipher.Id);
-        Assert.NotNull(nonManagePermission);
-        Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
-    }
-
-    private async Task AssertUserCipherPermissionsWithOrganizations(
-        ICipherRepository cipherRepository,
-        User user,
-        Cipher manageCipher,
-        Cipher nonManageCipher,
-        Cipher personalCipher)
-    {
-        var userCiphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
-        Assert.Equal(3, userCiphers.Count);
-
-        var managePermission = userCiphers.FirstOrDefault(c => c.Id == manageCipher.Id);
-        Assert.NotNull(managePermission);
-        Assert.True(managePermission.Manage, "Collection with Manage=true should grant Manage permission");
-
-        var nonManagePermission = userCiphers.FirstOrDefault(c => c.Id == nonManageCipher.Id);
-        Assert.NotNull(nonManagePermission);
-        Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
-
-        var personalPermission = userCiphers.FirstOrDefault(c => c.Id == personalCipher.Id);
-        Assert.NotNull(personalPermission);
-        Assert.True(personalPermission.Manage, "Personal ciphers should always have Manage permission");
-    }
-
-    private async Task AssertUserCipherPermissionsWithoutOrganizations(
-        ICipherRepository cipherRepository,
-        User user,
-        Cipher personalCipher)
-    {
-        var userCiphers = await cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: false);
-        Assert.Single(userCiphers);
-
-        var personalPermission = userCiphers.FirstOrDefault(c => c.Id == personalCipher.Id);
-        Assert.NotNull(personalPermission);
-        Assert.True(personalPermission.Manage, "Personal ciphers should always have Manage permission");
-    }
-
-    private async Task AssertIndividualCipherPermissions(
-        ICipherRepository cipherRepository,
-        User user,
-        Cipher manageCipher,
-        Cipher nonManageCipher,
-        Cipher personalCipher)
-    {
-        var manageDetails = await cipherRepository.GetByIdAsync(manageCipher.Id, user.Id);
-        Assert.NotNull(manageDetails);
-        Assert.True(manageDetails.Manage, "Collection with Manage=true should grant Manage permission");
-
-        var nonManageDetails = await cipherRepository.GetByIdAsync(nonManageCipher.Id, user.Id);
-        Assert.NotNull(nonManageDetails);
-        Assert.False(nonManageDetails.Manage, "Collection with Manage=false should not grant Manage permission");
-
-        var personalDetails = await cipherRepository.GetByIdAsync(personalCipher.Id, user.Id);
-        Assert.NotNull(personalDetails);
-        Assert.True(personalDetails.Manage, "Personal ciphers should always have Manage permission");
     }
 }
