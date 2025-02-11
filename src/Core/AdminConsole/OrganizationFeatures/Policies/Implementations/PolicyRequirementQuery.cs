@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+﻿using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
@@ -19,7 +19,7 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
         => _policyRequirements.Get<T>()(await GetPolicyDetails(userId));
 
-    private Task<IEnumerable<OrganizationUserPolicyDetails>> GetPolicyDetails(Guid userId) =>
+    private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId) =>
         _policyRepository.GetPolicyDetailsByUserId(userId);
 
     /// <summary>
@@ -32,7 +32,7 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
         public void Add<T>(CreateRequirement<T> factory) where T : IPolicyRequirement
         {
             // Explicitly convert T to an IPolicyRequirement (C# doesn't do this automatically).
-            IPolicyRequirement Converted(IEnumerable<OrganizationUserPolicyDetails> up) => factory(up);
+            IPolicyRequirement Converted(IEnumerable<PolicyDetails> p) => factory(p);
             _registry.Add(typeof(T), Converted);
         }
 
@@ -45,7 +45,7 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
 
             // Explicitly convert IPolicyRequirement back to T (C# doesn't do this automatically).
             // The cast here relies on the Register method correctly associating the type and factory function.
-            T Converted(IEnumerable<OrganizationUserPolicyDetails> up) => (T)factory(up);
+            T Converted(IEnumerable<PolicyDetails> p) => (T)factory(p);
             return Converted;
         }
     }

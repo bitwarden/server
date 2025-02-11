@@ -1,6 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 
 #nullable enable
@@ -12,5 +12,5 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId);
-    Task<IEnumerable<OrganizationUserPolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
+    Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
 }

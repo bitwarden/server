@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -52,5 +52,5 @@ public class PolicyRepository : Repository<AdminConsoleEntities.Policy, Policy, 
         }
     }
 
-    public Task<IEnumerable<OrganizationUserPolicyDetails>> GetPolicyDetailsByUserId(Guid userId) => throw new NotImplementedException();
+    public Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId) => throw new NotImplementedException();
 }

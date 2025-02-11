@@ -1372,7 +1372,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
                     new RevokeOrganizationUsersRequest(
                         p.OrganizationId,
-                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId!.Value, OrganizationId = p.OrganizationId }],
+                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
                         new SystemUser(EventSystemUser.TwoFactorDisabled)));
                 await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }
