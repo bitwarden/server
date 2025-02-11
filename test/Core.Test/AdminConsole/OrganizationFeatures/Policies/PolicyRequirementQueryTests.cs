@@ -17,37 +17,36 @@ public class PolicyRequirementQueryTests
     /// according to their provided CreateRequirement delegate.
     /// </summary>
     [Theory, BitAutoData]
-    public async Task GetAsync_Works(Guid userId, Guid organizationId, SutProvider<TestPolicyRequirementQuery> sutProvider)
+    public async Task GetAsync_Works(Guid userId, Guid organizationId)
     {
-        sutProvider.GetDependency<IPolicyRepository>().GetPolicyDetailsByUserId(userId).Returns([
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var factories = new List<CreateRequirement<IPolicyRequirement>>
+        {
+            // In prod this cast is handled when the CreateRequirement delegate is registered in DI
+            (CreateRequirement<TestPolicyRequirement>)TestPolicyRequirement.Create
+        };
+
+        var sut = new PolicyRequirementQuery(policyRepository, factories);
+        policyRepository.GetPolicyDetailsByUserId(userId).Returns([
             new PolicyDetails
             {
                 OrganizationId = organizationId
             }
         ]);
 
-        var requirement = await sutProvider.Sut.GetAsync<TestPolicyRequirement>(userId);
+        var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
         Assert.Equal(organizationId, requirement.OrganizationId);
     }
 
     [Theory, BitAutoData]
-    public async Task GetAsync_ThrowsIfNoRequirementRegistered(Guid userId, SutProvider<PolicyRequirementQuery> sutProvider)
+    public async Task GetAsync_ThrowsIfNoRequirementRegistered(Guid userId)
     {
-        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
-            => sutProvider.Sut.GetAsync<TestPolicyRequirement>(userId));
-        Assert.Contains("No Policy Requirement found", exception.Message);
-    }
+        var policyRepository = Substitute.For<IPolicyRepository>();
+        var sut = new PolicyRequirementQuery(policyRepository, []);
 
-    /// <summary>
-    /// Test query used to register our own TestPolicyRequirement so that we're testing the query itself
-    /// decoupled from any real requirement that is registered from time to time.
-    /// </summary>
-    public class TestPolicyRequirementQuery : PolicyRequirementQuery
-    {
-        public TestPolicyRequirementQuery(IPolicyRepository policyRepository) : base(policyRepository)
-        {
-            PolicyRequirements.Add(TestPolicyRequirement.Create);
-        }
+        var exception = await Assert.ThrowsAsync<NotImplementedException>(()
+            => sut.GetAsync<TestPolicyRequirement>(userId));
+        Assert.Contains("No Policy Requirement found", exception.Message);
     }
 
     /// <summary>
