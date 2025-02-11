@@ -113,7 +113,6 @@ public static class FeatureFlagKeys
 
     /* Tools Team */
     public const string ItemShare = "item-share";
-    public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
 
