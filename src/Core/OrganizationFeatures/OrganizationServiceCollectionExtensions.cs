@@ -161,6 +161,9 @@ public static class OrganizationServiceCollectionExtensions
 
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
+
+        services.AddScoped<IAuthorizationHandler, InviteOrganizationUsersAuthorizationHandler>();
+
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
     }
 

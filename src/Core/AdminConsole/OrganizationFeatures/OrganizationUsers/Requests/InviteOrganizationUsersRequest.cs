@@ -10,7 +10,7 @@ public record InviteOrganizationUsersRequest
     public Guid PerformedBy { get; }
     public DateTimeOffset PerformedAt { get; }
 
-    private InviteOrganizationUsersRequest(OrganizationUserInvite[] Invites,
+    public InviteOrganizationUsersRequest(OrganizationUserInvite[] Invites,
         OrganizationDto Organization,
         Guid PerformedBy,
         DateTimeOffset PerformedAt)
@@ -30,7 +30,8 @@ public record InviteOrganizationUsersRequest
                     inviteTuple.invite.Collections,
                     inviteTuple.invite.Type ?? OrganizationUserType.User,
                     inviteTuple.invite.Permissions,
-                    inviteTuple.externalId)).ToArray(),
+                    inviteTuple.externalId,
+                    inviteTuple.invite.AccessSecretsManager)).ToArray(),
             organization,
             performedBy,
             performedAt);

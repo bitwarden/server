@@ -15,7 +15,8 @@ public record OrganizationDto(
     int? SmMaxAutoScaleSeats,
     Plan Plan,
     string GatewayCustomerId,
-    string GatewaySubscriptionId
+    string GatewaySubscriptionId,
+    bool UseSecretsManager
 ) : ISubscriber
 {
     public Guid Id => OrganizationId;
@@ -51,5 +52,6 @@ public record OrganizationDto(
             organization.MaxAutoscaleSmSeats,
             StaticStore.GetPlan(organization.PlanType),
             organization.GatewayCustomerId,
-            organization.GatewaySubscriptionId);
+            organization.GatewaySubscriptionId,
+            organization.UseSecretsManager);
 }

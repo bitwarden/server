@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -13,7 +13,7 @@ public class InviteOrganizationUsersRequestTests
     [BitAutoData]
     public void Create_WhenPassedInvalidEmails_ThrowsException(string[] emails, OrganizationUserType type, Permissions permissions, string externalId)
     {
-        var action = () => OrganizationUserInvite.Create(emails, [], type, permissions, externalId);
+        var action = () => OrganizationUserInvite.Create(emails, [], type, permissions, externalId, false);
 
         var exception = Assert.Throws<BadRequestException>(action);
 
@@ -23,7 +23,7 @@ public class InviteOrganizationUsersRequestTests
     [Fact]
     public void Create_WhenPassedInvalidCollectionAccessConfiguration_ThrowsException()
     {
-        var validEmail = "test@email.com";
+        const string validEmail = "test@email.com";
 
         var invalidCollectionConfiguration = new CollectionAccessSelection
         {
@@ -31,7 +31,7 @@ public class InviteOrganizationUsersRequestTests
             HidePasswords = true
         };
 
-        var action = () => OrganizationUserInvite.Create([validEmail], [invalidCollectionConfiguration], default, default, default);
+        var action = () => OrganizationUserInvite.Create([validEmail], [invalidCollectionConfiguration], default, default, default, false);
 
         var exception = Assert.Throws<BadRequestException>(action);
 
@@ -44,7 +44,7 @@ public class InviteOrganizationUsersRequestTests
         const string validEmail = "test@email.com";
         var validCollectionConfiguration = new CollectionAccessSelection { Id = Guid.NewGuid(), Manage = true };
 
-        var invite = OrganizationUserInvite.Create([validEmail], [validCollectionConfiguration], default, default, default);
+        var invite = OrganizationUserInvite.Create([validEmail], [validCollectionConfiguration], default, default, default, false);
 
         Assert.NotNull(invite);
         Assert.Contains(validEmail, invite.Emails);
