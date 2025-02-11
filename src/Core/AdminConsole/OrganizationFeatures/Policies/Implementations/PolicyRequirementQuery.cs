@@ -9,7 +9,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 public class PolicyRequirementQuery : IPolicyRequirementQuery
 {
     private readonly IPolicyRepository _policyRepository;
-    private readonly PolicyRequirementRegistry _policyRequirements = new();
+    protected readonly PolicyRequirementRegistry PolicyRequirements = new();
 
     public PolicyRequirementQuery(IPolicyRepository policyRepository)
     {
@@ -19,7 +19,7 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     }
 
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
-        => _policyRequirements.Get<T>()(await GetPolicyDetails(userId));
+        => PolicyRequirements.Get<T>()(await GetPolicyDetails(userId));
 
     private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId) =>
         _policyRepository.GetPolicyDetailsByUserId(userId);
@@ -27,7 +27,7 @@ public class PolicyRequirementQuery : IPolicyRequirementQuery
     /// <summary>
     /// Helper class used to register and retrieve Policy Requirement factories by type.
     /// </summary>
-    private class PolicyRequirementRegistry
+    protected class PolicyRequirementRegistry
     {
         private readonly Dictionary<Type, CreateRequirement<IPolicyRequirement>> _registry = new();
 
