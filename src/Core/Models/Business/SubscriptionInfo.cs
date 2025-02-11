@@ -73,8 +73,11 @@ public class SubscriptionInfo
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
-                    AddonSubscriptionItem =
-                        Utilities.StaticStore.IsAddonSubscriptionItem(item.Plan.Id);
+
+                    if (item.Metadata != null)
+                    {
+                        AddonSubscriptionItem = item.Metadata.TryGetValue("isAddOn", out var value) && bool.Parse(value);
+                    }
                 }
 
                 Quantity = (int)item.Quantity;
