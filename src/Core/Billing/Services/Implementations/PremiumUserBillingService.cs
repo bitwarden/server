@@ -92,32 +92,7 @@ public class PremiumUserBillingService(
          * If the customer was previously set up with credit, which does not require a billing location,
          * we need to update the customer on the fly before we start the subscription.
          */
-        if (customerSetup is
-            {
-                TokenizedPaymentSource.Type: PaymentMethodType.Credit,
-                TaxInformation: { Country: not null and not "", PostalCode: not null and not "" }
-            })
-        {
-            var options = new CustomerUpdateOptions
-            {
-                Address = new AddressOptions
-                {
-                    Line1 = customerSetup.TaxInformation.Line1,
-                    Line2 = customerSetup.TaxInformation.Line2,
-                    City = customerSetup.TaxInformation.City,
-                    PostalCode = customerSetup.TaxInformation.PostalCode,
-                    State = customerSetup.TaxInformation.State,
-                    Country = customerSetup.TaxInformation.Country,
-                },
-                Expand = ["tax"],
-                Tax = new CustomerTaxOptions
-                {
-                    ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-                }
-            };
-
-            customer = await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
-        }
+        customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation);
 
         var subscription = await CreateSubscriptionAsync(user.Id, customer, storage);
 
@@ -167,6 +142,11 @@ public class PremiumUserBillingService(
         User user,
         CustomerSetup customerSetup)
     {
+        /*
+         * Creating a Customer via the adding of a payment method or the purchasing of a subscription requires
+         * an actual payment source. The only time this is not the case is when the Customer is created when the
+         * User purchases credit.
+         */
         if (customerSetup.TokenizedPaymentSource is not
             {
                 Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
@@ -366,5 +346,35 @@ public class PremiumUserBillingService(
         }
 
         return subscription;
+    }
+
+    private async Task<Customer> ReconcileBillingLocationAsync(
+        Customer customer,
+        TaxInformation taxInformation)
+    {
+        if (customer is { Address: { Country: not null and not "", PostalCode: not null and not "" } })
+        {
+            return customer;
+        }
+
+        var options = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Line1 = taxInformation.Line1,
+                Line2 = taxInformation.Line2,
+                City = taxInformation.City,
+                PostalCode = taxInformation.PostalCode,
+                State = taxInformation.State,
+                Country = taxInformation.Country,
+            },
+            Expand = ["tax"],
+            Tax = new CustomerTaxOptions
+            {
+                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+            }
+        };
+
+        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
     }
 }
