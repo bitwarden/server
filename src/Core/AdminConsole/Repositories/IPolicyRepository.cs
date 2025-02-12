@@ -20,5 +20,15 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     Task<Policy?> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type);
     Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId);
+    /// <summary>
+    /// Gets all PolicyDetails for a user for all policy types.
+    /// </summary>
+    /// <remarks>
+    /// Each PolicyDetail represents an OrganizationUser and a Policy which *may* be enforced
+    /// against them. It only returns PolicyDetails for policies that are enabled and where the organization's plan
+    /// supports policies.
+    /// This is consumed by <see cref="IPolicyRequirementQuery"/> to create requirements for specific policy types.
+    /// You probably do not want to call it directly.
+    /// </remarks>
     Task<IEnumerable<PolicyDetails>> GetPolicyDetailsByUserId(Guid userId);
 }
