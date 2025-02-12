@@ -196,7 +196,7 @@ public class DevicesController : Controller
             throw new NotFoundException();
         }
 
-        await _deviceService.SaveAsync((model.Endpoint, model.P256dh, model.Auth), device);
+        await _deviceService.SaveAsync(model.ToData(), device);
     }
 
     [AllowAnonymous]

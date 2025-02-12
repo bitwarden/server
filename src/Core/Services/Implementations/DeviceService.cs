@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 
@@ -20,7 +21,7 @@ public class DeviceService : IDeviceService
         _pushRegistrationService = pushRegistrationService;
     }
 
-    public async Task SaveAsync((string Endpoint, string P256dh, string Auth) webPush, Device device)
+    public async Task SaveAsync(WebPushRegistrationData webPush, Device device)
     {
         if (device.Id == default(Guid))
         {

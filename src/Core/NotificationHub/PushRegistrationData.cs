@@ -1,18 +1,30 @@
 ﻿namespace Bit.Core.NotificationHub;
 
+public struct WebPushRegistrationData
+{
+    public string Endpoint { get; init; }
+    public string P256dh { get; init; }
+    public string Auth { get; init; }
+}
+
 public class PushRegistrationData
 {
     public string Token { get; set; }
-    public (string Endpoint, string P256dh, string Auth)? WebPush { get; set; }
+    public WebPushRegistrationData? WebPush { get; set; }
     public PushRegistrationData(string token)
     {
         Token = token;
     }
 
-    public PushRegistrationData(string Endpoint, string P256dh, string Auth) : this((Endpoint, P256dh, Auth))
+    public PushRegistrationData(string Endpoint, string P256dh, string Auth) : this(new WebPushRegistrationData
     {
-    }
-    public PushRegistrationData((string Endpoint, string P256dh, string Auth) webPush)
+        Endpoint = Endpoint,
+        P256dh = P256dh,
+        Auth = Auth
+    })
+    { }
+
+    public PushRegistrationData(WebPushRegistrationData webPush)
     {
         WebPush = webPush;
     }

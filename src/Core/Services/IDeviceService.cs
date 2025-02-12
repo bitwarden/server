@@ -1,11 +1,12 @@
 ﻿using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Entities;
+using Bit.Core.NotificationHub;
 
 namespace Bit.Core.Services;
 
 public interface IDeviceService
 {
-    Task SaveAsync((string Endpoint, string P256dh, string Auth) webPush, Device device);
+    Task SaveAsync(WebPushRegistrationData webPush, Device device);
     Task SaveAsync(Device device);
     Task ClearTokenAsync(Device device);
     Task DeactivateAsync(Device device);
