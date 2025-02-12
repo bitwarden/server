@@ -91,7 +91,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                     "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
                     "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
                     userId, identifier));
-                installation.Platform = NotificationPlatform.Fcm;
+                installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
