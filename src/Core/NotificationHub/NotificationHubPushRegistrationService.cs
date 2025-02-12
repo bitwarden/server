@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Text;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Bit.Core.Enums;
@@ -147,7 +148,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             "{\"data\":{\"type\":\"#(type)\",\"message\":\"$(message)\"}}",
             userId, identifier));
 
-        var content = JsonSerializer.Serialize(new
+        var content = new
         {
             installationId = installation.InstallationId,
             pushChannel = new
@@ -159,11 +160,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             platform = "browser",
             tags = installation.Tags,
             templates = installation.Templates
-        }, webPushSerializationOptions);
+        };
 
         var client = _httpClientFactory.CreateClient("NotificationHub");
         var request = ConnectionFor(GetComb(installation.InstallationId)).CreateRequest(HttpMethod.Put, $"installations/{installation.InstallationId}");
-        request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+        request.Content = JsonContent.Create(content, new MediaTypeHeaderValue("application/json"), webPushSerializationOptions);
         var response = await client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         if (!response.IsSuccessStatusCode)
