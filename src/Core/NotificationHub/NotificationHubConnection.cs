@@ -8,7 +8,22 @@ using Microsoft.Azure.NotificationHubs;
 public class NotificationHubConnection
 {
     public string HubName { get; init; }
-    public string ConnectionString { get; init; }
+    private string _connectionString;
+    private Uri _endpoint;
+    private byte[] _sasKey;
+    private string _sasKeyName;
+    public string ConnectionString 
+    { 
+        get => _connectionString;
+        init
+        {
+            _connectionString = value;
+            var connectionStringBuilder = new NotificationHubConnectionStringBuilder(_connectionString);
+            _endpoint = connectionStringBuilder.Endpoint;
+            _sasKey = Encoding.UTF8.GetBytes(connectionStringBuilder.SharedAccessKey);
+            _sasKeyName = connectionStringBuilder.SharedAccessKeyName;
+        }
+    }
     public Uri Endpoint => new NotificationHubConnectionStringBuilder(ConnectionString).Endpoint;
     private string SasKey => new NotificationHubConnectionStringBuilder(ConnectionString).SharedAccessKey;
     private string SasKeyName => new NotificationHubConnectionStringBuilder(ConnectionString).SharedAccessKeyName;
