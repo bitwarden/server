@@ -95,31 +95,4 @@ public class CollectionService : ICollectionService
         await _collectionRepository.DeleteUserAsync(collection.Id, organizationUserId);
         await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
     }
-
-    public async Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId)
-    {
-        if (
-            !await _currentContext.ViewAllCollections(organizationId) &&
-            !await _currentContext.ManageUsers(organizationId) &&
-            !await _currentContext.ManageGroups(organizationId) &&
-            !await _currentContext.AccessImportExport(organizationId)
-        )
-        {
-            throw new NotFoundException();
-        }
-
-        IEnumerable<Collection> orgCollections;
-        if (await _currentContext.ViewAllCollections(organizationId) || await _currentContext.AccessImportExport(organizationId))
-        {
-            // Admins, Owners, Providers and Custom (with collection management or import/export permissions) can access all items even if not assigned to them
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
-        }
-        else
-        {
-            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
-            orgCollections = collections.Where(c => c.OrganizationId == organizationId);
-        }
-
-        return orgCollections;
-    }
 }

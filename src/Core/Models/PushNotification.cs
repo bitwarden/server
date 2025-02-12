@@ -79,4 +79,5 @@ public class OrganizationCollectionManagementPushNotification
     public Guid OrganizationId { get; init; }
     public bool LimitCollectionCreation { get; init; }
     public bool LimitCollectionDeletion { get; init; }
+    public bool LimitItemDeletion { get; init; }
 }

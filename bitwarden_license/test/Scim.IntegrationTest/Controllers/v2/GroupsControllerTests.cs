@@ -248,7 +248,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" ")]
-    public async Task Post_InvalidDisplayName_BadRequest(string displayName)
+    public async Task Post_InvalidDisplayName_BadRequest(string? displayName)
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
         var model = new ScimGroupRequestModel
