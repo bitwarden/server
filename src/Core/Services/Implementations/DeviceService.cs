@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
@@ -12,34 +13,31 @@ public class DeviceService : IDeviceService
 {
     private readonly IDeviceRepository _deviceRepository;
     private readonly IPushRegistrationService _pushRegistrationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public DeviceService(
         IDeviceRepository deviceRepository,
-        IPushRegistrationService pushRegistrationService)
+        IPushRegistrationService pushRegistrationService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _deviceRepository = deviceRepository;
         _pushRegistrationService = pushRegistrationService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task SaveAsync(WebPushRegistrationData webPush, Device device)
     {
-        if (device.Id == default(Guid))
-        {
-            await _deviceRepository.CreateAsync(device);
-        }
-        else
-        {
-            device.RevisionDate = DateTime.UtcNow;
-            await _deviceRepository.ReplaceAsync(device);
-        }
-
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new NotificationHub.PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth), device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
+        await SaveAsync(new PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth), device);
     }
 
     public async Task SaveAsync(Device device)
     {
-        if (device.Id == default(Guid))
+        await SaveAsync(new PushRegistrationData(device.PushToken), device);
+    }
+
+    private async Task SaveAsync(PushRegistrationData data, Device device)
+    {
+        if (device.Id == default)
         {
             await _deviceRepository.CreateAsync(device);
         }
@@ -49,8 +47,14 @@ public class DeviceService : IDeviceService
             await _deviceRepository.ReplaceAsync(device);
         }
 
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new NotificationHub.PushRegistrationData(device.PushToken), device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type);
+        var organizationIdsString =
+            (await _organizationUserRepository.GetManyDetailsByUserAsync(device.UserId,
+                OrganizationUserStatusType.Confirmed))
+            .Select(ou => ou.OrganizationId.ToString());
+
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(data, device.Id.ToString(),
+            device.UserId.ToString(), device.Identifier, device.Type, organizationIdsString);
+
     }
 
     public async Task ClearTokenAsync(Device device)

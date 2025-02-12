@@ -1,45 +1,62 @@
-﻿using AutoFixture;
+﻿#nullable enable
+using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.Test.NotificationCenter.AutoFixture;
 using Bit.Test.Common.AutoFixture;
-using Microsoft.Extensions.Logging;
+using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using GlobalSettingsCustomization = Bit.Test.Common.AutoFixture.GlobalSettings;
 
 namespace Bit.Core.Platform.Push.Internal.Test;
 
+[SutProviderCustomize]
 public class MultiServicePushNotificationServiceTests
 {
-    private readonly MultiServicePushNotificationService _sut;
-
-    private readonly ILogger<MultiServicePushNotificationService> _logger;
-    private readonly ILogger<RelayPushNotificationService> _relayLogger;
-    private readonly ILogger<NotificationsApiPushNotificationService> _hubLogger;
-    private readonly IEnumerable<IPushNotificationService> _services;
-    private readonly Settings.GlobalSettings _globalSettings;
-
-    public MultiServicePushNotificationServiceTests()
+    [Theory]
+    [BitAutoData]
+    [NotificationCustomize]
+    public async Task PushNotificationAsync_Notification_Sent(
+        SutProvider<MultiServicePushNotificationService> sutProvider, Notification notification)
     {
-        _logger = Substitute.For<ILogger<MultiServicePushNotificationService>>();
-        _relayLogger = Substitute.For<ILogger<RelayPushNotificationService>>();
-        _hubLogger = Substitute.For<ILogger<NotificationsApiPushNotificationService>>();
-        _services = new Fixture().WithAutoNSubstitutions().CreateMany<IPushNotificationService>();
+        await sutProvider.Sut.PushNotificationAsync(notification);
 
-        var fixture = new Fixture().WithAutoNSubstitutions().Customize(new GlobalSettingsCustomization());
-        _services = fixture.CreateMany<IPushNotificationService>();
-        _globalSettings = fixture.Create<Settings.GlobalSettings>();
-
-        _sut = new MultiServicePushNotificationService(
-            _services,
-            _logger,
-            _globalSettings
-        );
+        await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
+            .First()
+            .Received(1)
+            .PushNotificationAsync(notification);
     }
 
-    // Remove this test when we add actual tests. It only proves that
-    // we've properly constructed the system under test.
-    [Fact]
-    public void ServiceExists()
+    [Theory]
+    [BitAutoData([null, null])]
+    [BitAutoData(ClientType.All, null)]
+    [BitAutoData([null, "test device id"])]
+    [BitAutoData(ClientType.All, "test device id")]
+    public async Task SendPayloadToUserAsync_Message_Sent(ClientType? clientType, string? deviceId, string userId,
+        PushType type, object payload, string identifier, SutProvider<MultiServicePushNotificationService> sutProvider)
     {
-        Assert.NotNull(_sut);
+        await sutProvider.Sut.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId, clientType);
+
+        await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
+            .First()
+            .Received(1)
+            .SendPayloadToUserAsync(userId, type, payload, identifier, deviceId, clientType);
+    }
+
+    [Theory]
+    [BitAutoData([null, null])]
+    [BitAutoData(ClientType.All, null)]
+    [BitAutoData([null, "test device id"])]
+    [BitAutoData(ClientType.All, "test device id")]
+    public async Task SendPayloadToOrganizationAsync_Message_Sent(ClientType? clientType, string? deviceId,
+        string organizationId, PushType type, object payload, string identifier,
+        SutProvider<MultiServicePushNotificationService> sutProvider)
+    {
+        await sutProvider.Sut.SendPayloadToOrganizationAsync(organizationId, type, payload, identifier, deviceId,
+            clientType);
+
+        await sutProvider.GetDependency<IEnumerable<IPushNotificationService>>()
+            .First()
+            .Received(1)
+            .SendPayloadToOrganizationAsync(organizationId, type, payload, identifier, deviceId, clientType);
     }
 }

@@ -43,7 +43,7 @@ public class NotificationHubPool : INotificationHubPool
     /// <param name="comb"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException">Thrown when no notification hub is found for a given comb.</exception>
-    public NotificationHubClient ClientFor(Guid comb)
+    public INotificationHubClient ClientFor(Guid comb)
     {
         var resolvedConnection = ConnectionFor(comb);
         return resolvedConnection.HubClient;

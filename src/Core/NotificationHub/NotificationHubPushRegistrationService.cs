@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
@@ -36,16 +37,19 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     public async Task CreateOrUpdateRegistrationAsync(PushRegistrationData data, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds)
     {
+        var orgIds = organizationIds.ToList();
+        var clientType = DeviceTypes.ToClientType(type);
         var installation = new Installation
         {
             InstallationId = deviceId,
             PushChannel = data.Token,
             Tags = new List<string>
             {
-                $"userId:{userId}"
-            },
+                $"userId:{userId}",
+                $"clientType:{clientType}"
+            }.Concat(orgIds.Select(organizationId => $"organizationId:{organizationId}")).ToList(),
             Templates = new Dictionary<string, InstallationTemplate>()
         };
 
@@ -56,11 +60,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
         if (data.Token != null)
         {
-            await CreateOrUpdateMobileRegistrationAsync(installation, userId, identifier, type);
+            await CreateOrUpdateMobileRegistrationAsync(installation, userId, identifier, clientType, orgIds, type);
         }
         else if (data.WebPush != null)
         {
-            await CreateOrUpdateWebRegistrationAsync(data.WebPush.Value.Endpoint, data.WebPush.Value.P256dh, data.WebPush.Value.Auth, installation, userId, identifier, type);
+            await CreateOrUpdateWebRegistrationAsync(data.WebPush.Value.Endpoint, data.WebPush.Value.P256dh, data.WebPush.Value.Auth, installation, userId, identifier, clientType, orgIds);
         }
 
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -70,7 +74,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private async Task CreateOrUpdateMobileRegistrationAsync(Installation installation, string userId,
-        string identifier, DeviceType type)
+        string identifier, ClientType clientType, List<string> organizationIds, DeviceType type)
     {
         if (string.IsNullOrWhiteSpace(installation.PushChannel))
         {
@@ -82,41 +86,41 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             case DeviceType.Android:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
                     "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("message",
                     "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
                     "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
                     "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
                     "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
                     "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
                     "\"aps\":{\"content-available\":1}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("message",
                  "{\"data\":{\"type\":\"#(type)\"}," +
-                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}", userId, identifier));
+                    "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}", userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
                     "{\"data\":{\"type\":\"#(type)\"}," +
                     "\"aps\":{\"alert\":\"$(message)\",\"badge\":\"#(badge)\",\"content-available\":1}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Platform = NotificationPlatform.Apns;
                 break;
             case DeviceType.AndroidAmazon:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
                     "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("message",
                     "{\"data\":{\"type\":\"#(type)\",\"message\":\"$(message)\"}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
                     "{\"data\":{\"type\":\"#(type)\",\"message\":\"$(message)\"}}",
-                    userId, identifier));
+                    userId, identifier, clientType, organizationIds));
 
                 installation.Platform = NotificationPlatform.Adm;
                 break;
@@ -128,7 +132,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private async Task CreateOrUpdateWebRegistrationAsync(string endpoint, string p256dh, string auth, Installation installation, string userId,
-        string identifier, DeviceType type)
+        string identifier, ClientType clientType, List<string> organizationIds)
     {
         // The Azure SDK is currently lacking support for web push registrations.
         // We need to use the REST API directly.
@@ -140,13 +144,13 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
 
         installation.Templates.Add(BuildInstallationTemplate("payload",
             "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}",
-            userId, identifier));
+            userId, identifier, clientType, organizationIds));
         installation.Templates.Add(BuildInstallationTemplate("message",
             "{\"data\":{\"type\":\"#(type)\",\"message\":\"$(message)\"}}",
-                userId, identifier));
+                userId, identifier, clientType, organizationIds));
         installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
             "{\"data\":{\"type\":\"#(type)\",\"message\":\"$(message)\"}}",
-            userId, identifier));
+            userId, identifier, clientType, organizationIds));
 
         var content = new
         {
@@ -178,7 +182,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, [StringSyntax(StringSyntaxAttribute.Json)] string templateBody,
-        string userId, string identifier)
+        string userId, string identifier, ClientType clientType, List<string> organizationIds)
     {
         var fullTemplateId = $"template:{templateId}";
 
@@ -187,14 +191,18 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Body = templateBody,
             Tags = new List<string>
             {
-                fullTemplateId,
-                $"{fullTemplateId}_userId:{userId}"
+                fullTemplateId, $"{fullTemplateId}_userId:{userId}", $"clientType:{clientType}"
             }
         };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{identifier}");
+        }
+
+        foreach (var organizationId in organizationIds)
+        {
+            template.Tags.Add($"organizationId:{organizationId}");
         }
 
         return new KeyValuePair<string, InstallationTemplate>(fullTemplateId, template);
@@ -273,7 +281,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private INotificationHubClient ClientFor(Guid deviceId)
     {
         return _notificationHubPool.ClientFor(deviceId);
     }

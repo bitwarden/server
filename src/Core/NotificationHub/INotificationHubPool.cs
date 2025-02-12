@@ -5,6 +5,6 @@ namespace Bit.Core.NotificationHub;
 public interface INotificationHubPool
 {
     NotificationHubConnection ConnectionFor(Guid comb);
-    NotificationHubClient ClientFor(Guid comb);
+    INotificationHubClient ClientFor(Guid comb);
     INotificationHubProxy AllClients { get; }
 }
