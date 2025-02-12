@@ -676,7 +676,11 @@ public class AccountsController : Controller
             new TaxInfo
             {
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode
+                BillingAddressPostalCode = model.PostalCode,
+                BillingAddressCity = model.City,
+                BillingAddressLine1 = model.Line1,
+                BillingAddressLine2 = model.Line2,
+                BillingAddressState = model.State,
             });
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
@@ -736,8 +740,7 @@ public class AccountsController : Controller
                 BillingAddressCity = model.City,
                 BillingAddressState = model.State,
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
-                TaxIdNumber = model.TaxId
+                BillingAddressPostalCode = model.PostalCode
             });
     }
 
