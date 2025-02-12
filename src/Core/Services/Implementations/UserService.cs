@@ -1139,10 +1139,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             ? new UserLicense(user, _licenseService)
             : new UserLicense(user, subscriptionInfo, _licenseService);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
-        {
-            userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
-        }
+        userLicense.Token = await _licenseService.CreateUserTokenAsync(user, subscriptionInfo);
 
         return userLicense;
     }
