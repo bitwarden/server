@@ -43,7 +43,7 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureService.GetAll();
-        Push = new PushSettings(featureService, globalSettings);
+        Push = new PushSettings((bool)FeatureStates[FeatureFlagKeys.WebPush], globalSettings);
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration
@@ -97,9 +97,9 @@ public class PushSettings
         }
     }
 
-    public PushSettings(IFeatureService launchDarklyFeatureService, IGlobalSettings globalSettings)
+    public PushSettings(bool webPushEnabled, IGlobalSettings globalSettings)
     {
-        _webPushEnabled = launchDarklyFeatureService.IsEnabled(FeatureFlagKeys.WebPush);
+        _webPushEnabled = webPushEnabled;
         _vapidPublicKey = globalSettings.WebPush.VapidPublicKey;
     }
 }
