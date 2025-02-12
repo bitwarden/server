@@ -116,7 +116,7 @@ public class NotificationHubConnection
         return result;
     }
 
-    private string generateSasToken(Uri uri)
+    private string GenerateSasToken(Uri uri)
     {
         string targetUri = Uri.EscapeDataString(uri.ToString().ToLower()).ToLower();
         long expires = DateTime.UtcNow.AddMinutes(1).Ticks / TimeSpan.TicksPerSecond;
