@@ -33,7 +33,13 @@ public static class StripeConstants
 
     public static class InvoiceStatus
     {
+        public const string Draft = "draft";
         public const string Open = "open";
+    }
+
+    public static class MetadataKeys
+    {
+        public const string OrganizationId = "organizationId";
     }
 
     public static class PaymentBehavior

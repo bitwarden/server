@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Api.Billing.Controllers;
+using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Billing.Models.Requests;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -19,10 +19,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-
 using static Bit.Api.Test.Billing.Utilities;
 
-namespace Bit.Api.Test.Billing.Controllers;
+namespace Bit.Api.Test.AdminConsole.Controllers;
 
 [ControllerCustomize(typeof(ProviderClientsController))]
 [SutProviderCustomize]

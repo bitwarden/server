@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-      <Nullable>enable</Nullable>
-      <IsPackable>false</IsPackable>
+    <IsPackable>false</IsPackable>
+    <!-- Temp exclusions until warnings are fixed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS0672;CS1998</WarningsNotAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

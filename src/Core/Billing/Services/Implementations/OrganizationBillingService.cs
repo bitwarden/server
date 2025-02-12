@@ -369,11 +369,20 @@ public class OrganizationBillingService(
             }
         }
 
+        var customerHasTaxInfo = customer is
+        {
+            Address:
+            {
+                Country: not null and not "",
+                PostalCode: not null and not ""
+            }
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = true
+                Enabled = customerHasTaxInfo
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
@@ -383,7 +392,7 @@ public class OrganizationBillingService(
                 ["organizationId"] = organizationId.ToString()
             },
             OffSession = true,
-            TrialPeriodDays = plan.TrialPeriodDays
+            TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
