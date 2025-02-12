@@ -233,7 +233,8 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             {
                 OrganizationId = organization.Id,
                 LimitCollectionCreation = organization.LimitCollectionCreation,
-                LimitCollectionDeletion = organization.LimitCollectionDeletion
+                LimitCollectionDeletion = organization.LimitCollectionDeletion,
+                LimitItemDeletion = organization.LimitItemDeletion
             },
             false
         );

@@ -3,12 +3,17 @@
   <PropertyGroup>
     <UserSecretsId>bitwarden-Billing</UserSecretsId>
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
+    <!-- Temp exclusions until warnings are fixed -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);CS9113</WarningsNotAsErrors>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Billing' " />
   <ItemGroup>
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
 
 </Project>

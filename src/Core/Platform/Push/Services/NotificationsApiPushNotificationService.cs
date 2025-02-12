@@ -198,26 +198,6 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await SendMessageAsync(PushType.SyncNotification, message, true);
     }
 
-    public async Task PushSyncOrganizationStatusAsync(Organization organization)
-    {
-        var message = new OrganizationStatusPushNotification
-        {
-            OrganizationId = organization.Id,
-            Enabled = organization.Enabled
-        };
-
-        await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
-    }
-
-    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
-        await SendMessageAsync(PushType.SyncOrganizationCollectionSettingChanged,
-            new OrganizationCollectionManagementPushNotification
-            {
-                OrganizationId = organization.Id,
-                LimitCollectionCreation = organization.LimitCollectionCreation,
-                LimitCollectionDeletion = organization.LimitCollectionDeletion
-            }, false);
-
     private async Task PushSendAsync(Send send, PushType type)
     {
         if (send.UserId.HasValue)
@@ -265,4 +245,25 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         // Noop
         return Task.FromResult(0);
     }
+
+    public async Task PushSyncOrganizationStatusAsync(Organization organization)
+    {
+        var message = new OrganizationStatusPushNotification
+        {
+            OrganizationId = organization.Id,
+            Enabled = organization.Enabled
+        };
+
+        await SendMessageAsync(PushType.SyncOrganizationStatusChanged, message, false);
+    }
+
+    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
+        await SendMessageAsync(PushType.SyncOrganizationCollectionSettingChanged,
+            new OrganizationCollectionManagementPushNotification
+            {
+                OrganizationId = organization.Id,
+                LimitCollectionCreation = organization.LimitCollectionCreation,
+                LimitCollectionDeletion = organization.LimitCollectionDeletion,
+                LimitItemDeletion = organization.LimitItemDeletion
+            }, false);
 }
