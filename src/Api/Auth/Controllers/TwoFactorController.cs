@@ -400,6 +400,7 @@ public class TwoFactorController : Controller
     /// <summary>
     /// To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.
     /// </summary>
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     [HttpPost("recover")]
     [AllowAnonymous]
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)

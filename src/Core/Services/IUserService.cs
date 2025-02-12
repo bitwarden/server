@@ -93,9 +93,18 @@ public interface IUserService
     /// This method removes the two factor providers on a user and regenerates
     /// a new recovery code. Also removes policies on a user for when they lose
     /// their 2fa status, they need to comply with their organizations policies.
+    ///
+    /// This method is used by the TwoFactorAuthenticationValidator to recover two factor for a user. This allows users
+    /// to be logged in after a successful recovery attempt.
+    ///
+    /// This method logs the event, sends an email to the user, and removes two factor providers on the user account.
+    /// This means that a user will have to accomplish new device verification on their account on new logins, if it
+    /// is enabled for their user.
     /// </summary>
+    /// <param name="recoveryCode">recovery code associated with the user logging in</param>
     /// <param name="user">The user to refresh the 2FA and Recovery Code on.</param>
-    Task RefreshUser2FaAndRecoveryCodeAsync(User user);
+    /// <returns>true if the recovery code is valid; false otherwise</returns>
+    Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode);
 
     /// <summary>
     /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.

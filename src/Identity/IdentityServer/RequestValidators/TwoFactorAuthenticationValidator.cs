@@ -154,6 +154,11 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
+        if (type is TwoFactorProviderType.RecoveryCode)
+        {
+            return await _userService.RecoverTwoFactorAsync(user, token);
+        }
+
         // These cases we want to always return false, U2f is deprecated and OrganizationDuo uses a different
         // flow than the other two factor providers, it follows the same structure of a UserTokenProvider but
         // has it's logic ran outside the usual token provider flow. See IOrganizationDuoUniversalTokenProvider.cs
@@ -170,7 +175,6 @@ public class TwoFactorAuthenticationValidator(
         // enabled by a user, so we can't check the user's 2FA providers to see if they're
         // enabled. We just have to check if the token is valid.
         if (type != TwoFactorProviderType.Remember &&
-            type != TwoFactorProviderType.RecoveryCode &&
             !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
         {
             return false;

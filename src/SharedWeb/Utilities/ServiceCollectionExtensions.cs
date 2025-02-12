@@ -457,9 +457,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))
             .AddTokenProvider<EmailTokenProvider>(TokenOptions.DefaultEmailProvider)
             .AddTokenProvider<WebAuthnTokenProvider>(
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn))
-            .AddTokenProvider<RecoveryCodeTokenProvider>(
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.RecoveryCode));
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.WebAuthn));
 
         return identityBuilder;
     }

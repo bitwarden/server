@@ -176,19 +176,6 @@ public abstract class BaseRequestValidator<T> where T : class
             {
                 returnRememberMeToken = true;
             }
-
-            // 3d. If the user is logging in using a RecoveryCode type to login
-            // as their second factor we know we are in the flow where we need
-            // to disable their other 2FAs just like as if they were using
-            // their recovery code because they no longer have access to their
-            // 2FA device.
-            if (FeatureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin))
-            {
-                if (twoFactorProviderType == TwoFactorProviderType.RecoveryCode)
-                {
-                    await _userService.RefreshUser2FaAndRecoveryCodeAsync(user);
-                }
-            }
         }
 
         // 4. Check if the user is logging in from a new device.
