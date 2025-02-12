@@ -1,5 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -25,8 +27,9 @@ public class ConfigResponseModel : ResponseModel
     }
 
     public ConfigResponseModel(
-        IGlobalSettings globalSettings,
-        IDictionary<string, object> featureStates) : base("config")
+        IFeatureService featureService,
+        IGlobalSettings globalSettings
+        ) : base("config")
     {
         Version = AssemblyHelpers.GetVersion();
         GitHash = AssemblyHelpers.GetGitHash();
@@ -39,8 +42,8 @@ public class ConfigResponseModel : ResponseModel
             Notifications = globalSettings.BaseServiceUri.Notifications,
             Sso = globalSettings.BaseServiceUri.Sso
         };
-        FeatureStates = featureStates;
-        Push = new PushSettings(globalSettings);
+        FeatureStates = featureService.GetAll();
+        Push = new PushSettings(featureService, globalSettings);
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration
@@ -66,21 +69,38 @@ public class EnvironmentConfigResponseModel
 
 public class PushSettings
 {
-    public PushTechnologyType PushTechnology { get; set; }
+    private readonly bool _webPushEnabled;
+    private readonly string _vapidPublicKey;
+    public PushTechnologyType PushTechnology
+    {
+        get
+        {
+            if (VapidPublicKey != null)
+            {
+                return PushTechnologyType.WebPush;
+            }
+            return PushTechnologyType.SignalR;
+        }
+    }
     /// <summary>
     /// Only for use when PushTechnology is WebPush.
     /// </summary>
-    public string VapidPublicKey { get; set; }
-
-    public PushSettings()
+    public string VapidPublicKey
     {
+        get
+        {
+            if (_webPushEnabled)
+            {
+                return _vapidPublicKey;
+            }
+            return null;
+        }
     }
-    public PushSettings(IGlobalSettings globalSettings)
+
+    public PushSettings(IFeatureService launchDarklyFeatureService, IGlobalSettings globalSettings)
     {
-        VapidPublicKey = globalSettings.WebPush.VapidPublicKey;
-        PushTechnology = globalSettings.WebPush.SupportsWebPush
-            ? PushTechnologyType.WebPush
-            : PushTechnologyType.SignalR;
+        _webPushEnabled = launchDarklyFeatureService.IsEnabled(FeatureFlagKeys.WebPush);
+        _vapidPublicKey = globalSettings.WebPush.VapidPublicKey;
     }
 }
 
