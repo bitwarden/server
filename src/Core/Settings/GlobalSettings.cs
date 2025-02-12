@@ -672,6 +672,5 @@ public class GlobalSettings : IGlobalSettings
     public class WebPushSettings : IWebPushSettings
     {
         public string VapidPublicKey { get; set; }
-        public string VapidPrivateKey { get; set; }
     }
 }

@@ -1,7 +1,6 @@
 ﻿public interface IWebPushSettings
 {
     public string VapidPublicKey { get; set; }
-    public string VapidPrivateKey { get; set; }
     /// <summary>
     /// Gets whether the server has sufficient configuration for WebPush.
     /// </summary>
@@ -9,7 +8,7 @@
     {
         get
         {
-            return !string.IsNullOrWhiteSpace(VapidPublicKey) && !string.IsNullOrWhiteSpace(VapidPrivateKey);
+            return !string.IsNullOrWhiteSpace(VapidPublicKey);
         }
     }
 }
