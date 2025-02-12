@@ -29,10 +29,12 @@ public class AzureServiceBusEventWriteService : IEventWriteService, IAsyncDispos
 
     public async Task CreateManyAsync(IEnumerable<IEvent> events)
     {
-        foreach (var e in events)
+        var message = new ServiceBusMessage(JsonSerializer.SerializeToUtf8Bytes(events))
         {
-            await CreateAsync(e);
-        }
+            ContentType = "application/json"
+        };
+
+        await _sender.SendMessageAsync(message);
     }
 
     public async ValueTask DisposeAsync()

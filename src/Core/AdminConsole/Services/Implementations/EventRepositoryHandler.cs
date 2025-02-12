@@ -11,4 +11,9 @@ public class EventRepositoryHandler(
     {
         return eventWriteService.CreateAsync(eventMessage);
     }
+
+    public Task HandleManyEventAsync(IEnumerable<EventMessage> eventMessages)
+    {
+        return eventWriteService.CreateManyAsync(eventMessages);
+    }
 }
