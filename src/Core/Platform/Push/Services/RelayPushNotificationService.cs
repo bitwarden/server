@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -138,11 +139,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
     private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
-        var message = new UserPushNotification
-        {
-            UserId = userId,
-            Date = DateTime.UtcNow
-        };
+        var message = new UserPushNotification { UserId = userId, Date = DateTime.UtcNow };
 
         await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
     }
@@ -189,69 +186,32 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
     private async Task PushAuthRequestAsync(AuthRequest authRequest, PushType type)
     {
-        var message = new AuthRequestPushNotification
-        {
-            Id = authRequest.Id,
-            UserId = authRequest.UserId
-        };
+        var message = new AuthRequestPushNotification { Id = authRequest.Id, UserId = authRequest.UserId };
 
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
     }
 
-    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext)
+    public async Task PushSyncNotificationAsync(Notification notification)
     {
-        var request = new PushSendRequestModel
+        var message = new SyncNotificationPushNotification
         {
-            UserId = userId.ToString(),
-            Type = type,
-            Payload = payload
+            Id = notification.Id,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            ClientType = notification.ClientType,
+            RevisionDate = notification.RevisionDate
         };
 
-        await AddCurrentContextAsync(request, excludeCurrentContext);
-        await SendAsync(HttpMethod.Post, "push/send", request);
-    }
-
-    private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload, bool excludeCurrentContext)
-    {
-        var request = new PushSendRequestModel
+        if (notification.UserId.HasValue)
         {
-            OrganizationId = orgId.ToString(),
-            Type = type,
-            Payload = payload
-        };
-
-        await AddCurrentContextAsync(request, excludeCurrentContext);
-        await SendAsync(HttpMethod.Post, "push/send", request);
-    }
-
-    private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
-    {
-        var currentContext = _httpContextAccessor?.HttpContext?.
-            RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
-        if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
-        {
-            var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
-            if (device != null)
-            {
-                request.DeviceId = device.Id.ToString();
-            }
-            if (addIdentifier)
-            {
-                request.Identifier = currentContext.DeviceIdentifier;
-            }
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+                notification.ClientType);
         }
-    }
-
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        throw new NotImplementedException();
+        else if (notification.OrganizationId.HasValue)
+        {
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+                true, notification.ClientType);
+        }
     }
 
     public async Task PushSyncOrganizationStatusAsync(Organization organization)
@@ -278,4 +238,65 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             },
             false
         );
+
+    private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
+    {
+        var request = new PushSendRequestModel
+        {
+            UserId = userId.ToString(),
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
+
+        await AddCurrentContextAsync(request, excludeCurrentContext);
+        await SendAsync(HttpMethod.Post, "push/send", request);
+    }
+
+    private async Task SendPayloadToOrganizationAsync(Guid orgId, PushType type, object payload,
+        bool excludeCurrentContext, ClientType? clientType = null)
+    {
+        var request = new PushSendRequestModel
+        {
+            OrganizationId = orgId.ToString(),
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
+
+        await AddCurrentContextAsync(request, excludeCurrentContext);
+        await SendAsync(HttpMethod.Post, "push/send", request);
+    }
+
+    private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
+    {
+        var currentContext =
+            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+        if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
+        {
+            var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
+            if (device != null)
+            {
+                request.DeviceId = device.Id.ToString();
+            }
+
+            if (addIdentifier)
+            {
+                request.Identifier = currentContext.DeviceIdentifier;
+            }
+        }
+    }
+
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
+        string deviceId = null, ClientType? clientType = null)
+    {
+        throw new NotImplementedException();
+    }
 }
