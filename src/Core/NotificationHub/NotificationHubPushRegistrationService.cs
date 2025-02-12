@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;
 
@@ -14,25 +13,23 @@ namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
+    private static readonly JsonSerializerOptions webPushSerializationOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IServiceProvider _serviceProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<NotificationHubPushRegistrationService> _logger;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
         INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
         IHttpClientFactory httpClientFactory,
         ILogger<NotificationHubPushRegistrationService> logger)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _notificationHubPool = notificationHubPool;
-        _serviceProvider = serviceProvider;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -162,10 +159,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             platform = "browser",
             tags = installation.Tags,
             templates = installation.Templates
-        }, new JsonSerializerOptions
-        {
-            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
+        }, webPushSerializationOptions);
 
         var client = _httpClientFactory.CreateClient("NotificationHub");
         var request = ConnectionFor(GetComb(installation.InstallationId)).CreateRequest(HttpMethod.Put, $"installations/{installation.InstallationId}");
