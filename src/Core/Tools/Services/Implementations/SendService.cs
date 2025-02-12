@@ -1,7 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -26,7 +27,6 @@ public class SendService : ISendService
     public const string MAX_FILE_SIZE_READABLE = "500 MB";
     private readonly ISendRepository _sendRepository;
     private readonly IUserRepository _userRepository;
-    private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
@@ -36,6 +36,9 @@ public class SendService : ISendService
     private readonly IReferenceEventService _referenceEventService;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
+    private readonly IFeatureService _featureService;
+
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
 
     public SendService(
@@ -48,14 +51,14 @@ public class SendService : ISendService
         IPushNotificationService pushService,
         IReferenceEventService referenceEventService,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IPolicyRequirementQuery policyRequirementQuery,
+        IFeatureService featureService)
     {
         _sendRepository = sendRepository;
         _userRepository = userRepository;
         _userService = userService;
-        _policyRepository = policyRepository;
         _policyService = policyService;
         _organizationRepository = organizationRepository;
         _sendFileStorageService = sendFileStorageService;
@@ -64,6 +67,8 @@ public class SendService : ISendService
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
+        _policyRequirementQuery = policyRequirementQuery;
+        _featureService = featureService;
     }
 
     public async Task SaveSendAsync(Send send)
@@ -286,6 +291,12 @@ public class SendService : ISendService
 
     private async Task ValidateUserCanSaveAsync(Guid? userId, Send send)
     {
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
+        {
+            await ValidateUserCanSaveAsync_vNext(userId, send);
+            return;
+        }
+
         if (!userId.HasValue || (!_currentContext.Organizations?.Any() ?? true))
         {
             return;
@@ -305,6 +316,26 @@ public class SendService : ISendService
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
             }
+        }
+    }
+
+    private async Task ValidateUserCanSaveAsync_vNext(Guid? userId, Send send)
+    {
+        if (!userId.HasValue)
+        {
+            return;
+        }
+
+        var sendPolicyRequirement = await _policyRequirementQuery.GetAsync<SendPolicyRequirement>(userId.Value);
+
+        if (sendPolicyRequirement.DisableSend)
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
+        }
+
+        if (sendPolicyRequirement.DisableHideEmail && send.HideEmail.GetValueOrDefault())
+        {
+            throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
         }
     }
 
