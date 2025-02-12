@@ -1,0 +1,18 @@
+@model List<Bit.Admin.Billing.Models.ProviderPlanViewModel>
+@foreach (var plan in Model)
+{
+    <h2>@plan.Name</h2>
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">Purchased Seats</dt>
+        <dd class="col-sm-8 col-lg-9">@plan.PurchasedSeats</dd>
+
+        <dt class="col-sm-4 col-lg-3">Assigned Seats</dt>
+        <dd class="col-sm-8 col-lg-9">@plan.AssignedSeats</dd>
+
+        <dt class="col-sm-4 col-lg-3">Used Seats</dt>
+        <dd class="col-sm-8 col-lg-9">@plan.UsedSeats</dd>
+
+        <dt class="col-sm-4 col-lg-3">Remaining Seats</dt>
+        <dd class="col-sm-8 col-lg-9">@plan.RemainingSeats</dd>
+    </dl>
+}
