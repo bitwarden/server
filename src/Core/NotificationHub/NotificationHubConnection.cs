@@ -12,8 +12,8 @@ public class NotificationHubConnection
     private Uri _endpoint;
     private byte[] _sasKey;
     private string _sasKeyName;
-    public string ConnectionString 
-    { 
+    public string ConnectionString
+    {
         get => _connectionString;
         init
         {
@@ -126,7 +126,7 @@ public class NotificationHubConnection
         };
 
         var result = new HttpRequestMessage(method, uriBuilder.Uri);
-        result.Headers.Add("Authorization", generateSasToken(uriBuilder.Uri));
+        result.Headers.Add("Authorization", GenerateSasToken(uriBuilder.Uri));
         result.Headers.Add("TrackingId", Guid.NewGuid().ToString());
         return result;
     }
