@@ -58,8 +58,8 @@ UNION ALL
 SELECT
     *,
     1 [Edit],
-    1 [Manage],
     1 [ViewPassword],
+    1 [Manage],
     0 [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId)
