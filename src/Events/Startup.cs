@@ -82,6 +82,35 @@ public class Startup
         {
             services.AddHostedService<Core.HostedServices.ApplicationCacheHostedService>();
         }
+
+        // Optional RabbitMQ Listeners
+        if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+            CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+        {
+            services.AddSingleton<EventRepositoryHandler>();
+            services.AddKeyedSingleton<IEventWriteService, RepositoryEventWriteService>("persistent");
+            services.AddSingleton<IHostedService>(provider =>
+                new RabbitMqEventListenerService(
+                    provider.GetRequiredService<EventRepositoryHandler>(),
+                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                    globalSettings,
+                    globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
+
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.WebhookUrl))
+            {
+                services.AddSingleton<WebhookEventHandler>();
+                services.AddHttpClient(WebhookEventHandler.HttpClientName);
+
+                services.AddSingleton<IHostedService>(provider =>
+                    new RabbitMqEventListenerService(
+                        provider.GetRequiredService<WebhookEventHandler>(),
+                        provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                        globalSettings,
+                        globalSettings.EventLogging.RabbitMq.WebhookQueueName));
+            }
+        }
     }
 
     public void Configure(

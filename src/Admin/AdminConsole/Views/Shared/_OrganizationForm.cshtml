@@ -12,6 +12,7 @@
     var canViewBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_View);
     var canViewPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_View);
     var canViewLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_View);
+    var canEditName = AccessControlService.UserHasPermission(Permission.Org_Name_Edit);
     var canCheckEnabled = AccessControlService.UserHasPermission(Permission.Org_CheckEnabledBox);
     var canEditPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_Edit);
     var canEditLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_Edit);
@@ -28,7 +29,7 @@
             <div class="col-sm">
                 <div class="mb-3">
                     <label class="form-label" asp-for="Name"></label>
-                    <input type="text" class="form-control" asp-for="Name" value="@Model.Name" required>
+                    <input type="text" class="form-control" asp-for="Name" value="@Model.Name" required disabled="@(canEditName ? null : "disabled")">
                 </div>
             </div>
         </div>

@@ -67,6 +67,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         AccessSecretsManager = organization.AccessSecretsManager;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
         UseRiskInsights = organization.UseRiskInsights;
@@ -128,6 +129,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
     /// Indicates if the organization manages the user.

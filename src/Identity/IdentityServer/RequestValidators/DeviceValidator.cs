@@ -85,28 +85,17 @@ public class DeviceValidator(
             }
         }
 
-        // At this point we have established either new device verification is not required or the NewDeviceOtp is valid
+        // At this point we have established either new device verification is not required or the NewDeviceOtp is valid,
+        // so we save the device to the database and proceed with authentication
         requestDevice.UserId = context.User.Id;
         await _deviceService.SaveAsync(requestDevice);
         context.Device = requestDevice;
 
-        // backwards compatibility -- If NewDeviceVerification not enabled send the new login emails
-        // PM-13340: removal Task; remove entire if block emails should no longer be sent
-        if (!_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification))
+        if (!_globalSettings.DisableEmailNewDevice)
         {
-            // This ensures the user doesn't receive a "new device" email on the first login
-            var now = DateTime.UtcNow;
-            if (now - context.User.CreationDate > TimeSpan.FromMinutes(10))
-            {
-                var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
-                    .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
-                if (!_globalSettings.DisableEmailNewDevice)
-                {
-                    await _mailService.SendNewDeviceLoggedInEmail(context.User.Email, deviceType, now,
-                        _currentContext.IpAddress);
-                }
-            }
+            await SendNewDeviceLoginEmail(context.User, requestDevice);
         }
+
         return true;
     }
 
@@ -115,7 +104,7 @@ public class DeviceValidator(
     /// </summary>
     /// <param name="user">user attempting to authenticate</param>
     /// <param name="ValidatedRequest">The Request is used to check for the NewDeviceOtp and for the raw device data</param>
-    /// <returns>returns deviceValtaionResultType</returns>
+    /// <returns>returns deviceValidationResultType</returns>
     private async Task<DeviceValidationResultType> HandleNewDeviceVerificationAsync(User user, ValidatedRequest request)
     {
         // currently unreachable due to backward compatibility
@@ -123,6 +112,12 @@ public class DeviceValidator(
         if (user == null)
         {
             return DeviceValidationResultType.InvalidUser;
+        }
+
+        // Has the User opted out of new device verification
+        if (!user.VerifyDevices)
+        {
+            return DeviceValidationResultType.Success;
         }
 
         // CS exception flow
@@ -146,6 +141,12 @@ public class DeviceValidator(
             var otpValid = await _userService.VerifyOTPAsync(user, newDeviceOtp);
             if (otpValid)
             {
+                // In order to get here they would have to have access to their email so we verify it if it's not already
+                if (!user.EmailVerified)
+                {
+                    user.EmailVerified = true;
+                    await _userService.SaveUserAsync(user);
+                }
                 return DeviceValidationResultType.Success;
             }
             return DeviceValidationResultType.InvalidNewDeviceOtp;
@@ -160,6 +161,19 @@ public class DeviceValidator(
 
         // if we get to here then we need to send a new device verification email
         return DeviceValidationResultType.NewDeviceVerificationRequired;
+    }
+
+    private async Task SendNewDeviceLoginEmail(User user, Device requestDevice)
+    {
+        // Ensure that the user doesn't receive a "new device" email on the first login
+        var now = DateTime.UtcNow;
+        if (now - user.CreationDate > TimeSpan.FromMinutes(10))
+        {
+            var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
+                .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+            await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
+                _currentContext.IpAddress);
+        }
     }
 
     public async Task<Device> GetKnownDeviceAsync(User user, Device device)

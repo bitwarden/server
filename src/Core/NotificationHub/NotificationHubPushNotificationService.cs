@@ -6,8 +6,8 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
@@ -237,6 +237,20 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
         await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, false);
     }
+
+    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
+        await SendPayloadToOrganizationAsync(
+            organization.Id,
+            PushType.SyncOrganizationCollectionSettingChanged,
+            new OrganizationCollectionManagementPushNotification
+            {
+                OrganizationId = organization.Id,
+                LimitCollectionCreation = organization.LimitCollectionCreation,
+                LimitCollectionDeletion = organization.LimitCollectionDeletion,
+                LimitItemDeletion = organization.LimitItemDeletion
+            },
+            false
+        );
 
     private string GetContextIdentifier(bool excludeCurrentContext)
     {

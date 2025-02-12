@@ -50,6 +50,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
         Status = user.Status;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
         ResetPasswordEnrolled = user.ResetPasswordKey != null;
+        SsoExternalId = user.SsoExternalId;
     }
 
     /// <summary>
@@ -104,4 +105,10 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     /// </summary>
     [Required]
     public bool ResetPasswordEnrolled { get; }
+
+    /// <summary>
+    /// SSO external identifier for linking this member to an identity provider.
+    /// </summary>
+    /// <example>sso_external_id_123456</example>
+    public string SsoExternalId { get; set; }
 }
