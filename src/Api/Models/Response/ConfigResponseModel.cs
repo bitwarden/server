@@ -43,7 +43,7 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureService.GetAll();
-        var webPushEnabled = FeatureStates.ContainsKey(FeatureFlagKeys.WebPush) ? (bool)FeatureStates[FeatureFlagKeys.WebPush] : false;
+        var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue) ? (bool)webPushEnabledValue : false;
         Push = PushSettings.Build(webPushEnabled, globalSettings);
         Settings = new ServerSettingsResponseModel
         {

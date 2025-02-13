@@ -5,6 +5,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
 
+namespace Bit.Core.NotificationHub;
+
 public class NotificationHubConnection
 {
     public string HubName { get; init; }

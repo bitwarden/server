@@ -181,7 +181,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, [StringSyntax(StringSyntaxAttribute.Json)] string templateBody,
+    private static KeyValuePair<string, InstallationTemplate> BuildInstallationTemplate(string templateId, [StringSyntax(StringSyntaxAttribute.Json)] string templateBody,
         string userId, string identifier, ClientType clientType, List<string> organizationIds)
     {
         var fullTemplateId = $"template:{templateId}";
