@@ -21,7 +21,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type, IEnumerable<string> organizationIds, string installationId)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -50,7 +50,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             installation.Tags.Add($"organizationId:{organizationId}");
         }
 
-        if (!string.IsNullOrWhiteSpace(installationId))
+        if (installationId != Guid.Empty)
         {
             installation.Tags.Add($"installationId:{installationId}");
         }
@@ -99,7 +99,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier, ClientType clientType, List<string> organizationIds, string installationId)
+        string userId, string identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
     {
         if (templateBody == null)
         {
@@ -127,7 +127,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             template.Tags.Add($"organizationId:{organizationId}");
         }
 
-        if (!string.IsNullOrWhiteSpace(installationId))
+        if (installationId != Guid.Empty)
         {
             template.Tags.Add($"installationId:{installationId}");
         }

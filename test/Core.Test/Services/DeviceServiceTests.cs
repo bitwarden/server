@@ -57,7 +57,7 @@ public class DeviceServiceTests
                 Assert.Equal(2, organizationIdsList.Count);
                 Assert.Contains(organizationId1.ToString(), organizationIdsList);
                 Assert.Contains(organizationId2.ToString(), organizationIdsList);
-            }), installationId.ToString());
+            }), installationId);
     }
 
     [Theory]
@@ -97,7 +97,7 @@ public class DeviceServiceTests
                 Assert.Equal(2, organizationIdsList.Count);
                 Assert.Contains(organizationId1.ToString(), organizationIdsList);
                 Assert.Contains(organizationId2.ToString(), organizationIdsList);
-            }), installationId.ToString());
+            }), installationId);
     }
 
     /// <summary>

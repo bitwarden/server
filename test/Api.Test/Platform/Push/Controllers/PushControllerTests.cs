@@ -249,7 +249,7 @@ public class PushControllerTests
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(0)
             .CreateOrUpdateRegistrationAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<DeviceType>(), Arg.Any<IEnumerable<string>>(), Arg.Any<string>());
+                Arg.Any<DeviceType>(), Arg.Any<IEnumerable<string>>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -273,7 +273,7 @@ public class PushControllerTests
             Type = DeviceType.Android,
             Identifier = identifier.ToString(),
             OrganizationIds = [organizationId.ToString()],
-            InstallationId = installationId.ToString()
+            InstallationId = installationId
         });
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(1)
@@ -283,6 +283,6 @@ public class PushControllerTests
                     var organizationIdsList = organizationIds.ToList();
                     Assert.Contains(expectedOrganizationId, organizationIdsList);
                     Assert.Single(organizationIdsList);
-                }), installationId.ToString());
+                }), installationId);
     }
 }

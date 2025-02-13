@@ -11,5 +11,5 @@ public class PushRegistrationRequestModel
     [Required] public DeviceType Type { get; set; }
     [Required] public string Identifier { get; set; }
     public IEnumerable<string> OrganizationIds { get; set; }
-    public string InstallationId { get; set; }
+    public Guid InstallationId { get; set; }
 }

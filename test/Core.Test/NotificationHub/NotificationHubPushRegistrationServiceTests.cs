@@ -20,7 +20,7 @@ public class NotificationHubPushRegistrationServiceTests
         Guid organizationId, Guid installationId)
     {
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
-            identifier.ToString(), DeviceType.Android, [organizationId.ToString()], installationId.ToString());
+            identifier.ToString(), DeviceType.Android, [organizationId.ToString()], installationId);
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(0)
@@ -42,7 +42,7 @@ public class NotificationHubPushRegistrationServiceTests
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
             identifierNull ? null : identifier.ToString(), DeviceType.Android,
             partOfOrganizationId ? [organizationId.ToString()] : [],
-            installationIdNull ? null : installationId.ToString());
+            installationIdNull ? Guid.Empty : installationId);
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -118,7 +118,7 @@ public class NotificationHubPushRegistrationServiceTests
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
             identifierNull ? null : identifier.ToString(), DeviceType.iOS,
             partOfOrganizationId ? [organizationId.ToString()] : [],
-            installationIdNull ? null : installationId.ToString());
+            installationIdNull ? Guid.Empty : installationId);
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -194,7 +194,7 @@ public class NotificationHubPushRegistrationServiceTests
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
             identifierNull ? null : identifier.ToString(), DeviceType.AndroidAmazon,
             partOfOrganizationId ? [organizationId.ToString()] : [],
-            installationIdNull ? null : installationId.ToString());
+            installationIdNull ? Guid.Empty : installationId);
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
@@ -269,7 +269,7 @@ public class NotificationHubPushRegistrationServiceTests
         var pushToken = "test push token";
 
         await sutProvider.Sut.CreateOrUpdateRegistrationAsync(pushToken, deviceId.ToString(), userId.ToString(),
-            identifier.ToString(), deviceType, [organizationId.ToString()], installationId.ToString());
+            identifier.ToString(), deviceType, [organizationId.ToString()], installationId);
 
         sutProvider.GetDependency<INotificationHubPool>()
             .Received(1)
