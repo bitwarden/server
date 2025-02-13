@@ -2,7 +2,6 @@
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -385,45 +384,6 @@ public class BaseRequestValidatorTests
         var expectedMessage = $"Encryption key migration is required. Please log in to the web " +
                               $"vault at {_globalSettings.BaseServiceUri.VaultWithHash}";
         Assert.Equal(expectedMessage, errorResponse.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_RecoveryCodeLogin_Successful(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-        var user = context.CustomValidatorRequestContext.User;
-        var exampleRecoveryCode = "1234";
-
-        context.CustomValidatorRequestContext.User.TwoFactorRecoveryCode = exampleRecoveryCode;
-        context.ValidatedTokenRequest.Raw["TwoFactorToken"] = exampleRecoveryCode;
-        context.ValidatedTokenRequest.Raw["TwoFactorProvider"] = TwoFactorProviderType.RecoveryCode.ToString();
-
-        // Not a bot.
-        context.CustomValidatorRequestContext.CaptchaResponse.IsBot = false;
-
-        // Valid ValidateContextAsync.
-        _sut.isValid = true;
-
-        // Set two factor to be true.
-        _twoFactorAuthenticationValidator
-            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
-
-        _twoFactorAuthenticationValidator
-            .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, exampleRecoveryCode)
-            .Returns(true);
-
-        _featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin).Returns(true);
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert
-        await _userService.Received().RefreshUser2FaAndRecoveryCodeAsync(user);
     }
 
     private BaseRequestValidationContextFake CreateContext(

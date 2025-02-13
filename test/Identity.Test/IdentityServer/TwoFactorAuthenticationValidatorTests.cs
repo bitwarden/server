@@ -452,6 +452,47 @@ public class TwoFactorAuthenticationValidatorTests
         Assert.True(result);
     }
 
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.RecoveryCode)]
+    public async void VerifyTwoFactorAsync_RecoveryCode_ValidToken_ReturnsTrue(
+        TwoFactorProviderType providerType,
+        User user,
+        Organization organization)
+    {
+        var token = "1234";
+        user.TwoFactorRecoveryCode = token;
+
+        _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(true);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, organization, providerType, token);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.RecoveryCode)]
+    public async void VerifyTwoFactorAsync_RecoveryCode_InvalidToken_ReturnsFalse(
+        TwoFactorProviderType providerType,
+        User user,
+        Organization organization)
+    {
+        // Arrange
+        var token = "1234";
+        user.TwoFactorRecoveryCode = token;
+
+        _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(false);
+
+        // Act
+        var result = await _sut.VerifyTwoFactorAsync(
+            user, organization, providerType, token);
+
+        // Assert
+        Assert.False(result);
+    }
+
     private static UserManagerTestWrapper<User> SubstituteUserManager()
     {
         return new UserManagerTestWrapper<User>(

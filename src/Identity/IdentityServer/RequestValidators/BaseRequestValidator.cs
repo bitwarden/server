@@ -99,7 +99,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
-        // 2. Decide if this user belong to an organization that requires SSO.
+        // 2. Decide if this user belongs to an organization that requires SSO.
         validatorContext.SsoRequired = await RequireSsoLoginAsync(user, request.GrantType);
         if (validatorContext.SsoRequired)
         {
@@ -118,6 +118,7 @@ public abstract class BaseRequestValidator<T> where T : class
         // This flag is used to determine if the user wants a rememberMe token sent when
         // authentication is successful.
         var returnRememberMeToken = false;
+
         if (validatorContext.TwoFactorRequired)
         {
             var twoFactorToken = request.Raw["TwoFactorToken"];
@@ -171,8 +172,10 @@ public abstract class BaseRequestValidator<T> where T : class
             // 3c. When the 2FA authentication is successful, we can check if the user wants a
             // rememberMe token.
             var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
-            if (twoFactorRemember // Check if the user wants a rememberMe token.
-                && twoFactorProviderType != TwoFactorProviderType.Remember) // if the 2FA auth was rememberMe do not send another token.
+            // Check if the user wants a rememberMe token.
+            if (twoFactorRemember
+                // if the 2FA auth was rememberMe do not send another token.
+                && twoFactorProviderType != TwoFactorProviderType.Remember)
             {
                 returnRememberMeToken = true;
             }

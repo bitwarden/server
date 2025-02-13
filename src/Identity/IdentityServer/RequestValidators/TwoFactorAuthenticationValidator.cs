@@ -159,9 +159,10 @@ public class TwoFactorAuthenticationValidator(
             return await _userService.RecoverTwoFactorAsync(user, token);
         }
 
-        // These cases we want to always return false, U2f is deprecated and OrganizationDuo uses a different
-        // flow than the other two factor providers, it follows the same structure of a UserTokenProvider but
-        // has it's logic ran outside the usual token provider flow. See IOrganizationDuoUniversalTokenProvider.cs
+        // These cases we want to always return false, U2f is deprecated and OrganizationDuo
+        // uses a different flow than the other two factor providers, it follows the same
+        // structure of a UserTokenProvider but has it's logic ran outside the usual token
+        // provider flow. See IOrganizationDuoUniversalTokenProvider.cs
         if (type is TwoFactorProviderType.U2f or TwoFactorProviderType.OrganizationDuo)
         {
             return false;

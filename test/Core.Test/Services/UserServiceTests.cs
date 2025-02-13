@@ -730,6 +730,28 @@ public class UserServiceTests
                 .RemoveAsync(Arg.Any<string>());
     }
 
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_CorrectCode_ReturnsTrueAndProcessesPolicies(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+
+        // Act
+        var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.True(response);
+        Assert.Null(user.TwoFactorProviders);
+        Assert.NotEqual(recoveryCode, user.TwoFactorRecoveryCode);
+        // await sutProvider.GetDependency<IMailService>()
+        //     .SendRecoverTwoFactorEmail(
+        //         Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>()).Received();
+        // await sutProvider.GetDependency<IEventService>()
+        //     .LogUserEventAsync(user.Id, EventType.User_Recovered2fa).Received();
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {

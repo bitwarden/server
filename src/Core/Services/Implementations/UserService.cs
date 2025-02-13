@@ -903,7 +903,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode)
     {
-        if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
+        if (!CoreHelpers.FixedTimeEquals(
+                user.TwoFactorRecoveryCode,
+                recoveryCode.Replace(" ", string.Empty).Trim().ToLower()))
         {
             return false;
         }
@@ -1172,7 +1174,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     {
         if (user == null)
         {
-            Logger.LogWarning($"User {user.Id} does not exist when checking password.");
             return false;
         }
 

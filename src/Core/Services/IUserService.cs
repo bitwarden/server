@@ -87,19 +87,16 @@ public interface IUserService
     void SetTwoFactorProvider(User user, TwoFactorProviderType type, bool setEnabled = true);
 
     [Obsolete("To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.")]
-    Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode);
+    Task<bool> RecoverTwoFactorAsync(string email, string masterPassword, string recoveryCode);
 
     /// <summary>
-    /// This method removes the two factor providers on a user and regenerates
-    /// a new recovery code. Also removes policies on a user for when they lose
-    /// their 2fa status, they need to comply with their organizations policies.
+    /// This method is used by the TwoFactorAuthenticationValidator to recover two
+    /// factor for a user. This allows users to be logged in after a successful recovery
+    /// attempt.
     ///
-    /// This method is used by the TwoFactorAuthenticationValidator to recover two factor for a user. This allows users
-    /// to be logged in after a successful recovery attempt.
-    ///
-    /// This method logs the event, sends an email to the user, and removes two factor providers on the user account.
-    /// This means that a user will have to accomplish new device verification on their account on new logins, if it
-    /// is enabled for their user.
+    /// This method logs the event, sends an email to the user, and removes two factor
+    /// providers on the user account. This means that a user will have to accomplish
+    /// new device verification on their account on new logins, if it is enabled for their user.
     /// </summary>
     /// <param name="recoveryCode">recovery code associated with the user logging in</param>
     /// <param name="user">The user to refresh the 2FA and Recovery Code on.</param>
@@ -107,8 +104,8 @@ public interface IUserService
     Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode);
 
     /// <summary>
-    /// Returns true if the user is a legacy user. Legacy users use their master key as their encryption key.
-    /// We force these users to the web to migrate their encryption scheme.
+    /// Returns true if the user is a legacy user. Legacy users use their master key as their
+    /// encryption key. We force these users to the web to migrate their encryption scheme.
     /// </summary>
     Task<bool> IsLegacyUser(string userId);
 
@@ -116,7 +113,8 @@ public interface IUserService
     /// Indicates if the user is managed by any organization.
     /// </summary>
     /// <remarks>
-    /// A user is considered managed by an organization if their email domain matches one of the verified domains of that organization, and the user is a member of it.
+    /// A user is considered managed by an organization if their email domain matches one of the
+    /// verified domains of that organization, and the user is a member of it.
     /// The organization must be enabled and able to have verified domains.
     /// </remarks>
     /// <returns>
