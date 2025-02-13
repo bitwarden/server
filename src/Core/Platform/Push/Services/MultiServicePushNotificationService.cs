@@ -181,7 +181,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
 
         foreach (var service in _services)
         {
-            _logger.LogDebug("Pushing notification to service {}", service.GetType().Name);
+            _logger.LogDebug("Pushing notification to service {ServiceName}", service.GetType().Name);
             pushFunc(service);
         }
     }
