@@ -3,6 +3,7 @@ using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -33,6 +34,7 @@ public class PayPalControllerTests
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
+    private readonly IPremiumUserBillingService _premiumUserBillingService = Substitute.For<IPremiumUserBillingService>();
 
     private const string _defaultWebhookKey = "webhook-key";
 
@@ -385,8 +387,6 @@ public class PayPalControllerTests
 
         _userRepository.GetByIdAsync(userId).Returns(user);
 
-        _paymentService.CreditAccountAsync(user, 48M).Returns(true);
-
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
@@ -398,9 +398,7 @@ public class PayPalControllerTests
             transaction.UserId == userId &&
             transaction.Amount == 48M));
 
-        await _paymentService.Received(1).CreditAccountAsync(user, 48M);
-
-        await _userRepository.Received(1).ReplaceAsync(user);
+        await _premiumUserBillingService.Received(1).Credit(user, 48M);
 
         await _mailService.Received(1).SendAddedCreditAsync(billingEmail, 48M);
     }
@@ -544,7 +542,8 @@ public class PayPalControllerTests
             _paymentService,
             _transactionRepository,
             _userRepository,
-            _providerRepository);
+            _providerRepository,
+            _premiumUserBillingService);
 
         var httpContext = new DefaultHttpContext();
 
