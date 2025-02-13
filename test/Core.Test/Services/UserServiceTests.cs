@@ -744,12 +744,30 @@ public class UserServiceTests
         // Assert
         Assert.True(response);
         Assert.Null(user.TwoFactorProviders);
+        // Make sure a new code was generated for the user
         Assert.NotEqual(recoveryCode, user.TwoFactorRecoveryCode);
-        // await sutProvider.GetDependency<IMailService>()
-        //     .SendRecoverTwoFactorEmail(
-        //         Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>()).Received();
-        // await sutProvider.GetDependency<IEventService>()
-        //     .LogUserEventAsync(user.Id, EventType.User_Recovered2fa).Received();
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRecoverTwoFactorEmail(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_IncorrectCode_ReturnsFalse(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = "4567";
+
+        // Act
+        var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.False(response);
+        Assert.NotNull(user.TwoFactorProviders);
     }
 
     private static void SetupUserAndDevice(User user,

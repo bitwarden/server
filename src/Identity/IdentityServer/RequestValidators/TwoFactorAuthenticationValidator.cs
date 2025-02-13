@@ -171,8 +171,8 @@ public class TwoFactorAuthenticationValidator(
         // Now we are concerning the rest of the Two Factor Provider Types
 
         // The intent of this check is to make sure that the user is using a 2FA provider that
-        // is enabled and allowed by their premium status. The exception for Remember &
-        // RecoveryCode is because these are "special" 2FA types that aren't ever explicitly
+        // is enabled and allowed by their premium status. The exception for Remember
+        // is because it is a "special" 2FA type that isn't ever explicitly
         // enabled by a user, so we can't check the user's 2FA providers to see if they're
         // enabled. We just have to check if the token is valid.
         if (type != TwoFactorProviderType.Remember &&
@@ -181,6 +181,7 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
+        // Finally, verify the token based on the provider type.
         return await _userManager.VerifyTwoFactorTokenAsync(
             user, CoreHelpers.CustomProviderName(type), token);
     }
