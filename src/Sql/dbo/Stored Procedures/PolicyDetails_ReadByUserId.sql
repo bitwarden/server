@@ -27,11 +27,17 @@ WHERE
     AND O.Enabled = 1
     AND O.UsePolicies = 1
     AND (
-            (OU.[Status] != 0 AND OU.[UserId] = @UserId) -- OrgUsers who have accepted their invite and are linked to a UserId
+            -- OrgUsers who have accepted their invite and are linked to a UserId
+            -- (Note: this excludes "invited but revoked" users who don't have an OU.UserId yet,
+            -- but those users will go through policy enforcement later as part of accepting their invite after being restored.
+            -- This is an intentionally unhandled edge case for now.)
+            (OU.[Status] != 0 AND OU.[UserId] = @UserId)
+
+            -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
             OR EXISTS (
                 SELECT 1
                 FROM [dbo].[UserView] U
-                WHERE U.[Id] = @UserId AND OU.[Email] = U.[Email] AND OU.[Status] = 0 -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
+                WHERE U.[Id] = @UserId AND OU.[Email] = U.[Email] AND OU.[Status] = 0
             )
         )
 END

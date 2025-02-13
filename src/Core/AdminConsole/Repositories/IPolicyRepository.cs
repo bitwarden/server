@@ -26,7 +26,7 @@ public interface IPolicyRepository : IRepository<Policy, Guid>
     /// <remarks>
     /// Each PolicyDetail represents an OrganizationUser and a Policy which *may* be enforced
     /// against them. It only returns PolicyDetails for policies that are enabled and where the organization's plan
-    /// supports policies.
+    /// supports policies. It also excludes "revoked invited" users who are not subject to policy enforcement.
     /// This is consumed by <see cref="IPolicyRequirementQuery"/> to create requirements for specific policy types.
     /// You probably do not want to call it directly.
     /// </remarks>

@@ -24,10 +24,18 @@ public class GetPolicyDetailsByUserIdTests
         IPolicyRepository policyRepository)
     {
         // Arrange
-        // OrgUser1 - owner of org1
+        // OrgUser1 - owner of org1 - confirmed
         var user = await userRepository.CreateTestUserAsync();
         var org1 = await CreateEnterpriseOrg(organizationRepository);
-        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org1, user, role: OrganizationUserType.Owner);
+        var orgUser1 = new OrganizationUser
+        {
+            OrganizationId = org1.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+            Email = null    // confirmed OrgUsers use the email on the User table
+        };
+        await organizationUserRepository.CreateAsync(orgUser1);
         await policyRepository.CreateAsync(new Policy
         {
             OrganizationId = org1.Id,
@@ -36,14 +44,15 @@ public class GetPolicyDetailsByUserIdTests
             Data = CoreHelpers.ClassToJsonData(new TestPolicyData { BoolSetting = true, IntSetting = 5 })
         });
 
-        // OrgUser2 - custom user of org2
+        // OrgUser2 - custom user of org2 - accepted
         var org2 = await CreateEnterpriseOrg(organizationRepository);
         var orgUser2 = new OrganizationUser
         {
             OrganizationId = org2.Id,
             UserId = user.Id,
-            Status = OrganizationUserStatusType.Confirmed,
+            Status = OrganizationUserStatusType.Accepted,
             Type = OrganizationUserType.Custom,
+            Email = null    // accepted OrgUsers use the email on the User table
         };
         orgUser2.SetPermissions(new Permissions
         {
@@ -87,7 +96,7 @@ public class GetPolicyDetailsByUserIdTests
             PolicyType = PolicyType.SingleOrg,
             PolicyData = CoreHelpers.ClassToJsonData(new TestPolicyData { BoolSetting = false, IntSetting = 15 }),
             OrganizationUserType = OrganizationUserType.Custom,
-            OrganizationUserStatus = OrganizationUserStatusType.Confirmed,
+            OrganizationUserStatus = OrganizationUserStatusType.Accepted,
             OrganizationUserPermissionsData = CoreHelpers.ClassToJsonData(new Permissions { ManagePolicies = true }),
             IsProvider = false
         };
@@ -97,7 +106,7 @@ public class GetPolicyDetailsByUserIdTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetPolicyDetailsByUserId_InvitedUsers_Works(
+    public async Task GetPolicyDetailsByUserId_InvitedUser_Works(
         IUserRepository userRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
@@ -137,6 +146,85 @@ public class GetPolicyDetailsByUserIdTests
         };
 
         Assert.Equivalent(expectedPolicyDetails, actualPolicyDetails.Single());
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetPolicyDetailsByUserId_RevokedConfirmedUser_Works(
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await CreateEnterpriseOrg(organizationRepository);
+        // User has been confirmed to the org but then revoked
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Revoked,
+            Type = OrganizationUserType.Owner,
+            Email = null
+        };
+        await organizationUserRepository.CreateAsync(orgUser);
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = org.Id,
+            Enabled = true,
+            Type = PolicyType.SingleOrg,
+        });
+
+        // Act
+        var actualPolicyDetails = await policyRepository.GetPolicyDetailsByUserId(user.Id);
+
+        // Assert
+        var expectedPolicyDetails = new PolicyDetails
+        {
+            OrganizationUserId = orgUser.Id,
+            OrganizationId = org.Id,
+            PolicyType = PolicyType.SingleOrg,
+            OrganizationUserType = OrganizationUserType.Owner,
+            OrganizationUserStatus = OrganizationUserStatusType.Revoked,
+            IsProvider = false
+        };
+
+        Assert.Equivalent(expectedPolicyDetails, actualPolicyDetails.Single());
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetPolicyDetailsByUserId_RevokedInvitedUser_DoesntReturnPolicies(
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        IPolicyRepository policyRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await CreateEnterpriseOrg(organizationRepository);
+        // User has been invited to the org but then revoked - without ever being confirmed and linked to a user.
+        // This is an unhandled edge case because those users will go through policy enforcement later,
+        // as part of accepting their invite after being restored. For now this is just documented as expected behavior.
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = null,
+            Status = OrganizationUserStatusType.Revoked,
+            Type = OrganizationUserType.Owner,
+            Email = user.Email
+        };
+        await organizationUserRepository.CreateAsync(orgUser);
+        await policyRepository.CreateAsync(new Policy
+        {
+            OrganizationId = org.Id,
+            Enabled = true,
+            Type = PolicyType.SingleOrg,
+        });
+
+        // Act
+        var actualPolicyDetails = await policyRepository.GetPolicyDetailsByUserId(user.Id);
+
+        Assert.Empty(actualPolicyDetails);
     }
 
     [DatabaseTheory, DatabaseData]
