@@ -4,25 +4,25 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.Services;
 
-public class HttpPostEventHandler : IEventMessageHandler
+public class WebhookEventHandler : IEventMessageHandler
 {
     private readonly HttpClient _httpClient;
-    private readonly string _httpPostUrl;
+    private readonly string _webhookUrl;
 
-    public const string HttpClientName = "HttpPostEventHandlerHttpClient";
+    public const string HttpClientName = "WebhookEventHandlerHttpClient";
 
-    public HttpPostEventHandler(
+    public WebhookEventHandler(
         IHttpClientFactory httpClientFactory,
         GlobalSettings globalSettings)
     {
         _httpClient = httpClientFactory.CreateClient(HttpClientName);
-        _httpPostUrl = globalSettings.EventLogging.RabbitMq.HttpPostUrl;
+        _webhookUrl = globalSettings.EventLogging.WebhookUrl;
     }
 
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
         var content = JsonContent.Create(eventMessage);
-        var response = await _httpClient.PostAsync(_httpPostUrl, content);
+        var response = await _httpClient.PostAsync(_webhookUrl, content);
         response.EnsureSuccessStatusCode();
     }
 }
