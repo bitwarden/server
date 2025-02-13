@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.NotificationHub;
 
 namespace Bit.Core.Platform.Push.Internal;
 
@@ -9,7 +10,7 @@ public class NoopPushRegistrationService : IPushRegistrationService
         return Task.FromResult(0);
     }
 
-    public Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
+    public Task CreateOrUpdateRegistrationAsync(PushRegistrationData pushRegistrationData, string deviceId, string userId,
         string identifier, DeviceType type, IEnumerable<string> organizationIds)
     {
         return Task.FromResult(0);
