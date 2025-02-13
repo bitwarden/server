@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -463,6 +464,7 @@ public class TwoFactorAuthenticationValidatorTests
         user.TwoFactorRecoveryCode = token;
 
         _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
@@ -484,6 +486,7 @@ public class TwoFactorAuthenticationValidatorTests
         user.TwoFactorRecoveryCode = token;
 
         _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
