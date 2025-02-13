@@ -47,7 +47,6 @@ public class SyncSendPushNotification
     public DateTime RevisionDate { get; set; }
 }
 
-#nullable enable
 public class NotificationPushNotification
 {
     public Guid Id { get; set; }
@@ -63,7 +62,6 @@ public class NotificationPushNotification
     public DateTime? ReadDate { get; set; }
     public DateTime? DeletedDate { get; set; }
 }
-#nullable disable
 
 public class AuthRequestPushNotification
 {
@@ -82,4 +80,5 @@ public class OrganizationCollectionManagementPushNotification
     public Guid OrganizationId { get; init; }
     public bool LimitCollectionCreation { get; init; }
     public bool LimitCollectionDeletion { get; init; }
+    public bool LimitItemDeletion { get; init; }
 }

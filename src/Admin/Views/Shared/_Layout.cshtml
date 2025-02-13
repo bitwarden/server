@@ -1,10 +1,8 @@
 @using Bit.Admin.Enums;
-@using Bit.Core
 
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
-@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
@@ -13,8 +11,7 @@
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
-    var canPromoteProviderServiceUser = FeatureService.IsEnabled(FeatureFlagKeys.PromoteProviderServiceUserTool) &&
-                                        AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
+    var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
     var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);

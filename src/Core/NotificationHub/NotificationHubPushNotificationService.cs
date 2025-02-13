@@ -303,7 +303,8 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             {
                 OrganizationId = organization.Id,
                 LimitCollectionCreation = organization.LimitCollectionCreation,
-                LimitCollectionDeletion = organization.LimitCollectionDeletion
+                LimitCollectionDeletion = organization.LimitCollectionDeletion,
+                LimitItemDeletion = organization.LimitItemDeletion
             },
             false
         );
