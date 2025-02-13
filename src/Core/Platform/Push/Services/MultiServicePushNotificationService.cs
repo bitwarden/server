@@ -13,7 +13,7 @@ namespace Bit.Core.Platform.Push.Internal;
 
 public class MultiServicePushNotificationService : IPushNotificationService
 {
-    private readonly IEnumerable<IPushNotificationService>? _services;
+    private readonly IEnumerable<IPushNotificationService> _services;
     private readonly ILogger<MultiServicePushNotificationService> _logger;
 
     public MultiServicePushNotificationService(
@@ -181,7 +181,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
 
     private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
     {
-        if (_services == null)
+        if (!_services.Any())
         {
             _logger.LogWarning("No services found to push notification");
             return;
@@ -189,7 +189,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
 
         foreach (var service in _services)
         {
-            _logger.LogDebug("Pushing notification to service {}", service.GetType().Name);
+            _logger.LogDebug("Pushing notification to service {ServiceName}", service.GetType().Name);
             pushFunc(service);
         }
     }

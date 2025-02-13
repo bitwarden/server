@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -222,7 +221,6 @@ public class ToolsController : Controller
         return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId.Value });
     }
 
-    [RequireFeature(FeatureFlagKeys.PromoteProviderServiceUserTool)]
     [RequirePermission(Permission.Tools_PromoteProviderServiceUser)]
     public IActionResult PromoteProviderServiceUser()
     {
@@ -231,7 +229,6 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequireFeature(FeatureFlagKeys.PromoteProviderServiceUserTool)]
     [RequirePermission(Permission.Tools_PromoteProviderServiceUser)]
     public async Task<IActionResult> PromoteProviderServiceUser(PromoteProviderServiceUserModel model)
     {
