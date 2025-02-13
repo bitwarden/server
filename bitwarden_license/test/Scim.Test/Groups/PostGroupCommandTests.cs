@@ -1,10 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Scim.Context;
 using Bit.Scim.Groups;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -72,10 +70,6 @@ public class PostGroupCommandTests
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyByOrganizationIdAsync(organization.Id)
             .Returns(groups);
-
-        sutProvider.GetDependency<IScimContext>()
-            .RequestScimProvider
-            .Returns(ScimProviderType.Okta);
 
         var group = await sutProvider.Sut.PostGroupAsync(organization, scimGroupRequestModel);
 

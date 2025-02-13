@@ -104,8 +104,9 @@ public static class HubHelpers
                     .SendAsync("ReceiveMessage", organizationCollectionSettingsChangedNotification, cancellationToken);
                 break;
             case PushType.SyncNotification:
+            case PushType.SyncNotificationStatus:
                 var syncNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<SyncNotificationPushNotification>>(
+                    JsonSerializer.Deserialize<PushNotificationData<NotificationPushNotification>>(
                         notificationJson, _deserializerOptions);
                 if (syncNotification.Payload.UserId.HasValue)
                 {

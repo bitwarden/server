@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
@@ -42,7 +43,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -165,18 +166,44 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushSendAsync(send, PushType.SyncSendDelete);
     }
 
-    public async Task PushSyncNotificationAsync(Notification notification)
+    public async Task PushNotificationAsync(Notification notification)
     {
-        var message = new SyncNotificationPushNotification
+        var message = new NotificationPushNotification
         {
             Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
-            ClientType = notification.ClientType,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
         await SendMessageAsync(PushType.SyncNotification, message, true);
+    }
+
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    {
+        var message = new NotificationPushNotification
+        {
+            Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
+        };
+
+        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)
@@ -202,7 +229,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await _queueClient.SendMessageAsync(message);
     }
 
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
@@ -214,15 +241,15 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         return currentContext?.DeviceIdentifier;
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
