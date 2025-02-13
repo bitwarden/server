@@ -29,6 +29,7 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "src/**/Entities/**/*.cs" # Database entity definitions
 
 jobs:
   check-test-secrets:
