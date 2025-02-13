@@ -1,4 +1,6 @@
-﻿using Bit.Core.Billing.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.StaticStore;
 
@@ -42,6 +44,13 @@ public class PlanResponseModel : ResponseModel
         }
 
         PasswordManager = new PasswordManagerPlanFeaturesResponseModel(plan.PasswordManager);
+    }
+
+    public PlanResponseModel(Organization organization, string obj = "plan") : base(obj)
+    {
+        Type = organization.PlanType;
+        ProductTier = organization.PlanType.GetProductTier();
+        Name = organization.Plan;
     }
 
     public PlanType Type { get; set; }

@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Models.Business;
 
@@ -14,17 +15,15 @@ public class ProviderSubscriptionUpdate : SubscriptionUpdate
     protected override List<string> PlanIds => [_planId];
 
     public ProviderSubscriptionUpdate(
-        PlanType planType,
+        Plan plan,
         int previouslyPurchasedSeats,
         int newlyPurchasedSeats)
     {
-        if (!planType.SupportsConsolidatedBilling())
+        if (!plan.Type.SupportsConsolidatedBilling())
         {
             throw new BillingException(
                 message: $"Cannot create a {nameof(ProviderSubscriptionUpdate)} for {nameof(PlanType)} that doesn't support consolidated billing");
         }
-
-        var plan = Utilities.StaticStore.GetPlan(planType);
 
         _planId = plan.PasswordManager.StripeProviderPortalSeatPlanId;
         _previouslyPurchasedSeats = previouslyPurchasedSeats;

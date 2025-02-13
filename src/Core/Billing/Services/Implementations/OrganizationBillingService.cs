@@ -3,12 +3,12 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -26,6 +26,7 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IPricingClient pricingClient,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
@@ -63,13 +64,22 @@ public class OrganizationBillingService(
             return null;
         }
 
-        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
+        if (globalSettings.SelfHosted)
+        {
+            return OrganizationMetadata.Default;
+        }
+
+        var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
+
         var isManaged = organization.Status == OrganizationStatusType.Managed;
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
-                false, false, false, false, null, null, null);
+            return OrganizationMetadata.Default with
+            {
+                IsEligibleForSelfHost = isEligibleForSelfHost,
+                IsManaged = isManaged
+            };
         }
 
         var customer = await subscriberService.GetCustomer(organization,
@@ -77,18 +87,21 @@ public class OrganizationBillingService(
 
         var subscription = await subscriberService.GetSubscription(organization);
 
-        var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
-        var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
-        var isSubscriptionCanceled = IsSubscriptionCanceled(subscription);
-        var hasSubscription = true;
-        var openInvoice = await HasOpenInvoiceAsync(subscription);
-        var hasOpenInvoice = openInvoice.HasOpenInvoice;
-        var invoiceDueDate = openInvoice.DueDate;
-        var invoiceCreatedDate = openInvoice.CreatedDate;
-        var subPeriodEndDate = subscription?.CurrentPeriodEnd;
+        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
 
-        return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid, hasSubscription, hasOpenInvoice, isSubscriptionCanceled, invoiceDueDate, invoiceCreatedDate, subPeriodEndDate);
+        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+
+        return new OrganizationMetadata(
+            isEligibleForSelfHost,
+            isManaged,
+            isOnSecretsManagerStandalone,
+            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid,
+            true,
+            invoice?.Status == StripeConstants.InvoiceStatus.Open,
+            subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
+            invoice?.DueDate,
+            invoice?.Created,
+            subscription.CurrentPeriodEnd);
     }
 
     public async Task UpdatePaymentMethod(
@@ -299,7 +312,7 @@ public class OrganizationBillingService(
         Customer customer,
         SubscriptionSetup subscriptionSetup)
     {
-        var plan = subscriptionSetup.Plan;
+        var plan = await pricingClient.GetPlanOrThrow(subscriptionSetup.PlanType);
 
         var passwordManagerOptions = subscriptionSetup.PasswordManagerOptions;
 
@@ -385,15 +398,17 @@ public class OrganizationBillingService(
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
-    private static bool IsEligibleForSelfHost(
+    private async Task<bool> IsEligibleForSelfHostAsync(
         Organization organization)
     {
-        var eligibleSelfHostPlans = StaticStore.Plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
+        var plans = await pricingClient.ListPlans();
+
+        var eligibleSelfHostPlans = plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
 
         return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
-    private static bool IsOnSecretsManagerStandalone(
+    private async Task<bool> IsOnSecretsManagerStandalone(
         Organization organization,
         Customer? customer,
         Subscription? subscription)
@@ -403,7 +418,7 @@ public class OrganizationBillingService(
             return false;
         }
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {
@@ -424,38 +439,5 @@ public class OrganizationBillingService(
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }
 
-    private static bool IsSubscriptionUnpaid(Subscription subscription)
-    {
-        if (subscription == null)
-        {
-            return false;
-        }
-
-        return subscription.Status == "unpaid";
-    }
-
-    private async Task<(bool HasOpenInvoice, DateTime? CreatedDate, DateTime? DueDate)> HasOpenInvoiceAsync(Subscription subscription)
-    {
-        if (subscription?.LatestInvoiceId == null)
-        {
-            return (false, null, null);
-        }
-
-        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
-
-        return invoice?.Status == "open"
-            ? (true, invoice.Created, invoice.DueDate)
-            : (false, null, null);
-    }
-
-    private static bool IsSubscriptionCanceled(Subscription subscription)
-    {
-        if (subscription == null)
-        {
-            return false;
-        }
-
-        return subscription.Status == "canceled";
-    }
     #endregion
 }
