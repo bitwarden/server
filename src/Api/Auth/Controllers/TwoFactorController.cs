@@ -304,7 +304,7 @@ public class TwoFactorController : Controller
 
         if (user != null)
         {
-            // check if 2FA email is from passwordless
+            // Check if 2FA email is from Passwordless.
             if (!string.IsNullOrEmpty(requestModel.AuthRequestAccessCode))
             {
                 if (await _verifyAuthRequestCommand
@@ -317,17 +317,14 @@ public class TwoFactorController : Controller
             }
             else if (!string.IsNullOrEmpty(requestModel.SsoEmail2FaSessionToken))
             {
-                if (this.ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
+                if (ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
                 {
                     await _userService.SendTwoFactorEmailAsync(user);
                     return;
                 }
-                else
-                {
-                    await this.ThrowDelayedBadRequestExceptionAsync(
-                        "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.",
-                        2000);
-                }
+
+                await ThrowDelayedBadRequestExceptionAsync(
+                    "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.");
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
             {
@@ -336,8 +333,7 @@ public class TwoFactorController : Controller
             }
         }
 
-        await this.ThrowDelayedBadRequestExceptionAsync(
-            "Cannot send two-factor email.", 2000);
+        await ThrowDelayedBadRequestExceptionAsync("Cannot send two-factor email.");
     }
 
     [HttpPut("email")]
@@ -374,7 +370,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorProviderResponseModel> PutOrganizationDisable(string id,
         [FromBody] TwoFactorProviderRequestModel model)
     {
-        var user = await CheckAsync(model, false);
+        await CheckAsync(model, false);
 
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.ManagePolicies(orgIdGuid))
@@ -401,6 +397,10 @@ public class TwoFactorController : Controller
         return response;
     }
 
+    /// <summary>
+    /// To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.
+    /// </summary>
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     [HttpPost("recover")]
     [AllowAnonymous]
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)
@@ -463,10 +463,8 @@ public class TwoFactorController : Controller
             await Task.Delay(2000);
             throw new BadRequestException(name, $"{name} is invalid.");
         }
-        else
-        {
-            await Task.Delay(500);
-        }
+
+        await Task.Delay(500);
     }
 
     private bool ValidateSsoEmail2FaToken(string ssoEmail2FaSessionToken, User user)
