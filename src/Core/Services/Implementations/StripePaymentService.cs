@@ -2065,12 +2065,7 @@ public class StripePaymentService : IPaymentService
 
         if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
-            var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
-
-            if (gatewayCustomer.Discount != null)
-            {
-                options.Discounts.Add(new InvoiceDiscountOptions { Discount = gatewayCustomer.Discount.Id });
-            }
+            options.Customer = gatewayCustomerId;
         }
 
         if (!string.IsNullOrWhiteSpace(gatewaySubscriptionId))
