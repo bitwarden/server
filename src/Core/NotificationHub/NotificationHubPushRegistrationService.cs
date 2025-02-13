@@ -85,25 +85,25 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         {
             case DeviceType.Android:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
-                    "{\"data\":{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}}",
+                    "{\"message\":{\"data\":{\"type\":\"$(type)\",\"payload\":\"$(payload)\"}}}",
                     userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("message",
-                    "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                    "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
                     "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
                     userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
-                    "{\"data\":{\"data\":{\"type\":\"#(type)\"}," +
+                    "{\"message\":{\"data\":{\"type\":\"$(type)\"}," +
                     "\"notification\":{\"title\":\"$(title)\",\"body\":\"$(message)\"}}}",
                     userId, identifier, clientType, organizationIds));
                 installation.Platform = NotificationPlatform.FcmV1;
                 break;
             case DeviceType.iOS:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
-                    "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
+                    "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}" +
                     "\"aps\":{\"content-available\":1}}",
                     userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("message",
-                 "{\"data\":{\"type\":\"#(type)\"}," +
+                    "{\"data\":{\"type\":\"#(type)\"}," +
                     "\"aps\":{\"alert\":\"$(message)\",\"badge\":null,\"content-available\":1}}", userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("badgeMessage",
                     "{\"data\":{\"type\":\"#(type)\"}," +

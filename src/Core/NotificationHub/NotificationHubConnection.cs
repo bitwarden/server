@@ -8,25 +8,11 @@ using Microsoft.Azure.NotificationHubs;
 public class NotificationHubConnection
 {
     public string HubName { get; init; }
-    private string _connectionString;
-    private Uri _endpoint;
-    private byte[] _sasKey;
-    private string _sasKeyName;
-    public string ConnectionString
-    {
-        get => _connectionString;
-        init
-        {
-            _connectionString = value;
-            var connectionStringBuilder = new NotificationHubConnectionStringBuilder(_connectionString);
-            _endpoint = connectionStringBuilder.Endpoint;
-            _sasKey = Encoding.UTF8.GetBytes(connectionStringBuilder.SharedAccessKey);
-            _sasKeyName = connectionStringBuilder.SharedAccessKeyName;
-        }
-    }
-    public Uri Endpoint => new NotificationHubConnectionStringBuilder(ConnectionString).Endpoint;
-    private string SasKey => new NotificationHubConnectionStringBuilder(ConnectionString).SharedAccessKey;
-    private string SasKeyName => new NotificationHubConnectionStringBuilder(ConnectionString).SharedAccessKeyName;
+    public string ConnectionString { get; init; }
+    private Lazy<NotificationHubConnectionStringBuilder> _parsedConnectionString;
+    public Uri Endpoint => _parsedConnectionString.Value.Endpoint;
+    private string SasKey => _parsedConnectionString.Value.SharedAccessKey;
+    private string SasKeyName => _parsedConnectionString.Value.SharedAccessKeyName;
     public bool EnableSendTracing { get; init; }
     private NotificationHubClient _hubClient;
     /// <summary>
@@ -144,7 +130,10 @@ public class NotificationHubConnection
         }
     }
 
-    private NotificationHubConnection() { }
+    private NotificationHubConnection()
+    {
+        _parsedConnectionString = new(() => new NotificationHubConnectionStringBuilder(ConnectionString));
+    }
 
     /// <summary>
     /// Creates a new NotificationHubConnection from the given settings.
