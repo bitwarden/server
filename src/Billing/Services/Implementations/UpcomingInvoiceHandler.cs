@@ -1,7 +1,6 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -161,15 +160,15 @@ public class UpcomingInvoiceHandler : IUpcomingInvoiceHandler
 
     private async Task<Subscription> TryEnableAutomaticTaxAsync(Subscription subscription)
     {
-        var customerGetOptions = new CustomerGetOptions { Expand = ["tax"] };
-        var customer = await _stripeFacade.GetCustomer(subscription.CustomerId, customerGetOptions);
-
-        var subscriptionUpdateOptions = new SubscriptionUpdateOptions();
-
-        if (!subscriptionUpdateOptions.EnableAutomaticTax(customer, subscription))
+        if (subscription.AutomaticTax.Enabled)
         {
             return subscription;
         }
+
+        var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+        {
+            AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+        };
 
         return await _stripeFacade.UpdateSubscription(subscription.Id, subscriptionUpdateOptions);
     }
