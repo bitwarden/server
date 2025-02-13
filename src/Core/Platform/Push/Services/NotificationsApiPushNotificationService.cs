@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -16,7 +17,6 @@ namespace Bit.Core.Platform.Push;
 
 public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
 {
-    private readonly GlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public NotificationsApiPushNotificationService(
@@ -33,7 +33,6 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             globalSettings.InternalIdentityKey,
             logger)
     {
-        _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -52,7 +51,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -203,6 +202,27 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await SendMessageAsync(PushType.SyncNotification, message, true);
     }
 
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    {
+        var message = new NotificationPushNotification
+        {
+            Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
+        };
+
+        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
+    }
+
     private async Task PushSendAsync(Send send, PushType type)
     {
         if (send.UserId.HasValue)
@@ -225,7 +245,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await SendAsync(HttpMethod.Post, "send", request);
     }
 
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
@@ -233,19 +253,19 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         }
 
         var currentContext =
-            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
