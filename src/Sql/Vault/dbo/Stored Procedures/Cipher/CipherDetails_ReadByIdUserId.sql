@@ -21,7 +21,8 @@ SELECT
         [Key],
         [OrganizationUseTotp],
         MAX ([Edit]) AS [Edit],
-        MAX ([ViewPassword]) AS [ViewPassword]
+        MAX ([ViewPassword]) AS [ViewPassword],
+        MAX ([Manage]) AS [Manage]
     FROM
         [dbo].[UserCipherDetails](@UserId)
     WHERE
