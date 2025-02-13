@@ -160,21 +160,18 @@ public static class FeatureFlagKeys
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
-    public const string AuthenticatorSynciOS = "enable-authenticator-sync-ios";
-    public const string AuthenticatorSyncAndroid = "enable-authenticator-sync-android";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
     public const string Argon2Default = "argon2-default";
     public const string UsePricingService = "use-pricing-service";
     public const string RecordInstallationLastActivityDate = "installation-last-activity-date";
-    public const string EnablePasswordManagerSyncAndroid = "enable-password-manager-sync-android";
-    public const string EnablePasswordManagerSynciOS = "enable-password-manager-sync-ios";
     public const string AccountDeprovisioningBanner = "pm-17120-account-deprovisioning-admin-console-banner";
     public const string SingleTapPasskeyCreation = "single-tap-passkey-creation";
     public const string SingleTapPasskeyAuthentication = "single-tap-passkey-authentication";
     public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
     public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string AndroidMutualTls = "mutual-tls";
+    public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
 
     public static List<string> GetAllKeys()
     {
