@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.Billing.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -30,6 +31,7 @@ public class PasswordManagerInviteUserValidationTests
     public void Validate_NumberOfSeatsToAddMatchesSeatsAvailable_ShouldReturnValidResult(Organization organization)
     {
         organization.Seats = 8;
+        organization.PlanType = PlanType.EnterpriseAnnually;
         var seatsOccupiedByUsers = 4;
         var additionalSeats = 4;
 
@@ -59,6 +61,25 @@ public class PasswordManagerInviteUserValidationTests
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(InviteUserValidationErrorMessages.SeatLimitHasBeenReachedError, result.ErrorMessageString);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_GivenThePlanDoesNotAllowAdditionalSeats_ShouldBeInvalidMessageOfPlanNotAllowingSeats(Organization organization)
+    {
+        organization.Seats = 8;
+        var seatsOccupiedByUsers = 4;
+        var additionalSeats = 4;
+        organization.PlanType = PlanType.Free;
+
+        var organizationDto = OrganizationDto.FromOrganization(organization);
+
+        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, seatsOccupiedByUsers, additionalSeats);
+
+        var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
+
+        Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
+        Assert.Equal(InviteUserValidationErrorMessages.PlanDoesNotAllowAdditionalSeats, result.ErrorMessageString);
     }
 
 }

@@ -5,8 +5,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class PasswordManagerInviteUserValidation
 {
-
-    // TODO need to add plan validation from AdjustSeatsAsync
+    // NOTE This is only for validating adding users to an organization, not removing
 
     public static ValidationResult<PasswordManagerSubscriptionUpdate> Validate(PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
@@ -24,6 +23,18 @@ public static class PasswordManagerInviteUserValidation
             subscriptionUpdate.UpdatedSeatTotal > subscriptionUpdate.MaxAutoScaleSeats)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(SeatLimitHasBeenReachedError);
+        }
+
+        if (subscriptionUpdate.Plan.PasswordManager.HasAdditionalSeatsOption is false)
+        {
+            return new Invalid<PasswordManagerSubscriptionUpdate>(PlanDoesNotAllowAdditionalSeats);
+        }
+
+        // Apparently MaxAdditionalSeats is never set. Can probably be removed.
+        if (subscriptionUpdate.AdditionalSeats > subscriptionUpdate.Plan.PasswordManager.MaxAdditionalSeats)
+        {
+            return new Invalid<PasswordManagerSubscriptionUpdate>(string.Format(PlanOnlyAllowsMaxAdditionalSeats,
+                subscriptionUpdate.Plan.PasswordManager.MaxAdditionalSeats));
         }
 
         return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
