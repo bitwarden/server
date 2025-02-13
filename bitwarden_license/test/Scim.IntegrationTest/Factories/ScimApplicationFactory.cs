@@ -9,8 +9,6 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 
@@ -18,7 +16,8 @@ namespace Bit.Scim.IntegrationTest.Factories;
 
 public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 {
-    public readonly new TestServer Server;
+    public const int InitialGroupCount = 3;
+    public const int InitialGroupUsersCount = 2;
 
     public static readonly Guid TestUserId1 = Guid.Parse("2e8173db-8e8d-4de1-ac38-91b15c6d8dcb");
     public static readonly Guid TestUserId2 = Guid.Parse("b57846fc-0e94-4c93-9de5-9d0389eeadfb");
@@ -33,32 +32,29 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
     public static readonly Guid TestOrganizationUserId3 = Guid.Parse("be2f9045-e2b6-4173-ad44-4c69c3ea8140");
     public static readonly Guid TestOrganizationUserId4 = Guid.Parse("1f5689b7-e96e-4840-b0b1-eb3d5b5fd514");
 
-    public ScimApplicationFactory()
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        WebApplicationFactory<Startup> webApplicationFactory = WithWebHostBuilder(builder =>
+        base.ConfigureWebHost(builder);
+
+        builder.ConfigureServices(services =>
         {
-            builder.ConfigureServices(services =>
+            services
+                .AddAuthentication("Test")
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
+
+            // Override to bypass SCIM authorization
+            services.AddAuthorization(config =>
             {
-                services
-                    .AddAuthentication("Test")
-                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
-
-                // Override to bypass SCIM authorization
-                services.AddAuthorization(config =>
+                config.AddPolicy("Scim", policy =>
                 {
-                    config.AddPolicy("Scim", policy =>
-                    {
-                        policy.RequireAssertion(a => true);
-                    });
+                    policy.RequireAssertion(a => true);
                 });
-
-                var mailService = services.First(sd => sd.ServiceType == typeof(IMailService));
-                services.Remove(mailService);
-                services.AddSingleton<IMailService, NoopMailService>();
             });
-        });
 
-        Server = webApplicationFactory.Server;
+            var mailService = services.First(sd => sd.ServiceType == typeof(IMailService));
+            services.Remove(mailService);
+            services.AddSingleton<IMailService, NoopMailService>();
+        });
     }
 
     public async Task<HttpContext> GroupsGetAsync(Guid organizationId, Guid id)
