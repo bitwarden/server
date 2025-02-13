@@ -55,15 +55,31 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
-        await DeleteManyUsersAsync(organizationId, new[] { organizationUserId }, deletingUserId);
+        var result = await InternalDeleteManyUsersAsync(organizationId, new[] { organizationUserId }, deletingUserId);
+
+        var exception = result.Single().exception;
+
+        if (exception != null)
+        {
+            throw exception;
+        }
     }
 
     public async Task<IEnumerable<(Guid OrganizationUserId, string? ErrorMessage)>> DeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
     {
+        var userDeletionResults = await InternalDeleteManyUsersAsync(organizationId, orgUserIds, deletingUserId);
+
+        return userDeletionResults
+            .Select(result => (result.OrganizationUserId, result.exception?.Message))
+            .ToList();
+    }
+
+    private async Task<IEnumerable<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, Exception? exception)>> InternalDeleteManyUsersAsync(Guid organizationId, IEnumerable<Guid> orgUserIds, Guid? deletingUserId)
+    {
         var orgUsers = await _organizationUserRepository.GetManyAsync(orgUserIds);
         var users = await GetUsersAsync(orgUsers);
         var managementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(organizationId, orgUserIds);
-        var userDeletionResults = new List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, string? ErrorMessage)>();
+        var userDeletionResults = new List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, Exception? exception)>();
 
         foreach (var orgUserId in orgUserIds)
         {
@@ -89,11 +105,11 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
                 await CancelPremiumAsync(user);
 
-                userDeletionResults.Add((orgUserId, orgUser, user, string.Empty));
+                userDeletionResults.Add((orgUserId, orgUser, user, null));
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                userDeletionResults.Add((orgUserId, orgUser, user, ex.Message));
+                userDeletionResults.Add((orgUserId, orgUser, user, exception));
             }
         }
 
@@ -101,9 +117,7 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
         await LogDeletedOrganizationUsersAsync(userDeletionResults);
 
-        return userDeletionResults
-            .Select(i => (i.OrganizationUserId, i.ErrorMessage))
-            .ToList();
+        return userDeletionResults;
     }
 
     private async Task<IEnumerable<User>> GetUsersAsync(ICollection<OrganizationUser> orgUsers)
@@ -185,12 +199,13 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
     }
 
     private async Task LogDeletedOrganizationUsersAsync(
-        List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, string? ErrorMessage)> results)
+        List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, Exception? exception)> results)
     {
         var eventDate = DateTime.UtcNow;
 
         var events = results
-            .Where(result => string.IsNullOrEmpty(result.ErrorMessage)
+            .Where(result =>
+                result.exception == null
                 && result.orgUser != null)
             .Select(result => (result.orgUser!, (EventType)EventType.OrganizationUser_Deleted, (DateTime?)eventDate))
             .ToList();
@@ -200,11 +215,11 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
             await _eventService.LogOrganizationUserEventsAsync(events);
         }
     }
-    private async Task HandleUserDeletionsAsync(List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, string? ErrorMessage)> userDeletionResults)
+    private async Task HandleUserDeletionsAsync(List<(Guid OrganizationUserId, OrganizationUser? orgUser, User? user, Exception? exception)> userDeletionResults)
     {
         var usersToDelete = userDeletionResults
             .Where(result =>
-                string.IsNullOrEmpty(result.ErrorMessage)
+                result.exception == null
                 && result.user != null)
             .Select(i => i.user!);
 
