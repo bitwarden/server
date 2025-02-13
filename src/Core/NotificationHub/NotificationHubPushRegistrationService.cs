@@ -99,7 +99,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
             case DeviceType.iOS:
                 installation.Templates.Add(BuildInstallationTemplate("payload",
-                    "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}}" +
+                    "{\"data\":{\"type\":\"#(type)\",\"payload\":\"$(payload)\"}," +
                     "\"aps\":{\"content-available\":1}}",
                     userId, identifier, clientType, organizationIds));
                 installation.Templates.Add(BuildInstallationTemplate("message",

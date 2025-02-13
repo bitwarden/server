@@ -41,7 +41,7 @@ public class DeviceServiceTests
             Name = "test device",
             Type = DeviceType.Android,
             UserId = userId,
-            PushToken = "testtoken",
+            PushToken = "testToken",
             Identifier = "testid"
         };
         await deviceService.SaveAsync(device);
@@ -80,7 +80,7 @@ public class DeviceServiceTests
             Name = "test device",
             Type = DeviceType.Android,
             UserId = userId,
-            PushToken = "testtoken",
+            PushToken = "testToken",
             Identifier = "testid"
         };
         await deviceService.SaveAsync(device);

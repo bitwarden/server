@@ -43,7 +43,8 @@ public class ConfigResponseModel : ResponseModel
             Sso = globalSettings.BaseServiceUri.Sso
         };
         FeatureStates = featureService.GetAll();
-        Push = new PushSettings((bool)FeatureStates[FeatureFlagKeys.WebPush], globalSettings);
+        var webPushEnabled = FeatureStates.ContainsKey(FeatureFlagKeys.WebPush) ? (bool)FeatureStates[FeatureFlagKeys.WebPush] : false;
+        Push = PushSettings.Build(webPushEnabled, globalSettings);
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration
@@ -69,38 +70,18 @@ public class EnvironmentConfigResponseModel
 
 public class PushSettings
 {
-    private readonly bool _webPushEnabled;
-    private readonly string _vapidPublicKey;
-    public PushTechnologyType PushTechnology
-    {
-        get
-        {
-            if (VapidPublicKey != null)
-            {
-                return PushTechnologyType.WebPush;
-            }
-            return PushTechnologyType.SignalR;
-        }
-    }
-    /// <summary>
-    /// Only for use when PushTechnology is WebPush.
-    /// </summary>
-    public string VapidPublicKey
-    {
-        get
-        {
-            if (_webPushEnabled)
-            {
-                return _vapidPublicKey;
-            }
-            return null;
-        }
-    }
+    public PushTechnologyType PushTechnology { get; private init; }
+    public string VapidPublicKey { get; private init; }
 
-    public PushSettings(bool webPushEnabled, IGlobalSettings globalSettings)
+    public static PushSettings Build(bool webPushEnabled, IGlobalSettings globalSettings)
     {
-        _webPushEnabled = webPushEnabled;
-        _vapidPublicKey = globalSettings.WebPush.VapidPublicKey;
+        var vapidPublicKey = webPushEnabled ? globalSettings.WebPush.VapidPublicKey : null;
+        var pushTechnology = vapidPublicKey != null ? PushTechnologyType.WebPush : PushTechnologyType.SignalR;
+        return new()
+        {
+            VapidPublicKey = vapidPublicKey,
+            PushTechnology = pushTechnology
+        };
     }
 }
 
