@@ -31,6 +31,9 @@ public interface IPushNotificationService
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
     Task PushSyncOrganizationStatusAsync(Organization organization);
     Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization);
+
+    Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null);
     Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null);
     Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
