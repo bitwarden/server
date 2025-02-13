@@ -43,7 +43,7 @@ public class PushController : Controller
     {
         CheckUsage();
         await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type);
+            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.OrganizationIds.Select(Prefix));
     }
 
     [HttpPost("delete")]
@@ -79,12 +79,12 @@ public class PushController : Controller
         if (!string.IsNullOrWhiteSpace(model.UserId))
         {
             await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
-                   model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
+                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
         }
         else if (!string.IsNullOrWhiteSpace(model.OrganizationId))
         {
             await _pushNotificationService.SendPayloadToOrganizationAsync(Prefix(model.OrganizationId),
-                model.Type.Value, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId));
+                model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
         }
     }
 

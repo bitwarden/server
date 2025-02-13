@@ -13,14 +13,14 @@ using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 namespace Bit.Core.Test.Services;
 
 [SutProviderCustomize]
-public class HttpPostEventHandlerTests
+public class WebhookEventHandlerTests
 {
     private readonly MockedHttpMessageHandler _handler;
     private HttpClient _httpClient;
 
-    private const string _httpPostUrl = "http://localhost/test/event";
+    private const string _webhookUrl = "http://localhost/test/event";
 
-    public HttpPostEventHandlerTests()
+    public WebhookEventHandlerTests()
     {
         _handler = new MockedHttpMessageHandler();
         _handler.Fallback
@@ -29,15 +29,15 @@ public class HttpPostEventHandlerTests
         _httpClient = _handler.ToHttpClient();
     }
 
-    public SutProvider<HttpPostEventHandler> GetSutProvider()
+    public SutProvider<WebhookEventHandler> GetSutProvider()
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
-        clientFactory.CreateClient(HttpPostEventHandler.HttpClientName).Returns(_httpClient);
+        clientFactory.CreateClient(WebhookEventHandler.HttpClientName).Returns(_httpClient);
 
         var globalSettings = new GlobalSettings();
-        globalSettings.EventLogging.RabbitMq.HttpPostUrl = _httpPostUrl;
+        globalSettings.EventLogging.WebhookUrl = _webhookUrl;
 
-        return new SutProvider<HttpPostEventHandler>()
+        return new SutProvider<WebhookEventHandler>()
             .SetDependency(globalSettings)
             .SetDependency(clientFactory)
             .Create();
@@ -51,7 +51,7 @@ public class HttpPostEventHandlerTests
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
-            Arg.Is(AssertHelper.AssertPropertyEqual<string>(HttpPostEventHandler.HttpClientName))
+            Arg.Is(AssertHelper.AssertPropertyEqual<string>(WebhookEventHandler.HttpClientName))
         );
 
         Assert.Single(_handler.CapturedRequests);
@@ -60,7 +60,7 @@ public class HttpPostEventHandlerTests
         var returned = await request.Content.ReadFromJsonAsync<EventMessage>();
 
         Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Equal(_httpPostUrl, request.RequestUri.ToString());
+        Assert.Equal(_webhookUrl, request.RequestUri.ToString());
         AssertHelper.AssertPropertyEqual(eventMessage, returned, new[] { "IdempotencyId" });
     }
 }
