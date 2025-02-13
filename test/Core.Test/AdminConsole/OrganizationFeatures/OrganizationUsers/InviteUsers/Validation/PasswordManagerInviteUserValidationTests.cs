@@ -50,6 +50,7 @@ public class PasswordManagerInviteUserValidationTests
     {
         organization.Seats = 4;
         organization.MaxAutoscaleSeats = 4;
+        organization.PlanType = PlanType.EnterpriseAnnually;
         var seatsOccupiedByUsers = 4;
         var additionalSeats = 1;
 
@@ -81,5 +82,4 @@ public class PasswordManagerInviteUserValidationTests
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(InviteUserValidationErrorMessages.PlanDoesNotAllowAdditionalSeats, result.ErrorMessageString);
     }
-
 }

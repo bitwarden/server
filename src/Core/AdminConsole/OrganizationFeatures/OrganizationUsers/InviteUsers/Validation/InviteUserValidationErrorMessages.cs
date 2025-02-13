@@ -18,4 +18,5 @@ public static class InviteUserValidationErrorMessages
     public const string OrganizationNoSecretsManager = "Organization has no access to Secrets Manager";
     public const string SecretsManagerSeatLimitReached = "Secrets Manager seat limit has been reached.";
     public const string SecretsManagerCannotExceedPasswordManager = "You cannot have more Secrets Manager seats than Password Manager seats.";
+    public const string SecretsManagerAdditionalSeatLimitReached = "You have reached the maximum number of Secrets Manager seats ({0}) for this plan.";
 }

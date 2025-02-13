@@ -23,25 +23,34 @@ public class PasswordManagerSubscriptionUpdate
 
     public int? UpdatedSeatTotal => Seats + SeatsRequiredToAdd;
 
-    public Plan Plan { get; }
+    public Plan.PasswordManagerPlanFeatures PasswordManagerPlan { get; }
 
-    private PasswordManagerSubscriptionUpdate(int? organizationSeats, int? organizationAutoScaleSeatLimit, int currentSeats, int seatsToAdd, Plan plan)
+    private PasswordManagerSubscriptionUpdate(int? organizationSeats,
+        int? organizationAutoScaleSeatLimit,
+        int currentSeats,
+        int seatsToAdd,
+        Plan.PasswordManagerPlanFeatures plan)
     {
         Seats = organizationSeats;
         MaxAutoScaleSeats = organizationAutoScaleSeatLimit;
         OccupiedSeats = currentSeats;
         AdditionalSeats = seatsToAdd;
-        Plan = plan;
+        PasswordManagerPlan = plan;
     }
 
     public static PasswordManagerSubscriptionUpdate Create(OrganizationDto organizationDto, int occupiedSeats, int seatsToAdd)
     {
-        return new PasswordManagerSubscriptionUpdate(organizationDto.Seats, organizationDto.MaxAutoScaleSeats, occupiedSeats, seatsToAdd, organizationDto.Plan);
+        return new PasswordManagerSubscriptionUpdate(
+            organizationDto.Seats,
+            organizationDto.MaxAutoScaleSeats,
+            occupiedSeats,
+            seatsToAdd,
+            organizationDto.Plan.PasswordManager);
     }
 
     public static PasswordManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest refined)
     {
         return new PasswordManagerSubscriptionUpdate(refined.Organization.Seats, refined.Organization.MaxAutoScaleSeats,
-            refined.OccupiedPmSeats, refined.Invites.Length, refined.Organization.Plan);
+            refined.OccupiedPmSeats, refined.Invites.Length, refined.Organization.Plan.PasswordManager);
     }
 }
