@@ -135,33 +135,6 @@ public static class HubHelpers
                 }
 
                 break;
-            case PushType.SyncNotification:
-            case PushType.SyncNotificationStatus:
-                var syncNotification =
-                    JsonSerializer.Deserialize<PushNotificationData<NotificationPushNotification>>(
-                        notificationJson, _deserializerOptions);
-                if (syncNotification.Payload.UserId.HasValue)
-                {
-                    if (syncNotification.Payload.ClientType == ClientType.All)
-                    {
-                        await hubContext.Clients.User(syncNotification.Payload.UserId.ToString())
-                            .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
-                    }
-                    else
-                    {
-                        await hubContext.Clients.Group(NotificationsHub.GetUserGroup(
-                                syncNotification.Payload.UserId.Value, syncNotification.Payload.ClientType))
-                            .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
-                    }
-                }
-                else if (syncNotification.Payload.OrganizationId.HasValue)
-                {
-                    await hubContext.Clients.Group(NotificationsHub.GetOrganizationGroup(
-                            syncNotification.Payload.OrganizationId.Value, syncNotification.Payload.ClientType))
-                        .SendAsync(_receiveMessageMethod, syncNotification, cancellationToken);
-                }
-
-                break;
             default:
                 break;
         }
