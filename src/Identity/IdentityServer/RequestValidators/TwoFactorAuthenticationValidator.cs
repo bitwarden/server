@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity.TokenProviders;
@@ -154,9 +155,12 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
-        if (type is TwoFactorProviderType.RecoveryCode)
+        if (featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin))
         {
-            return await _userService.RecoverTwoFactorAsync(user, token);
+            if (type is TwoFactorProviderType.RecoveryCode)
+            {
+                return await _userService.RecoverTwoFactorAsync(user, token);
+            }
         }
 
         // These cases we want to always return false, U2f is deprecated and OrganizationDuo
