@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -62,8 +63,20 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
         {
             try
             {
-                var eventMessage = JsonSerializer.Deserialize<EventMessage>(eventArgs.Body.Span);
-                await _handler.HandleEventAsync(eventMessage);
+                using var jsonDocument = JsonDocument.Parse(Encoding.UTF8.GetString(eventArgs.Body.Span));
+                var root = jsonDocument.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    var eventMessages = root.Deserialize<List<EventMessage>>();
+                    await _handler.HandleManyEventAsync(eventMessages);
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    var eventMessage = root.Deserialize<EventMessage>();
+                    await _handler.HandleEventAsync(eventMessage);
+
+                }
             }
             catch (Exception ex)
             {
