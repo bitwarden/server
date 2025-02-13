@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using RabbitMQ.Client;
 
 namespace Bit.Core.Services;
 public class RabbitMqEventWriteService : IEventWriteService, IAsyncDisposable

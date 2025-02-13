@@ -2,6 +2,8 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 namespace Bit.Core.Services;
 

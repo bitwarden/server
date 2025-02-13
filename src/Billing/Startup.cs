@@ -10,6 +10,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 using Stripe;
 
 namespace Bit.Billing;
