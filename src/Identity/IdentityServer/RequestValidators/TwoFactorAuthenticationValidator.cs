@@ -155,7 +155,7 @@ public class TwoFactorAuthenticationValidator(
             return false;
         }
 
-        if (featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin))
+        if (_featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin))
         {
             if (type is TwoFactorProviderType.RecoveryCode)
             {
