@@ -1,6 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -24,6 +25,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationDisableCommand _organizationDisableCommand;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -35,7 +37,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationDisableCommand organizationDisableCommand)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -47,6 +50,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
         _featureService = featureService;
+        _organizationDisableCommand = organizationDisableCommand;
     }
 
     /// <summary>
@@ -63,7 +67,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired
                 when organizationId.HasValue:
                 {
-                    await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
                     if (subscription.Status == StripeSubscriptionStatus.Unpaid)
                     {
                         await ScheduleCancellationJobAsync(subscription.Id, organizationId.Value);
