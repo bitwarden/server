@@ -1852,7 +1852,6 @@ public class StripePaymentService : IPaymentService
                 Enabled = true,
             },
             Currency = "usd",
-            Discounts = new List<InvoiceDiscountOptions>(),
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items =
@@ -1903,29 +1902,23 @@ public class StripePaymentService : IPaymentService
             ];
         }
 
-        if (gatewayCustomerId != null)
+        if (!string.IsNullOrWhiteSpace(gatewayCustomerId))
         {
             var gatewayCustomer = await _stripeAdapter.CustomerGetAsync(gatewayCustomerId);
 
             if (gatewayCustomer.Discount != null)
             {
-                options.Discounts.Add(new InvoiceDiscountOptions
-                {
-                    Discount = gatewayCustomer.Discount.Id
-                });
+                options.Coupon = gatewayCustomer.Discount.Coupon.Id;
             }
+        }
 
-            if (gatewaySubscriptionId != null)
+        if (!string.IsNullOrWhiteSpace(gatewaySubscriptionId))
+        {
+            var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
+
+            if (gatewaySubscription?.Discount != null)
             {
-                var gatewaySubscription = await _stripeAdapter.SubscriptionGetAsync(gatewaySubscriptionId);
-
-                if (gatewaySubscription?.Discount != null)
-                {
-                    options.Discounts.Add(new InvoiceDiscountOptions
-                    {
-                        Discount = gatewaySubscription.Discount.Id
-                    });
-                }
+                options.Coupon ??= gatewaySubscription.Discount.Coupon.Id;
             }
         }
 
@@ -1976,7 +1969,6 @@ public class StripePaymentService : IPaymentService
                 Enabled = true,
             },
             Currency = "usd",
-            Discounts = new List<InvoiceDiscountOptions>(),
             SubscriptionDetails = new InvoiceSubscriptionDetailsOptions
             {
                 Items =
@@ -2069,7 +2061,7 @@ public class StripePaymentService : IPaymentService
 
             if (gatewayCustomer.Discount != null)
             {
-                options.Discounts.Add(new InvoiceDiscountOptions { Discount = gatewayCustomer.Discount.Id });
+                options.Coupon = gatewayCustomer.Discount.Coupon.Id;
             }
         }
 
@@ -2079,10 +2071,7 @@ public class StripePaymentService : IPaymentService
 
             if (gatewaySubscription?.Discount != null)
             {
-                options.Discounts.Add(new InvoiceDiscountOptions
-                {
-                    Discount = gatewaySubscription.Discount.Id
-                });
+                options.Coupon ??= gatewaySubscription.Discount.Coupon.Id;
             }
         }
 
