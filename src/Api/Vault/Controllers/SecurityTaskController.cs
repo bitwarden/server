@@ -2,10 +2,16 @@
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Commands.Interfaces;
+using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,19 +28,31 @@ public class SecurityTaskController : Controller
     private readonly IMarkTaskAsCompleteCommand _markTaskAsCompleteCommand;
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
+    private readonly IGetSecurityTasksNotificationDetailsQuery _getSecurityTasksNotificationDetailsQuery;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IMailService _mailService;
+    private readonly ICreateNotificationCommand _createNotificationCommand;
 
     public SecurityTaskController(
         IUserService userService,
         IGetTaskDetailsForUserQuery getTaskDetailsForUserQuery,
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
-        ICreateManyTasksCommand createManyTasksCommand)
+        ICreateManyTasksCommand createManyTasksCommand,
+        IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
+        IOrganizationRepository organizationRepository,
+        IMailService mailService,
+        ICreateNotificationCommand createNotificationCommand)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
         _markTaskAsCompleteCommand = markTaskAsCompleteCommand;
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
+        _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
+        _organizationRepository = organizationRepository;
+        _mailService = mailService;
+        _createNotificationCommand = createNotificationCommand;
     }
 
     /// <summary>
@@ -87,6 +105,37 @@ public class SecurityTaskController : Controller
         [FromBody] BulkCreateSecurityTasksRequestModel model)
     {
         var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
+
+        var securityTaskCiphers = await _getSecurityTasksNotificationDetailsQuery.GetNotificationDetailsByManyIds(orgId, securityTasks);
+
+        // Get the number of tasks for each user
+        var userTaskCount = securityTaskCiphers.GroupBy(x => x.UserId).Select(x => new
+        UserSecurityTasksCount
+        {
+            UserId = x.Key,
+            Email = x.First().Email,
+            TaskCount = x.Count()
+        }).ToList();
+
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
+
+        foreach (var userSecurityTaskCipher in securityTaskCiphers)
+        {
+            // Get the associated security task for the cipher
+            var securityTask = securityTasks.First(x => x.CipherId == userSecurityTaskCipher.CipherId);
+            // Create a notification for the user with the associated task
+            var notification = new Notification
+            {
+                UserId = userSecurityTaskCipher.UserId,
+                OrganizationId = orgId,
+                Priority = Priority.Informational,
+                ClientType = ClientType.Browser,
+                TaskId = securityTask.Id
+            };
+            await _createNotificationCommand.CreateAsync(notification);
+        }
+
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
     }
