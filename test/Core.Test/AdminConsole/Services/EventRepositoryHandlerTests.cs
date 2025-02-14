@@ -21,4 +21,15 @@ public class EventRepositoryHandlerTests
             Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(eventMessage))
         );
     }
+
+    [Theory, BitAutoData]
+    public async Task HandleManyEventAsync_WritesEventsToIEventWriteService(
+        IEnumerable<EventMessage> eventMessages,
+        SutProvider<EventRepositoryHandler> sutProvider)
+    {
+        await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
+            Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(eventMessages))
+        );
+    }
 }

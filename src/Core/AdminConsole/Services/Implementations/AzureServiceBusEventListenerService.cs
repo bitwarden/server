@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
@@ -29,9 +30,20 @@ public class AzureServiceBusEventListenerService : EventLoggingListenerService
         {
             try
             {
-                var eventMessage = JsonSerializer.Deserialize<EventMessage>(args.Message.Body.ToString());
+                using var jsonDocument = JsonDocument.Parse(Encoding.UTF8.GetString(args.Message.Body));
+                var root = jsonDocument.RootElement;
 
-                await _handler.HandleEventAsync(eventMessage);
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    var eventMessages = root.Deserialize<IEnumerable<EventMessage>>();
+                    await _handler.HandleManyEventsAsync(eventMessages);
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    var eventMessage = root.Deserialize<EventMessage>();
+                    await _handler.HandleEventAsync(eventMessage);
+
+                }
                 await args.CompleteMessageAsync(args.Message);
             }
             catch (Exception exception)

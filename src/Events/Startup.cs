@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Context;
 using Bit.Core.IdentityServer;
 using Bit.Core.Services;
@@ -63,11 +64,29 @@ public class Startup
         services.AddScoped<IEventService, EventService>();
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+            {
+                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
         }
         else
         {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+            {
+                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
         }
 
         services.AddOptionality();
