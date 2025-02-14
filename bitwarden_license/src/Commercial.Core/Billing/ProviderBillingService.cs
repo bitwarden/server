@@ -456,20 +456,17 @@ public class ProviderBillingService(
         Provider provider,
         TaxInfo taxInfo)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(taxInfo);
-
-        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
-            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        if (taxInfo is not
+            {
+                BillingAddressCountry: not null and not "",
+                BillingAddressPostalCode: not null and not ""
+            })
         {
             logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
-
             throw new BillingException();
         }
 
-        var providerDisplayName = provider.DisplayName();
-
-        var customerCreateOptions = new CustomerCreateOptions
+        var options = new CustomerCreateOptions
         {
             Address = new AddressOptions
             {
@@ -489,9 +486,9 @@ public class ProviderBillingService(
                     new CustomerInvoiceSettingsCustomFieldOptions
                     {
                         Name = provider.SubscriberType(),
-                        Value = providerDisplayName?.Length <= 30
-                            ? providerDisplayName
-                            : providerDisplayName?[..30]
+                        Value = provider.DisplayName()?.Length <= 30
+                            ? provider.DisplayName()
+                            : provider.DisplayName()?[..30]
                     }
                 ]
             },
@@ -503,7 +500,8 @@ public class ProviderBillingService(
 
         if (!string.IsNullOrEmpty(taxInfo.TaxIdNumber))
         {
-            var taxIdType = taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
+            var taxIdType = taxService.GetStripeTaxCode(
+                taxInfo.BillingAddressCountry,
                 taxInfo.TaxIdNumber);
 
             if (taxIdType == null)
@@ -514,15 +512,20 @@ public class ProviderBillingService(
                 throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
-            customerCreateOptions.TaxIdData =
+            options.TaxIdData =
             [
                 new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
             ];
         }
 
+        if (!string.IsNullOrEmpty(provider.DiscountId))
+        {
+            options.Coupon = provider.DiscountId;
+        }
+
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CustomerCreateAsync(options);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
