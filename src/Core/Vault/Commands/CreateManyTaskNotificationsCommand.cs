@@ -46,8 +46,6 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
 
         foreach (var userSecurityTaskCipher in securityTaskCiphers)
         {
-            // Get the associated security task for the cipher
-            var securityTask = securityTasks.First(x => x.CipherId == userSecurityTaskCipher.CipherId);
             // Create a notification for the user with the associated task
             var notification = new Notification
             {
@@ -55,7 +53,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
                 OrganizationId = orgId,
                 Priority = Priority.Informational,
                 ClientType = ClientType.Browser,
-                TaskId = securityTask.Id
+                TaskId = userSecurityTaskCipher.TaskId
             };
             await _createNotificationCommand.CreateAsync(notification);
         }
