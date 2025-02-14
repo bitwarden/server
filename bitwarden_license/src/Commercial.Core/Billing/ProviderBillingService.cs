@@ -10,6 +10,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
@@ -32,6 +33,7 @@ public class ProviderBillingService(
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
+    IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
@@ -136,7 +138,8 @@ public class ProviderBillingService(
             return;
         }
 
-        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
+        var oldPlanConfiguration = await pricingClient.GetPlanOrThrow(plan.PlanType);
+        var newPlanConfiguration = await pricingClient.GetPlanOrThrow(command.NewPlan);
 
         plan.PlanType = command.NewPlan;
         await providerPlanRepository.ReplaceAsync(plan);
@@ -160,7 +163,7 @@ public class ProviderBillingService(
             [
                 new SubscriptionItemOptions
                 {
-                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
+                    Price = newPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId,
                     Quantity = oldSubscriptionItem!.Quantity
                 },
                 new SubscriptionItemOptions
@@ -186,7 +189,7 @@ public class ProviderBillingService(
                 throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
             }
             organization.PlanType = command.NewPlan;
-            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
+            organization.Plan = newPlanConfiguration.Name;
             await organizationRepository.ReplaceAsync(organization);
         }
     }
@@ -550,7 +553,7 @@ public class ProviderBillingService(
 
         foreach (var providerPlan in providerPlans)
         {
-            var plan = StaticStore.GetPlan(providerPlan.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
             if (!providerPlan.IsConfigured())
             {
@@ -634,8 +637,10 @@ public class ProviderBillingService(
 
             if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
             {
-                var priceId = StaticStore.GetPlan(newPlanConfiguration.Plan).PasswordManager
-                    .StripeProviderPortalSeatPlanId;
+                var newPlan = await pricingClient.GetPlanOrThrow(newPlanConfiguration.Plan);
+
+                var priceId = newPlan.PasswordManager.StripeProviderPortalSeatPlanId;
+
                 var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
 
                 if (providerPlan.PurchasedSeats == 0)
@@ -699,7 +704,7 @@ public class ProviderBillingService(
         ProviderPlan providerPlan,
         int newlyAssignedSeats) => async (currentlySubscribedSeats, newlySubscribedSeats) =>
     {
-        var plan = StaticStore.GetPlan(providerPlan.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
         await paymentService.AdjustSeats(
             provider,
@@ -723,7 +728,7 @@ public class ProviderBillingService(
         var providerOrganizations =
             await providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id);
 
-        var plan = StaticStore.GetPlan(planType);
+        var plan = await pricingClient.GetPlanOrThrow(planType);
 
         return providerOrganizations
             .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)
