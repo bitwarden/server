@@ -174,6 +174,7 @@ public static class FeatureFlagKeys
     public const string AndroidMutualTls = "mutual-tls";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
+    public const string WebPush = "web-push";
 
     public static List<string> GetAllKeys()
     {
