@@ -3,7 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationDomainRepositoryTests
 {
@@ -252,12 +252,12 @@ public class OrganizationDomainRepositoryTests
             Txt = "btw+12345"
         };
 
-        var outside36HoursWindow = 20;
+        var outside36HoursWindow = 50;
         organizationDomain.SetNextRunDate(outside36HoursWindow);
 
         await organizationDomainRepository.CreateAsync(organizationDomain);
 
-        var date = DateTimeOffset.UtcNow.Date.AddDays(1);
+        var date = DateTime.UtcNow.AddDays(1);
 
         // Act
         var domains = await organizationDomainRepository.GetManyByNextRunDateAsync(date);

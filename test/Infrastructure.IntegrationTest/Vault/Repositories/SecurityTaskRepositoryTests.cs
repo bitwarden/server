@@ -223,4 +223,47 @@ public class SecurityTaskRepositoryTests
         Assert.DoesNotContain(task1, completedTasks, new SecurityTaskComparer());
         Assert.DoesNotContain(task3, completedTasks, new SecurityTaskComparer());
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateManyAsync(
+        IOrganizationRepository organizationRepository,
+        ICipherRepository cipherRepository,
+        ISecurityTaskRepository securityTaskRepository)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Test Plan",
+            BillingEmail = ""
+        });
+
+        var cipher1 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher1);
+
+        var cipher2 = new Cipher { Type = CipherType.Login, OrganizationId = organization.Id, Data = "", };
+        await cipherRepository.CreateAsync(cipher2);
+
+        var tasks = new List<SecurityTask>
+        {
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher1.Id,
+                Status = SecurityTaskStatus.Pending,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            },
+            new()
+            {
+                OrganizationId = organization.Id,
+                CipherId = cipher2.Id,
+                Status = SecurityTaskStatus.Completed,
+                Type = SecurityTaskType.UpdateAtRiskCredential,
+            }
+        };
+
+        var taskIds = await securityTaskRepository.CreateManyAsync(tasks);
+
+        Assert.Equal(2, taskIds.Count);
+    }
 }
