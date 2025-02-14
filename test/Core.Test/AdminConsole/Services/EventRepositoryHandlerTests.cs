@@ -27,7 +27,7 @@ public class EventRepositoryHandlerTests
         IEnumerable<EventMessage> eventMessages,
         SutProvider<EventRepositoryHandler> sutProvider)
     {
-        await sutProvider.Sut.HandleManyEventAsync(eventMessages);
+        await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(
             Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(eventMessages))
         );

@@ -68,7 +68,7 @@ public class WebhookEventHandlerTests
     {
         var sutProvider = GetSutProvider();
 
-        await sutProvider.Sut.HandleManyEventAsync(eventMessages);
+        await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
             Arg.Is(AssertHelper.AssertPropertyEqual<string>(WebhookEventHandler.HttpClientName))
         );

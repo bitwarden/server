@@ -6,5 +6,5 @@ public interface IEventMessageHandler
 {
     Task HandleEventAsync(EventMessage eventMessage);
 
-    Task HandleManyEventAsync(IEnumerable<EventMessage> eventMessages);
+    Task HandleManyEventsAsync(IEnumerable<EventMessage> eventMessages);
 }

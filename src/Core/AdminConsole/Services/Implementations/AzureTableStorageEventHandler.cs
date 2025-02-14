@@ -12,7 +12,7 @@ public class AzureTableStorageEventHandler(
         return eventWriteService.CreateManyAsync(EventTableEntity.IndexEvent(eventMessage));
     }
 
-    public Task HandleManyEventAsync(IEnumerable<EventMessage> eventMessages)
+    public Task HandleManyEventsAsync(IEnumerable<EventMessage> eventMessages)
     {
         return eventWriteService.CreateManyAsync(eventMessages.SelectMany(EventTableEntity.IndexEvent));
     }

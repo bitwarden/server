@@ -68,8 +68,8 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
 
                 if (root.ValueKind == JsonValueKind.Array)
                 {
-                    var eventMessages = root.Deserialize<List<EventMessage>>();
-                    await _handler.HandleManyEventAsync(eventMessages);
+                    var eventMessages = root.Deserialize<IEnumerable<EventMessage>>();
+                    await _handler.HandleManyEventsAsync(eventMessages);
                 }
                 else if (root.ValueKind == JsonValueKind.Object)
                 {

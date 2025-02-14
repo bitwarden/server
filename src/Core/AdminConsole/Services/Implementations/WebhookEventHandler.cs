@@ -21,7 +21,7 @@ public class WebhookEventHandler(
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task HandleManyEventAsync(IEnumerable<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync(IEnumerable<EventMessage> eventMessages)
     {
         var content = JsonContent.Create(eventMessages);
         var response = await _httpClient.PostAsync(_webhookUrl, content);
