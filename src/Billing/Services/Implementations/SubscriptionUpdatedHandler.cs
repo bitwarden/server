@@ -25,6 +25,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IOrganizationDisableCommand _organizationDisableCommand;
 
     public SubscriptionUpdatedHandler(
@@ -38,6 +39,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
         IFeatureService featureService,
+        IOrganizationEnableCommand organizationEnableCommand,
         IOrganizationDisableCommand organizationDisableCommand)
     {
         _stripeEventService = stripeEventService;
@@ -50,6 +52,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
         _featureService = featureService;
+        _organizationEnableCommand = organizationEnableCommand;
         _organizationDisableCommand = organizationDisableCommand;
     }
 
@@ -94,7 +97,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
-                    await _organizationService.EnableAsync(organizationId.Value);
+                    await _organizationEnableCommand.EnableAsync(organizationId.Value);
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
                     await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
                     break;

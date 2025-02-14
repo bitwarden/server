@@ -1643,6 +1643,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Body")
+                        .HasMaxLength(3000)
                         .HasColumnType("TEXT");
 
                     b.Property<byte>("ClientType")
