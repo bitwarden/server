@@ -18,6 +18,7 @@ public class ApiResources
                 Claims.SecurityStamp,
                 Claims.Premium,
                 Claims.Device,
+                Claims.DeviceType,
                 Claims.OrganizationOwner,
                 Claims.OrganizationAdmin,
                 Claims.OrganizationUser,
