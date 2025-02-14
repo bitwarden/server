@@ -129,7 +129,6 @@ public static class FeatureFlagKeys
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
-    public const string TwoFactorComponentRefactor = "two-factor-component-refactor";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
     public const string SSHKeyItemVaultItem = "ssh-key-vault-item";
