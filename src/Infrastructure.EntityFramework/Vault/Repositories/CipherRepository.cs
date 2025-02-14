@@ -348,11 +348,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(
-        Guid organizationId, IEnumerable<Guid> cipherIds)
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<Core.Vault.Entities.SecurityTask> tasks)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
+            var cipherIds = tasks.Where(t => t.CipherId.HasValue).Select(t => t.CipherId.Value);
             var dbContext = GetDatabaseContext(scope);
             var query = new UserSecurityTasksByCipherIdsQuery(organizationId, cipherIds).Run(dbContext);
 
@@ -379,9 +379,14 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                    {
                                        UserId = g.Key.UserId,
                                        CipherId = g.Key.CipherId,
-                                       Email = g.Key.Email
+                                       Email = g.Key.Email,
                                    };
                 userTaskCiphers = await groupByQuery.ToListAsync();
+            }
+
+            foreach (var userTaskCipher in userTaskCiphers)
+            {
+                userTaskCipher.TaskId = tasks.First(t => t.CipherId == userTaskCipher.CipherId).Id;
             }
 
             return userTaskCiphers;

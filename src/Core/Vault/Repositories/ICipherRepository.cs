@@ -4,6 +4,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
+
 namespace Bit.Core.Vault.Repositories;
 
 public interface ICipherRepository : IRepository<Cipher, Guid>
@@ -50,11 +51,11 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
         Guid userId);
 
     /// <summary>
-    /// Returns the users and the cipher ids for security tasks that are applicable to them.
+    /// Returns the users and the cipher ids for security tawsks that are applicable to them.
     ///
     /// Security tasks are actionable when a user has manage access to the associated cipher.
     /// </summary>
-    Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds);
+    Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<SecurityTask> tasks);
 
     /// <summary>
     /// Updates encrypted data for ciphers during a key rotation

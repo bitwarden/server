@@ -20,17 +20,13 @@ public class GetSecurityTasksNotificationDetailsQuery : IGetSecurityTasksNotific
     public async Task<ICollection<UserSecurityTaskCipher>> GetNotificationDetailsByManyIds(Guid organizationId, IEnumerable<SecurityTask> tasks)
     {
         var org = _currentContext.GetOrganization(organizationId);
-        var cipherIds = tasks
-            .Where(task => task.CipherId.HasValue)
-            .Select(task => task.CipherId.Value)
-            .ToList();
 
         if (org == null)
         {
             throw new NotFoundException();
         }
 
-        var userSecurityTaskCiphers = await _cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organizationId, cipherIds);
+        var userSecurityTaskCiphers = await _cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organizationId, tasks);
 
         return userSecurityTaskCiphers;
     }

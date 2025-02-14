@@ -4,7 +4,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 
-public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTaskCipher>
+public class UserSecurityTasksByCipherIdsQuery : IQuery<UserCipherForTask>
 {
     private readonly Guid _organizationId;
     private readonly IEnumerable<Guid> _cipherIds;
@@ -15,7 +15,7 @@ public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTaskCipher>
         _cipherIds = cipherIds;
     }
 
-    public IQueryable<UserSecurityTaskCipher> Run(DatabaseContext dbContext)
+    public IQueryable<UserCipherForTask> Run(DatabaseContext dbContext)
     {
         var baseCiphers =
             from c in dbContext.Ciphers
@@ -60,7 +60,7 @@ public class UserSecurityTasksByCipherIdsQuery : IQuery<UserSecurityTaskCipher>
                 (p, u) => new { p.UserId, p.Id, u.Email }
             )
             .GroupBy(x => new { x.UserId, x.Email, x.Id })
-            .Select(g => new UserSecurityTaskCipher
+            .Select(g => new UserCipherForTask
             {
                 UserId = (Guid)g.Key.UserId,
                 Email = g.Key.Email,
