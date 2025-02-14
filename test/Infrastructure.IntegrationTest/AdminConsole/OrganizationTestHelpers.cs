@@ -38,14 +38,13 @@ public static class OrganizationTestHelpers
     public static Task<OrganizationUser> CreateTestOrganizationUserAsync(
         this IOrganizationUserRepository organizationUserRepository,
         Organization organization,
-        User user,
-        OrganizationUserType role = OrganizationUserType.Owner)
+        User user)
         => organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user.Id,
             Status = OrganizationUserStatusType.Confirmed,
-            Type = role
+            Type = OrganizationUserType.Owner
         });
 
     public static Task<Group> CreateTestGroupAsync(
