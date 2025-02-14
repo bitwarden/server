@@ -44,18 +44,35 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
 
         await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
 
-        foreach (var userSecurityTaskCipher in securityTaskCiphers)
+        // Break securityTaskCiphers into separate lists by user Id
+        var securityTaskCiphersByUser = securityTaskCiphers.GroupBy(x => x.UserId)
+                                   .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var userId in securityTaskCiphersByUser.Keys)
         {
-            // Create a notification for the user with the associated task
-            var notification = new Notification
+            // Get the security tasks by the user Id
+            var userSecurityTaskCiphers = securityTaskCiphersByUser[userId];
+
+            // Process each user's security task ciphers
+            for (int i = 0; i < userSecurityTaskCiphers.Count; i++)
             {
-                UserId = userSecurityTaskCipher.UserId,
-                OrganizationId = orgId,
-                Priority = Priority.Informational,
-                ClientType = ClientType.Browser,
-                TaskId = userSecurityTaskCipher.TaskId
-            };
-            await _createNotificationCommand.CreateAsync(notification);
+                var userSecurityTaskCipher = userSecurityTaskCiphers[i];
+
+                // Create a notification for the user with the associated task
+                var notification = new Notification
+                {
+                    UserId = userSecurityTaskCipher.UserId,
+                    OrganizationId = orgId,
+                    Priority = Priority.Informational,
+                    ClientType = ClientType.Browser,
+                    TaskId = userSecurityTaskCipher.TaskId
+                };
+
+                // Only push the last notification for each user
+                bool skipNotificationPush = i != userSecurityTaskCiphers.Count - 1;
+
+                await _createNotificationCommand.CreateAsync(notification, skipNotificationPush);
+            }
         }
     }
 }
