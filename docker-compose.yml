@@ -1,0 +1,25 @@
+services:
+  api:
+    image: api
+    ports:
+      - "4000:5000"
+    environment:
+      globalSettings__DataProtection__directory: /home/app/.aspnet/DataProtection-Keys
+      globalSettings__selfHosted: true
+  identity:
+    image: identity
+    ports:
+      - "33656:5000"
+    environment:
+      globalSettings__DataProtection__directory: /home/app/.aspnet/DataProtection-Keys
+      globalSettings__selfHosted: true
+      globalSettings__IdentityServer__CertificateLocation: /home/app/config/identity.pfx
+    volumes:
+      - /tmp/server:/home/app/config # identity.pfx exists here
+  mssql:
+    image: bitwarden/mssql:2024.10.0
+    container_name: bitwarden-mssql
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: true
