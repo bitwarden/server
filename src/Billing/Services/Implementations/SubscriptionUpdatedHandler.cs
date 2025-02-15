@@ -1,7 +1,13 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Billing.Jobs;
+using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.Platform.Push;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Quartz;
 using Stripe;
 using Event = Stripe.Event;
 
@@ -15,6 +21,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeFacade _stripeFacade;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly ISchedulerFactory _schedulerFactory;
+    private readonly IFeatureService _featureService;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -22,7 +33,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationService organizationService,
         IStripeFacade stripeFacade,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
-        IUserService userService)
+        IUserService userService,
+        IPushNotificationService pushNotificationService,
+        IOrganizationRepository organizationRepository,
+        ISchedulerFactory schedulerFactory,
+        IFeatureService featureService,
+        IOrganizationEnableCommand organizationEnableCommand)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -30,6 +46,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeFacade = stripeFacade;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
         _userService = userService;
+        _pushNotificationService = pushNotificationService;
+        _organizationRepository = organizationRepository;
+        _schedulerFactory = schedulerFactory;
+        _featureService = featureService;
+        _organizationEnableCommand = organizationEnableCommand;
     }
 
     /// <summary>
@@ -47,6 +68,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 when organizationId.HasValue:
                 {
                     await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    if (subscription.Status == StripeSubscriptionStatus.Unpaid)
+                    {
+                        await ScheduleCancellationJobAsync(subscription.Id, organizationId.Value);
+                    }
                     break;
                 }
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired:
@@ -69,7 +94,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
-                    await _organizationService.EnableAsync(organizationId.Value);
+                    await _organizationEnableCommand.EnableAsync(organizationId.Value);
+                    var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                    await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
                     break;
                 }
             case StripeSubscriptionStatus.Active:
@@ -171,6 +198,29 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         if (subscriptionHasSecretsManagerTrial)
         {
             await _stripeFacade.DeleteSubscriptionDiscount(subscription.Id);
+        }
+    }
+
+    private async Task ScheduleCancellationJobAsync(string subscriptionId, Guid organizationId)
+    {
+        var isResellerManagedOrgAlertEnabled = _featureService.IsEnabled(FeatureFlagKeys.ResellerManagedOrgAlert);
+
+        if (isResellerManagedOrgAlertEnabled)
+        {
+            var scheduler = await _schedulerFactory.GetScheduler();
+
+            var job = JobBuilder.Create<SubscriptionCancellationJob>()
+                .WithIdentity($"cancel-sub-{subscriptionId}", "subscription-cancellations")
+                .UsingJobData("subscriptionId", subscriptionId)
+                .UsingJobData("organizationId", organizationId.ToString())
+                .Build();
+
+            var trigger = TriggerBuilder.Create()
+                .WithIdentity($"cancel-trigger-{subscriptionId}", "subscription-cancellations")
+                .StartAt(DateTimeOffset.UtcNow.AddDays(7))
+                .Build();
+
+            await scheduler.ScheduleJob(job, trigger);
         }
     }
 }

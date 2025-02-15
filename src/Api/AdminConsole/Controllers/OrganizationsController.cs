@@ -13,6 +13,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -52,11 +54,12 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderBillingService _providerBillingService;
     private readonly IDataProtectorTokenFactory<OrgDeleteTokenable> _orgDeleteTokenDataFactory;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
+    private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -73,11 +76,12 @@ public class OrganizationsController : Controller
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IFeatureService featureService,
         GlobalSettings globalSettings,
-        IPushNotificationService pushNotificationService,
         IProviderRepository providerRepository,
         IProviderBillingService providerBillingService,
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
+        IOrganizationDeleteCommand organizationDeleteCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -93,11 +97,12 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _featureService = featureService;
         _globalSettings = globalSettings;
-        _pushNotificationService = pushNotificationService;
         _providerRepository = providerRepository;
         _providerBillingService = providerBillingService;
         _orgDeleteTokenDataFactory = orgDeleteTokenDataFactory;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
+        _organizationDeleteCommand = organizationDeleteCommand;
     }
 
     [HttpGet("{id}")]
@@ -175,8 +180,8 @@ public class OrganizationsController : Controller
         }
 
         var organizationSignup = model.ToOrganizationSignup(user);
-        var result = await _organizationService.SignUpAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Item1);
+        var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
+        return new OrganizationResponseModel(result.Organization);
     }
 
     [HttpPost("create-without-payment")]
@@ -190,8 +195,8 @@ public class OrganizationsController : Controller
         }
 
         var organizationSignup = model.ToOrganizationSignup(user);
-        var result = await _organizationService.SignUpAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Item1);
+        var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
+        return new OrganizationResponseModel(result.Organization);
     }
 
     [HttpPut("{id}")]
@@ -258,7 +263,7 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Managed user account cannot leave managing organization. Contact your organization administrator for additional details.");
         }
 
-        await _removeOrganizationUserCommand.RemoveUserAsync(id, user.Id);
+        await _removeOrganizationUserCommand.UserLeaveAsync(id, user.Id);
     }
 
     [HttpDelete("{id}")]
@@ -302,7 +307,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationService.DeleteAsync(organization);
+        await _organizationDeleteCommand.DeleteAsync(organization);
     }
 
     [HttpPost("{id}/delete-recover-token")]
@@ -332,7 +337,7 @@ public class OrganizationsController : Controller
             }
         }
 
-        await _organizationService.DeleteAsync(organization);
+        await _organizationDeleteCommand.DeleteAsync(organization);
     }
 
     [HttpPost("{id}/api-key")]
@@ -525,14 +530,6 @@ public class OrganizationsController : Controller
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        if (
-          _globalSettings.SelfHosted &&
-          !_featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit)
-        )
-        {
-            throw new BadRequestException("Only allowed when not self hosted.");
-        }
-
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
@@ -546,5 +543,18 @@ public class OrganizationsController : Controller
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
+    }
+
+    [HttpGet("{id}/plan-type")]
+    public async Task<PlanType> GetPlanType(string id)
+    {
+        var orgIdGuid = new Guid(id);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return organization.PlanType;
     }
 }

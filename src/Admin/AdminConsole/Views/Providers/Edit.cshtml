@@ -17,6 +17,10 @@
 
 <h2>Provider Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+@if (Model.ProviderPlanViewModels.Any())
+{
+    @await Html.PartialAsync("~/Billing/Views/Providers/ProviderPlans.cshtml", Model.ProviderPlanViewModels)
+}
 @await Html.PartialAsync("Admins", Model)
 <form method="post" id="edit-form">
     <div asp-validation-summary="All" class="alert alert-danger"></div>

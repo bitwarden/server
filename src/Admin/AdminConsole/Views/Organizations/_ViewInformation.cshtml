@@ -55,19 +55,11 @@
     <dt class="col-sm-4 col-lg-3">Administrators manage all collections</dt>
     <dd id="pm-manage-collections" class="col-sm-8 col-lg-9">@(Model.Organization.AllowAdminAccessToAllCollectionItems ? "On" : "Off")</dd>
 
-    @if (!FeatureService.IsEnabled(Bit.Core.FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-    {
-      <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
-      <dd id="pm-collection-creation" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionCreationDeletion ? "On" : "Off")</dd>
-    }
-    else
-    {
-      <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
-      <dd id="pm-collection-creation" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionCreation ? "On" : "Off")</dd>
+    <dt class="col-sm-4 col-lg-3">Limit collection creation to administrators</dt>
+    <dd id="pm-collection-creation" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionCreation ? "On" : "Off")</dd>
 
-      <dt class="col-sm-4 col-lg-3">Limit collection deletion to administrators</dt>
-      <dd id="pm-collection-deletion" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionDeletion ? "On" : "Off")</dd>
-    }
+    <dt class="col-sm-4 col-lg-3">Limit collection deletion to administrators</dt>
+    <dd id="pm-collection-deletion" class="col-sm-8 col-lg-9">@(Model.Organization.LimitCollectionDeletion ? "On" : "Off")</dd>
 </dl>
 
 <h2>Secrets Manager</h2>

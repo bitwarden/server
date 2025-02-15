@@ -8,6 +8,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -50,11 +52,26 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationSignUpCommands();
+        services.AddOrganizationDeleteCommands();
+        services.AddOrganizationEnableCommands();
         services.AddOrganizationAuthCommands();
         services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
+
+    private static IServiceCollection AddOrganizationSignUpCommands(this IServiceCollection services) =>
+        services.AddScoped<ICloudOrganizationSignUpCommand, CloudOrganizationSignUpCommand>();
+
+    private static void AddOrganizationDeleteCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationDeleteCommand, OrganizationDeleteCommand>();
+        services.AddScoped<IOrganizationInitiateDeleteCommand, OrganizationInitiateDeleteCommand>();
+    }
+
+    private static void AddOrganizationEnableCommands(this IServiceCollection services) =>
+        services.AddScoped<IOrganizationEnableCommand, OrganizationEnableCommand>();
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
     {

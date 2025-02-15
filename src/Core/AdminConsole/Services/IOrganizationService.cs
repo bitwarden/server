@@ -20,13 +20,7 @@ public interface IOrganizationService
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
-    /// <summary>
-    /// Create a new organization in a cloud environment
-    /// </summary>
-    /// <returns>A tuple containing the new organization, the initial organizationUser (if any) and the default collection (if any)</returns>
 #nullable enable
-    Task<(Organization organization, OrganizationUser? organizationUser, Collection? defaultCollection)> SignUpAsync(OrganizationSignup organizationSignup);
-
     Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup);
 #nullable disable
     /// <summary>
@@ -34,12 +28,8 @@ public interface IOrganizationService
     /// </summary>
     Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
-    Task InitiateDeleteAsync(Organization organization, string orgAdminEmail);
-    Task DeleteAsync(Organization organization);
-    Task EnableAsync(Guid organizationId, DateTime? expirationDate);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
-    Task EnableAsync(Guid organizationId);
     Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);

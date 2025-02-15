@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -26,8 +27,13 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.KeyManagement;
+using Bit.Core.NotificationCenter;
 using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
+using Bit.Core.Platform;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
@@ -35,6 +41,7 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -120,6 +127,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
         services.AddReportingServices();
+        services.AddKeyManagementServices();
+        services.AddNotificationCenterServices();
+        services.AddPlatformServices();
+        services.AddImportServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -296,7 +307,10 @@ public static class ServiceCollectionExtensions
             services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
-                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
+                services.AddKeyedSingleton("notifications",
+                    (_, _) => new QueueClient(globalSettings.Notifications.ConnectionString, "notifications"));
+                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>(
+                    "implementation");
             }
         }
 
@@ -311,11 +325,29 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+            {
+                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
         }
         else if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+            {
+                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
         }
         else
         {

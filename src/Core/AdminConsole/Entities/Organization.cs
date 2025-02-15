@@ -96,24 +96,23 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     /// </summary>
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deprecated by https://bitwarden.atlassian.net/browse/PM-10863. This
-    // was replaced with `LimitCollectionCreation` and
-    // `LimitCollectionDeletion`.
-    public bool LimitCollectionCreationDeletion
-    {
-        get => LimitCollectionCreation || LimitCollectionDeletion;
-        set
-        {
-            LimitCollectionCreation = value;
-            LimitCollectionDeletion = value;
-        }
-    }
 
     /// <summary>
     /// If set to true, admins, owners, and some custom users can read/write all collections and items in the Admin Console.
     /// If set to false, users generally need collection-level permissions to read/write a collection or its items.
     /// </summary>
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+
+    /// <summary>
+    /// If set to true, members can only delete items when they have a Can Manage permission over the collection.
+    /// If set to false, members can delete items when they have a Can Manage OR Can Edit permission over the collection.
+    /// </summary>
+    public bool LimitItemDeletion { get; set; }
+
+    /// <summary>
+    /// Risk Insights is a reporting feature that provides insights into the security of an organization's vault.
+    /// </summary>
+    public bool UseRiskInsights { get; set; }
 
     public void SetNewId()
     {
@@ -314,11 +313,5 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
-
-        if (!featureService.IsEnabled(FeatureFlagKeys.LimitCollectionCreationDeletionSplit))
-        {
-            LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
-            AllowAdminAccessToAllCollectionItems = license.AllowAdminAccessToAllCollectionItems;
-        }
     }
 }

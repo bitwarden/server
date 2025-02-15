@@ -1,12 +1,15 @@
 ﻿using System.Globalization;
 using Bit.Commercial.Core.Billing.Models;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
@@ -24,6 +27,7 @@ using Stripe;
 namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
+    IEventService eventService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -31,9 +35,93 @@ public class ProviderBillingService(
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
+    IProviderUserRepository providerUserRepository,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IProviderBillingService
+    ISubscriberService subscriberService,
+    ITaxService taxService) : IProviderBillingService
 {
+    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
+    public async Task AddExistingOrganization(
+        Provider provider,
+        Organization organization,
+        string key)
+    {
+        await stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId,
+            new SubscriptionUpdateOptions
+            {
+                CancelAtPeriodEnd = false
+            });
+
+        var subscription =
+            await stripeAdapter.SubscriptionCancelAsync(organization.GatewaySubscriptionId,
+                new SubscriptionCancelOptions
+                {
+                    CancellationDetails = new SubscriptionCancellationDetailsOptions
+                    {
+                        Comment = $"Organization was added to Provider with ID {provider.Id}"
+                    },
+                    InvoiceNow = true,
+                    Prorate = true,
+                    Expand = ["latest_invoice", "test_clock"]
+                });
+
+        var now = subscription.TestClock?.FrozenTime ?? DateTime.UtcNow;
+
+        var wasTrialing = subscription.TrialEnd.HasValue && subscription.TrialEnd.Value > now;
+
+        if (!wasTrialing && subscription.LatestInvoice.Status == StripeConstants.InvoiceStatus.Draft)
+        {
+            await stripeAdapter.InvoiceFinalizeInvoiceAsync(subscription.LatestInvoiceId,
+                new InvoiceFinalizeOptions { AutoAdvance = true });
+        }
+
+        var managedPlanType = await GetManagedPlanTypeAsync(provider, organization);
+
+        // TODO: Replace with PricingClient
+        var plan = StaticStore.GetPlan(managedPlanType);
+        organization.Plan = plan.Name;
+        organization.PlanType = plan.Type;
+        organization.MaxCollections = plan.PasswordManager.MaxCollections;
+        organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
+        organization.UsePolicies = plan.HasPolicies;
+        organization.UseSso = plan.HasSso;
+        organization.UseGroups = plan.HasGroups;
+        organization.UseEvents = plan.HasEvents;
+        organization.UseDirectory = plan.HasDirectory;
+        organization.UseTotp = plan.HasTotp;
+        organization.Use2fa = plan.Has2fa;
+        organization.UseApi = plan.HasApi;
+        organization.UseResetPassword = plan.HasResetPassword;
+        organization.SelfHost = plan.HasSelfHost;
+        organization.UsersGetPremium = plan.UsersGetPremium;
+        organization.UseCustomPermissions = plan.HasCustomPermissions;
+        organization.UseScim = plan.HasScim;
+        organization.UseKeyConnector = plan.HasKeyConnector;
+        organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
+        organization.BillingEmail = provider.BillingEmail!;
+        organization.GatewaySubscriptionId = null;
+        organization.ExpirationDate = null;
+        organization.MaxAutoscaleSeats = null;
+        organization.Status = OrganizationStatusType.Managed;
+
+        var providerOrganization = new ProviderOrganization
+        {
+            ProviderId = provider.Id,
+            OrganizationId = organization.Id,
+            Key = key
+        };
+
+        await Task.WhenAll(
+            organizationRepository.ReplaceAsync(organization),
+            providerOrganizationRepository.CreateAsync(providerOrganization),
+            ScaleSeats(provider, organization.PlanType, organization.Seats!.Value)
+        );
+
+        await eventService.LogProviderOrganizationEventAsync(
+            providerOrganization,
+            EventType.ProviderOrganization_Added);
+    }
+
     public async Task ChangePlan(ChangeProviderPlanCommand command)
     {
         var plan = await providerPlanRepository.GetByIdAsync(command.ProviderPlanId);
@@ -205,6 +293,81 @@ public class ProviderBillingService(
         return memoryStream.ToArray();
     }
 
+    [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
+    public async Task<IEnumerable<AddableOrganization>> GetAddableOrganizations(
+        Provider provider,
+        Guid userId)
+    {
+        var providerUser = await providerUserRepository.GetByProviderUserAsync(provider.Id, userId);
+
+        if (providerUser is not { Status: ProviderUserStatusType.Confirmed })
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var candidates = await organizationRepository.GetAddableToProviderByUserIdAsync(userId, provider.Type);
+
+        var active = (await Task.WhenAll(candidates.Select(async organization =>
+            {
+                var subscription = await subscriberService.GetSubscription(organization);
+                return (organization, subscription);
+            })))
+            .Where(pair => pair.subscription is
+            {
+                Status:
+                    StripeConstants.SubscriptionStatus.Active or
+                    StripeConstants.SubscriptionStatus.Trialing or
+                    StripeConstants.SubscriptionStatus.PastDue
+            }).ToList();
+
+        if (active.Count == 0)
+        {
+            return [];
+        }
+
+        return await Task.WhenAll(active.Select(async pair =>
+        {
+            var (organization, _) = pair;
+
+            var planName = DerivePlanName(provider, organization);
+
+            var addable = new AddableOrganization(
+                organization.Id,
+                organization.Name,
+                planName,
+                organization.Seats!.Value);
+
+            if (providerUser.Type != ProviderUserType.ServiceUser)
+            {
+                return addable;
+            }
+
+            var applicablePlanType = await GetManagedPlanTypeAsync(provider, organization);
+
+            var requiresPurchase =
+                await SeatAdjustmentResultsInPurchase(provider, applicablePlanType, organization.Seats!.Value);
+
+            return addable with { Disabled = requiresPurchase };
+        }));
+
+        string DerivePlanName(Provider localProvider, Organization localOrganization)
+        {
+            if (localProvider.Type == ProviderType.Msp)
+            {
+                return localOrganization.PlanType switch
+                {
+                    var planType when PlanConstants.EnterprisePlanTypes.Contains(planType) => "Enterprise",
+                    var planType when PlanConstants.TeamsPlanTypes.Contains(planType) => "Teams",
+                    _ => throw new BillingException()
+                };
+            }
+
+            // TODO: Replace with PricingClient
+            var plan = StaticStore.GetPlan(localOrganization.PlanType);
+            return plan.Name;
+        }
+    }
+
     public async Task ScaleSeats(
         Provider provider,
         PlanType planType,
@@ -335,13 +498,27 @@ public class ProviderBillingService(
             Metadata = new Dictionary<string, string>
             {
                 { "region", globalSettings.BaseServiceUri.CloudRegion }
-            },
-            TaxIdData = taxInfo.HasTaxId ?
-                [
-                    new CustomerTaxIdDataOptions { Type = taxInfo.TaxIdType, Value = taxInfo.TaxIdNumber }
-                ]
-                : null
+            }
         };
+
+        if (!string.IsNullOrEmpty(taxInfo.TaxIdNumber))
+        {
+            var taxIdType = taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
+                taxInfo.TaxIdNumber);
+
+            if (taxIdType == null)
+            {
+                logger.LogWarning("Could not infer tax ID type in country '{Country}' with tax ID '{TaxID}'.",
+                    taxInfo.BillingAddressCountry,
+                    taxInfo.TaxIdNumber);
+                throw new BadRequestException("billingTaxIdTypeInferenceError");
+            }
+
+            customerCreateOptions.TaxIdData =
+            [
+                new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
+            ];
+        }
 
         try
         {
@@ -566,5 +743,22 @@ public class ProviderBillingService(
         }
 
         return providerPlan;
+    }
+
+    private async Task<PlanType> GetManagedPlanTypeAsync(
+        Provider provider,
+        Organization organization)
+    {
+        if (provider.Type == ProviderType.MultiOrganizationEnterprise)
+        {
+            return (await providerPlanRepository.GetByProviderId(provider.Id)).First().PlanType;
+        }
+
+        return organization.PlanType switch
+        {
+            var planType when PlanConstants.TeamsPlanTypes.Contains(planType) => PlanType.TeamsMonthly,
+            var planType when PlanConstants.EnterprisePlanTypes.Contains(planType) => PlanType.EnterpriseMonthly,
+            _ => throw new BillingException()
+        };
     }
 }

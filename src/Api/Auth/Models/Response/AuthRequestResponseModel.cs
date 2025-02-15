@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Auth.Models.Response;
@@ -17,6 +18,7 @@ public class AuthRequestResponseModel : ResponseModel
 
         Id = authRequest.Id;
         PublicKey = authRequest.PublicKey;
+        RequestDeviceTypeValue = authRequest.RequestDeviceType;
         RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
         RequestIpAddress = authRequest.RequestIpAddress;
@@ -30,6 +32,7 @@ public class AuthRequestResponseModel : ResponseModel
 
     public Guid Id { get; set; }
     public string PublicKey { get; set; }
+    public DeviceType RequestDeviceTypeValue { get; set; }
     public string RequestDeviceType { get; set; }
     public string RequestIpAddress { get; set; }
     public string Key { get; set; }

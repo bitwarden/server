@@ -1,7 +1,9 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -16,7 +18,6 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
 {
     private readonly ILogger<PaymentSucceededHandler> _logger;
     private readonly IStripeEventService _stripeEventService;
-    private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IStripeFacade _stripeFacade;
     private readonly IProviderRepository _providerRepository;
@@ -25,6 +26,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
     private readonly ICurrentContext _currentContext;
     private readonly IUserRepository _userRepository;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
+    private readonly IPushNotificationService _pushNotificationService;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
 
     public PaymentSucceededHandler(
         ILogger<PaymentSucceededHandler> logger,
@@ -37,7 +40,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         IUserRepository userRepository,
         IStripeEventUtilityService stripeEventUtilityService,
         IUserService userService,
-        IOrganizationService organizationService)
+        IPushNotificationService pushNotificationService,
+        IOrganizationEnableCommand organizationEnableCommand)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -49,7 +53,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         _userRepository = userRepository;
         _stripeEventUtilityService = stripeEventUtilityService;
         _userService = userService;
-        _organizationService = organizationService;
+        _pushNotificationService = pushNotificationService;
+        _organizationEnableCommand = organizationEnableCommand;
     }
 
     /// <summary>
@@ -138,8 +143,9 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 return;
             }
 
-            await _organizationService.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+            await _organizationEnableCommand.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
             var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+            await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)

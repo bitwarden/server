@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationUserRepositoryTests
 {
@@ -255,9 +255,8 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(organization.SmServiceAccounts, result.SmServiceAccounts);
         Assert.Equal(organization.LimitCollectionCreation, result.LimitCollectionCreation);
         Assert.Equal(organization.LimitCollectionDeletion, result.LimitCollectionDeletion);
-        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-        Assert.Equal(organization.LimitCollectionCreationDeletion, result.LimitCollectionCreationDeletion);
         Assert.Equal(organization.AllowAdminAccessToAllCollectionItems, result.AllowAdminAccessToAllCollectionItems);
+        Assert.Equal(organization.UseRiskInsights, result.UseRiskInsights);
     }
 
     [DatabaseTheory, DatabaseData]

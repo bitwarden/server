@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -79,7 +80,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email) =>
+    public Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
@@ -272,6 +273,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendUnclaimedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
@@ -306,6 +312,12 @@ public class NoopMailService : IMailService
     public Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate,
         string organizationId,
         string organizationName)
+    {
+        return Task.FromResult(0);
+    }
+    public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
+
+    public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
     {
         return Task.FromResult(0);
     }
