@@ -1604,15 +1604,12 @@ public class StripePaymentService : IPaymentService
         {
             subscriptionInfo.Subscription = new SubscriptionInfo.BillingSubscription(sub);
 
-            if (_featureService.IsEnabled(FeatureFlagKeys.AC1795_UpdatedSubscriptionStatusSection))
-            {
-                var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(sub);
+            var (suspensionDate, unpaidPeriodEndDate) = await GetSuspensionDateAsync(sub);
 
-                if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
-                {
-                    subscriptionInfo.Subscription.SuspensionDate = suspensionDate;
-                    subscriptionInfo.Subscription.UnpaidPeriodEndDate = unpaidPeriodEndDate;
-                }
+            if (suspensionDate.HasValue && unpaidPeriodEndDate.HasValue)
+            {
+                subscriptionInfo.Subscription.SuspensionDate = suspensionDate;
+                subscriptionInfo.Subscription.UnpaidPeriodEndDate = unpaidPeriodEndDate;
             }
         }
 
