@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 
@@ -23,11 +25,14 @@ public interface IPushNotificationService
     Task PushSyncSendCreateAsync(Send send);
     Task PushSyncSendUpdateAsync(Send send);
     Task PushSyncSendDeleteAsync(Send send);
+    Task PushNotificationAsync(Notification notification);
+    Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus);
     Task PushAuthRequestAsync(AuthRequest authRequest);
     Task PushAuthRequestResponseAsync(AuthRequest authRequest);
-    Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier, string deviceId = null);
-    Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null);
     Task PushSyncOrganizationStatusAsync(Organization organization);
     Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization);
+    Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null);
+    Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null);
 }
