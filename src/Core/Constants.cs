@@ -108,7 +108,9 @@ public static class FeatureFlagKeys
     public const string IntegrationPage = "pm-14505-admin-console-integration-page";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
+    public const string ShortcutDuplicatePatchRequests = "pm-16812-shortcut-duplicate-patch-requests";
     public const string PushSyncOrgKeysOnRevokeRestore = "pm-17168-push-sync-org-keys-on-revoke-restore";
+    public const string PolicyRequirements = "pm-14439-policy-requirements";
     public const string ScimInviteUserOptimization = "pm-16811-optimize-invite-user-flow-to-fail-fast";
 
     /* Tools Team */
@@ -171,6 +173,7 @@ public static class FeatureFlagKeys
     public const string EnablePMAuthenticatorSync = "enable-pm-bwa-sync";
     public const string P15179_AddExistingOrgsFromProviderPortal = "pm-15179-add-existing-orgs-from-provider-portal";
     public const string AndroidMutualTls = "mutual-tls";
+    public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
 
     public static List<string> GetAllKeys()

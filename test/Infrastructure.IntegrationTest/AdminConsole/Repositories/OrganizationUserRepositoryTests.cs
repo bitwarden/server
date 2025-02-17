@@ -8,7 +8,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationUserRepositoryTests
 {
