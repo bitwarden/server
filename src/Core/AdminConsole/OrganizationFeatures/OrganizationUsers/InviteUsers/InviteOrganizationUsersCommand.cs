@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Commands;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.CreateOrganizationUserExtensions;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -22,6 +23,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         var result = await InviteOrganizationUsersAsync(InviteOrganizationUsersRequest.Create(request));
 
+        if (result is Failure<IEnumerable<OrganizationUser>> failure)
+        {
+            return new Failure<OrganizationUser>(failure.ErrorMessage);
+        }
+
         if (result.Value.Any())
         {
             (OrganizationUser User, EventType type, EventSystemUser system, DateTime performedAt) log = (result.Value.First(), EventType.OrganizationUser_Invited, EventSystemUser.SCIM, request.PerformedAt.UtcDateTime);
@@ -29,7 +35,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             await eventService.LogOrganizationUserEventsAsync([log]);
         }
 
-        return new CommandResult<OrganizationUser>(result.Value.FirstOrDefault());
+        return new Success<OrganizationUser>(result.Value.FirstOrDefault());
     }
 
     private async Task<CommandResult<IEnumerable<OrganizationUser>>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
@@ -41,7 +47,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         var invitesToSend = request.Invites
             .SelectMany(invite => invite.Emails
                 .Where(email => !existingEmails.Contains(email))
-                .Select(email => OrganizationUserInviteDto.Create(email, invite))
+                .Select(email => OrganizationUserInviteDto.Create(email, invite, request.Organization.OrganizationId))
             );
 
         // Validate we can add those seats
@@ -55,8 +61,17 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.Organization.OrganizationId)
         });
 
+        if (!validationResult.IsValid)
+        {
+            return new Failure<IEnumerable<OrganizationUser>>(validationResult.ErrorMessageString);
+        }
+
+        var organizationUserCollection = invitesToSend
+            .Select(MapToDataModel(request.PerformedAt));
+
         try
         {
+            await organizationUserRepository.CreateManyAsync(organizationUserCollection);
             // save organization users
             // org users
             // collections

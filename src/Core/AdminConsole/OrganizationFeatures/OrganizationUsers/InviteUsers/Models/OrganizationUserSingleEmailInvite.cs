@@ -10,7 +10,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class OrganizationUserSingleEmailInvite
 {
     public string Email { get; private init; } = string.Empty;
-    public Guid[] AccessibleCollections { get; private init; } = [];
+    public CollectionAccessSelection[] AccessibleCollections { get; private init; } = [];
     public Permissions Permissions { get; private init; } = new();
     public OrganizationUserType Type { get; private init; } = OrganizationUserType.User;
     public bool AccessSecretsManager { get; private init; }
@@ -34,7 +34,7 @@ public class OrganizationUserSingleEmailInvite
         return new OrganizationUserSingleEmailInvite
         {
             Email = email,
-            AccessibleCollections = accessibleCollections.Select(x => x.Id).ToArray(),
+            AccessibleCollections = accessibleCollections.ToArray(),
             Type = type,
             Permissions = permissions,
             AccessSecretsManager = accessSecretsManager

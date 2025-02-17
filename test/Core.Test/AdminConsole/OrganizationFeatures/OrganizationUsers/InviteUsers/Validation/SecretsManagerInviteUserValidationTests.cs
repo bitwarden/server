@@ -85,7 +85,7 @@ public class SecretsManagerInviteUserValidationTests
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true))],
+            Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true), organization.Id)],
             Organization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
@@ -116,7 +116,7 @@ public class SecretsManagerInviteUserValidationTests
 
         var request = new InviteUserOrganizationValidationRequest
         {
-            Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true))],
+            Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true), organization.Id)],
             Organization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,

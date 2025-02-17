@@ -49,6 +49,6 @@ public class InviteOrganizationUserRequestTests
 
         Assert.NotNull(invite);
         Assert.Equal(validEmail, invite.Email);
-        Assert.Contains(validCollectionConfiguration.Id, invite.AccessibleCollections);
+        Assert.Contains(validCollectionConfiguration, invite.AccessibleCollections);
     }
 }

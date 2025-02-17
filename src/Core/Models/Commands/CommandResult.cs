@@ -10,7 +10,20 @@ public class CommandResult(IEnumerable<string> errors)
     public CommandResult() : this(Array.Empty<string>()) { }
 }
 
-public class CommandResult<T>(T value) : CommandResult
+public abstract class CommandResult<T> : CommandResult
 {
-    public T Value { get; set; } = value;
+
+    public T Value { get; set; }
+}
+
+public class Success<T> : CommandResult<T>
+{
+    public Success(T value) => Value = value;
+}
+
+public class Failure<T> : CommandResult<T>
+{
+    public Failure(string error) => ErrorMessages.Add(error);
+
+    public string ErrorMessage => string.Join(" ", ErrorMessages);
 }

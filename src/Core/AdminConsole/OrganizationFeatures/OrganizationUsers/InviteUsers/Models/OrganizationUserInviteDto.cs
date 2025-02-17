@@ -6,13 +6,15 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class OrganizationUserInviteDto
 {
     public string Email { get; private init; } = string.Empty;
-    public Guid[] AccessibleCollections { get; private init; } = [];
+    public CollectionAccessSelection[] AccessibleCollections { get; private init; } = [];
     public string ExternalId { get; private init; } = string.Empty;
     public Permissions Permissions { get; private init; } = new();
     public OrganizationUserType Type { get; private init; } = OrganizationUserType.User;
     public bool AccessSecretsManager { get; private init; }
+    public Guid OrganizationId { get; private init; } = Guid.Empty;
+    public Guid[] Groups { get; private init; } = [];
 
-    public static OrganizationUserInviteDto Create(string email, OrganizationUserInvite invite)
+    public static OrganizationUserInviteDto Create(string email, OrganizationUserInvite invite, Guid organizationId)
     {
         return new OrganizationUserInviteDto
         {
@@ -21,7 +23,9 @@ public class OrganizationUserInviteDto
             ExternalId = invite.ExternalId,
             Type = invite.Type,
             Permissions = invite.Permissions,
-            AccessSecretsManager = invite.AccessSecretsManager
+            AccessSecretsManager = invite.AccessSecretsManager,
+            OrganizationId = organizationId,
+            Groups = invite.Groups
         };
     }
 }
