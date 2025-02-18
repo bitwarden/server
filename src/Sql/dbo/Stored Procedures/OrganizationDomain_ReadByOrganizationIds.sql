@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByOrganizationIds]
+CREATE PROCEDURE [dbo].[OrganizationDomain_ReadByOrganizationIds]
     @OrganizationIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
