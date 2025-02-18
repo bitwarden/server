@@ -5,6 +5,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
 
@@ -116,11 +117,19 @@ public class EmergencyAccessViewResponseModel : ResponseModel
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
-        IEnumerable<CipherDetails> ciphers)
+        IEnumerable<CipherDetails> ciphers,
+        User user,
+        IDictionary<Guid, OrganizationAbility> organizationAbilities)
         : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
-        Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
+        Ciphers = ciphers.Select(cipher =>
+            new CipherResponseModel(
+                cipher,
+                user,
+                cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
+                    organizationAbility : null,
+                globalSettings));
     }
 
     public string KeyEncrypted { get; set; }
