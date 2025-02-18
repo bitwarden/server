@@ -23,17 +23,20 @@ public class EmergencyAccessController : Controller
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IEmergencyAccessService _emergencyAccessService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public EmergencyAccessController(
         IUserService userService,
         IEmergencyAccessRepository emergencyAccessRepository,
         IEmergencyAccessService emergencyAccessService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IApplicationCacheService applicationCacheService)
     {
         _userService = userService;
         _emergencyAccessRepository = emergencyAccessRepository;
         _emergencyAccessService = emergencyAccessService;
         _globalSettings = globalSettings;
+        _applicationCacheService = applicationCacheService;
     }
 
     [HttpGet("trusted")]
@@ -167,7 +170,14 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers);
+        var cipherOrganizationIds = viewResult.Ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
+        var organizationAbilities = await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
+        return new EmergencyAccessViewResponseModel(
+            _globalSettings,
+            viewResult.EmergencyAccess,
+            viewResult.Ciphers,
+            user,
+            organizationAbilities);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]
