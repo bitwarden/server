@@ -1,4 +1,4 @@
-/* Add OrganizationDomain_ReadByOrganizationIds */
+
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByOrganizationIds]
     @OrganizationIds AS [dbo].[GuidIdArray] READONLY
 AS
