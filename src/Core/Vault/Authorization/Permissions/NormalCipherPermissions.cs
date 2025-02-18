@@ -5,7 +5,7 @@ using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Vault.Authorization.Permissions;
 
-public static class NormalCipherPermissions
+public class NormalCipherPermissions
 {
     public static bool CanDelete(User user, CipherDetails cipherDetails, OrganizationAbility? organizationAbility)
     {
@@ -16,10 +16,10 @@ public static class NormalCipherPermissions
 
         if (organizationAbility == null)
         {
-            throw new Exception("");
+            throw new Exception("Cipher needs to belong to a user or an organization.");
         }
 
-        if (organizationAbility.LimitItemDeletion)
+        if (organizationAbility is { LimitItemDeletion: true })
         {
             return cipherDetails.Manage;
         }
