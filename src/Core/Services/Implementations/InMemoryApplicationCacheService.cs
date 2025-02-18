@@ -37,6 +37,14 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
             .TryGetValue(organizationId, out var organizationAbility);
         return organizationAbility;
     }
+
+    public async Task<IDictionary<Guid, OrganizationAbility?>> GetManyOrganizationAbilityAsync(IEnumerable<Guid> organizationIds)
+    {
+        var organizationAbilities = await GetOrganizationAbilitiesAsync();
+        return organizationIds.ToDictionary(
+            organizationId => organizationId,
+            organizationId => organizationAbilities.TryGetValue(organizationId, out var organizationAbility) ? organizationAbility : null);
+    }
 #nullable disable
 
     public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
