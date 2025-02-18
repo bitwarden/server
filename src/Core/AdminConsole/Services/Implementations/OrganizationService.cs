@@ -671,18 +671,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task EnableAsync(Guid organizationId, DateTime? expirationDate)
-    {
-        var org = await GetOrgById(organizationId);
-        if (org != null && !org.Enabled && org.Gateway.HasValue)
-        {
-            org.Enabled = true;
-            org.ExpirationDate = expirationDate;
-            org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
-        }
-    }
-
     public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
     {
         var org = await GetOrgById(organizationId);
@@ -704,16 +692,6 @@ public class OrganizationService : IOrganizationService
         {
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
-        }
-    }
-
-    public async Task EnableAsync(Guid organizationId)
-    {
-        var org = await GetOrgById(organizationId);
-        if (org != null && !org.Enabled)
-        {
-            org.Enabled = true;
             await ReplaceAndUpdateCacheAsync(org);
         }
     }

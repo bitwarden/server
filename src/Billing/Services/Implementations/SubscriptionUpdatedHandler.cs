@@ -1,6 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Push;
@@ -24,6 +25,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
     private readonly IPricingClient _pricingClient;
 
     public SubscriptionUpdatedHandler(
@@ -37,6 +39,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
         IFeatureService featureService,
+        IOrganizationEnableCommand organizationEnableCommand,
         IPricingClient pricingClient)
     {
         _stripeEventService = stripeEventService;
@@ -49,6 +52,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
         _featureService = featureService;
+        _organizationEnableCommand = organizationEnableCommand;
         _pricingClient = pricingClient;
     }
 
@@ -93,7 +97,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
-                    await _organizationService.EnableAsync(organizationId.Value);
+                    await _organizationEnableCommand.EnableAsync(organizationId.Value);
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
                     await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
                     break;
