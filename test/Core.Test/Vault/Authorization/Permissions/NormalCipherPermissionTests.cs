@@ -45,6 +45,20 @@ public class NormalCipherPermissionTests
         Assert.True(result);
     }
 
+    [Fact]
+    public void CanRestore_WhenCipherHasNoOwner_ShouldThrowException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId };
+        var cipherDetails = new CipherDetails { UserId = null };
+
+
+        // Act
+        // Assert
+        Assert.Throws<Exception>(() => NormalCipherPermissions.CanRestore(user, cipherDetails, null));
+    }
+
     [Theory]
     [InlineData(true, true, true, true)]
     [InlineData(true, false, false, false)]
@@ -80,5 +94,19 @@ public class NormalCipherPermissionTests
 
         // Assert
         Assert.True(result);
+    }
+
+    [Fact]
+    public void CanDelete_WhenCipherHasNoOwner_ShouldThrowException()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User { Id = userId };
+        var cipherDetails = new CipherDetails { UserId = null };
+
+
+        // Act
+        // Assert
+        Assert.Throws<Exception>(() => NormalCipherPermissions.CanDelete(user, cipherDetails, null));
     }
 }
