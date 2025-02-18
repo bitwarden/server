@@ -28,10 +28,8 @@ public interface IOrganizationService
     /// </summary>
     Task<(Organization organization, OrganizationUser organizationUser)> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
-    Task EnableAsync(Guid organizationId, DateTime? expirationDate);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
-    Task EnableAsync(Guid organizationId);
     Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);

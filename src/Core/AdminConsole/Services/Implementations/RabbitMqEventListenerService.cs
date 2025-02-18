@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -38,7 +39,10 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
         _connection = await _factory.CreateConnectionAsync(cancellationToken);
         _channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
 
-        await _channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
+        await _channel.ExchangeDeclareAsync(exchange: _exchangeName,
+                                            type: ExchangeType.Fanout,
+                                            durable: true,
+                                            cancellationToken: cancellationToken);
         await _channel.QueueDeclareAsync(queue: _queueName,
                                          durable: true,
                                          exclusive: false,
@@ -52,15 +56,27 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
         await base.StartAsync(cancellationToken);
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         var consumer = new AsyncEventingBasicConsumer(_channel);
         consumer.ReceivedAsync += async (_, eventArgs) =>
         {
             try
             {
-                var eventMessage = JsonSerializer.Deserialize<EventMessage>(eventArgs.Body.Span);
-                await _handler.HandleEventAsync(eventMessage);
+                using var jsonDocument = JsonDocument.Parse(Encoding.UTF8.GetString(eventArgs.Body.Span));
+                var root = jsonDocument.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array)
+                {
+                    var eventMessages = root.Deserialize<IEnumerable<EventMessage>>();
+                    await _handler.HandleManyEventsAsync(eventMessages);
+                }
+                else if (root.ValueKind == JsonValueKind.Object)
+                {
+                    var eventMessage = root.Deserialize<EventMessage>();
+                    await _handler.HandleEventAsync(eventMessage);
+
+                }
             }
             catch (Exception ex)
             {
@@ -68,18 +84,13 @@ public class RabbitMqEventListenerService : EventLoggingListenerService
             }
         };
 
-        await _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: stoppingToken);
-
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await Task.Delay(1_000, stoppingToken);
-        }
+        await _channel.BasicConsumeAsync(_queueName, autoAck: true, consumer: consumer, cancellationToken: cancellationToken);
     }
 
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _channel.CloseAsync();
-        await _connection.CloseAsync();
+        await _channel.CloseAsync(cancellationToken);
+        await _connection.CloseAsync(cancellationToken);
         await base.StopAsync(cancellationToken);
     }
 
