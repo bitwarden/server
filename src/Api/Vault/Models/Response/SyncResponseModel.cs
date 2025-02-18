@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
@@ -21,6 +22,7 @@ public class SyncResponseModel : ResponseModel
         User user,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
+        IDictionary<Guid, OrganizationAbility> organizationAbilities,
         IEnumerable<Guid> organizationIdsManagingUser,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
@@ -37,7 +39,14 @@ public class SyncResponseModel : ResponseModel
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsManagingUser);
         Folders = folders.Select(f => new FolderResponseModel(f));
-        Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
+        Ciphers = ciphers.Select(cipher =>
+            new CipherDetailsResponseModel(
+                cipher,
+                user,
+                cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
+                    organizationAbility : null,
+                globalSettings,
+                collectionCiphersDict));
         Collections = collections?.Select(
             c => new CollectionDetailsResponseModel(c)) ?? new List<CollectionDetailsResponseModel>();
         Domains = excludeDomains ? null : new DomainsResponseModel(user, false);
