@@ -170,14 +170,11 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        var cipherOrganizationIds = viewResult.Ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
-        var organizationAbilities = await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
         return new EmergencyAccessViewResponseModel(
             _globalSettings,
             viewResult.EmergencyAccess,
             viewResult.Ciphers,
-            user,
-            organizationAbilities);
+            user);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]

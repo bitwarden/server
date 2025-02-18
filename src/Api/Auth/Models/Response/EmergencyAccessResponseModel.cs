@@ -1,11 +1,11 @@
-﻿using Bit.Api.Vault.Models.Response;
+﻿using System.Text.Json.Serialization;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
 
@@ -114,21 +114,23 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
 
 public class EmergencyAccessViewResponseModel : ResponseModel
 {
+    [JsonConstructor]
+    public EmergencyAccessViewResponseModel()
+        : base("emergencyAccessView") { }
+
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
         IEnumerable<CipherDetails> ciphers,
-        User user,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities)
-        : base("emergencyAccessView")
+        User user)
+        : this()
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
         Ciphers = ciphers.Select(cipher =>
             new CipherResponseModel(
                 cipher,
                 user,
-                cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
-                    organizationAbility : null,
+                organizationAbility: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
                 globalSettings));
     }
 
