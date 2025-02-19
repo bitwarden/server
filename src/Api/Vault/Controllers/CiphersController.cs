@@ -11,6 +11,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -86,9 +87,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbilities = cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
 
-        return new CipherResponseModel(cipher, user, organizationAbilities, _globalSettings);
+        return new CipherResponseModel(cipher, user, organizationAbility, _globalSettings);
     }
 
     [HttpGet("{id}/admin")]
@@ -118,10 +119,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationAbilities = cipher.OrganizationId.HasValue ?
-            await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+        var organizationAbility = await GetOrganizationAbilityAsync(cipher);
         var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(user.Id, id);
-        return new CipherDetailsResponseModel(cipher, user, organizationAbilities, _globalSettings, collectionCiphers);
+        return new CipherDetailsResponseModel(cipher, user, organizationAbility, _globalSettings, collectionCiphers);
     }
 
     [HttpGet("")]
@@ -137,13 +137,11 @@ public class CiphersController : Controller
             var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdAsync(user.Id);
             collectionCiphersGroupDict = collectionCiphers.GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
         }
-        var cipherOrganizationIds = ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
-        var organizationAbilities = await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
+        var organizationAbilities = await GetManyOrganizationAbilitiesAsync(ciphers);
         var responses = ciphers.Select(cipher => new CipherDetailsResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
-                organizationAbility : null,
+            cipher.OrganizationId.HasValue ? organizationAbilities[cipher.OrganizationId.Value] : null,
             _globalSettings,
             collectionCiphersGroupDict)).ToList();
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
@@ -163,7 +161,7 @@ public class CiphersController : Controller
         var response = new CipherResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
         return response;
     }
@@ -182,7 +180,7 @@ public class CiphersController : Controller
         var response = new CipherResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
         return response;
     }
@@ -232,7 +230,7 @@ public class CiphersController : Controller
         var response = new CipherResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
         return response;
     }
@@ -301,14 +299,12 @@ public class CiphersController : Controller
         }
 
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var cipherOrganizationIds = ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
-        var organizationAbilities = await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
+        var organizationAbilities = await GetManyOrganizationAbilitiesAsync(ciphers);
         var responses = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(
                 cipher,
                 user,
-                cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
-                    organizationAbility : null,
+                cipher.OrganizationId.HasValue ? organizationAbilities[cipher.OrganizationId.Value] : null,
                 _globalSettings));
 
         return new ListResponseModel<CipherDetailsResponseModel>(responses);
@@ -611,7 +607,7 @@ public class CiphersController : Controller
         var response = new CipherResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
         return response;
     }
@@ -638,7 +634,7 @@ public class CiphersController : Controller
         var response = new CipherResponseModel(
             sharedCipher,
             user,
-            sharedCipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(sharedCipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(sharedCipher),
             _globalSettings);
         return response;
     }
@@ -664,7 +660,7 @@ public class CiphersController : Controller
         return new CipherDetailsResponseModel(
             updatedCipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(updatedCipher),
             _globalSettings,
             collectionCiphers);
     }
@@ -696,7 +692,7 @@ public class CiphersController : Controller
                 : new CipherDetailsResponseModel(
                     updatedCipher,
                     user,
-                    updatedCipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(updatedCipher.OrganizationId.Value) : null,
+                    await GetOrganizationAbilityAsync(updatedCipher),
                     _globalSettings,
                     collectionCiphers)
         };
@@ -899,7 +895,7 @@ public class CiphersController : Controller
         return new CipherResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
     }
 
@@ -1075,7 +1071,7 @@ public class CiphersController : Controller
             CipherResponse = request.AdminRequest ? null : new CipherResponseModel(
                 (CipherDetails)cipher,
                 user,
-                cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+                await GetOrganizationAbilityAsync(cipher),
                 _globalSettings),
             CipherMiniResponse = request.AdminRequest ? new CipherMiniResponseModel(cipher, _globalSettings, cipher.OrganizationUseTotp) : null,
         };
@@ -1150,7 +1146,7 @@ public class CiphersController : Controller
         return new CipherResponseModel(
             cipher,
             user,
-            cipher.OrganizationId.HasValue ? await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null,
+            await GetOrganizationAbilityAsync(cipher),
             _globalSettings);
     }
 
@@ -1300,5 +1296,24 @@ public class CiphersController : Controller
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
         return await _cipherRepository.GetByIdAsync(cipherId, userId);
+    }
+
+    /// <summary>
+    /// Returns the organization ability for the cipher if it is an organization cipher, otherwise returns null.
+    /// </summary>
+    private async Task<OrganizationAbility> GetOrganizationAbilityAsync(Cipher cipher)
+    {
+        return cipher.OrganizationId.HasValue ?
+            await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value) : null;
+    }
+
+    /// <summary>
+    /// Returns a dictionary of organization abilities for the provided ciphers that are organization ciphers.
+    /// If the cipher is not an organization cipher, the value will be null.
+    /// </summary>
+    private async Task<IDictionary<Guid, OrganizationAbility>> GetManyOrganizationAbilitiesAsync(IEnumerable<Cipher> ciphers)
+    {
+        var cipherOrganizationIds = ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
+        return await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
     }
 }
