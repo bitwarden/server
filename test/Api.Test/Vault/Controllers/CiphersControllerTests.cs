@@ -27,17 +27,18 @@ namespace Bit.Api.Test.Controllers;
 public class CiphersControllerTests
 {
     [Theory, BitAutoData]
-    public async Task PutPartialShouldReturnCipherWithGivenFolderAndFavoriteValues(Guid userId, Guid folderId, SutProvider<CiphersController> sutProvider)
+    public async Task PutPartialShouldReturnCipherWithGivenFolderAndFavoriteValues(User user, Guid folderId, SutProvider<CiphersController> sutProvider)
     {
         var isFavorite = true;
         var cipherId = Guid.NewGuid();
 
         sutProvider.GetDependency<IUserService>()
-            .GetProperUserId(Arg.Any<ClaimsPrincipal>())
-            .Returns(userId);
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
 
         var cipherDetails = new CipherDetails
         {
+            UserId = user.Id,
             Favorite = isFavorite,
             FolderId = folderId,
             Type = Core.Vault.Enums.CipherType.SecureNote,
@@ -45,7 +46,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherId, userId)
+            .GetByIdAsync(cipherId, user.Id)
             .Returns(Task.FromResult(cipherDetails));
 
         var result = await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
@@ -55,12 +56,12 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task PutCollections_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, Guid userId,
+    public async Task PutCollections_vNextShouldThrowExceptionWhenCipherIsNullOrNoOrgValue(Guid id, CipherCollectionsRequestModel model, User user,
         SutProvider<CiphersController> sutProvider)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).Returns(userId);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(Guid.NewGuid()).Returns(false);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, userId).ReturnsNull();
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(id, user.Id).ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.PutCollections_vNext(id, model);
 
@@ -115,6 +116,7 @@ public class CiphersControllerTests
     private void SetupUserAndOrgMocks(Guid id, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdCipherIdAsync(userId, id).Returns(new List<CollectionCipher>());
     }
