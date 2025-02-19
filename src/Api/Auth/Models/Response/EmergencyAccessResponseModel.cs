@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using Bit.Api.Vault.Models.Response;
+﻿using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -114,16 +113,12 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
 
 public class EmergencyAccessViewResponseModel : ResponseModel
 {
-    [JsonConstructor]
-    public EmergencyAccessViewResponseModel()
-        : base("emergencyAccessView") { }
-
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
         IEnumerable<CipherDetails> ciphers,
         User user)
-        : this()
+        : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
         Ciphers = ciphers.Select(cipher =>
