@@ -7,9 +7,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// <summary>
 /// Policy requirements for the Disable Send and Send Options policies.
 /// </summary>
-public class SendPolicyRequirement : SendOptionsPolicyData, IPolicyRequirement
+public class SendPolicyRequirement : IPolicyRequirement
 {
     public bool DisableSend { get; init; }
+    public bool DisableHideEmail { get; init; }
 
     public static SendPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
@@ -21,7 +22,7 @@ public class SendPolicyRequirement : SendOptionsPolicyData, IPolicyRequirement
 
         return filteredPolicies
             .GetPolicyType(PolicyType.SendOptions)
-            .Select(p => p.GetDataModel<SendPolicyRequirement>())
+            .Select(p => p.GetDataModel<SendOptionsPolicyData>())
             .Aggregate(
                 new SendPolicyRequirement
                 {
