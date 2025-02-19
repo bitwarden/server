@@ -617,7 +617,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Failed(new IdentityError
         {
             Code = "EmailDomainMismatch",
-            Description = "Your new email must match your organization domain"
+            Description = "Your new email must match your organization domain."
         });
     }
 
