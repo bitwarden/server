@@ -4,10 +4,12 @@ using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
-public class SendPolicyRequirement : IPolicyRequirement
+/// <summary>
+/// Policy requirements for the Disable Send and Send Options policies.
+/// </summary>
+public class SendPolicyRequirement : SendOptionsPolicyData, IPolicyRequirement
 {
     public bool DisableSend { get; init; }
-    public bool DisableHideEmail { get; init; }
 
     public static SendPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
@@ -17,16 +19,19 @@ public class SendPolicyRequirement : IPolicyRequirement
             .ExemptProviders()
             .ToList();
 
-        return new SendPolicyRequirement
-        {
-            DisableSend = filteredPolicies
-                .GetPolicyType(PolicyType.DisableSend)
-                .Any(),
-
-            DisableHideEmail = filteredPolicies
-                .GetPolicyType(PolicyType.SendOptions)
-                .Select(up => up.GetDataModel<SendOptionsPolicyData>())
-                .Any(d => d.DisableHideEmail)
-        };
+        return filteredPolicies
+            .GetPolicyType(PolicyType.SendOptions)
+            .Select(p => p.GetDataModel<SendPolicyRequirement>())
+            .Aggregate(
+                new SendPolicyRequirement
+                {
+                    // Set Disable Send requirement in the initial seed
+                    DisableSend = filteredPolicies.GetPolicyType(PolicyType.DisableSend).Any()
+                },
+                (result, data) => new SendPolicyRequirement
+                {
+                    DisableSend = result.DisableSend,
+                    DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail
+                });
     }
 }
