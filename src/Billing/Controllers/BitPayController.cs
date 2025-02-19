@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Bit.Billing.Constants;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Services;
@@ -65,7 +66,7 @@ public class BitPayController : Controller
             return new BadRequestResult();
         }
 
-        if (model.Event.Name != "invoice_confirmed")
+        if (model.Event.Name != BitPayNotificationCode.InvoiceConfirmed)
         {
             // Only processing confirmed invoice events for now.
             return new OkResult();
@@ -79,7 +80,7 @@ public class BitPayController : Controller
             return new BadRequestResult();
         }
 
-        if (invoice.Status != "confirmed" && invoice.Status != "completed")
+        if (invoice.Status != BitPayInvoiceStatus.Confirmed && invoice.Status != BitPayInvoiceStatus.Complete)
         {
             _logger.LogWarning("Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id);
             return new BadRequestResult();
