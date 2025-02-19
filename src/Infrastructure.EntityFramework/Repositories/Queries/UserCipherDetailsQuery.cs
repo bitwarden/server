@@ -64,8 +64,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                         c.Favorites,
                         c.Folders,
                         Edit = cu == null ? (cg != null && cg.ReadOnly == false) : cu.ReadOnly == false,
-                        Manage = cu == null ? (cg != null && cg.Manage == true) : cu.Manage == true,
                         ViewPassword = cu == null ? (cg != null && cg.HidePasswords == false) : cu.HidePasswords == false,
+                        Manage = cu == null ? (cg != null && cg.Manage == true) : cu.Manage == true,
                         OrganizationUseTotp = o.UseTotp,
                         c.Reprompt,
                         c.Key
@@ -87,8 +87,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
                          c.Favorites,
                          c.Folders,
                          Edit = true,
-                         Manage = true,
                          ViewPassword = true,
+                         Manage = true,
                          OrganizationUseTotp = false,
                          c.Reprompt,
                          c.Key
@@ -108,9 +108,9 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
             FolderId = GetFolderId(_userId, new Cipher { Id = c.Id, Folders = c.Folders }),
             Edit = c.Edit,
-            Manage = c.Manage,
             Reprompt = c.Reprompt,
             ViewPassword = c.ViewPassword,
+            Manage = c.Manage,
             OrganizationUseTotp = c.OrganizationUseTotp,
             Key = c.Key
         });
