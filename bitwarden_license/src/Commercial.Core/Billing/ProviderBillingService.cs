@@ -122,6 +122,19 @@ public class ProviderBillingService(
             providerOrganizationRepository.CreateAsync(providerOrganization)
         );
 
+        var clientCustomer = await subscriberService.GetCustomer(organization);
+
+        if (clientCustomer.Balance != 0)
+        {
+            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+                new CustomerBalanceTransactionCreateOptions
+                {
+                    Amount = clientCustomer.Balance,
+                    Currency = "USD",
+                    Description = $"Unused, prorated time for client organization with ID {organization.Id}."
+                });
+        }
+
         await eventService.LogProviderOrganizationEventAsync(
             providerOrganization,
             EventType.ProviderOrganization_Added);
