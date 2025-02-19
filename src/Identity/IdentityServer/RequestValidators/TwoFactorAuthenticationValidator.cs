@@ -40,12 +40,13 @@ public interface ITwoFactorAuthenticationValidator
     /// Uses the built in userManager methods to verify the two-factor token for the user. If the organization uses
     /// organization duo, it will use the organization duo token provider to verify the token.
     /// </summary>
-    /// <param name="user">the active User</param>
-    /// <param name="organization">organization of user; can be null</param>
-    /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
-    /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
+    /// <param name="user">The active User.</param>
+    /// <param name="organization">Organization of user; can be null.</param>
+    /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token.</param>
+    /// <param name="token">Secret passed from the user and consumed by the two-factor provider's verify method.</param>
+    /// <param name="validatorContext">Validator context to set some state to be used in the Device Validation at a later point.</param>
     /// <returns>boolean</returns>
-    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
+    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token, CustomValidatorRequestContext validatorContext);
 }
 
 public class TwoFactorAuthenticationValidator(
@@ -144,7 +145,8 @@ public class TwoFactorAuthenticationValidator(
         User user,
         Organization organization,
         TwoFactorProviderType type,
-        string token)
+        string token,
+        CustomValidatorRequestContext validatorContext)
     {
         if (organization != null && type == TwoFactorProviderType.OrganizationDuo)
         {
@@ -159,7 +161,13 @@ public class TwoFactorAuthenticationValidator(
         {
             if (type is TwoFactorProviderType.RecoveryCode)
             {
-                return await _userService.RecoverTwoFactorAsync(user, token);
+                var validRecoveryResponse = await _userService.RecoverTwoFactorAsync(user, token);
+
+                // We are in the recovery flow and we want to know if the recovery token is valid
+                // for later use in device verification.
+                validatorContext.InRecoveryFlowAndValidCode = validRecoveryResponse;
+
+                return validRecoveryResponse;
             }
         }
 

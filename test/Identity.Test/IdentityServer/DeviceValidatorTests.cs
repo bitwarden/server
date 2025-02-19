@@ -398,6 +398,123 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async void ValidateRequestDeviceAsync_RecoveryFlowSkipsNewDeviceVerification_ReturnsSuccess(
+        CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        context.InRecoveryFlowAndValidCode = true;
+
+        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
+        _globalSettings.EnableNewDeviceVerification = true;
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
+
+        var newDeviceOtp = "123456";
+        request.Raw.Add("NewDeviceOtp", newDeviceOtp);
+
+        _userService.VerifyOTPAsync(context.User, newDeviceOtp).Returns(true);
+
+        // Act
+        var result = await _sut.ValidateRequestDeviceAsync(request, context);
+
+        // Assert
+        await _userService.Received(0).SendOTPAsync(context.User);
+        await _deviceService.Received(1).SaveAsync(context.Device);
+        await _distributedCache.Received(0).GetAsync(Arg.Any<string>());
+
+        Assert.True(result);
+        Assert.False(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.Equal(context.User.Id, context.Device.UserId);
+        Assert.NotNull(context.Device);
+    }
+
+    [Theory, BitAutoData]
+    public async void ValidateRequestDeviceAsync_RecoveryFlowFalseContinuesFlow_ReturnsSuccess(
+        CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        context.InRecoveryFlowAndValidCode = false;
+
+        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
+        _globalSettings.EnableNewDeviceVerification = true;
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
+
+        var newDeviceOtp = "123456";
+        request.Raw.Add("NewDeviceOtp", newDeviceOtp);
+
+        _userService.VerifyOTPAsync(context.User, newDeviceOtp).Returns(true);
+
+        // Act
+        var result = await _sut.ValidateRequestDeviceAsync(request, context);
+
+        // Assert
+        await _userService.Received(0).SendOTPAsync(context.User);
+        await _deviceService.Received(1).SaveAsync(context.Device);
+        await _distributedCache.Received(1).GetAsync(Arg.Any<string>());
+
+        Assert.True(result);
+        Assert.False(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.Equal(context.User.Id, context.Device.UserId);
+        Assert.NotNull(context.Device);
+    }
+
+    // [Theory, BitAutoData]
+    // public async void ValidateRequestDeviceAsync_DeviceNull_RecoveryFlow_ReturnsTrue(
+    //     CustomValidatorRequestContext context,
+    //     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    // {
+    //     // Arrange
+    //     context.KnownDevice = false;
+    //     context.InRecoveryFlowAndValidCode = true;
+    //
+    //     _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
+    //         .Returns(true);
+    //
+    //     // Act
+    //     Assert.NotNull(context.User);
+    //     var result = await _sut.ValidateRequestDeviceAsync(request, context);
+    //
+    //     // Assert
+    //     await _deviceService.Received(1).SaveAsync(Arg.Any<Device>());
+    //
+    //     Assert.True(result);
+    // }
+    //
+    // [Theory, BitAutoData]
+    // public async void ValidateRequestDeviceAsync_DeviceNull_InvalidRecoveryFlow_ReturnsFalse(
+    //     CustomValidatorRequestContext context,
+    //     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    // {
+    //     // Arrange
+    //     context.KnownDevice = false;
+    //     context.InRecoveryFlowAndValidCode = false;
+    //
+    //     ArrangeForHandleNewDeviceVerificationTest(context, request);
+    //     AddValidDeviceToRequest(request);
+    //     _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
+    //         .Returns(null as Device);
+    //     _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
+    //         .Returns(true);
+    //     _globalSettings.EnableNewDeviceVerification = true;
+    //
+    //     // Act
+    //     Assert.NotNull(context.User);
+    //     var result = await _sut.ValidateRequestDeviceAsync(request, context);
+    //
+    //     // Assert
+    //     await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
+    //
+    //     Assert.False(result);
+    //     Assert.NotNull(context.CustomResponse["ErrorModel"]);
+    //     var expectedErrorModel = new ErrorResponseModel("no device information provided");
+    //     var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
+    //     Assert.Equal(expectedErrorModel.Message, actualResponse.Message);
+    // }
+
+    [Theory, BitAutoData]
     public async void HandleNewDeviceVerificationAsync_UserNull_ContextModified_ReturnsInvalidUser(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)

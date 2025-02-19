@@ -28,6 +28,11 @@ public class CustomValidatorRequestContext
     /// </summary>
     public bool SsoRequired { get; set; } = false;
     /// <summary>
+    /// This communicates if we are in a recovery flow and thus need to make new device verification
+    /// skip a part of the flow in order to allow the recovery code to log in the user.
+    /// </summary>
+    public bool InRecoveryFlowAndValidCode = false;
+    /// <summary>
     /// We use the parent class for both GrantValidationResult and TokenRequestValidationResult here for
     /// flexibility when building an error response.
     /// This will be null if the authentication request is successful.

@@ -10,6 +10,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Identity.IdentityServer;
 using Bit.Identity.IdentityServer.RequestValidators;
 using Bit.Identity.Test.Wrappers;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -320,7 +321,8 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData]
     public async void VerifyTwoFactorAsync_Individual_TypeNull_ReturnsFalse(
         User user,
-        string token)
+        string token,
+        CustomValidatorRequestContext context)
     {
         // Arrange
         _userService.TwoFactorProviderIsEnabledAsync(
@@ -330,7 +332,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.U2f, token);
+            user, null, TwoFactorProviderType.U2f, token, context);
 
         // Assert
         Assert.False(result);
@@ -340,7 +342,9 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData]
     public async void VerifyTwoFactorAsync_Individual_NotEnabled_ReturnsFalse(
         User user,
-        string token)
+        string token,
+        CustomValidatorRequestContext context)
+
     {
         // Arrange
         _userService.TwoFactorProviderIsEnabledAsync(
@@ -350,7 +354,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.Email, token);
+            user, null, TwoFactorProviderType.Email, token, context);
 
         // Assert
         Assert.False(result);
@@ -360,7 +364,8 @@ public class TwoFactorAuthenticationValidatorTests
     [BitAutoData]
     public async void VerifyTwoFactorAsync_Organization_NotEnabled_ReturnsFalse(
         User user,
-        string token)
+        string token,
+        CustomValidatorRequestContext context)
     {
         // Arrange
         _userService.TwoFactorProviderIsEnabledAsync(
@@ -370,7 +375,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, null, TwoFactorProviderType.OrganizationDuo, token);
+            user, null, TwoFactorProviderType.OrganizationDuo, token, context);
 
         // Assert
         Assert.False(result);
@@ -385,7 +390,8 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_Individual_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
-        string token)
+        string token,
+        CustomValidatorRequestContext context)
     {
         // Arrange
         _userService.TwoFactorProviderIsEnabledAsync(
@@ -395,7 +401,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
-        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token, context);
 
         // Assert
         Assert.True(result);
@@ -410,7 +416,8 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_Individual_InvalidToken_ReturnsFalse(
         TwoFactorProviderType providerType,
         User user,
-        string token)
+        string token,
+        CustomValidatorRequestContext context)
     {
         // Arrange
         _userService.TwoFactorProviderIsEnabledAsync(
@@ -420,7 +427,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
 
         // Act
-        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token, context);
 
         // Assert
         Assert.False(result);
@@ -432,7 +439,8 @@ public class TwoFactorAuthenticationValidatorTests
         TwoFactorProviderType providerType,
         User user,
         Organization organization,
-        string token)
+        string token,
+        CustomValidatorRequestContext context)
     {
         // Arrange
         _organizationDuoUniversalTokenProvider.ValidateAsync(
@@ -447,7 +455,7 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, context);
 
         // Assert
         Assert.True(result);
@@ -458,7 +466,8 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_RecoveryCode_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
-        Organization organization)
+        Organization organization,
+        CustomValidatorRequestContext context)
     {
         var token = "1234";
         user.TwoFactorRecoveryCode = token;
@@ -468,10 +477,11 @@ public class TwoFactorAuthenticationValidatorTests
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, context);
 
         // Assert
         Assert.True(result);
+        Assert.True(context.InRecoveryFlowAndValidCode);
     }
 
     [Theory]
@@ -479,21 +489,24 @@ public class TwoFactorAuthenticationValidatorTests
     public async void VerifyTwoFactorAsync_RecoveryCode_InvalidToken_ReturnsFalse(
         TwoFactorProviderType providerType,
         User user,
-        Organization organization)
+        Organization organization,
+        CustomValidatorRequestContext context)
     {
         // Arrange
         var token = "1234";
         user.TwoFactorRecoveryCode = token;
+        context.InRecoveryFlowAndValidCode = true;
 
         _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(false);
         _featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin).Returns(true);
 
         // Act
         var result = await _sut.VerifyTwoFactorAsync(
-            user, organization, providerType, token);
+            user, organization, providerType, token, context);
 
         // Assert
         Assert.False(result);
+        Assert.False(context.InRecoveryFlowAndValidCode);
     }
 
     private static UserManagerTestWrapper<User> SubstituteUserManager()
