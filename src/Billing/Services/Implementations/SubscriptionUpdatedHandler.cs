@@ -208,9 +208,11 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private async Task ScheduleCancellationJobAsync(string subscriptionId, Guid organizationId)
     {
         var isResellerManagedOrgAlertEnabled = _featureService.IsEnabled(FeatureFlagKeys.ResellerManagedOrgAlert);
-
-        if (isResellerManagedOrgAlertEnabled)
+        if (!isResellerManagedOrgAlertEnabled)
         {
+            return;
+        }
+
         var scheduler = await _schedulerFactory.GetScheduler();
 
         var job = JobBuilder.Create<SubscriptionCancellationJob>()
@@ -226,5 +228,4 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
 
         await scheduler.ScheduleJob(job, trigger);
     }
-}
 }
