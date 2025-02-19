@@ -1,4 +1,7 @@
-﻿using Bit.Core.Models.Api;
+﻿using Bit.Core;
+using Bit.Core.Enums;
+using Bit.Core.Models.Api;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
@@ -11,6 +14,7 @@ public class ConfigResponseModel : ResponseModel
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
     public IDictionary<string, object> FeatureStates { get; set; }
+    public PushSettings Push { get; set; }
     public ServerSettingsResponseModel Settings { get; set; }
 
     public ConfigResponseModel() : base("config")
@@ -23,8 +27,9 @@ public class ConfigResponseModel : ResponseModel
     }
 
     public ConfigResponseModel(
-        IGlobalSettings globalSettings,
-        IDictionary<string, object> featureStates) : base("config")
+        IFeatureService featureService,
+        IGlobalSettings globalSettings
+        ) : base("config")
     {
         Version = AssemblyHelpers.GetVersion();
         GitHash = AssemblyHelpers.GetGitHash();
@@ -37,7 +42,9 @@ public class ConfigResponseModel : ResponseModel
             Notifications = globalSettings.BaseServiceUri.Notifications,
             Sso = globalSettings.BaseServiceUri.Sso
         };
-        FeatureStates = featureStates;
+        FeatureStates = featureService.GetAll();
+        var webPushEnabled = FeatureStates.TryGetValue(FeatureFlagKeys.WebPush, out var webPushEnabledValue) ? (bool)webPushEnabledValue : false;
+        Push = PushSettings.Build(webPushEnabled, globalSettings);
         Settings = new ServerSettingsResponseModel
         {
             DisableUserRegistration = globalSettings.DisableUserRegistration
@@ -59,6 +66,23 @@ public class EnvironmentConfigResponseModel
     public string Identity { get; set; }
     public string Notifications { get; set; }
     public string Sso { get; set; }
+}
+
+public class PushSettings
+{
+    public PushTechnologyType PushTechnology { get; private init; }
+    public string VapidPublicKey { get; private init; }
+
+    public static PushSettings Build(bool webPushEnabled, IGlobalSettings globalSettings)
+    {
+        var vapidPublicKey = webPushEnabled ? globalSettings.WebPush.VapidPublicKey : null;
+        var pushTechnology = vapidPublicKey != null ? PushTechnologyType.WebPush : PushTechnologyType.SignalR;
+        return new()
+        {
+            VapidPublicKey = vapidPublicKey,
+            PushTechnology = pushTechnology
+        };
+    }
 }
 
 public class ServerSettingsResponseModel

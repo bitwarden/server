@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -40,13 +41,13 @@ public class DeviceServiceTests
             Name = "test device",
             Type = DeviceType.Android,
             UserId = userId,
-            PushToken = "testtoken",
+            PushToken = "testToken",
             Identifier = "testid"
         };
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
+        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(v => v.Token == "testToken"), id.ToString(),
             userId.ToString(), "testid", DeviceType.Android,
             Arg.Do<IEnumerable<string>>(organizationIds =>
             {
@@ -79,12 +80,12 @@ public class DeviceServiceTests
             Name = "test device",
             Type = DeviceType.Android,
             UserId = userId,
-            PushToken = "testtoken",
+            PushToken = "testToken",
             Identifier = "testid"
         };
         await deviceService.SaveAsync(device);
 
-        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync("testtoken",
+        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(v => v.Token == "testToken"),
             Arg.Do<string>(id => Guid.TryParse(id, out var _)), userId.ToString(), "testid", DeviceType.Android,
             Arg.Do<IEnumerable<string>>(organizationIds =>
             {

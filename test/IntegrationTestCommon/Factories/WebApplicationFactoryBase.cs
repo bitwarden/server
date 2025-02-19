@@ -163,6 +163,10 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
                 // New Device Verification
                 { "globalSettings:disableEmailNewDevice", "false" },
+
+                // Web push notifications
+                { "globalSettings:webPush:vapidPublicKey", "BGBtAM0bU3b5jsB14IjBYarvJZ6rWHilASLudTTYDDBi7a-3kebo24Yus_xYeOMZ863flAXhFAbkL6GVSrxgErg" },
+                { "globalSettings:launchDarkly:flagValues:web-push", "true" },
             });
         });
 
