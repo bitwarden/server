@@ -97,7 +97,10 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 {
                     await _organizationEnableCommand.EnableAsync(organizationId.Value);
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+                    if (organization != null)
+                    {
                         await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
+                    }
                     break;
                 }
             case StripeSubscriptionStatus.Active:
