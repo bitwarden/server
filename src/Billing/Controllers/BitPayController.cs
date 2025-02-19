@@ -76,20 +76,20 @@ public class BitPayController : Controller
         if (invoice == null)
         {
             // Request forged...?
-            _logger.LogWarning("Invoice not found. #" + model.Data.Id);
+            _logger.LogWarning("Invoice not found. #{InvoiceId}", model.Data.Id);
             return new BadRequestResult();
         }
 
         if (invoice.Status != BitPayInvoiceStatus.Confirmed && invoice.Status != BitPayInvoiceStatus.Complete)
         {
-            _logger.LogWarning("Invoice status of '" + invoice.Status + "' is not acceptable. #" + invoice.Id);
+            _logger.LogWarning("Invoice status of '{InvoiceStatus}' is not acceptable. #{InvoiceId}", invoice.Status, invoice.Id);
             return new BadRequestResult();
         }
 
         if (invoice.Currency != "USD")
         {
             // Only process USD payments
-            _logger.LogWarning("Non USD payment received. #" + invoice.Id);
+            _logger.LogWarning("Non USD payment received. #{InvoiceId}", invoice.Id);
             return new OkResult();
         }
 
