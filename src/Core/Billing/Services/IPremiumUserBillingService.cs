@@ -6,6 +6,8 @@ namespace Bit.Core.Billing.Services;
 
 public interface IPremiumUserBillingService
 {
+    Task Credit(User user, decimal amount);
+
     /// <summary>
     /// <para>Establishes the Stripe entities necessary for a Bitwarden <see cref="User"/> using the provided <paramref name="sale"/>.</para>
     /// <para>
