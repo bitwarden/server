@@ -1654,7 +1654,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Body")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(3000)
+                        .HasColumnType("varchar(3000)");
 
                     b.Property<byte>("ClientType")
                         .HasColumnType("tinyint unsigned");

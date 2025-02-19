@@ -1660,7 +1660,8 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Body")
-                        .HasColumnType("text");
+                        .HasMaxLength(3000)
+                        .HasColumnType("character varying(3000)");
 
                     b.Property<byte>("ClientType")
                         .HasColumnType("smallint");
