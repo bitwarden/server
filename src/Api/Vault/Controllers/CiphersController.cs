@@ -709,7 +709,12 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
-        if (cipher == null)
+        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipher.Id);
+        var hasManagePermissionsForCipher = (await _collectionRepository.GetManyByUserIdAsync(userId))
+             .Where(c => c.OrganizationId == cipher.OrganizationId && c.Manage && collectionCiphers.Select(cc => cc.CollectionId).Contains(c.Id))
+             .ToDictionary(c => c.Id)?.Count > 0;
+
+        if (cipher == null || (!hasManagePermissionsForCipher && cipher.Type == Core.Vault.Enums.CipherType.SecureNote))
         {
             throw new NotFoundException();
         }
