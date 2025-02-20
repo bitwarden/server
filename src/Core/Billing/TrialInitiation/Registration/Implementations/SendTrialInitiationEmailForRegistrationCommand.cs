@@ -43,10 +43,7 @@ public class SendTrialInitiationEmailForRegistrationCommand(
 
         await PerformConstantTimeOperationsAsync();
 
-        if (!userExists)
-        {
-            await mailService.SendTrialInitiationSignupEmailAsync(email, token, productTier, products);
-        }
+        await mailService.SendTrialInitiationSignupEmailAsync(userExists, email, token, productTier, products);
 
         return null;
     }
