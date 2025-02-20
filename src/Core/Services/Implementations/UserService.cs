@@ -49,6 +49,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
@@ -81,6 +82,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         ICipherRepository cipherRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
         IMailService mailService,
         IPushNotificationService pushService,
         IUserStore<User> store,
@@ -127,6 +129,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _cipherRepository = cipherRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
+        _organizationDomainRepository = organizationDomainRepository;
         _mailService = mailService;
         _pushService = pushService;
         _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
@@ -521,6 +524,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
+        var managedUserValidationResult = await ValidateManagedUserAsync(user, newEmail);
+
+        if (!managedUserValidationResult.Succeeded)
+        {
+            return managedUserValidationResult;
+        }
+
         if (!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
             GetChangeEmailTokenPurpose(newEmail), token))
         {
@@ -584,6 +594,31 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _pushService.PushLogOutAsync(user.Id);
 
         return IdentityResult.Success;
+    }
+
+    private async Task<IdentityResult> ValidateManagedUserAsync(User user, string newEmail)
+    {
+        var managingOrganizations = await GetOrganizationsManagingUserAsync(user.Id);
+
+        if (!managingOrganizations.Any())
+        {
+            return IdentityResult.Success;
+        }
+
+        var newDomain = CoreHelpers.GetEmailDomain(newEmail);
+
+        var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(managingOrganizations.Select(org => org.Id));
+
+        if (verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
+        {
+            return IdentityResult.Success;
+        }
+
+        return IdentityResult.Failed(new IdentityError
+        {
+            Code = "EmailDomainMismatch",
+            Description = "Your new email must match your organization domain."
+        });
     }
 
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
