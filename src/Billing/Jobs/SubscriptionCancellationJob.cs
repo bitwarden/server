@@ -23,9 +23,9 @@ public class SubscriptionCancellationJob(
         }
 
         var subscription = await stripeFacade.GetSubscription(subscriptionId);
-        if (subscription?.Status != "unpaid")
+        if (subscription?.Status != "unpaid" ||
+            subscription.LatestInvoice?.BillingReason is not ("subscription_cycle" or "subscription_create"))
         {
-            // Subscription is no longer unpaid, skip cancellation
             return;
         }
 
