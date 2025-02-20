@@ -34,7 +34,7 @@ public class SendPolicyRequirement : IPolicyRequirement
             .ExemptProviders()
             .ToList();
 
-        return filteredPolicies
+        var result = filteredPolicies
             .GetPolicyType(PolicyType.SendOptions)
             .Select(p => p.GetDataModel<SendOptionsPolicyData>())
             .Aggregate(
@@ -48,5 +48,7 @@ public class SendPolicyRequirement : IPolicyRequirement
                     DisableSend = result.DisableSend,
                     DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail
                 });
+
+        return result;
     }
 }
