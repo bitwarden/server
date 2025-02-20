@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -9,7 +10,6 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Event = Stripe.Event;
 
 namespace Bit.Billing.Services.Implementations;
@@ -28,6 +28,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
+    private readonly IPricingClient _pricingClient;
 
     public PaymentSucceededHandler(
         ILogger<PaymentSucceededHandler> logger,
@@ -41,7 +42,8 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         IStripeEventUtilityService stripeEventUtilityService,
         IUserService userService,
         IPushNotificationService pushNotificationService,
-        IOrganizationEnableCommand organizationEnableCommand)
+        IOrganizationEnableCommand organizationEnableCommand,
+        IPricingClient pricingClient)
     {
         _logger = logger;
         _stripeEventService = stripeEventService;
@@ -55,6 +57,7 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         _userService = userService;
         _pushNotificationService = pushNotificationService;
         _organizationEnableCommand = organizationEnableCommand;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
@@ -96,9 +99,9 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
                 return;
             }
 
-            var teamsMonthly = StaticStore.GetPlan(PlanType.TeamsMonthly);
+            var teamsMonthly = await _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly);
 
-            var enterpriseMonthly = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
+            var enterpriseMonthly = await _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly);
 
             var teamsMonthlyLineItem =
                 subscription.Items.Data.FirstOrDefault(item =>
@@ -137,14 +140,21 @@ public class PaymentSucceededHandler : IPaymentSucceededHandler
         }
         else if (organizationId.HasValue)
         {
-            if (!subscription.Items.Any(i =>
-                    StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
+            var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+
+            if (organization == null)
+            {
+                return;
+            }
+
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            if (subscription.Items.All(item => plan.PasswordManager.StripePlanId != item.Plan.Id))
             {
                 return;
             }
 
             await _organizationEnableCommand.EnableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
-            var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
             await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
 
             await _referenceEventService.RaiseEventAsync(

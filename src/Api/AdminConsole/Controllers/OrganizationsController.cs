@@ -22,6 +22,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -60,6 +61,7 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -81,7 +83,8 @@ public class OrganizationsController : Controller
         IDataProtectorTokenFactory<OrgDeleteTokenable> orgDeleteTokenDataFactory,
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
-        IOrganizationDeleteCommand organizationDeleteCommand)
+        IOrganizationDeleteCommand organizationDeleteCommand,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -103,6 +106,7 @@ public class OrganizationsController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
         _organizationDeleteCommand = organizationDeleteCommand;
+        _pricingClient = pricingClient;
     }
 
     [HttpGet("{id}")]
@@ -120,7 +124,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("")]
@@ -181,7 +186,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPost("create-without-payment")]
@@ -196,7 +202,8 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _cloudOrganizationSignUpCommand.SignUpOrganizationAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Organization);
+        var plan = await _pricingClient.GetPlanOrThrow(result.Organization.PlanType);
+        return new OrganizationResponseModel(result.Organization, plan);
     }
 
     [HttpPut("{id}")]
@@ -224,7 +231,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _globalSettings), updateBilling);
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpPost("{id}/storage")]
@@ -358,8 +366,8 @@ public class OrganizationsController : Controller
         if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
-            var plan = StaticStore.GetPlan(organization.PlanType);
-            if (plan.ProductTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
+            var productTier = organization.PlanType.GetProductTier();
+            if (productTier is not ProductTierType.Enterprise and not ProductTierType.Teams)
             {
                 throw new NotFoundException();
             }
@@ -542,7 +550,8 @@ public class OrganizationsController : Controller
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization, _featureService), eventType: EventType.Organization_CollectionManagement_Updated);
-        return new OrganizationResponseModel(organization);
+        var plan = await _pricingClient.GetPlan(organization.PlanType);
+        return new OrganizationResponseModel(organization, plan);
     }
 
     [HttpGet("{id}/plan-type")]

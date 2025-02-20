@@ -82,7 +82,6 @@ public class SubscriptionInfo
             }
 
             public bool AddonSubscriptionItem { get; set; }
-
             public string ProductId { get; set; }
             public string Name { get; set; }
             public decimal Amount { get; set; }
