@@ -33,13 +33,16 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
         var subCanceled = subscription.Status == StripeSubscriptionStatus.Canceled;
 
         const string providerMigrationCancellationComment = "Cancelled as part of provider migration to Consolidated Billing";
+        const string addedToProviderCancellationComment = "Organization was added to Provider";
 
         if (!subCanceled)
         {
             return;
         }
 
-        if (organizationId.HasValue && subscription is not { CancellationDetails.Comment: providerMigrationCancellationComment })
+        if (organizationId.HasValue &&
+            subscription.CancellationDetails.Comment != providerMigrationCancellationComment &&
+            !subscription.CancellationDetails.Comment.Contains(addedToProviderCancellationComment))
         {
             await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
         }

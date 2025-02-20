@@ -10,9 +10,11 @@ CREATE TABLE [dbo].[Notification]
     [Body] NVARCHAR (MAX) NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
     [RevisionDate] DATETIME2 (7) NOT NULL,
+    [TaskId] UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_Notification] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Notification_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
-    CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    CONSTRAINT [FK_Notification_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
+    CONSTRAINT [FK_Notification_SecurityTask] FOREIGN KEY ([TaskId]) REFERENCES [dbo].[SecurityTask] ([Id])
 );
 
 
@@ -30,3 +32,6 @@ GO
 CREATE NONCLUSTERED INDEX [IX_Notification_OrganizationId]
     ON [dbo].[Notification]([OrganizationId] ASC) WHERE OrganizationId IS NOT NULL;
 
+GO
+CREATE NONCLUSTERED INDEX [IX_Notification_TaskId]
+    ON [dbo].[Notification] ([TaskId] ASC) WHERE TaskId IS NOT NULL;
