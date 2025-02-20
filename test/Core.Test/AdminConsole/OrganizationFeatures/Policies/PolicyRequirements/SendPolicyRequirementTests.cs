@@ -10,8 +10,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 
 public class SendPolicyRequirementTests
 {
-    // DisableSend
-
     [Theory, AutoData]
     public void DisableSend_IsFalse_IfNoDisableSendPolicies(
         [PolicyDetails(PolicyType.RequireSso)] PolicyDetails otherPolicy1,
@@ -59,8 +57,6 @@ public class SendPolicyRequirementTests
         var actual = SendPolicyRequirement.Create([policyDetails]);
         Assert.Equal(shouldBeEnforced, actual.DisableSend);
     }
-
-    // DisableHideEmail
 
     [Theory, AutoData]
     public void DisableHideEmail_IsFalse_IfNoSendOptionsPolicies(
