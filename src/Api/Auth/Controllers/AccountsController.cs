@@ -266,8 +266,18 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        try
+        {
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
+            throw new BadRequestException(ModelState);
+        }
+
         var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            model.ToUser(user),
+            user,
             model.MasterPasswordHash,
             model.Key,
             model.OrgIdentifier);
@@ -977,7 +987,6 @@ public class AccountsController : Controller
         await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
     }
 
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)

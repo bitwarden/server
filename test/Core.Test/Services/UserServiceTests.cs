@@ -454,8 +454,10 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task DisableTwoFactorProviderAsync_WithAccountDeprovisioningEnabled_WhenOrganizationHas2FAPolicyEnabled_WhenUserIsManaged_DisablingAllProviders_RemovesOrRevokesUserAndSendsEmail(
-        SutProvider<UserService> sutProvider, User user, Organization organization1, Organization organization2)
+    public async Task DisableTwoFactorProviderAsync_WithAccountDeprovisioningEnabled_WhenOrganizationHas2FAPolicyEnabled_DisablingAllProviders_RevokesUserAndSendsEmail(
+        SutProvider<UserService> sutProvider, User user,
+        Organization organization1, Guid organizationUserId1,
+        Organization organization2, Guid organizationUserId2)
     {
         // Arrange
         user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
@@ -464,6 +466,7 @@ public class UserServiceTests
         });
         organization1.Enabled = organization2.Enabled = true;
         organization1.UseSso = organization2.UseSso = true;
+
         sutProvider.GetDependency<IFeatureService>()
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(true);
@@ -474,12 +477,14 @@ public class UserServiceTests
                 new OrganizationUserPolicyDetails
                 {
                     OrganizationId = organization1.Id,
+                    OrganizationUserId = organizationUserId1,
                     PolicyType = PolicyType.TwoFactorAuthentication,
                     PolicyEnabled = true
                 },
                 new OrganizationUserPolicyDetails
                 {
                     OrganizationId = organization2.Id,
+                    OrganizationUserId = organizationUserId2,
                     PolicyType = PolicyType.TwoFactorAuthentication,
                     PolicyEnabled = true
                 }
@@ -490,9 +495,6 @@ public class UserServiceTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organization2.Id)
             .Returns(organization2);
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByVerifiedUserEmailDomainAsync(user.Id)
-            .Returns(new[] { organization1 });
         var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>(), JsonHelpers.LegacyEnumKeyResolver);
 
         // Act
@@ -506,24 +508,71 @@ public class UserServiceTests
             .Received(1)
             .LogUserEventAsync(user.Id, EventType.User_Disabled2fa);
 
-        // Revoke the user from the first organization because they are managed by it
+        // Revoke the user from the first organization
         await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
             .RevokeNonCompliantOrganizationUsersAsync(
                 Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization1.Id &&
-                    r.OrganizationUsers.First().UserId == user.Id &&
+                    r.OrganizationUsers.First().Id == organizationUserId1 &&
                     r.OrganizationUsers.First().OrganizationId == organization1.Id));
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization1.DisplayName(), user.Email);
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization1.DisplayName(), user.Email);
 
-        // Remove the user from the second organization because they are not managed by it
-        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+        // Remove the user from the second organization
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
             .Received(1)
-            .RemoveUserAsync(organization2.Id, user.Id);
+            .RevokeNonCompliantOrganizationUsersAsync(
+                Arg.Is<RevokeOrganizationUsersRequest>(r => r.OrganizationId == organization2.Id &&
+                    r.OrganizationUsers.First().Id == organizationUserId2 &&
+                    r.OrganizationUsers.First().OrganizationId == organization2.Id));
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(organization2.DisplayName(), user.Email);
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization2.DisplayName(), user.Email);
+    }
+
+    [Theory, BitAutoData]
+    public async Task DisableTwoFactorProviderAsync_WithAccountDeprovisioningEnabled_UserHasOneProviderEnabled_DoesNotRemoveUserFromOrganization(
+        SutProvider<UserService> sutProvider, User user, Organization organization)
+    {
+        // Arrange
+        user.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Email] = new() { Enabled = true },
+            [TwoFactorProviderType.Remember] = new() { Enabled = true }
+        });
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication)
+            .Returns(
+            [
+                new OrganizationUserPolicyDetails
+                {
+                    OrganizationId = organization.Id,
+                    PolicyType = PolicyType.TwoFactorAuthentication,
+                    PolicyEnabled = true
+                }
+            ]);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+        var expectedSavedProviders = JsonHelpers.LegacySerialize(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
+        {
+            [TwoFactorProviderType.Remember] = new() { Enabled = true }
+        }, JsonHelpers.LegacyEnumKeyResolver);
+
+        // Act
+        await sutProvider.Sut.DisableTwoFactorProviderAsync(user, TwoFactorProviderType.Email);
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>()
+            .Received(1)
+            .ReplaceAsync(Arg.Is<User>(u => u.Id == user.Id && u.TwoFactorProviders == expectedSavedProviders));
+        await sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RevokeNonCompliantOrganizationUsersAsync(default);
+        await sutProvider.GetDependency<IMailService>()
+            .DidNotReceiveWithAnyArgs()
+            .SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(default, default);
     }
 
     [Theory, BitAutoData]
@@ -679,6 +728,46 @@ public class UserServiceTests
         await sutProvider.GetDependency<IDistributedCache>()
                 .DidNotReceive()
                 .RemoveAsync(Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_CorrectCode_ReturnsTrueAndProcessesPolicies(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+
+        // Act
+        var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.True(response);
+        Assert.Null(user.TwoFactorProviders);
+        // Make sure a new code was generated for the user
+        Assert.NotEqual(recoveryCode, user.TwoFactorRecoveryCode);
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRecoverTwoFactorEmail(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_IncorrectCode_ReturnsFalse(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = "4567";
+
+        // Act
+        var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.False(response);
+        Assert.NotNull(user.TwoFactorProviders);
     }
 
     private static void SetupUserAndDevice(User user,

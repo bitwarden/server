@@ -17,6 +17,7 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "src/**/Entities/**/*.cs" # Database entity definitions
   pull_request:
     paths:
       - ".github/workflows/test-database.yml" # This file
@@ -28,6 +29,7 @@ on:
       - "src/Infrastructure.Dapper/**" # Changes to SQL Server Dapper Repository Layer
       - "src/Infrastructure.EntityFramework/**" # Changes to Entity Framework Repository Layer
       - "test/Infrastructure.IntegrationTest/**" # Any changes to the tests
+      - "src/**/Entities/**/*.cs" # Database entity definitions
 
 jobs:
   check-test-secrets:
@@ -200,7 +202,7 @@ jobs:
         shell: pwsh
 
       - name: Upload DACPAC
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: sql.dacpac
           path: Sql.dacpac
@@ -226,7 +228,7 @@ jobs:
         shell: pwsh
 
       - name: Report validation results
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
         with:
           name: report.xml
           path: |

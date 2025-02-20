@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.Billing.Models.Api.Requests.Accounts;
+﻿using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Context;
 using Bit.Core.Tools.Enums;
@@ -18,8 +17,8 @@ public class AccountsController(
     ISendTrialInitiationEmailForRegistrationCommand sendTrialInitiationEmailForRegistrationCommand,
     IReferenceEventService referenceEventService) : Microsoft.AspNetCore.Mvc.Controller
 {
-    [RequireFeature(FeatureFlagKeys.EmailVerification)]
     [HttpPost("trial/send-verification-email")]
+    [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> PostTrialInitiationSendVerificationEmailAsync([FromBody] TrialSendVerificationEmailRequestModel model)
     {
         var token = await sendTrialInitiationEmailForRegistrationCommand.Handle(

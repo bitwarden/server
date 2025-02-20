@@ -2,6 +2,7 @@
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Mail;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Billing.Enums;
@@ -73,6 +74,7 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -81,6 +83,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
         {
+            IsExistingUser = isExistingUser,
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -295,7 +298,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email)
+    public async Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email)
     {
         var message = CreateDefaultMessage($"You have been revoked from {organizationName}", email);
         var model = new OrganizationUserRevokedForPolicyTwoFactorViewModel
@@ -472,7 +475,7 @@ public class HandlebarsMailService : IMailService
                 "AdminConsole.DomainClaimedByOrganization",
                 new ClaimedDomainUserNotificationViewModel
                 {
-                    TitleFirst = $"Hey {emailAddress}, your account is owned by {org.DisplayName()}",
+                    TitleFirst = $"Your Bitwarden account is claimed by {org.DisplayName()}",
                     OrganizationName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false)
                 });
     }
@@ -863,7 +866,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"Join {providerName}", email);
         var model = new ProviderUserInvitedViewModel
         {
-            ProviderName = CoreHelpers.SanitizeForEmail(providerName),
+            ProviderName = CoreHelpers.SanitizeForEmail(providerName, false),
             Email = WebUtility.UrlEncode(providerUser.Email),
             ProviderId = providerUser.ProviderId.ToString(),
             ProviderUserId = providerUser.Id.ToString(),
@@ -1165,6 +1168,23 @@ public class HandlebarsMailService : IMailService
         };
         await AddMessageContentAsync(message, "FamiliesForEnterprise.FamiliesForEnterpriseRemovedFromFamilyUser", model);
         message.Category = "FamiliesForEnterpriseRemovedFromFamilyUser";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    {
+        var templateName = _globalSettings.SelfHosted ?
+            "AdminConsole.SelfHostNotifyAdminDeviceApprovalRequested" :
+            "AdminConsole.NotifyAdminDeviceApprovalRequested";
+        var message = CreateDefaultMessage("Review SSO login request for new device", adminEmails);
+        var model = new DeviceApprovalRequestedViewModel
+        {
+            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            UserNameRequestingAccess = GetUserIdentifier(email, userName),
+            OrganizationId = organizationId,
+        };
+        await AddMessageContentAsync(message, templateName, model);
+        message.Category = "DeviceApprovalRequested";
         await _mailDeliveryService.SendEmailAsync(message);
     }
 

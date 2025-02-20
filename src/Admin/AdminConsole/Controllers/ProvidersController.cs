@@ -235,7 +235,8 @@ public class ProvidersController : Controller
 
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderViewModel(provider, users, providerOrganizations));
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        return View(new ProviderViewModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -248,6 +249,18 @@ public class ProvidersController : Controller
         }
 
         return View(provider);
+    }
+
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var provider = await GetEditModel(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        return RedirectToAction("Edit", new { id });
     }
 
     [HttpPost]

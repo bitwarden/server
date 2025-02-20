@@ -127,6 +127,7 @@ public class CiphersControllerTests
             UserId = userId,
             OrganizationId = Guid.NewGuid(),
             Type = CipherType.Login,
+            ViewPassword = true,
             Data = @"
             {
                 ""Uris"": [

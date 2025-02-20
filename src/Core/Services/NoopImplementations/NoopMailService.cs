@@ -26,6 +26,7 @@ public class NoopMailService : IMailService
     }
 
     public Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -80,7 +81,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email) =>
+    public Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
@@ -316,5 +317,10 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
     public Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList) => Task.CompletedTask;
+
+    public Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName)
+    {
+        return Task.FromResult(0);
+    }
 }
 

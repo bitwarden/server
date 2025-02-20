@@ -12,6 +12,7 @@ public class BillingSettings
     public virtual FreshDeskSettings FreshDesk { get; set; } = new FreshDeskSettings();
     public virtual string FreshsalesApiKey { get; set; }
     public virtual PayPalSettings PayPal { get; set; } = new PayPalSettings();
+    public virtual OnyxSettings Onyx { get; set; } = new OnyxSettings();
 
     public class PayPalSettings
     {
@@ -30,5 +31,11 @@ public class BillingSettings
         public virtual string Region { get; set; }
         public virtual string UserFieldName { get; set; }
         public virtual string OrgFieldName { get; set; }
+    }
+
+    public class OnyxSettings
+    {
+        public virtual string ApiKey { get; set; }
+        public virtual string BaseUrl { get; set; }
     }
 }

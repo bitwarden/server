@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -314,7 +315,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return;
         }
 
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
+        var token = await GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
@@ -867,6 +868,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
+    /// <summary>
+    /// To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.
+    /// </summary>
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
     {
         var user = await _userRepository.GetByEmailAsync(email);
@@ -882,6 +887,25 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
+        {
+            return false;
+        }
+
+        user.TwoFactorProviders = null;
+        user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        await SaveUserAsync(user);
+        await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+        await CheckPoliciesOnTwoFactorRemovalAsync(user);
+
+        return true;
+    }
+
+    public async Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode)
+    {
+        if (!CoreHelpers.FixedTimeEquals(
+                user.TwoFactorRecoveryCode,
+                recoveryCode.Replace(" ", string.Empty).Trim().ToLower()))
         {
             return false;
         }
@@ -933,18 +957,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         else
         {
-            var deprecateStripeSourcesAPI = _featureService.IsEnabled(FeatureFlagKeys.AC2476_DeprecateStripeSourcesAPI);
-
-            if (deprecateStripeSourcesAPI)
-            {
-                var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
-                await _premiumUserBillingService.Finalize(sale);
-            }
-            else
-            {
-                paymentIntentClientSecret = await _paymentService.PurchasePremiumAsync(user, paymentMethodType,
-                    paymentToken, additionalStorageGb, taxInfo);
-            }
+            var sale = PremiumUserSale.From(user, paymentMethodType, paymentToken, taxInfo, additionalStorageGb);
+            await _premiumUserBillingService.Finalize(sale);
         }
 
         user.Premium = true;
@@ -1054,11 +1068,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid token.");
         }
 
-        var updated = await _paymentService.UpdatePaymentMethodAsync(user, paymentMethodType, paymentToken, taxInfo: taxInfo);
-        if (updated)
-        {
-            await SaveUserAsync(user);
-        }
+        var tokenizedPaymentSource = new TokenizedPaymentSource(paymentMethodType, paymentToken);
+        var taxInformation = TaxInformation.From(taxInfo);
+
+        await _premiumUserBillingService.UpdatePaymentMethod(user, tokenizedPaymentSource, taxInformation);
+        await SaveUserAsync(user);
     }
 
     public async Task CancelPremiumAsync(User user, bool? endOfPeriod = null)
@@ -1090,7 +1104,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await EnablePremiumAsync(user, expirationDate);
     }
 
-    public async Task EnablePremiumAsync(User user, DateTime? expirationDate)
+    private async Task EnablePremiumAsync(User user, DateTime? expirationDate)
     {
         if (user != null && !user.Premium && user.Gateway.HasValue)
         {
@@ -1107,7 +1121,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await DisablePremiumAsync(user, expirationDate);
     }
 
-    public async Task DisablePremiumAsync(User user, DateTime? expirationDate)
+    private async Task DisablePremiumAsync(User user, DateTime? expirationDate)
     {
         if (user != null && user.Premium)
         {
@@ -1372,19 +1386,18 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
     {
         var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
-        var organizationsManagingUser = await GetOrganizationsManagingUserAsync(user.Id);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
             var organization = await _organizationRepository.GetByIdAsync(p.OrganizationId);
-            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning) && organizationsManagingUser.Any(o => o.Id == p.OrganizationId))
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
             {
                 await _revokeNonCompliantOrganizationUserCommand.RevokeNonCompliantOrganizationUsersAsync(
                     new RevokeOrganizationUsersRequest(
                         p.OrganizationId,
-                        [new OrganizationUserUserDetails { UserId = user.Id, OrganizationId = p.OrganizationId }],
+                        [new OrganizationUserUserDetails { Id = p.OrganizationUserId, OrganizationId = p.OrganizationId }],
                         new SystemUser(EventSystemUser.TwoFactorDisabled)));
-                await _mailService.SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(organization.DisplayName(), user.Email);
+                await _mailService.SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(organization.DisplayName(), user.Email);
             }
             else
             {
