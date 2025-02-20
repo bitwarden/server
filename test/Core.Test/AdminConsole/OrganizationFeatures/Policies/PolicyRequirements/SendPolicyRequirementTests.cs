@@ -16,7 +16,9 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.SendOptions)] PolicyDetails otherPolicy2)
     {
         EnableDisableHideEmail(otherPolicy2);
+
         var actual = SendPolicyRequirement.Create([otherPolicy1, otherPolicy2]);
+
         Assert.False(actual.DisableSend);
     }
 
@@ -31,7 +33,9 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.DisableSend)] PolicyDetails policyDetails)
     {
         policyDetails.OrganizationUserType = userType;
+
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.Equal(shouldBeEnforced, actual.DisableSend);
     }
 
@@ -40,6 +44,7 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.DisableSend, isProvider: true)] PolicyDetails policyDetails)
     {
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.False(actual.DisableSend);
     }
 
@@ -54,7 +59,9 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.DisableSend)] PolicyDetails policyDetails)
     {
         policyDetails.OrganizationUserStatus = userStatus;
+
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.Equal(shouldBeEnforced, actual.DisableSend);
     }
 
@@ -64,6 +71,7 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.DisableSend)] PolicyDetails otherPolicy2)
     {
         var actual = SendPolicyRequirement.Create([otherPolicy1, otherPolicy2]);
+
         Assert.False(actual.DisableHideEmail);
     }
 
@@ -79,7 +87,9 @@ public class SendPolicyRequirementTests
     {
         EnableDisableHideEmail(policyDetails);
         policyDetails.OrganizationUserType = userType;
+
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.Equal(shouldBeEnforced, actual.DisableHideEmail);
     }
 
@@ -88,7 +98,9 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.SendOptions, isProvider: true)] PolicyDetails policyDetails)
     {
         EnableDisableHideEmail(policyDetails);
+
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.False(actual.DisableHideEmail);
     }
 
@@ -104,7 +116,9 @@ public class SendPolicyRequirementTests
     {
         EnableDisableHideEmail(policyDetails);
         policyDetails.OrganizationUserStatus = userStatus;
+
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.Equal(shouldBeEnforced, actual.DisableHideEmail);
     }
 
@@ -113,7 +127,9 @@ public class SendPolicyRequirementTests
         [PolicyDetails(PolicyType.SendOptions)] PolicyDetails policyDetails)
     {
         policyDetails.PolicyData = null;
+
         var actual = SendPolicyRequirement.Create([policyDetails]);
+
         Assert.False(actual.DisableHideEmail);
     }
 
