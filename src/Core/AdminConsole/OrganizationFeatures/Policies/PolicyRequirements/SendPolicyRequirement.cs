@@ -9,9 +9,23 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 /// </summary>
 public class SendPolicyRequirement : IPolicyRequirement
 {
+    /// <summary>
+    /// Indicates whether Send is disabled for the user. If true, the user should not be able to create or edit Sends.
+    /// They may still delete existing Sends.
+    /// </summary>
     public bool DisableSend { get; init; }
+    /// <summary>
+    /// Indicates whether the user is prohibited from hiding their email from the recipient of a Send.
+    /// </summary>
     public bool DisableHideEmail { get; init; }
 
+    /// <summary>
+    /// Create a new SendPolicyRequirement.
+    /// </summary>
+    /// <param name="policyDetails">All PolicyDetails relating to the user.</param>
+    /// <remarks>
+    /// This is a <see cref="RequirementFactory{T}"/> for the SendPolicyRequirement.
+    /// </remarks>
     public static SendPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var filteredPolicies = policyDetails
