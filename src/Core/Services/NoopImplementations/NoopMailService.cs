@@ -87,7 +87,7 @@ public class NoopMailService : IMailService
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
-    public Task SendTwoFactorEmailAsync(string email, string token)
+    public Task SendTwoFactorEmailAsync(string email, bool authentication, string accountEmail, string token, DateTime requestDateTime, string deviceIp, string deviceType)
     {
         return Task.FromResult(0);
     }

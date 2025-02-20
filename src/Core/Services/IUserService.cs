@@ -21,7 +21,14 @@ public interface IUserService
     Task<IdentityResult> CreateUserAsync(User user);
     Task<IdentityResult> CreateUserAsync(User user, string masterPasswordHash);
     Task SendMasterPasswordHintAsync(string email);
-    Task SendTwoFactorEmailAsync(User user);
+    /// <summary>
+    /// This method is used for both email two factor, new device verification, and email two factor setup.
+    /// </summary>
+    /// <param name="user">user requesting the action</param>
+    /// <param name="authentication">this controls if what verbiage is shown in the email</param>
+    /// <returns>void</returns>
+    Task SendTwoFactorEmailAsync(User user, bool authentication = true);
+    Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);

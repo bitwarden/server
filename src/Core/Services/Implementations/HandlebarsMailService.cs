@@ -146,7 +146,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
     {
         var message = CreateDefaultMessage("Your Email Change", newEmailAddress);
-        var model = new EmailTokenViewModel
+        var model = new UserVerificationEmailTokenViewModel
         {
             Token = token,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -158,14 +158,21 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendTwoFactorEmailAsync(string email, string token)
+    public async Task SendTwoFactorEmailAsync(string email, bool authentication, string accountEmail, string token, DateTime requestDateTime, string deviceIp, string deviceType)
     {
-        var message = CreateDefaultMessage("Your Two-step Login Verification Code", email);
-        var model = new EmailTokenViewModel
+        var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
+        var model = new TwoFactorEmailTokenViewModel
         {
             Token = token,
+            EmailTotpAction = authentication ? "logging in" : "setting up email two-step login",
+            AccountEmail = accountEmail,
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            DeviceIp = deviceIp,
+            DeviceType = deviceType,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
+            SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -1012,7 +1019,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendOTPEmailAsync(string email, string token)
     {
         var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
-        var model = new EmailTokenViewModel
+        var model = new UserVerificationEmailTokenViewModel
         {
             Token = token,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,

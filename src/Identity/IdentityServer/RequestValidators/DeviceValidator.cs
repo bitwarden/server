@@ -79,7 +79,7 @@ public class DeviceValidator(
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
                 {
-                    await _userService.SendOTPAsync(context.User);
+                    await _userService.SendTwoFactorEmailAsync(context.User);
                 }
                 return false;
             }
@@ -163,6 +163,14 @@ public class DeviceValidator(
         return DeviceValidationResultType.NewDeviceVerificationRequired;
     }
 
+    /// <summary>
+    /// Sends an email whenever the user logs in from a new device. Will not send to a user who's account
+    /// is less than 10 minutes old. We assume an account that is less than 10 minutes old is new and does
+    /// not need an email stating they just logged in.
+    /// </summary>
+    /// <param name="user">user logging in</param>
+    /// <param name="requestDevice">current device being approved to login</param>
+    /// <returns>void</returns>
     private async Task SendNewDeviceLoginEmail(User user, Device requestDevice)
     {
         // Ensure that the user doesn't receive a "new device" email on the first login
