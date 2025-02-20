@@ -111,10 +111,15 @@ public class ProviderBillingService(
             Key = key
         };
 
+        /*
+         * We have to scale the provider's seats before the ProviderOrganization
+         * row is inserted so the added organization's seats don't get double counted.
+         */
+        await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
+
         await Task.WhenAll(
             organizationRepository.ReplaceAsync(organization),
-            providerOrganizationRepository.CreateAsync(providerOrganization),
-            ScaleSeats(provider, organization.PlanType, organization.Seats!.Value)
+            providerOrganizationRepository.CreateAsync(providerOrganization)
         );
 
         var clientCustomer = await subscriberService.GetCustomer(organization);
