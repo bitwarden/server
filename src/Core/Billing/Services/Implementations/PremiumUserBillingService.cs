@@ -320,7 +320,7 @@ public class PremiumUserBillingService(
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = true
+                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported,
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
