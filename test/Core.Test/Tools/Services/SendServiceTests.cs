@@ -3,6 +3,8 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -22,6 +24,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
@@ -112,6 +115,93 @@ public class SendServiceTests
     {
         SaveSendAsync_Setup(sendType, false, sutProvider, send);
         SaveSendAsync_HideEmail_Setup(false, sutProvider, send, policy);
+
+        await sutProvider.Sut.SaveSendAsync(send);
+
+        await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
+    }
+
+    // Disable Send policy check - vNext
+    private void SaveSendAsync_Setup_vNext(SutProvider<SendService> sutProvider, Send send,
+        SendPolicyRequirement sendPolicyRequirement)
+    {
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendPolicyRequirement>(send.UserId!.Value)
+            .Returns(sendPolicyRequirement);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
+
+        // Should not be called in these tests
+        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).ThrowsAsync<Exception>();
+    }
+
+    [Theory]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
+    public async Task SaveSendAsync_DisableSend_Applies_Throws_vNext(SendType sendType,
+        SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
+    {
+        send.Type = sendType;
+        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement { DisableSend = true });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
+        Assert.Contains("Due to an Enterprise Policy, you are only able to delete an existing Send.",
+            exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
+    public async Task SaveSendAsync_DisableSend_DoesntApply_Success_vNext(SendType sendType,
+        SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
+    {
+        send.Type = sendType;
+        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement());
+
+        await sutProvider.Sut.SaveSendAsync(send);
+
+        await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
+    }
+
+    // Send Options Policy - Disable Hide Email check
+
+    [Theory]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
+    public async Task SaveSendAsync_DisableHideEmail_Applies_Throws_vNext(SendType sendType,
+        SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
+    {
+        send.Type = sendType;
+        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement { DisableHideEmail = true });
+        send.HideEmail = true;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
+        Assert.Contains("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
+    public async Task SaveSendAsync_DisableHideEmail_Applies_ButEmailNotHidden_Success_vNext(SendType sendType,
+        SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
+    {
+        send.Type = sendType;
+        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement { DisableHideEmail = true });
+        send.HideEmail = false;
+
+        await sutProvider.Sut.SaveSendAsync(send);
+
+        await sutProvider.GetDependency<ISendRepository>().Received(1).CreateAsync(send);
+    }
+
+    [Theory]
+    [BitAutoData(SendType.File)]
+    [BitAutoData(SendType.Text)]
+    public async Task SaveSendAsync_DisableHideEmail_DoesntApply_Success_vNext(SendType sendType,
+        SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
+    {
+        send.Type = sendType;
+        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement());
+        send.HideEmail = true;
 
         await sutProvider.Sut.SaveSendAsync(send);
 
