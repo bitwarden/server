@@ -157,6 +157,14 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.CompletedTask;
     }
 
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
+    {
+        PushToServices((s) =>
+            s.SendPayloadToInstallationAsync(installationId, type, payload, identifier, deviceId, clientType));
+        return Task.CompletedTask;
+    }
+
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {

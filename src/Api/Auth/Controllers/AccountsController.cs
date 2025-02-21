@@ -149,12 +149,6 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
-        {
-            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
-        }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
     }
@@ -173,12 +167,6 @@ public class AccountsController : Controller
             throw new BadRequestException("You cannot change your email when using Key Connector.");
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
-        {
-            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
-        }
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
             model.NewMasterPasswordHash, model.Token, model.Key);
