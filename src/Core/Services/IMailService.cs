@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Services;
 
@@ -98,5 +99,5 @@ public interface IMailService
         string organizationName);
     Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
     Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
+    Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons);
 }
-
