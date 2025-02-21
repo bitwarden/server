@@ -3,7 +3,6 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Settings;
-using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -110,11 +109,7 @@ public class CipherResponseModel : CipherMiniResponseModel
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ViewPassword = cipher.ViewPassword;
-        Permissions = new CipherPermissionsResponseModel
-        {
-            Delete = NormalCipherPermissions.CanDelete(user, cipher, organizationAbility),
-            Restore = NormalCipherPermissions.CanRestore(user, cipher, organizationAbility)
-        };
+        Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbility);
     }
 
     public Guid? FolderId { get; set; }
