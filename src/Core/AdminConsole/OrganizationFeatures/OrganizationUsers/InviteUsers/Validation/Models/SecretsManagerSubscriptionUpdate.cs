@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+﻿using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
@@ -31,6 +32,17 @@ public class SecretsManagerSubscriptionUpdate
         AdditionalSeats = seatsToAdd;
         PasswordManagerUpdatedSeatTotal = passwordManagerUpdatedSeatTotal;
         SecretsManagerPlan = plan;
+    }
+
+    public static SecretsManagerSubscriptionUpdate Create(OrganizationDto organizationDto, int occupiedSeats, int seatsToAdd, int passwordManagerSeatTotal)
+    {
+        return new SecretsManagerSubscriptionUpdate(organizationDto.UseSecretsManager,
+            organizationDto.SmSeats,
+            organizationDto.SmMaxAutoScaleSeats,
+            occupiedSeats,
+            seatsToAdd,
+            passwordManagerSeatTotal,
+            organizationDto.Plan.SecretsManager);
     }
 
     public static SecretsManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest refined, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate)

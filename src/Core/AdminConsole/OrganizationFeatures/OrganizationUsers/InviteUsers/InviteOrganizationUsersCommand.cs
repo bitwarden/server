@@ -73,6 +73,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 .Select(email => OrganizationUserInviteDto.Create(email, invite, request.Organization.OrganizationId))
             );
 
+        if (invitesToSend.Any() is false)
+        {
+            return new Success<IEnumerable<OrganizationUser>>([]);
+        }
+
         // Validate we can add those seats
         var validationResult = await inviteUsersValidation.ValidateAsync(new InviteUserOrganizationValidationRequest
         {

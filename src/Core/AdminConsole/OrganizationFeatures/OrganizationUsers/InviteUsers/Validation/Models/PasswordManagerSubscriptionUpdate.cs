@@ -50,9 +50,13 @@ public class PasswordManagerSubscriptionUpdate
             organizationDto.Plan.PasswordManager);
     }
 
-    public static PasswordManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest refined)
+    public static PasswordManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest validationRequest)
     {
-        return new PasswordManagerSubscriptionUpdate(refined.Organization.Seats, refined.Organization.MaxAutoScaleSeats,
-            refined.OccupiedPmSeats, refined.Invites.Length, refined.Organization.Plan.PasswordManager);
+        return new PasswordManagerSubscriptionUpdate(
+            validationRequest.Organization.Seats,
+            validationRequest.Organization.MaxAutoScaleSeats,
+            validationRequest.OccupiedPmSeats,
+            validationRequest.Invites.Length,
+            validationRequest.Organization.Plan.PasswordManager);
     }
 }
