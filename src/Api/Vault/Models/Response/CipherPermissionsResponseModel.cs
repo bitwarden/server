@@ -3,10 +3,12 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Models.Data;
 
-public class CipherPermissionsResponseModel
+namespace Bit.Api.Vault.Models.Response;
+
+public record CipherPermissionsResponseModel
 {
-    public bool Delete { get; set; }
-    public bool Restore { get; set; }
+    public bool Delete { get; init; }
+    public bool Restore { get; init; }
 
     public CipherPermissionsResponseModel(
         User user,
