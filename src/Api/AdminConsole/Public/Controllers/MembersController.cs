@@ -2,7 +2,11 @@
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
 using Bit.Api.Models.Public.Response;
+using Bit.Core;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
@@ -29,6 +33,9 @@ public class MembersController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
+    private readonly IInviteOrganizationUsersCommand _inviteOrganizationUsersCommand;
+    private readonly IFeatureService _featureService;
+    private readonly TimeProvider _timeProvider;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -42,7 +49,10 @@ public class MembersController : Controller
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
-        IRemoveOrganizationUserCommand removeOrganizationUserCommand)
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+        IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
+        IFeatureService featureService,
+        TimeProvider timeProvider)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -56,6 +66,9 @@ public class MembersController : Controller
         _organizationRepository = organizationRepository;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
+        _inviteOrganizationUsersCommand = inviteOrganizationUsersCommand;
+        _featureService = featureService;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -151,8 +164,27 @@ public class MembersController : Controller
 
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
+        if (_featureService.IsEnabled(FeatureFlagKeys.ScimCreateUserRefactor))
+        {
+            var invitedUserResult = await _inviteOrganizationUsersCommand.InvitePublicApiOrganizationUserAsync(
+                InviteOrganizationUserRequest.Create(
+                    model.ToOrganizationUserSingleEmailInvite(hasStandaloneSecretsManager),
+                    OrganizationDto.FromOrganization(organization),
+                    Guid.Empty,
+                    _timeProvider.GetUtcNow()
+                ));
+
+            if (invitedUserResult is { Success: true })
+            {
+                return new JsonResult(new MemberResponseModel(invitedUserResult.Data, invite.Collections));
+            }
+
+            return new EmptyResult();  // TODO figure out something better to put here
+        }
+
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
             systemUser: null, invite, model.ExternalId);
+
         var response = new MemberResponseModel(user, invite.Collections);
         return new JsonResult(response);
     }
