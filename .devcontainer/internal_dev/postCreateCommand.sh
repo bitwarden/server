@@ -3,6 +3,8 @@ export DEV_DIR=/workspace/dev
 export CONTAINER_CONFIG=/workspace/.devcontainer/internal_dev
 git config --global --add safe.directory /workspace
 
+
+
 get_installation_id_and_key() {
     pushd ./dev >/dev/null || exit
     echo "Please enter your installation id and key from https://bitwarden.com/host:"
@@ -89,4 +91,9 @@ install_stripe_cli() {
 }
 
 # main
-one_time_setup
+if [[ -z "${CODESPACES}"]]; then
+  # TODO Write codespaces specific instructions and link here
+  echo "Running in codespaces, follow instructions here: https://contributing.bitwarden.com/getting-started/server/guide/ to continue the setup"
+else
+  one_time_setup
+fi
