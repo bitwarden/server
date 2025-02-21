@@ -361,11 +361,25 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var token = await base.GenerateTwoFactorTokenAsync(user,
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
 
-        var deviceType = _currentContext.DeviceType.GetType().GetMember(_currentContext.DeviceType.ToString())
-            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+        var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
+            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
 
         await _mailService.SendTwoFactorEmailAsync(
-            email, authentication, user.Email, token, DateTime.UtcNow, _currentContext.IpAddress, deviceType);
+            email, user.Email, token, _currentContext.IpAddress, deviceType, authentication);
+    }
+
+    public async Task SendNewDeviceVerificationEmailAsync(User user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+            "otp:" + user.Email);
+
+        var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
+            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
+
+        await _mailService.SendTwoFactorEmailAsync(
+            user.Email, user.Email, token, _currentContext.IpAddress, deviceType);
     }
 
     public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
@@ -1491,7 +1505,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (await VerifySecretAsync(user, secret))
         {
-            await SendTwoFactorEmailAsync(user);
+            await SendNewDeviceVerificationEmailAsync(user);
         }
     }
 

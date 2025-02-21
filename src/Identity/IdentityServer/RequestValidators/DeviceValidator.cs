@@ -79,7 +79,7 @@ public class DeviceValidator(
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
                 {
-                    await _userService.SendTwoFactorEmailAsync(context.User);
+                    await _userService.SendNewDeviceVerificationEmailAsync(context.User);
                 }
                 return false;
             }

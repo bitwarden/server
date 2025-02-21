@@ -23,7 +23,7 @@ public interface IMailService
     Task SendCannotDeleteManagedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
-    Task SendTwoFactorEmailAsync(string email, bool authentication, string accountEmail, string token, DateTime requestDateTime, string deviceIp, string deviceType);
+    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
 

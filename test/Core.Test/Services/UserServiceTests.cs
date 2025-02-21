@@ -96,6 +96,9 @@ public class UserServiceTests
     {
         var email = user.Email.ToLowerInvariant();
         var token = "thisisatokentocompare";
+        var authentication = true;
+        var IpAddress = "1.1.1.1";
+        var deviceType = "Android";
 
         var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
         userTwoFactorTokenProvider
@@ -104,6 +107,10 @@ public class UserServiceTests
         userTwoFactorTokenProvider
             .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(token));
+
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = DeviceType.Android;
+        context.IpAddress = IpAddress;
 
         sutProvider.Sut.RegisterTokenProvider("Custom_Email", userTwoFactorTokenProvider);
 
@@ -119,7 +126,7 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendTwoFactorEmailAsync(email, token);
+            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType, authentication);
     }
 
     [Theory, BitAutoData]
@@ -158,6 +165,44 @@ public class UserServiceTests
         });
 
         await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendNewDeviceVerificationEmailAsync_ExceptionBecauseUserNull(SutProvider<UserService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(null));
+    }
+
+    [Theory]
+    [BitAutoData(DeviceType.UnknownBrowser, "Unknown Browser")]
+    [BitAutoData(DeviceType.Android, "Android")]
+    public async Task SendNewDeviceVerificationEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName, SutProvider<UserService> sutProvider, User user)
+    {
+        SetupFakeTokenProvider(sutProvider, user);
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = deviceType;
+        context.IpAddress = "1.1.1.1";
+
+        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), deviceTypeName, Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendNewDeviceVerificationEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(SutProvider<UserService> sutProvider, User user)
+    {
+        SetupFakeTokenProvider(sutProvider, user);
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = null;
+        context.IpAddress = "1.1.1.1";
+
+        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), "Unknown Browser", Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -243,43 +288,7 @@ public class UserServiceTests
             });
 
         // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
-        var sut = new UserService(
-            sutProvider.GetDependency<IUserRepository>(),
-            sutProvider.GetDependency<ICipherRepository>(),
-            sutProvider.GetDependency<IOrganizationUserRepository>(),
-            sutProvider.GetDependency<IOrganizationRepository>(),
-            sutProvider.GetDependency<IMailService>(),
-            sutProvider.GetDependency<IPushNotificationService>(),
-            sutProvider.GetDependency<IUserStore<User>>(),
-            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
-            sutProvider.GetDependency<IPasswordHasher<User>>(),
-            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
-            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
-            sutProvider.GetDependency<ILookupNormalizer>(),
-            sutProvider.GetDependency<IdentityErrorDescriber>(),
-            sutProvider.GetDependency<IServiceProvider>(),
-            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
-            sutProvider.GetDependency<ILicensingService>(),
-            sutProvider.GetDependency<IEventService>(),
-            sutProvider.GetDependency<IApplicationCacheService>(),
-            sutProvider.GetDependency<IDataProtectionProvider>(),
-            sutProvider.GetDependency<IPaymentService>(),
-            sutProvider.GetDependency<IPolicyRepository>(),
-            sutProvider.GetDependency<IPolicyService>(),
-            sutProvider.GetDependency<IReferenceEventService>(),
-            sutProvider.GetDependency<IFido2>(),
-            sutProvider.GetDependency<ICurrentContext>(),
-            sutProvider.GetDependency<IGlobalSettings>(),
-            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
-            sutProvider.GetDependency<IProviderUserRepository>(),
-            sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IFeatureService>(),
-            sutProvider.GetDependency<IPremiumUserBillingService>(),
-            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
-            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
-            sutProvider.GetDependency<IDistributedCache>()
-            );
+        var sut = RebuildSut(sutProvider);
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
 
@@ -576,7 +585,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_UserNull_SendOTPAsyncNotCalled(
+    public async Task ResendNewDeviceVerificationEmail_UserNull_SendTwoFactorEmailAsyncNotCalled(
         SutProvider<UserService> sutProvider, string email, string secret)
     {
         sutProvider.GetDependency<IUserRepository>()
@@ -587,11 +596,11 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_SecretNotValid_SendOTPAsyncNotCalled(
+    public async Task ResendNewDeviceVerificationEmail_SecretNotValid_SendTwoFactorEmailAsyncNotCalled(
     SutProvider<UserService> sutProvider, string email, string secret)
     {
         sutProvider.GetDependency<IUserRepository>()
@@ -602,7 +611,7 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -636,6 +645,10 @@ public class UserServiceTests
             .GetByEmailAsync(user.Email)
             .Returns(user);
 
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = DeviceType.Android;
+        context.IpAddress = "1.1.1.1";
+
         // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
         var sut = RebuildSut(sutProvider);
 
@@ -643,7 +656,8 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOTPEmailAsync(user.Email, Arg.Any<string>());
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+
     }
 
     [Theory]
