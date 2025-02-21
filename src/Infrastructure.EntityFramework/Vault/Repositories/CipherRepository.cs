@@ -432,6 +432,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Edit = true,
                                         Reprompt = c.Reprompt,
                                         ViewPassword = true,
+                                        Manage = true,
                                         OrganizationUseTotp = false,
                                         Key = c.Key
                                     };
