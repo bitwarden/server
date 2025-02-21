@@ -3,11 +3,10 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
@@ -17,7 +16,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -81,15 +79,6 @@ public class OrganizationServiceTests
             .Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
 
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-            );
 
         await sutProvider.Sut.ImportAsync(org.Id, null, newUsers, null, false, EventSystemUser.PublicApi);
 
@@ -104,9 +93,11 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(
-                Arg.Is<OrganizationInvitesInfo>(info => info.OrgUserTokenPairs.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(
+                Arg.Is<SendInvitesRequest>(
+                    info => info.Users.Length == expectedNewUsersCount &&
+                            info.Organization == org));
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -156,16 +147,6 @@ public class OrganizationServiceTests
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
         currentContext.ManageUsers(org.Id).Returns(true);
 
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-            );
-
         await sutProvider.Sut.ImportAsync(org.Id, null, newUsers, null, false, EventSystemUser.PublicApi);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
@@ -183,14 +164,15 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(request =>
+                request.Users.Length == expectedNewUsersCount &&
+                request.Organization == org));
 
         // Sent events
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>(events =>
-            events.Where(e => e.Item2 == EventType.OrganizationUser_Invited).Count() == expectedNewUsersCount));
+            events.Count(e => e.Item2 == EventType.OrganizationUser_Invited) == expectedNewUsersCount));
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
             referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == org.Id &&
@@ -272,123 +254,13 @@ public class OrganizationServiceTests
         // Must set guids in order for dictionary of guids to not throw aggregate exceptions
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
 
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-                );
-
-
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) });
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(request =>
+                request.Users.DistinctBy(x => x.Email).Count() == invite.Emails.Distinct().Count() &&
+                request.Organization == organization));
 
-    }
-
-    [Theory]
-    [OrganizationInviteCustomize, OrganizationCustomize, BitAutoData]
-    public async Task InviteUsers_SsoOrgWithNullSsoConfig_Passes(Organization organization, OrganizationUser invitor,
-                [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
-    {
-        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        // Org must be able to use SSO to trigger this proper test case as we currently only call to retrieve
-        // an org's SSO config if the org can use SSO
-        organization.UseSso = true;
-
-        // Return null for sso config
-        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
-
-        // Must set guids in order for dictionary of guids to not throw aggregate exceptions
-        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
-
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-                );
-
-
-
-        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) });
-
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
-    }
-
-    [Theory]
-    [OrganizationInviteCustomize, OrganizationCustomize, BitAutoData]
-    public async Task InviteUsers_SsoOrgWithNeverEnabledRequireSsoPolicy_Passes(Organization organization, SsoConfig ssoConfig, OrganizationUser invitor,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
-    {
-        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order to avoid resetting mocks
-        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
-        sutProvider.Create();
-
-        // Org must be able to use SSO and policies to trigger this test case
-        organization.UseSso = true;
-        organization.UsePolicies = true;
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
-
-        ssoConfig.Enabled = true;
-        sutProvider.GetDependency<ISsoConfigRepository>().GetByOrganizationIdAsync(organization.Id).Returns(ssoConfig);
-
-
-        // Return null policy to mimic new org that's never turned on the require sso policy
-        sutProvider.GetDependency<IPolicyRepository>().GetManyByOrganizationIdAsync(organization.Id).ReturnsNull();
-
-        // Must set guids in order for dictionary of guids to not throw aggregate exceptions
-        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
-
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-                );
-
-        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, new (OrganizationUserInvite, string)[] { (invite, null) });
-
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == invite.Emails.Distinct().Count() &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
     }
 
     [Theory]
@@ -639,14 +511,14 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
         // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-            );
+        // sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
+        //     .CreateToken(Arg.Any<OrganizationUser>())
+        //     .Returns(
+        //         info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
+        //         {
+        //             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+        //         }
+        //     );
 
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
@@ -657,11 +529,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == 1 &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(request =>
+                request.Users.Length == 1 &&
+                request.Organization == organization));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -714,16 +585,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-            );
-
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
@@ -735,12 +596,11 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
             .InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId));
         Assert.Contains("This user has already been invited", exception.Message);
 
-        // MailService and EventService are still called, but with no OrgUsers
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                !info.OrgUserTokenPairs.Any() &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
+        // SendOrganizationInvitesCommand and EventService are still called, but with no OrgUsers
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(info =>
+                info.Organization == organization &&
+                info.Users.Length == 0));
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events => !events.Any()));
     }
@@ -789,16 +649,6 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-            );
-
         sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
             .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
             .Returns(true);
@@ -808,11 +658,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, invites);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == invites.SelectMany(i => i.invite.Emails).Count() &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(info =>
+                info.Organization == organization &&
+                info.Users.Length == invites.SelectMany(x => x.invite.Emails).Distinct().Count()));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -850,23 +699,12 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
 
         currentContext.ManageUsers(organization.Id).Returns(true);
 
-        // Mock tokenable factory to return a token that expires in 5 days
-        sutProvider.GetDependency<IOrgUserInviteTokenableFactory>()
-            .CreateToken(Arg.Any<OrganizationUser>())
-            .Returns(
-                info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                {
-                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                }
-            );
-
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitingUserId: null, eventSystemUser, invites);
 
-        await sutProvider.GetDependency<IMailService>().Received(1)
-            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
-                info.OrgUserTokenPairs.Count() == invites.SelectMany(i => i.invite.Emails).Count() &&
-                info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
-                info.OrganizationName == organization.Name));
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(info =>
+                info.Users.Length == invites.SelectMany(i => i.invite.Emails).Count() &&
+                info.Organization == organization));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
     }
@@ -972,8 +810,10 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUser_InvalidStatus(OrganizationUser confirmingUser,
-        [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser orgUser, string key,
+    public async Task ConfirmUser_InvalidStatus(
+        OrganizationUser confirmingUser,
+        [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser orgUser,
+        string key,
         SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();

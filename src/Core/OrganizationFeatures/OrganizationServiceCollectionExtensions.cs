@@ -169,9 +169,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
 
-
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
         services.AddScoped<IInviteUsersValidation, InviteUsersValidation>();
+        services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of
