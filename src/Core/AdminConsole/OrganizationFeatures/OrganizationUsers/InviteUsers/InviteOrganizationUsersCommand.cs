@@ -78,7 +78,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return new Success<IEnumerable<OrganizationUser>>([]);
         }
 
-        // Validate we can add those seats
         var validationResult = await inviteUsersValidation.ValidateAsync(new InviteUserOrganizationValidationRequest
         {
             Invites = invitesToSend.ToArray(),

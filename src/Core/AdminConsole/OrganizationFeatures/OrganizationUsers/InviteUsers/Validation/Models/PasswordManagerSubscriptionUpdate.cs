@@ -23,7 +23,7 @@ public class PasswordManagerSubscriptionUpdate
 
     public int? UpdatedSeatTotal => Seats + SeatsRequiredToAdd;
 
-    public bool MaxSeatsReached => Seats.HasValue && MaxAutoScaleSeats.HasValue && Seats.Value == MaxAutoScaleSeats.Value;
+    public bool MaxSeatsReached => UpdatedSeatTotal.HasValue && MaxAutoScaleSeats.HasValue && UpdatedSeatTotal.Value == MaxAutoScaleSeats.Value;
 
     public Plan.PasswordManagerPlanFeatures PasswordManagerPlan { get; }
 
