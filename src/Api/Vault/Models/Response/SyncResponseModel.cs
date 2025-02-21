@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
@@ -22,7 +21,7 @@ public class SyncResponseModel : ResponseModel
         User user,
         bool userTwoFactorEnabled,
         bool userHasPremiumFromOrganization,
-        IDictionary<Guid, OrganizationAbility> organizationAbilities,
+        IDictionary<Guid, CipherPermissionsResponseData> cipherPermissions,
         IEnumerable<Guid> organizationIdsManagingUser,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetails,
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
@@ -42,9 +41,7 @@ public class SyncResponseModel : ResponseModel
         Ciphers = ciphers.Select(cipher =>
             new CipherDetailsResponseModel(
                 cipher,
-                user,
-                cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
-                    organizationAbility : null,
+                cipherPermissions[cipher.Id],
                 globalSettings,
                 collectionCiphersDict));
         Collections = collections?.Select(

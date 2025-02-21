@@ -10,7 +10,6 @@ public interface IApplicationCacheService
     Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync();
 #nullable enable
     Task<OrganizationAbility?> GetOrganizationAbilityAsync(Guid orgId);
-    Task<IDictionary<Guid, OrganizationAbility?>> GetManyOrganizationAbilityAsync(IEnumerable<Guid> orgIds);
 #nullable disable
     Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync();
     Task UpsertOrganizationAbilityAsync(Organization organization);
