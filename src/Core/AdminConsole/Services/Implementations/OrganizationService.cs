@@ -6,11 +6,10 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Business;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
@@ -29,7 +28,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
@@ -56,7 +54,6 @@ public class OrganizationService : IOrganizationService
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
     private readonly IPolicyService _policyService;
-    private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
@@ -68,12 +65,11 @@ public class OrganizationService : IOrganizationService
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
-    private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
-    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -91,7 +87,6 @@ public class OrganizationService : IOrganizationService
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
         IPolicyService policyService,
-        ISsoConfigRepository ssoConfigRepository,
         ISsoUserRepository ssoUserRepository,
         IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
@@ -101,14 +96,13 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
-        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IProviderRepository providerRepository,
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationBillingService organizationBillingService,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -125,7 +119,6 @@ public class OrganizationService : IOrganizationService
         _paymentService = paymentService;
         _policyRepository = policyRepository;
         _policyService = policyService;
-        _ssoConfigRepository = ssoConfigRepository;
         _ssoUserRepository = ssoUserRepository;
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
@@ -137,12 +130,11 @@ public class OrganizationService : IOrganizationService
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _providerRepository = providerRepository;
-        _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
-        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1080,12 +1072,8 @@ public class OrganizationService : IOrganizationService
         await SendInviteAsync(orgUser, org, initOrganization);
     }
 
-    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
-    {
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(orgUsers, organization);
-
-        await _mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
-    }
+    private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
 
     private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
@@ -1098,56 +1086,9 @@ public class OrganizationService : IOrganizationService
     }
 
     private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(
-        IEnumerable<OrganizationUser> orgUsers,
-        Organization organization,
-        bool initOrganization = false)
-    {
-        // Materialize the sequence into a list to avoid multiple enumeration warnings
-        var orgUsersList = orgUsers.ToList();
-
-        // Email links must include information about the org and user for us to make routing decisions client side
-        // Given an org user, determine if existing BW user exists
-        var orgUserEmails = orgUsersList.Select(ou => ou.Email).ToList();
-        var existingUsers = await _userRepository.GetManyByEmailsAsync(orgUserEmails);
-
-        // hash existing users emails list for O(1) lookups
-        var existingUserEmailsHashSet = new HashSet<string>(existingUsers.Select(u => u.Email));
-
-        // Create a dictionary of org user guids and bools for whether or not they have an existing BW user
-        var orgUserHasExistingUserDict = orgUsersList.ToDictionary(
-            ou => ou.Id,
-            ou => existingUserEmailsHashSet.Contains(ou.Email)
-        );
-
-        // Determine if org has SSO enabled and if user is required to login with SSO
-        // Note: we only want to call the DB after checking if the org can use SSO per plan and if they have any policies enabled.
-        var orgSsoEnabled = organization.UseSso && (await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id))?.Enabled == true;
-        // Even though the require SSO policy can be turned on regardless of SSO being enabled, for this logic, we only
-        // need to check the policy if the org has SSO enabled.
-        var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
-                                               organization.UsePolicies &&
-                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso))?.Enabled == true;
-
-        // Generate the list of org users and expiring tokens
-        // create helper function to create expiring tokens
-        (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
-        {
-            var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
-            var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
-            return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
-        }
-
-        var orgUsersWithExpTokens = orgUsers.Select(MakeOrgUserExpiringTokenPair);
-
-        return new OrganizationInvitesInfo(
-            organization,
-            orgSsoEnabled,
-            orgSsoLoginRequiredPolicyEnabled,
-            orgUsersWithExpTokens,
-            orgUserHasExistingUserDict,
-            initOrganization
-        );
-    }
+        IEnumerable<OrganizationUser> orgUsers, Organization organization, bool initOrganization = false) =>
+        await _sendOrganizationInvitesCommand.BuildOrganizationInvitesInfoAsync(orgUsers, organization,
+            initOrganization);
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId)
