@@ -16,8 +16,8 @@ public class Program
                     {
                         var context = e.Properties["SourceContext"].ToString();
 
-                        if (e.Properties.ContainsKey("RequestPath") &&
-                            !string.IsNullOrWhiteSpace(e.Properties["RequestPath"]?.ToString()) &&
+                        if (e.Properties.TryGetValue("RequestPath", out var requestPath) &&
+                            !string.IsNullOrWhiteSpace(requestPath?.ToString()) &&
                             (context.Contains(".Server.Kestrel") || context.Contains(".Core.IISHttpServer")))
                         {
                             return false;

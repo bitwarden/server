@@ -462,13 +462,13 @@ public class EventService : IEventService
 
     private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
     {
-        return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-               orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
+        return orgAbilities != null && orgAbilities.TryGetValue(orgId, out var orgAbility) &&
+               orgAbility.Enabled && orgAbility.UseEvents;
     }
 
     private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
     {
-        return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
-               providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
+        return providerAbilities != null && providerAbilities.TryGetValue(providerId, out var providerAbility) &&
+               providerAbility.Enabled && providerAbility.UseEvents;
     }
 }
