@@ -182,22 +182,6 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostEmailToken_WithAccountDeprovisioningEnabled_WhenUserIsManagedByAnOrganization_ShouldThrowBadRequestException()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
-
-        var result = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostEmailToken(new EmailTokenRequestModel())
-        );
-
-        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
-    }
-
-    [Fact]
     public async Task PostEmail_ShouldChangeUserEmail()
     {
         var user = GenerateExampleUser();
@@ -248,20 +232,6 @@ public class AccountsControllerTests : IDisposable
         );
     }
 
-    [Fact]
-    public async Task PostEmail_WithAccountDeprovisioningEnabled_WhenUserIsManagedByAnOrganization_ShouldThrowBadRequestException()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
-
-        var result = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostEmail(new EmailRequestModel())
-        );
-
-        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
-    }
 
     [Fact]
     public async Task PostVerifyEmail_ShouldSendEmailVerification()

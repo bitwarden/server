@@ -66,8 +66,8 @@ public class UserServiceTests
         user.EmailVerified = true;
         user.Email = userLicense.Email;
 
-        sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
+        sutProvider.GetDependency<IGlobalSettings>().LicenseDirectory = tempDir.Directory;
         sutProvider.GetDependency<ILicensingService>()
             .VerifyLicense(userLicense)
             .Returns(true);
@@ -288,7 +288,44 @@ public class UserServiceTests
             });
 
         // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
-        var sut = RebuildSut(sutProvider);
+        var sut = new UserService(
+            sutProvider.GetDependency<IUserRepository>(),
+            sutProvider.GetDependency<ICipherRepository>(),
+            sutProvider.GetDependency<IOrganizationUserRepository>(),
+            sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IOrganizationDomainRepository>(),
+            sutProvider.GetDependency<IMailService>(),
+            sutProvider.GetDependency<IPushNotificationService>(),
+            sutProvider.GetDependency<IUserStore<User>>(),
+            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
+            sutProvider.GetDependency<IPasswordHasher<User>>(),
+            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
+            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
+            sutProvider.GetDependency<ILookupNormalizer>(),
+            sutProvider.GetDependency<IdentityErrorDescriber>(),
+            sutProvider.GetDependency<IServiceProvider>(),
+            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
+            sutProvider.GetDependency<ILicensingService>(),
+            sutProvider.GetDependency<IEventService>(),
+            sutProvider.GetDependency<IApplicationCacheService>(),
+            sutProvider.GetDependency<IDataProtectionProvider>(),
+            sutProvider.GetDependency<IPaymentService>(),
+            sutProvider.GetDependency<IPolicyRepository>(),
+            sutProvider.GetDependency<IPolicyService>(),
+            sutProvider.GetDependency<IReferenceEventService>(),
+            sutProvider.GetDependency<IFido2>(),
+            sutProvider.GetDependency<ICurrentContext>(),
+            sutProvider.GetDependency<IGlobalSettings>(),
+            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
+            sutProvider.GetDependency<IProviderUserRepository>(),
+            sutProvider.GetDependency<IStripeSyncService>(),
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
+            sutProvider.GetDependency<IFeatureService>(),
+            sutProvider.GetDependency<IPremiumUserBillingService>(),
+            sutProvider.GetDependency<IRemoveOrganizationUserCommand>(),
+            sutProvider.GetDependency<IRevokeNonCompliantOrganizationUserCommand>(),
+            sutProvider.GetDependency<IDistributedCache>()
+            );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
 
@@ -843,6 +880,7 @@ public class UserServiceTests
             sutProvider.GetDependency<ICipherRepository>(),
             sutProvider.GetDependency<IOrganizationUserRepository>(),
             sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IOrganizationDomainRepository>(),
             sutProvider.GetDependency<IMailService>(),
             sutProvider.GetDependency<IPushNotificationService>(),
             sutProvider.GetDependency<IUserStore<User>>(),
