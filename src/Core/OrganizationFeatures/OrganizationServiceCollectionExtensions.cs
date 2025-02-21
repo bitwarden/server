@@ -13,6 +13,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Validation;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
@@ -163,8 +164,14 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationUserUserDetailsQuery, OrganizationUserUserDetailsQuery>();
         services.AddScoped<IGetOrganizationUsersManagementStatusQuery, GetOrganizationUsersManagementStatusQuery>();
 
+        services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
+        services.AddScoped<IInviteUsersValidation, InviteUsersValidation>();
+
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserMiniDetailsAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
+
+        services.AddScoped<IAuthorizationHandler, InviteOrganizationUsersAuthorizationHandler>();
+
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
     }
 
