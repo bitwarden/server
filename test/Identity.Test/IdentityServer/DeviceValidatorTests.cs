@@ -574,7 +574,7 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(1).SendOTPAsync(context.User);
+        await _userService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);
