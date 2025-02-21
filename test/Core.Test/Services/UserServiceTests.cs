@@ -66,8 +66,8 @@ public class UserServiceTests
         user.EmailVerified = true;
         user.Email = userLicense.Email;
 
-        sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
+        sutProvider.GetDependency<IGlobalSettings>().LicenseDirectory = tempDir.Directory;
         sutProvider.GetDependency<ILicensingService>()
             .VerifyLicense(userLicense)
             .Returns(true);
@@ -248,6 +248,7 @@ public class UserServiceTests
             sutProvider.GetDependency<ICipherRepository>(),
             sutProvider.GetDependency<IOrganizationUserRepository>(),
             sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IOrganizationDomainRepository>(),
             sutProvider.GetDependency<IMailService>(),
             sutProvider.GetDependency<IPushNotificationService>(),
             sutProvider.GetDependency<IUserStore<User>>(),
@@ -829,6 +830,7 @@ public class UserServiceTests
             sutProvider.GetDependency<ICipherRepository>(),
             sutProvider.GetDependency<IOrganizationUserRepository>(),
             sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IOrganizationDomainRepository>(),
             sutProvider.GetDependency<IMailService>(),
             sutProvider.GetDependency<IPushNotificationService>(),
             sutProvider.GetDependency<IUserStore<User>>(),
