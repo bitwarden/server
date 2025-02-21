@@ -10,6 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,17 +24,20 @@ public class EmergencyAccessController : Controller
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IEmergencyAccessService _emergencyAccessService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly ICipherPermissionsService _cipherPermissionsService;
 
     public EmergencyAccessController(
         IUserService userService,
         IEmergencyAccessRepository emergencyAccessRepository,
         IEmergencyAccessService emergencyAccessService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ICipherPermissionsService cipherPermissionsService)
     {
         _userService = userService;
         _emergencyAccessRepository = emergencyAccessRepository;
         _emergencyAccessService = emergencyAccessService;
         _globalSettings = globalSettings;
+        _cipherPermissionsService = cipherPermissionsService;
     }
 
     [HttpGet("trusted")]
@@ -167,7 +171,8 @@ public class EmergencyAccessController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var viewResult = await _emergencyAccessService.ViewAsync(id, user);
-        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, user);
+        var cipherPermissions = await _cipherPermissionsService.GetManyCipherPermissionsAsync(viewResult.Ciphers, user);
+        return new EmergencyAccessViewResponseModel(_globalSettings, viewResult.EmergencyAccess, viewResult.Ciphers, cipherPermissions, user);
     }
 
     [HttpGet("{id}/{cipherId}/attachment/{attachmentId}")]

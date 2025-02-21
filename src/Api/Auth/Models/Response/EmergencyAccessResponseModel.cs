@@ -117,6 +117,7 @@ public class EmergencyAccessViewResponseModel : ResponseModel
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
         IEnumerable<CipherDetails> ciphers,
+        IDictionary<Guid, CipherPermissionsResponseData> cipherPermissions,
         User user)
         : base("emergencyAccessView")
     {
@@ -124,8 +125,7 @@ public class EmergencyAccessViewResponseModel : ResponseModel
         Ciphers = ciphers.Select(cipher =>
             new CipherResponseModel(
                 cipher,
-                user,
-                organizationAbility: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
+                cipherPermissions[cipher.Id],
                 globalSettings));
     }
 

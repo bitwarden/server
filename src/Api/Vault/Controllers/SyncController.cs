@@ -14,6 +14,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -36,7 +37,7 @@ public class SyncController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
     private readonly IFeatureService _featureService;
-    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly ICipherPermissionsService _cipherPermissionsService;
 
     public SyncController(
         IUserService userService,
@@ -51,7 +52,7 @@ public class SyncController : Controller
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         IFeatureService featureService,
-        IApplicationCacheService applicationCacheService)
+        ICipherPermissionsService cipherPermissionsService)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -65,7 +66,7 @@ public class SyncController : Controller
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
-        _applicationCacheService = applicationCacheService;
+        _cipherPermissionsService = cipherPermissionsService;
     }
 
     [HttpGet("")]
@@ -107,10 +108,9 @@ public class SyncController : Controller
         var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
         var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
-        var cipherOrganizationIds = ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
-        var organizationAbilities = await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
+        var cipherPermissions = await _cipherPermissionsService.GetManyCipherPermissionsAsync(ciphers, user);
 
-        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
+        var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, cipherPermissions,
             organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;

@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -99,8 +98,7 @@ public class CipherResponseModel : CipherMiniResponseModel
 {
     public CipherResponseModel(
         CipherDetails cipher,
-        User user,
-        OrganizationAbility organizationAbility,
+        CipherPermissionsResponseData cipherPermissions,
         IGlobalSettings globalSettings,
         string obj = "cipher")
         : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
@@ -109,25 +107,24 @@ public class CipherResponseModel : CipherMiniResponseModel
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ViewPassword = cipher.ViewPassword;
-        Permissions = new CipherPermissionsResponseModel(user, cipher, organizationAbility);
+        Permissions = cipherPermissions;
     }
 
     public Guid? FolderId { get; set; }
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }
-    public CipherPermissionsResponseModel Permissions { get; set; }
+    public CipherPermissionsResponseData Permissions { get; set; }
 }
 
 public class CipherDetailsResponseModel : CipherResponseModel
 {
     public CipherDetailsResponseModel(
         CipherDetails cipher,
-        User user,
-        OrganizationAbility organizationAbility,
+        CipherPermissionsResponseData cipherPermissions,
         GlobalSettings globalSettings,
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, obj)
+        : base(cipher, cipherPermissions, globalSettings, obj)
     {
         if (collectionCiphers?.ContainsKey(cipher.Id) ?? false)
         {
@@ -141,22 +138,20 @@ public class CipherDetailsResponseModel : CipherResponseModel
 
     public CipherDetailsResponseModel(
         CipherDetails cipher,
-        User user,
-        OrganizationAbility organizationAbility,
+        CipherPermissionsResponseData cipherPermissions,
         GlobalSettings globalSettings,
         IEnumerable<CollectionCipher> collectionCiphers, string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, obj)
+        : base(cipher, cipherPermissions, globalSettings, obj)
     {
         CollectionIds = collectionCiphers?.Select(c => c.CollectionId) ?? new List<Guid>();
     }
 
     public CipherDetailsResponseModel(
         CipherDetailsWithCollections cipher,
-        User user,
-        OrganizationAbility organizationAbility,
+        CipherPermissionsResponseData cipherPermissions,
         GlobalSettings globalSettings,
         string obj = "cipherDetails")
-        : base(cipher, user, organizationAbility, globalSettings, obj)
+        : base(cipher, cipherPermissions, globalSettings, obj)
     {
         CollectionIds = cipher.CollectionIds ?? new List<Guid>();
     }
