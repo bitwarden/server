@@ -32,6 +32,7 @@ public static class PolicyServiceCollectionExtensions
     private static void AddPolicyRequirements(this IServiceCollection services)
     {
         // Register policy requirement factories here
+        services.AddPolicyRequirement(SendPolicyRequirement.Create);
     }
 
     /// <summary>
