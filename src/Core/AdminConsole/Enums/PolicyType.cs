@@ -15,7 +15,8 @@ public enum PolicyType : byte
     DisablePersonalVaultExport = 10,
     ActivateAutofill = 11,
     AutomaticAppLogIn = 12,
-    FreeFamiliesSponsorshipPolicy = 13
+    FreeFamiliesSponsorshipPolicy = 13,
+    RemoveUnlockWithPin = 14,
 }
 
 public static class PolicyTypeExtensions
@@ -41,7 +42,8 @@ public static class PolicyTypeExtensions
             PolicyType.DisablePersonalVaultExport => "Remove individual vault export",
             PolicyType.ActivateAutofill => "Active auto-fill",
             PolicyType.AutomaticAppLogIn => "Automatically log in users for allowed applications",
-            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship"
+            PolicyType.FreeFamiliesSponsorshipPolicy => "Remove Free Bitwarden Families sponsorship",
+            PolicyType.RemoveUnlockWithPin => "Remove unlock with PIN"
         };
     }
 }
