@@ -90,4 +90,72 @@ public class InviteOrganizationUserCommandTests
             .UpdateSubscriptionAsync(Arg.Any<Core.Models.Business.SecretsManagerSubscriptionUpdate>());
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task InviteScimOrganizationUserAsync_WhenEmailDoesNotExistAndRequestIsValid_ThenUserIsSavedAndInviteIsSent(
+        MailAddress address,
+        Organization organization,
+        OrganizationUser user,
+        FakeTimeProvider timeProvider,
+        string externalId,
+        SutProvider<InviteOrganizationUsersCommand> sutProvider)
+    {
+        // Arrange
+        user.Email = address.Address;
+
+        var organizationDto = OrganizationDto.FromOrganization(organization);
+
+        var request = InviteScimOrganizationUserRequest.Create(
+            OrganizationUserSingleEmailInvite.Create(
+                user.Email,
+                [],
+                OrganizationUserType.User,
+                new Permissions(),
+                false),
+            organizationDto,
+            timeProvider.GetUtcNow(),
+            externalId
+        );
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .SelectKnownEmailsAsync(organization.Id, Arg.Any<IEnumerable<string>>(), false)
+            .Returns([]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        var validationRequest = new InviteUserOrganizationValidationRequest
+        {
+            Invites = [OrganizationUserInviteDto.Create(request.Invite.Email, OrganizationUserInvite.Create(request.Invite, request.ExternalId), organization.Id)],
+            Organization = organizationDto,
+            PerformedBy = Guid.Empty,
+            PerformedAt = request.PerformedAt,
+            OccupiedPmSeats = 0,
+            OccupiedSmSeats = 0,
+            PasswordManagerSubscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0),
+            SecretsManagerSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(organizationDto, 0, 0, 0)
+        };
+
+        sutProvider.GetDependency<IInviteUsersValidation>()
+            .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
+            .Returns(new Valid<InviteUserOrganizationValidationRequest>(validationRequest));
+
+        // Act
+        var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
+
+        // Assert
+        Assert.IsType<Success<OrganizationUser>>(result);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<CreateOrganizationUser>>(users =>
+                users.Any(user => user.User.Email == request.Invite.Email)));
+
+        sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
+            .Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(invite =>
+                invite.Organization == organization &&
+                invite.Users.Count(x => x.Email == user.Email) == 1));
+    }
 }
