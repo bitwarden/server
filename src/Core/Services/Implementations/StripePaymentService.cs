@@ -703,7 +703,7 @@ public class StripePaymentService : IPaymentService
                             new CustomerInvoiceSettingsCustomFieldOptions()
                             {
                                 Name = subscriber.SubscriberType(),
-                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName()),
+                                Value = subscriber.GetFormattedInvoiceName()
                             }
 
                         ]
@@ -795,7 +795,7 @@ public class StripePaymentService : IPaymentService
                             new CustomerInvoiceSettingsCustomFieldOptions()
                             {
                                 Name = subscriber.SubscriberType(),
-                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName())
+                                Value = subscriber.GetFormattedInvoiceName()
                             }
                         ]
                     },
@@ -863,7 +863,7 @@ public class StripePaymentService : IPaymentService
         var customer = await GetCustomerAsync(subscriber.GatewayCustomerId, GetCustomerPaymentOptions());
         var billingInfo = new BillingInfo
         {
-            Balance = GetBillingBalance(customer),
+            Balance = customer.GetBillingBalance(),
             PaymentSource = await GetBillingPaymentSourceAsync(customer)
         };
 
@@ -1086,7 +1086,7 @@ public class StripePaymentService : IPaymentService
         return customer?.Discount?.Coupon?.Id == SecretsManagerStandaloneDiscountId;
     }
 
-    public async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
+    private async Task<(DateTime?, DateTime?)> GetSuspensionDateAsync(Subscription subscription)
     {
         if (subscription.Status is not "past_due" && subscription.Status is not "unpaid")
         {
@@ -1402,11 +1402,6 @@ public class StripePaymentService : IPaymentService
         return cardPaymentMethods.OrderByDescending(m => m.Created).FirstOrDefault();
     }
 
-    private decimal GetBillingBalance(Customer customer)
-    {
-        return customer != null ? customer.Balance / 100M : default;
-    }
-
     private async Task<BillingInfo.BillingSource> GetBillingPaymentSourceAsync(Customer customer)
     {
         if (customer == null)
@@ -1536,19 +1531,5 @@ public class StripePaymentService : IPaymentService
             _logger.LogError(exception, "An error occurred while listing Stripe invoices");
             throw new GatewayException("Failed to retrieve current invoices", exception);
         }
-    }
-
-    // We are taking only first 30 characters of the SubscriberName because stripe provide
-    // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
-    private static string GetFirstThirtyCharacters(string subscriberName)
-    {
-        if (string.IsNullOrWhiteSpace(subscriberName))
-        {
-            return string.Empty;
-        }
-
-        return subscriberName.Length <= 30
-            ? subscriberName
-            : subscriberName[..30];
     }
 }
