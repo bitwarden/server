@@ -157,4 +157,25 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         dbContext.OrganizationDomains.RemoveRange(expiredDomains);
         return await dbContext.SaveChangesAsync() > 0;
     }
+
+    public async Task<IEnumerable<Core.Entities.OrganizationDomain>> GetVerifiedDomainsByOrganizationIdsAsync(
+        IEnumerable<Guid> organizationIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var verifiedDomains = await (from d in dbContext.OrganizationDomains
+                                     where organizationIds.Contains(d.OrganizationId) && d.VerifiedDate != null
+                                     select new OrganizationDomain
+                                     {
+                                         OrganizationId = d.OrganizationId,
+                                         DomainName = d.DomainName
+                                     })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Mapper.Map<List<OrganizationDomain>>(verifiedDomains);
+    }
+
 }
+

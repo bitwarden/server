@@ -21,7 +21,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type, IEnumerable<string> organizationIds)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -48,6 +48,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         foreach (var organizationId in organizationIdsList)
         {
             installation.Tags.Add($"organizationId:{organizationId}");
+        }
+
+        if (installationId != Guid.Empty)
+        {
+            installation.Tags.Add($"installationId:{installationId}");
         }
 
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
@@ -80,11 +85,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
 
         BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType,
-            organizationIdsList);
+            organizationIdsList, installationId);
         BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType,
-            organizationIdsList);
+            organizationIdsList, installationId);
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier, clientType, organizationIdsList);
+            userId, identifier, clientType, organizationIdsList, installationId);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -94,7 +99,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier, ClientType clientType, List<string> organizationIds)
+        string userId, string identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
     {
         if (templateBody == null)
         {
@@ -120,6 +125,11 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         foreach (var organizationId in organizationIds)
         {
             template.Tags.Add($"organizationId:{organizationId}");
+        }
+
+        if (installationId != Guid.Empty)
+        {
+            template.Tags.Add($"installationId:{installationId}");
         }
 
         installation.Templates.Add(fullTemplateId, template);

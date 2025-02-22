@@ -19,6 +19,7 @@ using Xunit;
 using static Bit.Core.Test.Billing.Utilities;
 using Address = Stripe.Address;
 using Customer = Stripe.Customer;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
@@ -1446,7 +1447,7 @@ public class SubscriberServiceTests
             });
 
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
+            .Returns(new GlobalSettings.BaseServiceUriSettings(new GlobalSettings())
             {
                 CloudRegion = "US"
             });
@@ -1488,7 +1489,7 @@ public class SubscriberServiceTests
             });
 
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
+            .Returns(new GlobalSettings.BaseServiceUriSettings(new GlobalSettings())
             {
                 CloudRegion = "US"
             });
