@@ -306,4 +306,81 @@ public class OrganizationDomainRepositoryTests
         var expectedDomain = domains.FirstOrDefault(domain => domain.DomainName == organizationDomain.DomainName);
         Assert.Null(expectedDomain);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetVerifiedDomainsByOrganizationIdsAsync_ShouldVerifiedDomainsMatchesOrganizationIds(
+        IOrganizationRepository organizationRepository,
+        IOrganizationDomainRepository organizationDomainRepository)
+    {
+        // Arrange
+        var guid1 = Guid.NewGuid();
+        var guid2 = Guid.NewGuid();
+
+        var organization1 = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {guid1}",
+            BillingEmail = $"test+{guid1}@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+
+        });
+
+        var organization1Domain1 = new OrganizationDomain
+        {
+            OrganizationId = organization1.Id,
+            DomainName = $"domain1+{guid1}@example.com",
+            Txt = "btw+12345"
+        };
+
+        const int arbitraryNextIteration = 1;
+        organization1Domain1.SetNextRunDate(arbitraryNextIteration);
+        organization1Domain1.SetVerifiedDate();
+
+        await organizationDomainRepository.CreateAsync(organization1Domain1);
+
+        var organization1Domain2 = new OrganizationDomain
+        {
+            OrganizationId = organization1.Id,
+            DomainName = $"domain2+{guid1}@example.com",
+            Txt = "btw+12345"
+        };
+
+        organization1Domain2.SetNextRunDate(arbitraryNextIteration);
+
+        await organizationDomainRepository.CreateAsync(organization1Domain2);
+
+        var organization2 = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org {guid2}",
+            BillingEmail = $"test+{guid2}@example.com",
+            Plan = "Test",
+            PrivateKey = "privatekey",
+
+        });
+
+        var organization2Domain1 = new OrganizationDomain
+        {
+            OrganizationId = organization2.Id,
+            DomainName = $"domain+{guid2}@example.com",
+            Txt = "btw+12345"
+        };
+        organization2Domain1.SetVerifiedDate();
+        organization2Domain1.SetNextRunDate(arbitraryNextIteration);
+
+        await organizationDomainRepository.CreateAsync(organization2Domain1);
+
+
+        // Act
+        var domains = await organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(new[] { organization1.Id });
+
+        // Assert
+        var expectedDomain = domains.FirstOrDefault(domain => domain.DomainName == organization1Domain1.DomainName);
+        Assert.NotNull(expectedDomain);
+
+        var unverifiedDomain = domains.FirstOrDefault(domain => domain.DomainName == organization1Domain2.DomainName);
+        var otherOrganizationDomain = domains.FirstOrDefault(domain => domain.DomainName == organization2Domain1.DomainName);
+
+        Assert.Null(otherOrganizationDomain);
+        Assert.Null(unverifiedDomain);
+    }
 }

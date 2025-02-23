@@ -27,6 +27,8 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
 
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
+
 namespace Bit.Core.Test.Tools.Services;
 
 [SutProviderCustomize]
@@ -399,7 +401,7 @@ public class SendServiceTests
             .CanAccessPremium(user)
             .Returns(true);
 
-        sutProvider.GetDependency<Settings.GlobalSettings>()
+        sutProvider.GetDependency<GlobalSettings>()
             .SelfHosted = true;
 
         var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
@@ -432,7 +434,7 @@ public class SendServiceTests
             .CanAccessPremium(user)
             .Returns(true);
 
-        sutProvider.GetDependency<Settings.GlobalSettings>()
+        sutProvider.GetDependency<GlobalSettings>()
             .SelfHosted = false;
 
         var badRequest = await Assert.ThrowsAsync<BadRequestException>(() =>
