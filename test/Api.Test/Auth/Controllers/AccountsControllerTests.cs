@@ -134,29 +134,43 @@ public class AccountsControllerTests : IDisposable
     [Fact]
     public async Task PostEmailToken_ShouldInitiateEmailChange()
     {
+        // Arrange
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        var newEmail = "example@user.com";
+        const string newEmail = "example@user.com";
+        _userService.ValidateManagedUserDomainAsync(user, newEmail).Returns(IdentityResult.Success);
 
+        // Act
         await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
 
+        // Assert
         await _userService.Received(1).InitiateEmailChangeAsync(user, newEmail);
     }
 
     [Fact]
-    public async Task PostEmailToken_WithAccountDeprovisioningEnabled_WhenUserIsNotManagedByAnOrganization_ShouldInitiateEmailChange()
+    public async Task PostEmailToken_WhenValidateManagedUserDomainAsyncFails_ShouldReturnError()
     {
+        // Arrange
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
-        var newEmail = "example@user.com";
 
-        await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
+        const string newEmail = "example@user.com";
 
-        await _userService.Received(1).InitiateEmailChangeAsync(user, newEmail);
+        _userService.ValidateManagedUserDomainAsync(user, newEmail)
+            .Returns(IdentityResult.Failed(new IdentityError
+            {
+                Code = "TestFailure",
+                Description = "This is a test."
+            }));
+
+
+        // Act
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail })
+        );
     }
 
     [Fact]
