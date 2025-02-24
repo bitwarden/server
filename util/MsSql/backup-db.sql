@@ -1,3 +1,10 @@
+-- Manually shrink the transaction log, if needed:
+--     // run at least 2 backups
+--     use vault;
+--     go
+--     DBCC SHRINKFILE (vault_log);
+--     go
+
 -- Database name which is set from the backup-db.sh script.
 DECLARE @DatabaseName varchar(100)
 SET @DatabaseName = 'vault'
