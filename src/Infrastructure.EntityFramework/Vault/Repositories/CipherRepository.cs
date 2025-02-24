@@ -430,7 +430,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Favorite = c.Favorite,
                                         FolderId = c.FolderId,
                                         Edit = true,
-                                        Manage = true,
                                         Reprompt = c.Reprompt,
                                         ViewPassword = true,
                                         Manage = true,

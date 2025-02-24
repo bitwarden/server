@@ -19,11 +19,6 @@ SELECT
         ELSE 0
     END [Edit],
     CASE
-        WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1
-        THEN 1
-        ELSE 0
-    END [Manage],
-    CASE
     	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
     	THEN 1
     	ELSE 0
