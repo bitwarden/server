@@ -105,7 +105,6 @@ public static class FeatureFlagKeys
     public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
-    public const string IntegrationPage = "pm-14505-admin-console-integration-page";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
     public const string LimitItemDeletion = "pm-15493-restrict-item-deletion-to-can-manage-permission";
     public const string ShortcutDuplicatePatchRequests = "pm-16812-shortcut-duplicate-patch-requests";
@@ -173,6 +172,7 @@ public static class FeatureFlagKeys
     public const string AndroidMutualTls = "mutual-tls";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
+    public const string AndroidImportLoginsFlow = "import-logins-flow";
 
     public static List<string> GetAllKeys()
     {
