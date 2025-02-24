@@ -69,6 +69,7 @@ public class OrganizationEditModel : OrganizationViewModel
         Seats = org.Seats;
         MaxAutoscaleSeats = org.MaxAutoscaleSeats;
         MaxCollections = org.MaxCollections;
+        UseViewPolicies = org.UseViewPolicies;
         UsePolicies = org.UsePolicies;
         UseSso = org.UseSso;
         UseKeyConnector = org.UseKeyConnector;
@@ -121,6 +122,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? MaxAutoscaleSeats { get; set; }
     [Display(Name = "Max. Collections")]
     public short? MaxCollections { get; set; }
+    [Display(Name = "View Policies")]
+    public bool UseViewPolicies { get; set; }
     [Display(Name = "Policies")]
     public bool UsePolicies { get; set; }
     [Display(Name = "SSO")]
@@ -197,6 +200,7 @@ public class OrganizationEditModel : OrganizationViewModel
                     CanBeUsedByBusiness = p.CanBeUsedByBusiness,
                     TrialPeriodDays = p.TrialPeriodDays,
                     HasSelfHost = p.HasSelfHost,
+                    HasViewPolicies = p.HasViewPolicies,
                     HasPolicies = p.HasPolicies,
                     HasGroups = p.HasGroups,
                     HasDirectory = p.HasDirectory,
@@ -276,6 +280,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.Plan = Plan;
         existingOrganization.Seats = Seats;
         existingOrganization.MaxCollections = MaxCollections;
+        existingOrganization.UseViewPolicies = UseViewPolicies;
         existingOrganization.UsePolicies = UsePolicies;
         existingOrganization.UseSso = UseSso;
         existingOrganization.UseKeyConnector = UseKeyConnector;

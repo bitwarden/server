@@ -208,6 +208,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("UseTotp")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("UseViewPolicies")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("UsersGetPremium")
                         .HasColumnType("boolean");
 

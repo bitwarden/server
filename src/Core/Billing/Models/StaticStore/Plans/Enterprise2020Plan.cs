@@ -17,6 +17,7 @@ public record Enterprise2020Plan : Plan
 
         TrialPeriodDays = 7;
 
+        HasViewPolicies = true;
         HasPolicies = true;
         HasSelfHost = true;
         HasGroups = true;

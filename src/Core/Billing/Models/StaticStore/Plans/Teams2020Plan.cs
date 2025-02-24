@@ -17,6 +17,7 @@ public record Teams2020Plan : Plan
 
         TrialPeriodDays = 7;
 
+        HasViewPolicies = true;
         HasGroups = true;
         HasDirectory = true;
         HasEvents = true;

@@ -13,6 +13,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
     {
         Id = organization.OrganizationId;
         Name = organization.Name;
+        UseViewPolicies = organization.UseViewPolicies;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
         UseKeyConnector = organization.UseKeyConnector;

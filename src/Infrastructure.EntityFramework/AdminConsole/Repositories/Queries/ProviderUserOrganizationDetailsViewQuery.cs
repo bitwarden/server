@@ -19,6 +19,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             UserId = x.pu.UserId,
             Name = x.o.Name,
             Enabled = x.o.Enabled,
+            UseViewPolicies = x.o.UseViewPolicies,
             UsePolicies = x.o.UsePolicies,
             UseSso = x.o.UseSso,
             UseKeyConnector = x.o.UseKeyConnector,

@@ -222,6 +222,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(user1.Id, result.UserId);
         Assert.Equal(orgUser1.Id, result.OrganizationUserId);
         Assert.Equal(organization.Name, result.Name);
+        Assert.Equal(organization.UseViewPolicies, result.UseViewPolicies);
         Assert.Equal(organization.UsePolicies, result.UsePolicies);
         Assert.Equal(organization.UseSso, result.UseSso);
         Assert.Equal(organization.UseKeyConnector, result.UseKeyConnector);

@@ -13,6 +13,7 @@ CREATE TABLE [dbo].[Organization] (
     [PlanType]                      TINYINT          NOT NULL,
     [Seats]                         INT              NULL,
     [MaxCollections]                SMALLINT         NULL,
+    [UseViewPolicies]               BIT              NOT NULL,
     [UsePolicies]                   BIT              NOT NULL,
     [UseSso]                        BIT              NOT NULL,
     [UseGroups]                     BIT              NOT NULL,

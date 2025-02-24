@@ -17,6 +17,7 @@ public record EnterprisePlan : Plan
 
         TrialPeriodDays = 7;
 
+        HasViewPolicies = true;
         HasPolicies = true;
         HasSelfHost = true;
         HasGroups = true;

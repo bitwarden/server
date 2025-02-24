@@ -12,6 +12,7 @@ public class OrganizationUserOrganizationDetails
     public Guid OrganizationUserId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+    public bool UseViewPolicies { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
     public bool UseKeyConnector { get; set; }
