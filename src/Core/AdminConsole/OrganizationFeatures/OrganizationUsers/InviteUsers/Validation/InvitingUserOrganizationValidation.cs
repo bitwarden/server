@@ -7,6 +7,11 @@ public static class InvitingUserOrganizationValidation
 {
     public static ValidationResult<OrganizationDto> Validate(OrganizationDto organization)
     {
+        if (organization.Seats is null)
+        {
+            return new Valid<OrganizationDto>(organization);
+        }
+
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
             return new Invalid<OrganizationDto>(NoPaymentMethodFoundError);

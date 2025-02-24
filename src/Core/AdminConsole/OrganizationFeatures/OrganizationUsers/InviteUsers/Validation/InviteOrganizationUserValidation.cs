@@ -51,7 +51,8 @@ public class InviteUsersValidation(
 
         var provider = await providerRepository.GetByOrganizationIdAsync(request.Organization.OrganizationId);
 
-        if (InvitingUserOrganizationProviderValidation.Validate(ProviderDto.FromProviderEntity(provider)) is
+        if (provider is not null &&
+            InvitingUserOrganizationProviderValidation.Validate(ProviderDto.FromProviderEntity(provider)) is
             Invalid<ProviderDto> invalidProviderValidation)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidProviderValidation.ErrorMessageString);
@@ -65,7 +66,10 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidPaymentValidation.ErrorMessageString);
         }
 
-        return new Valid<InviteUserOrganizationValidationRequest>(null);
+        return new Valid<InviteUserOrganizationValidationRequest>(new InviteUserOrganizationValidationRequest(
+            request,
+            subscriptionUpdate,
+            smSubscriptionUpdate));
     }
 
     public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings) =>

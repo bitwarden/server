@@ -96,7 +96,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         var valid = validationResult as Valid<InviteUserOrganizationValidationRequest>;
 
         var organizationUserCollection = invitesToSend
-            .Select(MapToDataModel(request.PerformedAt));
+            .Select(MapToDataModel(request.PerformedAt))
+            .ToArray();
 
         var organization = await organizationRepository.GetByIdAsync(valid.Value.Organization.OrganizationId);
         try

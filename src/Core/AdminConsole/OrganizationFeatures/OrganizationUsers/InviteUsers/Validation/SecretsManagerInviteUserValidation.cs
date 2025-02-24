@@ -5,41 +5,39 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class SecretsManagerInviteUserValidation
 {
-    // NOTE This is only validating adding new users
-    public static ValidationResult<SecretsManagerSubscriptionUpdate> Validate(SecretsManagerSubscriptionUpdate subscriptionUpdate)
-    {
-        if (subscriptionUpdate.UseSecretsManger is false)
+    public static ValidationResult<SecretsManagerSubscriptionUpdate> Validate(
+        SecretsManagerSubscriptionUpdate subscriptionUpdate) =>
+        subscriptionUpdate switch
         {
-            return new Invalid<SecretsManagerSubscriptionUpdate>(OrganizationNoSecretsManager);
-        }
+            { UseSecretsManger: false, AdditionalSeats: > 0 } =>
+                new Invalid<SecretsManagerSubscriptionUpdate>(OrganizationNoSecretsManager),
 
-        if (subscriptionUpdate.Seats == null)
-        {
-            return new Valid<SecretsManagerSubscriptionUpdate>(subscriptionUpdate); // no need to adjust seats...continue on
-        }
+            { UseSecretsManger: false, AdditionalSeats: 0 } or { UseSecretsManger: true, Seats: null } =>
+                new Valid<SecretsManagerSubscriptionUpdate>(subscriptionUpdate),
 
-        // max additional seats is never set...maybe remove this
-        if (subscriptionUpdate.SecretsManagerPlan is { HasAdditionalSeatsOption: false } ||
-            subscriptionUpdate.SecretsManagerPlan.MaxAdditionalSeats is not null &&
-            subscriptionUpdate.AdditionalSeats > subscriptionUpdate.SecretsManagerPlan.MaxAdditionalSeats)
-        {
-            return new Invalid<SecretsManagerSubscriptionUpdate>(
-                string.Format(SecretsManagerAdditionalSeatLimitReached,
+            { UseSecretsManger: true, SecretsManagerPlan.HasAdditionalSeatsOption: false } =>
+                new Invalid<SecretsManagerSubscriptionUpdate>(
+                    string.Format(SecretsManagerAdditionalSeatLimitReached,
                     subscriptionUpdate.SecretsManagerPlan.BaseSeats +
-                    subscriptionUpdate.SecretsManagerPlan.MaxAdditionalSeats.GetValueOrDefault()));
-        }
+                    subscriptionUpdate.SecretsManagerPlan.MaxAdditionalSeats.GetValueOrDefault())),
 
-        if (subscriptionUpdate.UpdatedSeatTotal is not null && subscriptionUpdate.MaxAutoScaleSeats is not null &&
-            subscriptionUpdate.UpdatedSeatTotal > subscriptionUpdate.MaxAutoScaleSeats)
-        {
-            return new Invalid<SecretsManagerSubscriptionUpdate>(SecretsManagerSeatLimitReached);
-        }
+            { UseSecretsManger: true, SecretsManagerPlan.MaxAdditionalSeats: var planMaxSeats }
+                when planMaxSeats < subscriptionUpdate.AdditionalSeats =>
+                new Invalid<SecretsManagerSubscriptionUpdate>(
+                    string.Format(SecretsManagerAdditionalSeatLimitReached,
+                        subscriptionUpdate.SecretsManagerPlan.BaseSeats +
+                        subscriptionUpdate.SecretsManagerPlan.MaxAdditionalSeats.GetValueOrDefault())),
 
-        if (subscriptionUpdate.PasswordManagerUpdatedSeatTotal < subscriptionUpdate.UpdatedSeatTotal)
-        {
-            return new Invalid<SecretsManagerSubscriptionUpdate>(SecretsManagerCannotExceedPasswordManager);
-        }
+            { UseSecretsManger: true, UpdatedSeatTotal: var updateSeatTotal, MaxAutoScaleSeats: var maxAutoScaleSeats }
+                when updateSeatTotal > maxAutoScaleSeats =>
+                new Invalid<SecretsManagerSubscriptionUpdate>(SecretsManagerSeatLimitReached),
 
-        return new Valid<SecretsManagerSubscriptionUpdate>(subscriptionUpdate);
-    }
+            {
+                PasswordManagerUpdatedSeatTotal: var passwordManagerUpdatedSeatTotal,
+                UpdatedSeatTotal: var secretsManagerUpdatedSeatTotal
+            } when passwordManagerUpdatedSeatTotal < secretsManagerUpdatedSeatTotal =>
+                new Invalid<SecretsManagerSubscriptionUpdate>(SecretsManagerCannotExceedPasswordManager),
+
+            _ => new Valid<SecretsManagerSubscriptionUpdate>(subscriptionUpdate)
+        };
 }

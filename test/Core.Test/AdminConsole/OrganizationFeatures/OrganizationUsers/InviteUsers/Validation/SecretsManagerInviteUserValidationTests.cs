@@ -16,7 +16,7 @@ public class SecretsManagerInviteUserValidationTests
 {
     [Theory]
     [BitAutoData]
-    public void Validate_GivenOrganizationDoesNotHaveSecretsManager_ThenShouldNotBeAllowedToAddSecretsManagerUsers(
+    public void Validate_GivenOrganizationDoesNotHaveSecretsManagerAndNotTryingToAddSecretsManagerUser_ThenTheRequestIsValid(
         Organization organization)
     {
         organization.UseSecretsManager = false;
@@ -27,6 +27,35 @@ public class SecretsManagerInviteUserValidationTests
         var request = new InviteUserOrganizationValidationRequest
         {
             Invites = [new OrganizationUserInviteDto()],
+            Organization = organizationDto,
+            PerformedBy = Guid.Empty,
+            PerformedAt = default,
+            OccupiedPmSeats = 0,
+            OccupiedSmSeats = 0
+        };
+
+        var update = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+
+        var result = SecretsManagerInviteUserValidation.Validate(update);
+
+        Assert.IsType<Valid<SecretsManagerSubscriptionUpdate>>(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public void Validate_GivenOrganizationDoesNotHaveSecretsManagerAndTryingToAddSecretsManagerUser_ThenShouldReturnInvalidMessage(
+        Organization organization)
+    {
+        organization.UseSecretsManager = false;
+
+        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+
+        var invite = OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true);
+
+        var request = new InviteUserOrganizationValidationRequest
+        {
+            Invites = [OrganizationUserInviteDto.Create(invite.Emails.First(), invite, organizationDto.OrganizationId)],
             Organization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
