@@ -67,7 +67,12 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         string emailToken = null;
         factory.SubstituteService<IMailService>(mailService =>
         {
-            mailService.SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => emailToken = t))
+            mailService.SendTwoFactorEmailAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Do<string>(t => emailToken = t),
+                    Arg.Any<string>(),
+                    Arg.Any<string>())
                 .Returns(Task.CompletedTask);
         });
 
@@ -273,7 +278,12 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         string emailToken = null;
         localFactory.SubstituteService<IMailService>(mailService =>
         {
-            mailService.SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => emailToken = t))
+            mailService.SendTwoFactorEmailAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Do<string>(t => emailToken = t),
+                    Arg.Any<string>(),
+                    Arg.Any<string>())
                 .Returns(Task.CompletedTask);
         });
 

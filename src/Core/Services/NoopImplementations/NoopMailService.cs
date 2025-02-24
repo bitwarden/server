@@ -26,6 +26,7 @@ public class NoopMailService : IMailService
     }
 
     public Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -86,7 +87,7 @@ public class NoopMailService : IMailService
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
-    public Task SendTwoFactorEmailAsync(string email, string token)
+    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
     {
         return Task.FromResult(0);
     }
