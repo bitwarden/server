@@ -78,7 +78,7 @@ public class CreateNotificationCommandTest
     {
         Setup(sutProvider, notification, true);
 
-        var newNotification = await sutProvider.Sut.CreateAsync(notification, true);
+        var newNotification = await sutProvider.Sut.CreateAsync(notification, false);
 
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(0)
