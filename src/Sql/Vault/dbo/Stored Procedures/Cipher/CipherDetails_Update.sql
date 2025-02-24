@@ -13,6 +13,7 @@
     @Favorite BIT,
     @Edit BIT, -- not used
     @ViewPassword BIT, -- not used
+    @Manage BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
@@ -31,7 +32,7 @@ BEGIN
         [OrganizationId] = @OrganizationId,
         [Type] = @Type,
         [Data] = @Data,
-        [Folders] = 
+        [Folders] =
             CASE
             WHEN @FolderId IS NOT NULL AND [Folders] IS NULL THEN
                 CONCAT('{', @UserIdKey, ':"', @FolderId, '"', '}')
