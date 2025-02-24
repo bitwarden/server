@@ -19,6 +19,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 #nullable enable
 
@@ -138,7 +139,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var foundAuthRequest = await sutProvider.Sut.GetValidatedAuthRequestAsync(authRequest.Id, authRequest.AccessCode);
 
@@ -513,7 +514,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var updateModel = new AuthRequestUpdateRequestModel
         {
@@ -582,7 +583,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         sutProvider.GetDependency<IDeviceRepository>()
             .GetByIdentifierAsync(device.Identifier, authRequest.UserId)
@@ -736,7 +737,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var updateModel = new AuthRequestUpdateRequestModel
         {
@@ -803,7 +804,7 @@ public class AuthRequestServiceTests
 
         sutProvider.GetDependency<IGlobalSettings>()
             .PasswordlessAuth
-            .Returns(new Settings.GlobalSettings.PasswordlessAuthSettings());
+            .Returns(new GlobalSettings.PasswordlessAuthSettings());
 
         var updateModel = new AuthRequestUpdateRequestModel
         {

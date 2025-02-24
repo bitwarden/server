@@ -44,10 +44,9 @@ public class WebhookEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventAsync_PostsEventsToUrl(EventMessage eventMessage)
+    public async Task HandleEventAsync_PostsEventToUrl(EventMessage eventMessage)
     {
         var sutProvider = GetSutProvider();
-        var content = JsonContent.Create(eventMessage);
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
@@ -62,5 +61,25 @@ public class WebhookEventHandlerTests
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal(_webhookUrl, request.RequestUri.ToString());
         AssertHelper.AssertPropertyEqual(eventMessage, returned, new[] { "IdempotencyId" });
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleEventManyAsync_PostsEventsToUrl(IEnumerable<EventMessage> eventMessages)
+    {
+        var sutProvider = GetSutProvider();
+
+        await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
+        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
+            Arg.Is(AssertHelper.AssertPropertyEqual<string>(WebhookEventHandler.HttpClientName))
+        );
+
+        Assert.Single(_handler.CapturedRequests);
+        var request = _handler.CapturedRequests[0];
+        Assert.NotNull(request);
+        var returned = request.Content.ReadFromJsonAsAsyncEnumerable<EventMessage>();
+
+        Assert.Equal(HttpMethod.Post, request.Method);
+        Assert.Equal(_webhookUrl, request.RequestUri.ToString());
+        AssertHelper.AssertPropertyEqual(eventMessages, returned, new[] { "IdempotencyId" });
     }
 }

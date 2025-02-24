@@ -7,5 +7,9 @@
 
 <h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
+@if (Model.ProviderPlanViewModels.Any())
+{
+    @await Html.PartialAsync("ProviderPlans", Model.ProviderPlanViewModels)
+}
 @await Html.PartialAsync("Admins", Model)
 @await Html.PartialAsync("Organizations", Model)

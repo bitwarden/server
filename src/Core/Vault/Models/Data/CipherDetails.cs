@@ -55,6 +55,7 @@ public class CipherDetailsWithCollections : CipherDetails
         Edit = cipher.Edit;
         Manage = cipher.Manage;
         ViewPassword = cipher.ViewPassword;
+        Manage = cipher.Manage;
 
         CollectionIds = collectionCiphersGroupDict.TryGetValue(Id, out var value)
             ? value.Select(cc => cc.CollectionId)
