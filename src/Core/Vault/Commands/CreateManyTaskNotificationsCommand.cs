@@ -69,7 +69,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
                 };
 
                 // Only push the last notification for each user
-                bool skipNotificationPush = i != userSecurityTaskCiphers.Count - 1;
+                bool skipNotificationPush = i == userSecurityTaskCiphers.Count - 1;
 
                 await _createNotificationCommand.CreateAsync(notification, skipNotificationPush);
             }
