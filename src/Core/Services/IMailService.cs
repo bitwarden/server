@@ -15,6 +15,7 @@ public interface IMailService
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
     Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -23,7 +24,7 @@ public interface IMailService
     Task SendCannotDeleteManagedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
-    Task SendTwoFactorEmailAsync(string email, string token);
+    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
 
