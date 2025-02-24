@@ -117,6 +117,21 @@ public class Startup
                     globalSettings,
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
 
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.SlackToken) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.SlackUserEmail))
+            {
+                services.AddHttpClient(SlackMessageSender.HttpClientName);
+                services.AddSingleton<SlackMessageSender>();
+                services.AddSingleton<SlackEventHandler>();
+
+                services.AddSingleton<IHostedService>(provider =>
+                    new RabbitMqEventListenerService(
+                        provider.GetRequiredService<SlackEventHandler>(),
+                        provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                        globalSettings,
+                        globalSettings.EventLogging.RabbitMq.SlackQueueName));
+            }
+
             if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.WebhookUrl))
             {
                 services.AddSingleton<WebhookEventHandler>();

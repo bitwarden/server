@@ -53,6 +53,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
     public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
+    public virtual SlackSettings Slack { get; set; } = new SlackSettings();
     public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
@@ -269,9 +270,19 @@ public class GlobalSettings : IGlobalSettings
         }
     }
 
+    public class SlackSettings
+    {
+        public virtual string ClientId { get; set; }
+        public virtual string ClientSecret { get; set; }
+        public virtual string RedirectUrl { get; set; }
+        public virtual string Scopes { get; set; }
+    }
+
     public class EventLoggingSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
+        public virtual string SlackToken { get; set; }
+        public virtual string SlackUserEmail { get; set; }
         public virtual string WebhookUrl { get; set; }
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
 
@@ -305,6 +316,7 @@ public class GlobalSettings : IGlobalSettings
 
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
             public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
+            public virtual string SlackQueueName { get; set; } = "events-slack-queue";
 
             public string HostName
             {
