@@ -382,7 +382,6 @@ public class OrganizationUserRepositoryTests
             Type = OrganizationUserType.Owner
         });
 
-        // This fails because the IDs clash, even though the repository should set these to random values
         var createdOrgUserIds = await organizationUserRepository.CreateManyAsync(orgUsers);
 
         var readOrgUsers = await organizationUserRepository.GetManyByOrganizationAsync(org.Id, null);
@@ -423,7 +422,6 @@ public class OrganizationUserRepositoryTests
         var readOrgUsers = await organizationUserRepository.GetManyByOrganizationAsync(org.Id, null);
         var readOrgUserIds = readOrgUsers.Select(ou => ou.Id);
 
-        // the IDs returned by CreateMany don't match what we read back from the db
         Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
     }
 }
