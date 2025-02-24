@@ -1,23 +1,17 @@
 IF COL_LENGTH('dbo.Organization', 'UseViewPolicies') IS NULL
 BEGIN
-ALTER TABLE
-    [dbo].[Organization]
+    ALTER TABLE
+        [dbo].[Organization]
     ADD
-    [UseViewPolicies] BIT NOT NULL DEFAULT(0)
+        [UseViewPolicies] BIT NOT NULL DEFAULT(0)
+
+    UPDATE [dbo].[Organization]
+        SET [UseViewPolicies] = 1
+    WHERE [PlanType] IN(2,3,4,5,8,9,10,11,12,13,14,15,17,18,19,20)
 END
-GO
+GO;
 
-UPDATE [dbo].[Organization]
-    SET [UseViewPolicies] = 0
-    WHERE [PlanType] IN(2,3,4,5,8,9,10,11,12,13,14,15,17,18,19,20);
-
-IF OBJECT_ID('[dbo].[Organization_Create') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_Create]
-END
-GO
-
-CREATE PROCEDURE [dbo].[Organization_Create]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -203,14 +197,10 @@ BEGIN
         @LimitItemDeletion
     )
 END
-
-IF OBJECT_ID('[dbo].[Organization_Update') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Organization_Update]
-END
 GO
 
-CREATE PROCEDURE [dbo].[Organization_Update]
+
+CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -335,4 +325,4 @@ SET
     [LimitItemDeletion] = @LimitItemDeletion
 WHERE
     [Id] = @Id
-END
+END;
