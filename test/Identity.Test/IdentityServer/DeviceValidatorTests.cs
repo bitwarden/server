@@ -658,7 +658,7 @@ public class DeviceValidatorTests
         request.GrantType = "password";
         context.TwoFactorRequired = false;
         context.SsoRequired = false;
-        if(context.User != null)
+        if (context.User != null)
         {
             context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(365);
         }
