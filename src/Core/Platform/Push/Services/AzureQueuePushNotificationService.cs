@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿#nullable enable
+using System.Text.Json;
 using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
@@ -6,11 +7,13 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.NotificationCenter.Entities;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
@@ -18,13 +21,22 @@ public class AzureQueuePushNotificationService : IPushNotificationService
 {
     private readonly QueueClient _queueClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IGlobalSettings _globalSettings;
 
     public AzureQueuePushNotificationService(
         [FromKeyedServices("notifications")] QueueClient queueClient,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IGlobalSettings globalSettings,
+        ILogger<AzureQueuePushNotificationService> logger)
     {
         _queueClient = queueClient;
         _httpContextAccessor = httpContextAccessor;
+        _globalSettings = globalSettings;
+
+        if (globalSettings.Installation.Id == Guid.Empty)
+        {
+            logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
+        }
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -42,7 +54,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -175,13 +187,36 @@ public class AzureQueuePushNotificationService : IPushNotificationService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
-        await SendMessageAsync(PushType.SyncNotification, message, true);
+        await SendMessageAsync(PushType.Notification, message, true);
+    }
+
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    {
+        var message = new NotificationPushNotification
+        {
+            Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
+        };
+
+        await SendMessageAsync(PushType.NotificationStatus, message, true);
     }
 
     private async Task PushSendAsync(Send send, PushType type)
@@ -207,7 +242,7 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         await _queueClient.SendMessageAsync(message);
     }
 
-    private string GetContextIdentifier(bool excludeCurrentContext)
+    private string? GetContextIdentifier(bool excludeCurrentContext)
     {
         if (!excludeCurrentContext)
         {
@@ -219,15 +254,20 @@ public class AzureQueuePushNotificationService : IPushNotificationService
         return currentContext?.DeviceIdentifier;
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) =>
+        // Noop
+        Task.CompletedTask;
+
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         // Noop
         return Task.FromResult(0);

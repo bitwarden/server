@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -16,9 +17,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Platform.Push.Internal;
 
+/// <summary>
+/// Sends mobile push notifications to the Bitwarden Cloud API, then relayed to Azure Notification Hub.
+/// Used by Self-Hosted environments.
+/// Received by PushController endpoint in Api project.
+/// </summary>
 public class RelayPushNotificationService : BaseIdentityClientService, IPushNotificationService
 {
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IGlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public RelayPushNotificationService(
@@ -37,6 +44,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             logger)
     {
         _deviceRepository = deviceRepository;
+        _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -55,7 +63,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await PushCipherAsync(cipher, PushType.SyncLoginDelete, null);
     }
 
-    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid> collectionIds)
+    private async Task PushCipherAsync(Cipher cipher, PushType type, IEnumerable<Guid>? collectionIds)
     {
         if (cipher.OrganizationId.HasValue)
         {
@@ -201,21 +209,69 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
-        if (notification.UserId.HasValue)
+        if (notification.Global)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+            await SendPayloadToInstallationAsync(PushType.Notification, message, true, notification.ClientType);
+        }
+        else if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.Notification, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.Notification, message,
                 true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification id {NotificationId} push notification", notification.Id);
+        }
+    }
+
+    public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    {
+        var message = new NotificationPushNotification
+        {
+            Id = notification.Id,
+            Priority = notification.Priority,
+            Global = notification.Global,
+            ClientType = notification.ClientType,
+            UserId = notification.UserId,
+            OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
+            Title = notification.Title,
+            Body = notification.Body,
+            CreationDate = notification.CreationDate,
+            RevisionDate = notification.RevisionDate,
+            ReadDate = notificationStatus.ReadDate,
+            DeletedDate = notificationStatus.DeletedDate
+        };
+
+        if (notification.Global)
+        {
+            await SendPayloadToInstallationAsync(PushType.NotificationStatus, message, true, notification.ClientType);
+        }
+        else if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.NotificationStatus, message, true,
+                notification.ClientType);
+        }
+        else if (notification.OrganizationId.HasValue)
+        {
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.NotificationStatus, message,
+                true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification status id {NotificationId} push notification", notification.Id);
         }
     }
 
@@ -243,6 +299,21 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             },
             false
         );
+
+    private async Task SendPayloadToInstallationAsync(PushType type, object payload, bool excludeCurrentContext,
+        ClientType? clientType = null)
+    {
+        var request = new PushSendRequestModel
+        {
+            InstallationId = _globalSettings.Installation.Id.ToString(),
+            Type = type,
+            Payload = payload,
+            ClientType = clientType
+        };
+
+        await AddCurrentContextAsync(request, excludeCurrentContext);
+        await SendAsync(HttpMethod.Post, "push/send", request);
+    }
 
     private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
         ClientType? clientType = null)
@@ -277,7 +348,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
     private async Task AddCurrentContextAsync(PushSendRequestModel request, bool addIdentifier)
     {
         var currentContext =
-            _httpContextAccessor?.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
+            _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         if (!string.IsNullOrWhiteSpace(currentContext?.DeviceIdentifier))
         {
             var device = await _deviceRepository.GetByIdentifierAsync(currentContext.DeviceIdentifier);
@@ -293,14 +364,18 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         }
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) =>
+        throw new NotImplementedException();
+
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         throw new NotImplementedException();
     }

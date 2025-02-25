@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Entities;
@@ -84,8 +85,8 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         return Task.FromResult(0);
     }
@@ -107,11 +108,17 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null, ClientType? clientType = null)
+    public Task PushNotificationAsync(Notification notification) => Task.CompletedTask;
+
+    public Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus) =>
+        Task.CompletedTask;
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) => Task.CompletedTask;
+
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
     {
         return Task.FromResult(0);
     }
-
-    public Task PushNotificationAsync(Notification notification) => Task.CompletedTask;
 }

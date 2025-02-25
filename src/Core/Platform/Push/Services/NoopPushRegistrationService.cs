@@ -11,7 +11,7 @@ public class NoopPushRegistrationService : IPushRegistrationService
     }
 
     public Task CreateOrUpdateRegistrationAsync(PushRegistrationData pushRegistrationData, string deviceId, string userId,
-        string identifier, DeviceType type, IEnumerable<string> organizationIds)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
     {
         return Task.FromResult(0);
     }

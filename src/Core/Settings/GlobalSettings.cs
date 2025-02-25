@@ -243,7 +243,18 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set
+            {
+                // On development environment, the self-hosted overrides would not override the read-only connection string, since it is already set from the non-self-hosted connection string.
+                // This causes a bug, where the read-only connection string is pointing to self-hosted database.
+                if (!string.IsNullOrWhiteSpace(_readOnlyConnectionString) &&
+                    _readOnlyConnectionString == _connectionString)
+                {
+                    _readOnlyConnectionString = null;
+                }
+
+                _connectionString = value.Trim('"');
+            }
         }
 
         public string ReadOnlyConnectionString
