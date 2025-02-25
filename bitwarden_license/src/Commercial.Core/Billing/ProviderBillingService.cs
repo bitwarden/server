@@ -83,6 +83,7 @@ public class ProviderBillingService(
         organization.PlanType = plan.Type;
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
         organization.MaxStorageGb = plan.PasswordManager.BaseStorageGb;
+        organization.UseViewPolicies = plan.HasViewPolicies;
         organization.UsePolicies = plan.HasPolicies;
         organization.UseSso = plan.HasSso;
         organization.UseGroups = plan.HasGroups;

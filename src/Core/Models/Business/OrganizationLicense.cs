@@ -35,6 +35,7 @@ public class OrganizationLicense : ILicense
         PlanType = org.PlanType;
         Seats = org.Seats;
         MaxCollections = org.MaxCollections;
+        UseViewPolicies = org.UseViewPolicies;
         UsePolicies = org.UsePolicies;
         UseSso = org.UseSso;
         UseKeyConnector = org.UseKeyConnector;
@@ -119,6 +120,7 @@ public class OrganizationLicense : ILicense
     public PlanType PlanType { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
+    public bool UseViewPolicies { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
     public bool UseKeyConnector { get; set; }

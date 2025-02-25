@@ -337,6 +337,12 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.ManageGroups ?? false)) ?? false);
     }
 
+    public async Task<bool> AccessPolicies(Guid orgId)
+    {
+        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
+                    && (o.Permissions?.AccessPolicies ?? false)) ?? false);
+    }
+
     public async Task<bool> ManagePolicies(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -522,6 +528,7 @@ public class CurrentContext : ICurrentContext
             EditAnyCollection = hasClaim("editanycollection"),
             DeleteAnyCollection = hasClaim("deleteanycollection"),
             ManageGroups = hasClaim("managegroups"),
+            AccessPolicies = hasClaim("accesspolicies"),
             ManagePolicies = hasClaim("managepolicies"),
             ManageSso = hasClaim("managesso"),
             ManageUsers = hasClaim("manageusers"),

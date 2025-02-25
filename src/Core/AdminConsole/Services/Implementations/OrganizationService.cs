@@ -1860,6 +1860,11 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
+        if (permissions.AccessPolicies && !await _currentContext.AccessPolicies(organizationId))
+        {
+            return false;
+        }
+
         if (permissions.ManagePolicies && !await _currentContext.ManagePolicies(organizationId))
         {
             return false;

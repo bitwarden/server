@@ -48,6 +48,7 @@ public interface ICurrentContext
     [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> ViewAllCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
+    Task<bool> AccessPolicies(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);
     Task<bool> ManageSso(Guid orgId);
     Task<bool> ManageUsers(Guid orgId);

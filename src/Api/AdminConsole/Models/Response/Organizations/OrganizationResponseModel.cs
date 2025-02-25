@@ -35,6 +35,7 @@ public class OrganizationResponseModel : ResponseModel
         MaxCollections = organization.MaxCollections;
         MaxStorageGb = organization.MaxStorageGb;
         UsePolicies = organization.UsePolicies;
+        UseViewPolicies = organization.UseViewPolicies;
         UseSso = organization.UseSso;
         UseKeyConnector = organization.UseKeyConnector;
         UseScim = organization.UseScim;
@@ -81,6 +82,7 @@ public class OrganizationResponseModel : ResponseModel
     public short? MaxCollections { get; set; }
     public short? MaxStorageGb { get; set; }
     public bool UsePolicies { get; set; }
+    public bool UseViewPolicies { get; set; }
     public bool UseSso { get; set; }
     public bool UseKeyConnector { get; set; }
     public bool UseScim { get; set; }

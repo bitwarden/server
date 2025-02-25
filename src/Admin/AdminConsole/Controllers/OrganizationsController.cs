@@ -445,6 +445,7 @@ public class OrganizationsController : Controller
             organization.Use2fa = model.Use2fa;
             organization.UseApi = model.UseApi;
             organization.UseGroups = model.UseGroups;
+            organization.UseViewPolicies = model.UseViewPolicies;
             organization.UsePolicies = model.UsePolicies;
             organization.UseSso = model.UseSso;
             organization.UseKeyConnector = model.UseKeyConnector;

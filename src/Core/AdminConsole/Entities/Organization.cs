@@ -297,6 +297,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseTotp = license.UseTotp;
         Use2fa = license.Use2fa;
         UseApi = license.UseApi;
+        UseViewPolicies = license.UseViewPolicies;
         UsePolicies = license.UsePolicies;
         UseSso = license.UseSso;
         UseKeyConnector = license.UseKeyConnector;
