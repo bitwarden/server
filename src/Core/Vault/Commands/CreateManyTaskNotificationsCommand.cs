@@ -1,7 +1,8 @@
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Commands.Interfaces;
@@ -15,17 +16,20 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IMailService _mailService;
     private readonly ICreateNotificationCommand _createNotificationCommand;
+    private readonly IPushNotificationService _pushNotificationService;
 
     public CreateManyTaskNotificationsCommand(
         IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
         IOrganizationRepository organizationRepository,
         IMailService mailService,
-        ICreateNotificationCommand createNotificationCommand)
+        ICreateNotificationCommand createNotificationCommand,
+        IPushNotificationService pushNotificationService)
     {
         _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
         _organizationRepository = organizationRepository;
         _mailService = mailService;
         _createNotificationCommand = createNotificationCommand;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task CreateAsync(Guid orgId, IEnumerable<SecurityTask> securityTasks)
@@ -70,6 +74,9 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
 
                 await _createNotificationCommand.CreateAsync(notification, false);
             }
+
+            // Notify the user that they have pending security tasks
+            await _pushNotificationService.PushPendingSecurityTasksAsync(userId);
         }
     }
 }
