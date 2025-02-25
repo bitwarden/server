@@ -20,8 +20,9 @@ public class PolicyRequirementQuery(
         }
 
         var policyDetails = await GetPolicyDetails(userId);
-        var policiesOfType = policyDetails.Where(p => p.PolicyType == factory.PolicyType);
-        var filteredPolicies = factory.Filter(policiesOfType);
+        var filteredPolicies = policyDetails
+            .Where(p => p.PolicyType == factory.PolicyType)
+            .Where(p => factory.Enforce(p));
         var requirement = factory.Create(filteredPolicies);
 
         return requirement;

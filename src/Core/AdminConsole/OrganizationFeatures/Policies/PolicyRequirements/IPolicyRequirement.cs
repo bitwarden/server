@@ -29,7 +29,7 @@ public interface IRequirementFactory<out T> where T : IPolicyRequirement
     /// </summary>
     /// <param name="policyDetails">Policy details for the defined PolicyType.</param>
     /// <returns></returns>
-    IEnumerable<PolicyDetails> Filter(IEnumerable<PolicyDetails> policyDetails);
+    bool Enforce(PolicyDetails policyDetails);
 
     /// <summary>
     /// A reducer method that creates a single <see cref="IPolicyRequirement"/> from the PolicyDetails.

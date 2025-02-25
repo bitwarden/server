@@ -16,11 +16,10 @@ public abstract class SimpleRequirementFactory<T> : IRequirementFactory<T> where
 
     public abstract PolicyType PolicyType { get; }
 
-    public IEnumerable<PolicyDetails> Filter(IEnumerable<PolicyDetails> policyDetails)
-        => policyDetails
-            .ExemptRoles(ExemptRoles)
-            .ExemptStatus([OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked])
-            .ExemptProviders();
+    public bool Enforce(PolicyDetails policyDetails)
+        => !policyDetails.HasRole(ExemptRoles) &&
+            !policyDetails.HasStatus([OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked]) &&
+            !policyDetails.IsProvider;
 
     public abstract T Create(IEnumerable<PolicyDetails> policyDetails);
 }
