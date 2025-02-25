@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+using Bit.Core.Enums;
 using Bit.Core.NotificationCenter.Commands.Interfaces;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.NotificationCenter.Enums;
@@ -68,10 +68,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
                     TaskId = userSecurityTaskCipher.TaskId
                 };
 
-                // Only push the last notification for each user
-                bool skipNotificationPush = i == userSecurityTaskCiphers.Count - 1;
-
-                await _createNotificationCommand.CreateAsync(notification, skipNotificationPush);
+                await _createNotificationCommand.CreateAsync(notification, false);
             }
         }
     }
