@@ -5,6 +5,9 @@ namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
+    private const string BaseDirectoryLog = "/var/log/bitwarden";
+    private const string BaseDirectoryConfig = "/config";
+
     private string _logDirectory;
     private string _licenseDirectory;
 
@@ -16,6 +19,8 @@ public class GlobalSettings : IGlobalSettings
         DataProtection = new DataProtectionSettings(this);
     }
 
+    public bool UseNewDirectoryStructure { get; set; }
+
     public bool SelfHosted { get; set; }
     public bool UnifiedDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
@@ -23,7 +28,20 @@ public class GlobalSettings : IGlobalSettings
     public virtual string ProjectName { get; set; }
     public virtual string LogDirectory
     {
-        get => BuildDirectory(_logDirectory, "/logs");
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_logDirectory))
+            {
+                return _logDirectory;
+            }
+
+            if (UseNewDirectoryStructure)
+            {
+                return BaseDirectoryLog;
+            }
+
+            return BuildDirectory(_logDirectory, "/logs");
+        }
         set => _logDirectory = value;
     }
     public virtual bool LogDirectoryByProject { get; set; } = true;
@@ -31,7 +49,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableDevLogging { get; set; } = false;
     public virtual string LicenseDirectory
     {
-        get => BuildDirectory(_licenseDirectory, "/core/licenses");
+        get => BuildDirectory(_licenseDirectory, UseNewDirectoryStructure ? "/shared/licenses" : "/core/licenses");
         set => _licenseDirectory = value;
     }
     public string LicenseCertificatePassword { get; set; }
@@ -123,7 +141,8 @@ public class GlobalSettings : IGlobalSettings
         {
             return null;
         }
-        return string.Concat("/etc/bitwarden", appendedPath);
+
+        return string.Concat(UseNewDirectoryStructure ? BaseDirectoryConfig : "/etc/bitwarden", appendedPath);
     }
 
     public class BaseServiceUriSettings : IBaseServiceUriSettings
@@ -423,7 +442,7 @@ public class GlobalSettings : IGlobalSettings
         public string CertificatePassword { get; set; }
         public string Directory
         {
-            get => _globalSettings.BuildDirectory(_directory, "/core/aspnet-dataprotection");
+            get => _globalSettings.BuildDirectory(_directory, _globalSettings.UseNewDirectoryStructure ? "/shared/aspnet-dataprotection" : "/core/aspnet-dataprotection");
             set => _directory = value;
         }
     }
