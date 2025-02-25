@@ -144,7 +144,8 @@ public class UpcomingInvoiceHandler(
         await stripeFacade.UpdateSubscription(subscription.Id,
             new SubscriptionUpdateOptions
             {
-                DefaultTaxRates = [], AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                DefaultTaxRates = [],
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
             });
 
         return;
