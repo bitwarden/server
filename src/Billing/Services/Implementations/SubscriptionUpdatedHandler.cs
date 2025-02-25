@@ -26,6 +26,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IFeatureService _featureService;
     private readonly IOrganizationEnableCommand _organizationEnableCommand;
+    private readonly IOrganizationDisableCommand _organizationDisableCommand;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -38,7 +39,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
         IFeatureService featureService,
-        IOrganizationEnableCommand organizationEnableCommand)
+        IOrganizationEnableCommand organizationEnableCommand,
+        IOrganizationDisableCommand organizationDisableCommand)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -51,6 +53,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _schedulerFactory = schedulerFactory;
         _featureService = featureService;
         _organizationEnableCommand = organizationEnableCommand;
+        _organizationDisableCommand = organizationDisableCommand;
     }
 
     /// <summary>
@@ -67,7 +70,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             case StripeSubscriptionStatus.Unpaid or StripeSubscriptionStatus.IncompleteExpired
                 when organizationId.HasValue:
                 {
-                    await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
+                    await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
                     if (subscription.Status == StripeSubscriptionStatus.Unpaid &&
                         subscription.LatestInvoice is { BillingReason: "subscription_cycle" or "subscription_create" })
                     {
