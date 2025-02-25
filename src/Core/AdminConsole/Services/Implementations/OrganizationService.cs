@@ -686,20 +686,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task DisableAsync(Guid organizationId, DateTime? expirationDate)
-    {
-        var org = await GetOrgById(organizationId);
-        if (org != null && org.Enabled)
-        {
-            org.Enabled = false;
-            org.ExpirationDate = expirationDate;
-            org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCacheAsync(org);
-
-            // TODO: send email to owners?
-        }
-    }
-
     public async Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate)
     {
         var org = await GetOrgById(organizationId);
