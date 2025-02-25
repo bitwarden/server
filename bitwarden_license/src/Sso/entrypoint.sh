@@ -35,16 +35,16 @@ mkdir -p /etc/bitwarden/logs
 mkdir -p /etc/bitwarden/ca-certificates
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
-if [[ $globalSettings__selfHosted == "true" ]]; then
-  cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
-fi
+# if [[ $globalSettings__selfHosted == "true" ]]; then
+#   cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
+# fi
 
 chown -R $USERNAME:$GROUPNAME /app
 
-if [[ $globalSettings__selfHosted == "true" ]]; then
-  cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
-    && update-ca-certificates
-fi
+# if [[ $globalSettings__selfHosted == "true" ]]; then
+#   cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
+#     && update-ca-certificates
+# fi
 
 if [[ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerberos/krb5.conf" ]]; then
   chown -R $USERNAME:$GROUPNAME /etc/bitwarden/kerberos

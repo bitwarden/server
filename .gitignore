@@ -225,3 +225,7 @@ src/Notifications/Notifications.zip
 bitwarden_license/src/Portal/Portal.zip
 bitwarden_license/src/Sso/Sso.zip
 **/src/**/flags.json
+
+logs/*
+config/*
+storage/*

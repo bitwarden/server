@@ -1,18 +1,13 @@
-FROM bitwarden/server:latest
+FROM bitwarden/server:latest as build
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG PROJECT_NAME=Attachments
 
-LABEL com.bitwarden.product="bitwarden"
+RUN mkdir -p {/storage/attachments,/bitwarden_server,/config} \
+  && chown -R app:app {/storage/attachments,/bitwarden_server,/config}
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        gosu \
-        curl \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV ASPNETCORE_URLS http://+:5000
 EXPOSE 5000
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 
-ENTRYPOINT ["/entrypoint.sh"]
+USER app
+ENTRYPOINT ["/bitwarden_server/Server", "/contentRoot=/config/core/attachments", "/webRoot=.", "/serveUnknown=true"]
