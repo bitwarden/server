@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -20,5 +21,9 @@ public interface IPolicyRequirement;
 /// See <see cref="PolicyRequirementHelpers"/> for extension methods to handle common requirements when implementing
 /// this delegate.
 /// </remarks>
-public delegate T RequirementFactory<out T>(IEnumerable<PolicyDetails> policyDetails)
-    where T : IPolicyRequirement;
+public interface IRequirementFactory<out T> where T : IPolicyRequirement
+{
+    IEnumerable<PolicyType> PolicyTypes { get; }
+    IEnumerable<PolicyDetails> Filter(IEnumerable<PolicyDetails> policyDetails);
+    T Create(IEnumerable<PolicyDetails> policyDetails);
+}

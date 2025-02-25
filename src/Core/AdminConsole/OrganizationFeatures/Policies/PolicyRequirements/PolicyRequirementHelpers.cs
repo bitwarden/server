@@ -13,7 +13,12 @@ public static class PolicyRequirementHelpers
     public static IEnumerable<PolicyDetails> GetPolicyType(
         this IEnumerable<PolicyDetails> policyDetails,
         PolicyType type)
-        => policyDetails.Where(x => x.PolicyType == type);
+        => policyDetails.GetPolicyTypes([type]);
+
+    public static IEnumerable<PolicyDetails> GetPolicyTypes(
+        this IEnumerable<PolicyDetails> policyDetails,
+        IEnumerable<PolicyType> types)
+        => policyDetails.Where(x => types.Contains(x.PolicyType));
 
     /// <summary>
     /// Filters the PolicyDetails to remove the specified user roles. This can be used to exempt

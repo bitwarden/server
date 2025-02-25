@@ -18,30 +18,26 @@ public class SendPolicyRequirement : IPolicyRequirement
     /// Indicates whether the user is prohibited from hiding their email from the recipient of a Send.
     /// </summary>
     public bool DisableHideEmail { get; init; }
+}
 
-    /// <summary>
-    /// Create a new SendPolicyRequirement.
-    /// </summary>
-    /// <param name="policyDetails">All PolicyDetails relating to the user.</param>
-    /// <remarks>
-    /// This is a <see cref="RequirementFactory{T}"/> for the SendPolicyRequirement.
-    /// </remarks>
-    public static SendPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+public class SendPolicyRequirementFactory : SimpleRequirementFactory<SendPolicyRequirement>
+{
+    protected override IEnumerable<OrganizationUserType> ExemptRoles =>
+        [OrganizationUserType.Owner, OrganizationUserType.Admin];
+
+    public override IEnumerable<PolicyType> PolicyTypes => [PolicyType.SendOptions, PolicyType.DisableSend];
+
+    public override SendPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
-        var filteredPolicies = policyDetails
-            .ExemptRoles([OrganizationUserType.Owner, OrganizationUserType.Admin])
-            .ExemptStatus([OrganizationUserStatusType.Invited, OrganizationUserStatusType.Revoked])
-            .ExemptProviders()
-            .ToList();
-
-        var result = filteredPolicies
+        policyDetails = policyDetails.ToList();
+        var result = policyDetails
             .GetPolicyType(PolicyType.SendOptions)
             .Select(p => p.GetDataModel<SendOptionsPolicyData>())
             .Aggregate(
                 new SendPolicyRequirement
                 {
                     // Set Disable Send requirement in the initial seed
-                    DisableSend = filteredPolicies.GetPolicyType(PolicyType.DisableSend).Any()
+                    DisableSend = policyDetails.GetPolicyType(PolicyType.DisableSend).Any()
                 },
                 (result, data) => new SendPolicyRequirement
                 {
