@@ -266,7 +266,7 @@ public class PushControllerTests
         var expectedDeviceId = $"{installationId}_{deviceId}";
         var expectedOrganizationId = $"{installationId}_{organizationId}";
 
-        await sutProvider.Sut.RegisterAsync(new PushRegistrationRequestModel
+        var model = new PushRegistrationRequestModel
         {
             DeviceId = deviceId.ToString(),
             PushToken = "test-push-token",
@@ -275,10 +275,12 @@ public class PushControllerTests
             Identifier = identifier.ToString(),
             OrganizationIds = [organizationId.ToString()],
             InstallationId = installationId
-        });
+        };
+
+        await sutProvider.Sut.RegisterAsync(model);
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(1)
-            .CreateOrUpdateRegistrationAsync(new PushRegistrationData("test-push-token"), expectedDeviceId, expectedUserId,
+            .CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(data => data.Equals(new PushRegistrationData(model.PushToken))), expectedDeviceId, expectedUserId,
                 expectedIdentifier, DeviceType.Android, Arg.Do<IEnumerable<string>>(organizationIds =>
                 {
                     var organizationIdsList = organizationIds.ToList();
