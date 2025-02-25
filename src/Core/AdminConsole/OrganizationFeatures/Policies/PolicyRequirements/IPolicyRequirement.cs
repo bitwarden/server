@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
@@ -12,18 +13,28 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 public interface IPolicyRequirement;
 
 /// <summary>
-/// A factory function that takes a sequence of <see cref="PolicyDetails"/> and transforms them into a single
-/// <see cref="IPolicyRequirement"/> for consumption by the relevant domain. This will receive *all* policy types
-/// that may be enforced against a user; when implementing this delegate, you must filter out irrelevant policy types
-/// as well as policies that should not be enforced against a user (e.g. due to the user's role or status).
+/// An interface that defines how to create a single <see cref="IPolicyRequirement"/> from a sequence of
+/// <see cref="PolicyDetails"/>.
 /// </summary>
-/// <remarks>
-/// See <see cref="PolicyRequirementHelpers"/> for extension methods to handle common requirements when implementing
-/// this delegate.
-/// </remarks>
 public interface IRequirementFactory<out T> where T : IPolicyRequirement
 {
-    IEnumerable<PolicyType> PolicyTypes { get; }
+    /// <summary>
+    /// The PolicyType that corresponds to the <see cref="Policy"/> and the resulting <see cref="IPolicyRequirement"/>.
+    /// </summary>
+    PolicyType PolicyType { get; }
+
+    /// <summary>
+    /// A filter function that removes <see cref="PolicyDetails"/> that shouldn't be enforced against the user - for
+    /// example, because the user's role is exempt, because they are not in the required status, or because they are a provider.
+    /// </summary>
+    /// <param name="policyDetails">Policy details for the defined PolicyType.</param>
+    /// <returns></returns>
     IEnumerable<PolicyDetails> Filter(IEnumerable<PolicyDetails> policyDetails);
+
+    /// <summary>
+    /// A reducer method that creates a single <see cref="IPolicyRequirement"/> from the PolicyDetails.
+    /// </summary>
+    /// <param name="policyDetails">PolicyDetails for the specified PolicyType, after they have been filtered per above.</param>
+    /// <returns></returns>
     T Create(IEnumerable<PolicyDetails> policyDetails);
 }
