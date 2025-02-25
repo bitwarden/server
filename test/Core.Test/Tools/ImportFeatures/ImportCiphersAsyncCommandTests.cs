@@ -75,10 +75,8 @@ public class ImportCiphersAsyncCommandTests
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
-        // Act
         await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships);
 
-        // Assert
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
     }

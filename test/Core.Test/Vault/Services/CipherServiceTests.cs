@@ -736,7 +736,6 @@ public class CipherServiceTests
         CipherDetails cipher,
         Guid savingUserId)
     {
-        // Arrange
         cipher.Id = default;
         cipher.UserId = savingUserId;
         cipher.OrganizationId = null;
@@ -745,7 +744,6 @@ public class CipherServiceTests
             .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
             .Returns(true);
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
         Assert.Contains("restricted from saving items to your personal vault", exception.Message);
@@ -758,7 +756,6 @@ public class CipherServiceTests
         CipherDetails cipher,
         Guid savingUserId)
     {
-        // Arrange
         cipher.Id = default;
         cipher.UserId = savingUserId;
         cipher.OrganizationId = null;
@@ -767,10 +764,8 @@ public class CipherServiceTests
             .AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership)
             .Returns(false);
 
-        // Act
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
 
-        // Assert
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
             .CreateAsync(cipher);
@@ -783,7 +778,6 @@ public class CipherServiceTests
         CipherDetails cipher,
         Guid savingUserId)
     {
-        // Arrange
         cipher.Id = default;
         cipher.UserId = savingUserId;
         cipher.OrganizationId = null;
@@ -796,7 +790,6 @@ public class CipherServiceTests
             .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
             .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = true });
 
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null));
         Assert.Contains("restricted from saving items to your personal vault", exception.Message);
@@ -809,7 +802,6 @@ public class CipherServiceTests
         CipherDetails cipher,
         Guid savingUserId)
     {
-        // Arrange
         cipher.Id = default;
         cipher.UserId = savingUserId;
         cipher.OrganizationId = null;
@@ -822,10 +814,8 @@ public class CipherServiceTests
             .GetAsync<PersonalOwnershipPolicyRequirement>(savingUserId)
             .Returns(new PersonalOwnershipPolicyRequirement { DisablePersonalOwnership = false });
 
-        // Act
         await sutProvider.Sut.SaveDetailsAsync(cipher, savingUserId, null);
 
-        // Assert
         await sutProvider.GetDependency<ICipherRepository>()
             .Received(1)
             .CreateAsync(cipher);
