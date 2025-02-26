@@ -1,7 +1,8 @@
-﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -12,15 +13,17 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 
-
 public interface IRestoreOrganizationUserCommand
 {
     Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId);
     Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
-    Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
+
+    Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
+        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
 }
 
-public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
+public class RestoreOrganizationUserCommand(
+    ICurrentContext currentContext,
     IEventService eventService,
     IFeatureService featureService,
     IPushNotificationService pushNotificationService,
@@ -29,8 +32,7 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
     ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
     IPolicyService policyService,
     IUserRepository userRepository,
-    IOrganizationService organizationService,
-    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery) : IRestoreOrganizationUserCommand
+    IOrganizationService organizationService) : IRestoreOrganizationUserCommand
 {
     public async Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId)
     {
@@ -48,7 +50,8 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
         await RepositoryRestoreUserAsync(organizationUser);
         await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) &&
+            organizationUser.UserId.HasValue)
         {
             await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -57,9 +60,11 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
     public async Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser)
     {
         await RepositoryRestoreUserAsync(organizationUser);
-        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
+        await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored,
+            systemUser);
 
-        if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) &&
+            organizationUser.UserId.HasValue)
         {
             await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -85,17 +90,61 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
         // Only check 2FA status if the user is linked to a user account
         if (organizationUser.UserId.HasValue)
         {
-            userTwoFactorIsEnabled = (await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync([organizationUser.UserId.Value]))
+            userTwoFactorIsEnabled =
+                (await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync([organizationUser.UserId.Value]))
                 .FirstOrDefault()
                 .twoFactorIsEnabled;
         }
+
+        await CheckUserForOtherFreeOrganizationOwnershipAsync(organizationUser);
 
         await CheckPoliciesBeforeRestoreAsync(organizationUser, userTwoFactorIsEnabled);
 
         var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
         await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
+
         organizationUser.Status = status;
+    }
+
+    private async Task CheckUserForOtherFreeOrganizationOwnershipAsync(OrganizationUser organizationUser)
+    {
+        var relatedOrgUsersFromOtherOrgs = await organizationUserRepository.GetManyByUserAsync(organizationUser.UserId.Value);
+        var otherOrgs = await organizationRepository.GetManyByUserIdAsync(organizationUser.UserId.Value);
+
+        var orgOrgUserDict = relatedOrgUsersFromOtherOrgs
+            .ToDictionary(x => x, x => otherOrgs.FirstOrDefault(y => y.Id == x.OrganizationId));
+
+        CheckForOtherFreeOrganizationOwnership(organizationUser, orgOrgUserDict);
+    }
+
+    private async Task<Dictionary<OrganizationUser, Organization>> GetRelatedOrganizationUsersAndOrganizations(
+        IEnumerable<OrganizationUser> organizationUsers)
+    {
+        var allUserIds = organizationUsers.Select(x => x.UserId.Value);
+
+        var otherOrganizationUsers = await organizationUserRepository.GetManyByManyUsersAsync(allUserIds);
+
+        var otherOrgs =
+            await organizationRepository.GetManyByIdsAsync(otherOrganizationUsers
+                .Select(x => x.OrganizationId)
+                .Distinct());
+
+        return otherOrganizationUsers.ToDictionary(x => x, x =>
+            otherOrgs.FirstOrDefault(y => y.Id == x.OrganizationId));
+    }
+
+    private static void CheckForOtherFreeOrganizationOwnership(OrganizationUser organizationUser,
+        Dictionary<OrganizationUser, Organization> otherOrgUsersAndOrgs)
+    {
+        if (otherOrgUsersAndOrgs.Any(x =>
+                x.Key.UserId == organizationUser.UserId &&
+                x.Key.Type == OrganizationUserType.Owner &&
+                x.Value.PlanType == PlanType.Free))
+        {
+            throw new BadRequestException(
+                "User is an owner of another free organization. Please have them upgrade to a paid plan to restore their account.");
+        }
     }
 
     public async Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
@@ -127,6 +176,8 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
         var organizationUsersTwoFactorEnabled = await twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(
             filteredUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId.Value));
 
+        var orgUsersAndOrgs = await GetRelatedOrganizationUsersAndOrganizations(filteredUsers);
+
         var result = new List<Tuple<OrganizationUser, string>>();
 
         foreach (var organizationUser in filteredUsers)
@@ -143,21 +194,28 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
                     throw new BadRequestException("You cannot restore yourself.");
                 }
 
-                if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue && !deletingUserIsOwner)
+                if (organizationUser.Type == OrganizationUserType.Owner && restoringUserId.HasValue &&
+                    !deletingUserIsOwner)
                 {
                     throw new BadRequestException("Only owners can restore other owners.");
                 }
 
                 var twoFactorIsEnabled = organizationUser.UserId.HasValue
-                    && organizationUsersTwoFactorEnabled.FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value).twoFactorIsEnabled;
+                                         && organizationUsersTwoFactorEnabled
+                                             .FirstOrDefault(ou => ou.userId == organizationUser.UserId.Value)
+                                             .twoFactorIsEnabled;
+
                 await CheckPoliciesBeforeRestoreAsync(organizationUser, twoFactorIsEnabled);
+
+                CheckForOtherFreeOrganizationOwnership(organizationUser, orgUsersAndOrgs);
 
                 var status = OrganizationService.GetPriorActiveOrganizationUserStatusType(organizationUser);
 
                 await organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                 organizationUser.Status = status;
                 await eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-                if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+                if (featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) &&
+                    organizationUser.UserId.HasValue)
                 {
                     await pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
@@ -189,7 +247,8 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
         var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
         var singleOrgPoliciesApplyingToRevokedUsers = await policyService.GetPoliciesApplicableToUserAsync(userId,
             PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
-        var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
+        var singleOrgPolicyApplies =
+            singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
 
         var singleOrgCompliant = true;
         var belongsToOtherOrgCompliant = true;
@@ -222,7 +281,8 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
 
         if (!singleOrgCompliant && !twoFactorCompliant)
         {
-            throw new BadRequestException(user.Email + " is not compliant with the single organization and two-step login polciy");
+            throw new BadRequestException(user.Email +
+                                          " is not compliant with the single organization and two-step login polciy");
         }
         else if (!singleOrgCompliant)
         {
@@ -230,7 +290,8 @@ public class RestoreOrganizationUserCommand(ICurrentContext currentContext,
         }
         else if (!belongsToOtherOrgCompliant)
         {
-            throw new BadRequestException(user.Email + " belongs to an organization that doesn't allow them to join multiple organizations");
+            throw new BadRequestException(user.Email +
+                                          " belongs to an organization that doesn't allow them to join multiple organizations");
         }
         else if (!twoFactorCompliant)
         {

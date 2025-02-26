@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -329,14 +330,13 @@ public class RestoreOrganizationUserCommandTests
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUser.UserId.Value, true) });
 
         sutProvider.GetDependency<IPolicyService>()
             .AnyPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.SingleOrg, Arg.Any<OrganizationUserStatusType>())
             .Returns(true);
 
-        var user = new User();
-        user.Email = "test@bitwarden.com";
+        var user = new User { Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -379,13 +379,11 @@ public class RestoreOrganizationUserCommandTests
 
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[]
-            {
+            .Returns([
                 new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication, OrganizationUserStatus = OrganizationUserStatusType.Revoked }
-            });
+            ]);
 
-        var user = new User();
-        user.Email = "test@bitwarden.com";
+        var user = new User { Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -417,10 +415,10 @@ public class RestoreOrganizationUserCommandTests
 
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication }
+            ]);
 
-        var user = new User();
-        user.Email = "test@bitwarden.com";
+        var user = new User { Email = "test@bitwarden.com" };
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(organizationUser.UserId.Value).Returns(user);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -451,11 +449,12 @@ public class RestoreOrganizationUserCommandTests
 
         sutProvider.GetDependency<IPolicyService>()
             .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication } });
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication }
+            ]);
 
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
-            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>() { (organizationUser.UserId.Value, true) });
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUser.UserId.Value, true) });
 
         await sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id);
 
@@ -465,6 +464,46 @@ public class RestoreOrganizationUserCommandTests
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RestoreUser_WhenUserOwningAnotherFreeOrganization_ThenRestoreUserFails(
+        Organization organization,
+        Organization otherOrganization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserOwnerFromDifferentOrg,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        organizationUser.Email = null; // this is required to mock that the user as had already been confirmed before the revoke
+
+        orgUserOwnerFromDifferentOrg.UserId = organizationUser.UserId;
+        otherOrganization.Id = orgUserOwnerFromDifferentOrg.OrganizationId;
+        otherOrganization.PlanType = PlanType.Free;
+
+        RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(organizationUser.UserId.Value)
+            .Returns([orgUserOwnerFromDifferentOrg]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByUserIdAsync(organizationUser.UserId.Value)
+            .Returns([otherOrganization]);
+
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(organizationUser.UserId.Value, PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organizationUser.OrganizationId, PolicyType = PolicyType.TwoFactorAuthentication }
+            ]);
+
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(i => i.Contains(organizationUser.UserId.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)> { (organizationUser.UserId.Value, true) });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
+
+        Assert.Equal("User is an owner of another free organization. Please have them upgrade to a paid plan to restore their account.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -485,7 +524,7 @@ public class RestoreOrganizationUserCommandTests
         orgUser1.OrganizationId = orgUser2.OrganizationId = organization.Id;
         organizationUserRepository
             .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id)))
-            .Returns(new[] { orgUser1, orgUser2 });
+            .Returns([orgUser1, orgUser2]);
 
         twoFactorIsEnabledQuery
             .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
@@ -540,7 +579,7 @@ public class RestoreOrganizationUserCommandTests
 
         // Setup 2FA policy
         policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
-            .Returns(new[] { new OrganizationUserPolicyDetails { OrganizationId = organization.Id, PolicyType = PolicyType.TwoFactorAuthentication } });
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organization.Id, PolicyType = PolicyType.TwoFactorAuthentication }]);
 
         // User1 has 2FA, User2 doesn't
         sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
@@ -552,7 +591,7 @@ public class RestoreOrganizationUserCommandTests
             });
 
         // Act
-        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, new[] { orgUser1.Id, orgUser2.Id, orgUser3.Id }, owner.Id, userService);
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id, orgUser2.Id, orgUser3.Id], owner.Id, userService);
 
         // Assert
         Assert.Equal(3, result.Count);
