@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Azure;
 using Azure.Data.Tables;
@@ -13,9 +13,9 @@ namespace Bit.Core.Platform.Infrastructure;
 internal class BrokenDevelepmentEnvironmentException : Exception
 {
     public BrokenDevelepmentEnvironmentException(string message)
-        : base (message)
+        : base(message)
     {
-        
+
     }
 
     public BrokenDevelepmentEnvironmentException(string message, Exception innerException)
@@ -28,13 +28,13 @@ internal class BrokenDevelepmentEnvironmentException : Exception
 public class AzureScaffolder : IHostedService
 {
     private static readonly IEnumerable<string> _containers =
-      [ "attachments", "sendfiles", "misc" ];
+      ["attachments", "sendfiles", "misc"];
 
     private static readonly IEnumerable<string> _queues =
-      [ "event", "notifications", "reference-events", "mail" ];
+      ["event", "notifications", "reference-events", "mail"];
 
     private static readonly IEnumerable<string> _tables =
-      [ "event", "metadata", "installationdevice"];
+      ["event", "metadata", "installationdevice"];
 
     private static readonly BlobCorsRule _corsRule = new()
     {
@@ -84,7 +84,7 @@ public class AzureScaffolder : IHostedService
         {
             // Rethrow with more explicit exception
             throw new BrokenDevelepmentEnvironmentException(
-                "The version of Azurite being ran is incompitable with our Azure packages. Read more https://contributing.bitwarden.com/link-here", 
+                "The version of Azurite being ran is incompitable with our Azure packages. Read more https://contributing.bitwarden.com/link-here",
                 requestedFailedEx
             );
         }
@@ -98,7 +98,7 @@ public class AzureScaffolder : IHostedService
     private static async Task ScaffoldAsync(CancellationToken cancellationToken)
     {
         var blobServiceClient = new BlobServiceClient(_developmentUri);
-        
+
         foreach (var container in _containers)
         {
             var blobContainer = blobServiceClient.GetBlobContainerClient(container);
@@ -128,9 +128,9 @@ public class AzureScaffolder : IHostedService
                 await queueClient.CreateAsync(cancellationToken: cancellationToken);
             }
         }
-        
+
         var tableServiceClient = new TableServiceClient(_developmentUri);
-        
+
         foreach (var table in _tables)
         {
             var tableClient = tableServiceClient.GetTableClient(table);
