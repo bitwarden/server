@@ -43,8 +43,7 @@ public class SyncResponseModel : ResponseModel
             new CipherDetailsResponseModel(
                 cipher,
                 user,
-                cipher.OrganizationId.HasValue && organizationAbilities.TryGetValue(cipher.OrganizationId.Value, out var organizationAbility) ?
-                    organizationAbility : null,
+                organizationAbilities,
                 globalSettings,
                 collectionCiphersDict));
         Collections = collections?.Select(

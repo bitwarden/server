@@ -107,8 +107,7 @@ public class SyncController : Controller
         var organizationManagingActiveUser = await _userService.GetOrganizationsManagingUserAsync(user.Id);
         var organizationIdsManagingActiveUser = organizationManagingActiveUser.Select(o => o.Id);
 
-        var cipherOrganizationIds = ciphers.Where(c => c.OrganizationId.HasValue).Select(c => c.OrganizationId.Value).Distinct().ToList();
-        var organizationAbilities = await _applicationCacheService.GetManyOrganizationAbilityAsync(cipherOrganizationIds);
+        var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsManagingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,

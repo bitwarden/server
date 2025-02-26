@@ -125,7 +125,7 @@ public class EmergencyAccessViewResponseModel : ResponseModel
             new CipherResponseModel(
                 cipher,
                 user,
-                organizationAbility: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
+                organizationAbilities: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
                 globalSettings));
     }
 

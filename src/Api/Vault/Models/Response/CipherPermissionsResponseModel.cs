@@ -13,8 +13,14 @@ public record CipherPermissionsResponseModel
     public CipherPermissionsResponseModel(
         User user,
         CipherDetails cipherDetails,
-        OrganizationAbility organizationAbility)
+        IDictionary<Guid, OrganizationAbility> organizationAbilities)
     {
+        OrganizationAbility organizationAbility = null;
+        if (cipherDetails.OrganizationId.HasValue && !organizationAbilities.TryGetValue(cipherDetails.OrganizationId.Value, out organizationAbility))
+        {
+            throw new Exception("Organization-owned cipher missing required organization abilities in the provided dictionary.");
+        }
+
         Delete = NormalCipherPermissions.CanDelete(user, cipherDetails, organizationAbility);
         Restore = NormalCipherPermissions.CanRestore(user, cipherDetails, organizationAbility);
     }
