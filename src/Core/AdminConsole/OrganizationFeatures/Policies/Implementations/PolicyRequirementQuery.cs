@@ -16,19 +16,17 @@ public class PolicyRequirementQuery(
         var factory = factories.OfType<IRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
         {
-            throw new NotImplementedException("No Policy Requirement found for " + typeof(T));
+            throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
         }
 
         var policyDetails = await GetPolicyDetails(userId);
         var filteredPolicies = policyDetails
             .Where(p => p.PolicyType == factory.PolicyType)
-            .Where(p => factory.Enforce(p));
+            .Where(factory.Enforce);
         var requirement = factory.Create(filteredPolicies);
-
         return requirement;
     }
 
-    private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId) =>
-        policyRepository.GetPolicyDetailsByUserId(userId);
+    private Task<IEnumerable<PolicyDetails>> GetPolicyDetails(Guid userId)
+        => policyRepository.GetPolicyDetailsByUserId(userId);
 }
-
