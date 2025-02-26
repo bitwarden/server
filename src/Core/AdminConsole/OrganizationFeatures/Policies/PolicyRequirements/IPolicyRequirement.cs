@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
@@ -19,22 +18,21 @@ public interface IPolicyRequirement;
 public interface IRequirementFactory<out T> where T : IPolicyRequirement
 {
     /// <summary>
-    /// The PolicyType that corresponds to the <see cref="Policy"/> and the resulting <see cref="IPolicyRequirement"/>.
+    /// The <see cref="PolicyType"/> that the requirement relates to.
     /// </summary>
     PolicyType PolicyType { get; }
 
     /// <summary>
-    /// A filter function that removes <see cref="PolicyDetails"/> that shouldn't be enforced against the user - for
-    /// example, because the user's role is exempt, because they are not in the required status, or because they are a provider.
+    /// A predicate that determines whether a policy should be enforced against the user.
     /// </summary>
+    /// <remarks>Use this to exempt users based on their role, status or other attributes.</remarks>
     /// <param name="policyDetails">Policy details for the defined PolicyType.</param>
-    /// <returns></returns>
+    /// <returns>True if the policy should be enforced against the user, false otherwise.</returns>
     bool Enforce(PolicyDetails policyDetails);
 
     /// <summary>
-    /// A reducer method that creates a single <see cref="IPolicyRequirement"/> from the PolicyDetails.
+    /// A reducer method that creates a single <see cref="IPolicyRequirement"/> from a set of PolicyDetails.
     /// </summary>
-    /// <param name="policyDetails">PolicyDetails for the specified PolicyType, after they have been filtered per above.</param>
-    /// <returns></returns>
+    /// <param name="policyDetails">PolicyDetails for the specified PolicyType, after they have been filtered by the Enforce predicate.</param>
     T Create(IEnumerable<PolicyDetails> policyDetails);
 }
