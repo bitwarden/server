@@ -1,5 +1,16 @@
 ﻿{{#>BasicTextLayout}}
-Your two-step verification code is: {{Token}}
+To finish {{EmailTotpAction}}, enter this verification code: {{Token}}
 
-Use this code to complete logging in with Bitwarden.
+If this was not you, take these immediate steps to secure your account in the web app:
+
+Deauthorize unrecognized devices
+
+Change your master password
+
+Turn on two-step login
+
+Account : {{AccountEmail}}
+Date : {{TheDate}} at {{TheTime}} {{TimeZone}}
+IP : {{DeviceIp}}
+Device Type : {{DeviceType}}
 {{/BasicTextLayout}}
