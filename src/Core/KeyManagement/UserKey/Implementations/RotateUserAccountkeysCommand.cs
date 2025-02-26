@@ -20,6 +20,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private readonly ISendRepository _sendRepository;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IDeviceRepository _deviceRepository;
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
     private readonly IWebAuthnCredentialRepository _credentialRepository;
@@ -42,6 +43,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     public RotateUserAccountKeysCommand(IUserService userService, IUserRepository userRepository,
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
+        IDeviceRepository deviceRepository,
         IPasswordHasher<User> passwordHasher,
         IPushNotificationService pushService, IdentityErrorDescriber errors, IWebAuthnCredentialRepository credentialRepository)
     {
@@ -52,6 +54,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _sendRepository = sendRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
+        _deviceRepository = deviceRepository;
         _pushService = pushService;
         _identityErrorDescriber = errors;
         _credentialRepository = credentialRepository;
@@ -125,6 +128,17 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         if (model.WebAuthnKeys.Any())
         {
             saveEncryptedDataActions.Add(_credentialRepository.UpdateKeysForRotationAsync(user.Id, model.WebAuthnKeys));
+        }
+
+        if (model.DeviceKeys.Any())
+        {
+            foreach (var device in model.DeviceKeys)
+            {
+                var dbDevice = await _deviceRepository.GetByIdentifierAsync(device.DeviceId.ToString());
+                dbDevice.EncryptedUserKey = device.EncryptedUserKey;
+                dbDevice.EncryptedPublicKey = device.EncryptedPublicKey;
+                await _deviceRepository.ReplaceAsync(dbDevice);
+            }
         }
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
