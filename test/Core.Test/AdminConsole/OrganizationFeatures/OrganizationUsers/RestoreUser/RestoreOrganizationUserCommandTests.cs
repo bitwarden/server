@@ -609,6 +609,70 @@ public class RestoreOrganizationUserCommandTests
             .RestoreAsync(orgUser3.Id, OrganizationUserStatusType.Invited);
     }
 
+    [Theory, BitAutoData]
+    public async Task RestoreUsers_UserOwnsAnotherFreeOrganization_BlocksOwnerUserFromBeingRestored(Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
+        [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser3,
+        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser orgUserFromOtherOrg,
+        Organization otherOrganization,
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
+    {
+        // Arrange
+        RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var policyService = sutProvider.GetDependency<IPolicyService>();
+        var userService = Substitute.For<IUserService>();
+
+        orgUser1.Email = orgUser2.Email = null;
+        orgUser3.UserId = null;
+        orgUser3.Key = null;
+        orgUser1.OrganizationId = orgUser2.OrganizationId = orgUser3.OrganizationId = organization.Id;
+
+        orgUserFromOtherOrg.UserId = orgUser1.UserId;
+        otherOrganization.Id = orgUserFromOtherOrg.OrganizationId;
+        otherOrganization.PlanType = PlanType.Free;
+
+        organizationUserRepository
+            .GetManyAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.Id) && ids.Contains(orgUser2.Id) && ids.Contains(orgUser3.Id)))
+            .Returns(new[] { orgUser1, orgUser2, orgUser3 });
+
+        userRepository.GetByIdAsync(orgUser2.UserId!.Value).Returns(new User { Email = "test@example.com" });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([orgUserFromOtherOrg]);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetManyByIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUserFromOtherOrg.OrganizationId)))
+            .Returns([otherOrganization]);
+
+
+        // Setup 2FA policy
+        policyService.GetPoliciesApplicableToUserAsync(Arg.Any<Guid>(), PolicyType.TwoFactorAuthentication, Arg.Any<OrganizationUserStatusType>())
+            .Returns([new OrganizationUserPolicyDetails { OrganizationId = organization.Id, PolicyType = PolicyType.TwoFactorAuthentication }]);
+
+        // User1 has 2FA, User2 doesn't
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>()
+            .TwoFactorIsEnabledAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(orgUser1.UserId!.Value) && ids.Contains(orgUser2.UserId!.Value)))
+            .Returns(new List<(Guid userId, bool twoFactorIsEnabled)>
+            {
+                (orgUser1.UserId!.Value, true),
+                (orgUser2.UserId!.Value, false)
+            });
+
+        // Act
+        var result = await sutProvider.Sut.RestoreUsersAsync(organization.Id, [orgUser1.Id, orgUser2.Id, orgUser3.Id], owner.Id, userService);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Contains("owner", result[0].Item2); // Owner should fail
+        await organizationUserRepository
+            .DidNotReceive()
+            .RestoreAsync(orgUser1.Id, OrganizationUserStatusType.Confirmed);
+    }
 
     private static void RestoreUser_Setup(
         Organization organization,
