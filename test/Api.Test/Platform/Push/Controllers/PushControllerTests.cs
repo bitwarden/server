@@ -280,7 +280,7 @@ public class PushControllerTests
         await sutProvider.Sut.RegisterAsync(model);
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(1)
-            .CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(data => data.Equals(new PushRegistrationData(model.PushToken))), expectedDeviceId, expectedUserId,
+            .CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(data => data == new PushRegistrationData(model.PushToken)), expectedDeviceId, expectedUserId,
                 expectedIdentifier, DeviceType.Android, Arg.Do<IEnumerable<string>>(organizationIds =>
                 {
                     var organizationIdsList = organizationIds.ToList();
