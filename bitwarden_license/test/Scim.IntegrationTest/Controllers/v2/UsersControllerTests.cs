@@ -1,9 +1,12 @@
 ﻿using System.Text.Json;
+using Bit.Core;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.Helpers;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
@@ -276,9 +279,15 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
     }
 
-    [Fact]
-    public async Task Post_Success()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Post_Success(bool isScimInviteUserOptimizationEnabled)
     {
+        _factory.SubstituteService((IFeatureService featureService)
+            => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
+                .Returns(isScimInviteUserOptimizationEnabled));
+
         var email = "user5@example.com";
         var displayName = "Test User 5";
         var externalId = "UE";
