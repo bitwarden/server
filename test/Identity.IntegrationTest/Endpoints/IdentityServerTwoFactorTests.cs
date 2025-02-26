@@ -17,7 +17,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
+using Duende.IdentityModel;
 using LinqToDB;
 using NSubstitute;
 using Xunit;
