@@ -9,14 +9,19 @@ public class NormalCipherPermissions
 {
     public static bool CanDelete(User user, CipherDetails cipherDetails, OrganizationAbility? organizationAbility)
     {
+        if (cipherDetails.OrganizationId == null && cipherDetails.UserId == null)
+        {
+            throw new Exception("Cipher needs to belong to a user or an organization.");
+        }
+
         if (user.Id == cipherDetails.UserId)
         {
             return true;
         }
 
-        if (organizationAbility == null)
+        if (organizationAbility?.Id != cipherDetails.OrganizationId)
         {
-            throw new Exception("Cipher needs to belong to a user or an organization.");
+            throw new Exception("Cipher does not belong to the input organization.");
         }
 
         if (organizationAbility is { LimitItemDeletion: true })

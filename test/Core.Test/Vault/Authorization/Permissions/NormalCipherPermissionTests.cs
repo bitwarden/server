@@ -19,8 +19,9 @@ public class NormalCipherPermissionTests
     {
         // Arrange
         var user = new User { Id = Guid.Empty };
-        var cipherDetails = new CipherDetails { Manage = manage, Edit = edit, UserId = null };
-        var organizationAbility = new OrganizationAbility { LimitItemDeletion = limitItemDeletion };
+        var organizationId = Guid.NewGuid();
+        var cipherDetails = new CipherDetails { Manage = manage, Edit = edit, UserId = null, OrganizationId = organizationId };
+        var organizationAbility = new OrganizationAbility { Id = organizationId, LimitItemDeletion = limitItemDeletion };
 
         // Act
         var result = NormalCipherPermissions.CanRestore(user, cipherDetails, organizationAbility);
@@ -49,14 +50,34 @@ public class NormalCipherPermissionTests
     public void CanRestore_WhenCipherHasNoOwner_ShouldThrowException()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var user = new User { Id = userId };
+        var user = new User { Id = Guid.NewGuid() };
         var cipherDetails = new CipherDetails { UserId = null };
 
 
         // Act
         // Assert
         Assert.Throws<Exception>(() => NormalCipherPermissions.CanRestore(user, cipherDetails, null));
+    }
+
+    public static List<object[]> TestCases =>
+    [
+        new object[] { new OrganizationAbility { Id = Guid.Empty } },
+        new object[] { null },
+    ];
+
+    [Theory]
+    [MemberData(nameof(TestCases))]
+    public void CanRestore_WhenCipherDoesNotBelongToInputOrganization_ShouldThrowException(OrganizationAbility? organizationAbility)
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid() };
+        var cipherDetails = new CipherDetails { UserId = null, OrganizationId = Guid.NewGuid() };
+
+        // Act
+        var exception = Assert.Throws<Exception>(() => NormalCipherPermissions.CanDelete(user, cipherDetails, organizationAbility));
+
+        // Assert
+        Assert.Equal("Cipher does not belong to the input organization.", exception.Message);
     }
 
     [Theory]
@@ -70,8 +91,9 @@ public class NormalCipherPermissionTests
     {
         // Arrange
         var user = new User { Id = Guid.Empty };
-        var cipherDetails = new CipherDetails { Manage = manage, Edit = edit, UserId = null };
-        var organizationAbility = new OrganizationAbility { LimitItemDeletion = limitItemDeletion };
+        var organizationId = Guid.NewGuid();
+        var cipherDetails = new CipherDetails { Manage = manage, Edit = edit, UserId = null, OrganizationId = organizationId };
+        var organizationAbility = new OrganizationAbility { Id = organizationId, LimitItemDeletion = limitItemDeletion };
 
         // Act
         var result = NormalCipherPermissions.CanRestore(user, cipherDetails, organizationAbility);
@@ -100,13 +122,29 @@ public class NormalCipherPermissionTests
     public void CanDelete_WhenCipherHasNoOwner_ShouldThrowException()
     {
         // Arrange
-        var userId = Guid.NewGuid();
-        var user = new User { Id = userId };
+        var user = new User { Id = Guid.NewGuid() };
         var cipherDetails = new CipherDetails { UserId = null };
 
 
         // Act
+        var exception = Assert.Throws<Exception>(() => NormalCipherPermissions.CanDelete(user, cipherDetails, null));
+
         // Assert
-        Assert.Throws<Exception>(() => NormalCipherPermissions.CanDelete(user, cipherDetails, null));
+        Assert.Equal("Cipher needs to belong to a user or an organization.", exception.Message);
+    }
+
+    [Theory]
+    [MemberData(nameof(TestCases))]
+    public void CanDelete_WhenCipherDoesNotBelongToInputOrganization_ShouldThrowException(OrganizationAbility? organizationAbility)
+    {
+        // Arrange
+        var user = new User { Id = Guid.NewGuid() };
+        var cipherDetails = new CipherDetails { UserId = null, OrganizationId = Guid.NewGuid() };
+
+        // Act
+        var exception = Assert.Throws<Exception>(() => NormalCipherPermissions.CanDelete(user, cipherDetails, organizationAbility));
+
+        // Assert
+        Assert.Equal("Cipher does not belong to the input organization.", exception.Message);
     }
 }
