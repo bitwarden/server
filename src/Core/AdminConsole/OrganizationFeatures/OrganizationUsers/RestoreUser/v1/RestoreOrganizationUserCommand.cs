@@ -154,7 +154,7 @@ public class RestoreOrganizationUserCommand(
         var filteredUsers = orgUsers.Where(u => u.OrganizationId == organizationId)
             .ToList();
 
-        if (!filteredUsers.Any())
+        if (filteredUsers.Count == 0)
         {
             throw new BadRequestException("Users invalid.");
         }
