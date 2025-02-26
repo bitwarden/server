@@ -31,6 +31,8 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
+using Bit.Core.Platform.Infrastructure;
+
 
 
 #if !OSS
@@ -64,6 +66,15 @@ public class Startup
         {
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
             services.Configure<IpRateLimitPolicies>(Configuration.GetSection("IpRateLimitPolicies"));
+        }
+
+        // TODO: Be more selective about adding this scaffolder
+        if (Environment.IsDevelopment())
+        {
+            // If this scaffolder is going to be registered, we want it registered
+            // pretty early in case any other hosted services need to use the
+            // things this hosted service will create.
+            services.AddHostedService<AzureScaffolder>();
         }
 
         // Data Protection
