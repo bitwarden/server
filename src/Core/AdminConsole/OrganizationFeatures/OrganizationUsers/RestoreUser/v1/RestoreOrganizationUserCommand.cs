@@ -113,6 +113,7 @@ public class RestoreOrganizationUserCommand(
         var otherOrgs = await organizationRepository.GetManyByUserIdAsync(organizationUser.UserId.Value);
 
         var orgOrgUserDict = relatedOrgUsersFromOtherOrgs
+            .Where(x => x.Id != organizationUser.Id)
             .ToDictionary(x => x, x => otherOrgs.FirstOrDefault(y => y.Id == x.OrganizationId));
 
         CheckForOtherFreeOrganizationOwnership(organizationUser, orgOrgUserDict);
@@ -123,15 +124,16 @@ public class RestoreOrganizationUserCommand(
     {
         var allUserIds = organizationUsers.Select(x => x.UserId.Value);
 
-        var otherOrganizationUsers = await organizationUserRepository.GetManyByManyUsersAsync(allUserIds);
+        var otherOrganizationUsers = (await organizationUserRepository.GetManyByManyUsersAsync(allUserIds))
+            .Where(x => organizationUsers.Any(y => y.Id == x.Id) == false);
 
         var otherOrgs =
             await organizationRepository.GetManyByIdsAsync(otherOrganizationUsers
                 .Select(x => x.OrganizationId)
                 .Distinct());
 
-        return otherOrganizationUsers.ToDictionary(x => x, x =>
-            otherOrgs.FirstOrDefault(y => y.Id == x.OrganizationId));
+        return otherOrganizationUsers
+            .ToDictionary(x => x, x => otherOrgs.FirstOrDefault(y => y.Id == x.OrganizationId));
     }
 
     private static void CheckForOtherFreeOrganizationOwnership(OrganizationUser organizationUser,
