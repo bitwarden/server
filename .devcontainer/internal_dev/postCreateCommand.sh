@@ -52,9 +52,6 @@ Proceed? [y/N] " response
 Press <Enter> to continue."
         remove_comments ./dev/secrets.json
         configure_other_vars
-        echo "Installing Az module. This will take ~a minute..."
-        pwsh -Command "Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force"
-        pwsh ./dev/setup_azurite.ps1
 
         dotnet tool install dotnet-certificate-tool -g >/dev/null
 
