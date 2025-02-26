@@ -11,7 +11,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 public class PersonalOwnershipPolicyRequirementTests
 {
     [Theory, AutoData]
-    public void DisablePersonalOwnership_IsFalse_IfNoPersonalOwnershipPolicies(
+    public void Create_WithNonPersonalOwnershipPolicies_ReturnsDisablePersonalOwnershipFalse(
         [PolicyDetails(PolicyType.RequireSso)] PolicyDetails otherPolicy1,
         [PolicyDetails(PolicyType.SendOptions)] PolicyDetails otherPolicy2)
     {
@@ -25,7 +25,7 @@ public class PersonalOwnershipPolicyRequirementTests
     [InlineAutoData(OrganizationUserType.Admin, false)]
     [InlineAutoData(OrganizationUserType.User, true)]
     [InlineAutoData(OrganizationUserType.Custom, true)]
-    public void DisablePersonalOwnership_TestRoles(
+    public void Create_WithDifferentOrganizationUserTypes_ReturnsExpectedEnforcement(
         OrganizationUserType userType,
         bool shouldBeEnforced,
         [PolicyDetails(PolicyType.PersonalOwnership)] PolicyDetails policyDetails)
@@ -38,7 +38,7 @@ public class PersonalOwnershipPolicyRequirementTests
     }
 
     [Theory, AutoData]
-    public void DisablePersonalOwnership_Not_EnforcedAgainstProviders(
+    public void Create_WithProviderPolicyDetails_ReturnsDisablePersonalOwnershipFalse(
         [PolicyDetails(PolicyType.PersonalOwnership, isProvider: true)] PolicyDetails policyDetails)
     {
         var actual = PersonalOwnershipPolicyRequirement.Create([policyDetails]);
@@ -51,7 +51,7 @@ public class PersonalOwnershipPolicyRequirementTests
     [InlineAutoData(OrganizationUserStatusType.Accepted, true)]
     [InlineAutoData(OrganizationUserStatusType.Invited, false)]
     [InlineAutoData(OrganizationUserStatusType.Revoked, false)]
-    public void DisablePersonalOwnership_TestStatuses(
+    public void Create_WithDifferentOrganizationUserStatuses_ReturnsExpectedEnforcement(
         OrganizationUserStatusType userStatus,
         bool shouldBeEnforced,
         [PolicyDetails(PolicyType.PersonalOwnership)] PolicyDetails policyDetails)
