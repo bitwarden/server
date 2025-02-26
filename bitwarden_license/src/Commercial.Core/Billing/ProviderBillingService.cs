@@ -79,8 +79,7 @@ public class ProviderBillingService(
 
         var managedPlanType = await GetManagedPlanTypeAsync(provider, organization);
 
-        // TODO: Replace with PricingClient
-        var plan = StaticStore.GetPlan(managedPlanType);
+        var plan = await pricingClient.GetPlanOrThrow(managedPlanType);
         organization.Plan = plan.Name;
         organization.PlanType = plan.Type;
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
@@ -350,7 +349,7 @@ public class ProviderBillingService(
         {
             var (organization, _) = pair;
 
-            var planName = DerivePlanName(provider, organization);
+            var planName = await DerivePlanName(provider, organization);
 
             var addable = new AddableOrganization(
                 organization.Id,
@@ -371,7 +370,7 @@ public class ProviderBillingService(
             return addable with { Disabled = requiresPurchase };
         }));
 
-        string DerivePlanName(Provider localProvider, Organization localOrganization)
+        async Task<string> DerivePlanName(Provider localProvider, Organization localOrganization)
         {
             if (localProvider.Type == ProviderType.Msp)
             {
@@ -383,8 +382,7 @@ public class ProviderBillingService(
                 };
             }
 
-            // TODO: Replace with PricingClient
-            var plan = StaticStore.GetPlan(localOrganization.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(localOrganization.PlanType);
             return plan.Name;
         }
     }

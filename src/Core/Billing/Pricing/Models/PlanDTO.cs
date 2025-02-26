@@ -17,7 +17,7 @@ public class PlanDTO
     public SecretsManagerPurchasablesDTO? SecretsManager { get; set; }
     public int? TrialPeriodDays { get; set; }
     public string[] CanUpgradeTo { get; set; } = null!;
-    public Dictionary<string, string> AdditionalData = null!;
+    public Dictionary<string, string> AdditionalData { get; set; } = null!;
 }
 
 public class SecretsManagerPurchasablesDTO

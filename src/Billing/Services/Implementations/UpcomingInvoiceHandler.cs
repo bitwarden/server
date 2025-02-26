@@ -139,7 +139,7 @@ public class UpcomingInvoiceHandler(
     {
         if (subscription.AutomaticTax.Enabled ||
             !subscription.Customer.HasBillingLocation() ||
-            IsNonTaxableNonUSBusinessUseSubscription(subscription))
+            await IsNonTaxableNonUSBusinessUseSubscription(subscription))
         {
             return;
         }
@@ -153,14 +153,12 @@ public class UpcomingInvoiceHandler(
 
         return;
 
-        bool IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
+        async Task<bool> IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
         {
-            var familyPriceIds = new List<string>
-            {
-                // TODO: Replace with the PricingClient
-                StaticStore.GetPlan(PlanType.FamiliesAnnually2019).PasswordManager.StripePlanId,
-                StaticStore.GetPlan(PlanType.FamiliesAnnually).PasswordManager.StripePlanId
-            };
+            var familyPriceIds = (await Task.WhenAll(
+                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
+                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
+                .Select(plan => plan.PasswordManager.StripePlanId);
 
             return localSubscription.Customer.Address.Country != "US" &&
                    localSubscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
