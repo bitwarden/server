@@ -7,7 +7,7 @@ public static class ServiceCollectionExtensions
 {
     public static void AddPricingClient(this IServiceCollection services)
     {
-        services.AddHttpClient<PricingClient>((serviceProvider, httpClient) =>
+        services.AddHttpClient<IPricingClient, PricingClient>((serviceProvider, httpClient) =>
         {
             var globalSettings = serviceProvider.GetRequiredService<GlobalSettings>();
             if (string.IsNullOrEmpty(globalSettings.PricingUri))
@@ -17,6 +17,5 @@ public static class ServiceCollectionExtensions
             httpClient.BaseAddress = new Uri(globalSettings.PricingUri);
             httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
         });
-        services.AddTransient<IPricingClient, PricingClient>();
     }
 }

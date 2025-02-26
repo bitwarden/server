@@ -36,6 +36,8 @@ public record PlanAdapter : Plan
         DisplaySortOrder = plan.AdditionalData.TryGetValue("displaySortOrder", out var displaySortOrder)
             ? int.Parse(displaySortOrder)
             : 0;
+        Disabled = !plan.Available;
+        LegacyYear = plan.LegacyYear;
         PasswordManager = ToPasswordManagerPlanFeatures(plan);
         SecretsManager = plan.SecretsManager != null ? ToSecretsManagerPlanFeatures(plan) : null;
 
@@ -100,6 +102,7 @@ public record PlanAdapter : Plan
         var maxSeats = GetMaxSeats(plan.Seats);
         var baseStorageGb = (short?)plan.Storage?.Provided;
         var hasAdditionalStorageOption = plan.Storage != null;
+        var additionalStoragePricePerGb = plan.Storage?.Price ?? 0;
         var stripeStoragePlanId = plan.Storage?.StripePriceId;
         short? maxCollections = plan.AdditionalData.TryGetValue("passwordManager.maxCollections", out var value) ? short.Parse(value) : null;
 
@@ -117,6 +120,7 @@ public record PlanAdapter : Plan
             MaxSeats = maxSeats,
             BaseStorageGb = baseStorageGb,
             HasAdditionalStorageOption = hasAdditionalStorageOption,
+            AdditionalStoragePricePerGb = additionalStoragePricePerGb,
             StripeStoragePlanId = stripeStoragePlanId,
             MaxCollections = maxCollections
         };
@@ -172,7 +176,10 @@ public record PlanAdapter : Plan
             scalable => (short)scalable.Provided);
 
     private static short? GetMaxSeats(PurchasableDTO purchasable)
-        => purchasable.FromFree(x => (short)x.Quantity);
+        => purchasable.Match<short?>(
+            free => (short)free.Quantity,
+            packaged => (short)packaged.Quantity,
+            _ => null);
 
     private static short? GetMaxSeats(FreeOrScalableDTO freeOrScalable)
         => freeOrScalable.FromFree(x => (short)x.Quantity);
