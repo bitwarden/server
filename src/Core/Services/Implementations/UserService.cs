@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using System.Security.Claims;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data;
@@ -49,6 +51,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
@@ -81,6 +84,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         ICipherRepository cipherRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
+        IOrganizationDomainRepository organizationDomainRepository,
         IMailService mailService,
         IPushNotificationService pushService,
         IUserStore<User> store,
@@ -127,6 +131,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _cipherRepository = cipherRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
+        _organizationDomainRepository = organizationDomainRepository;
         _mailService = mailService;
         _pushService = pushService;
         _identityOptions = optionsAccessor?.Value ?? new IdentityOptions();
@@ -315,7 +320,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return;
         }
 
-        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
+        var token = await GenerateUserTokenAsync(user, TokenOptions.DefaultProvider, "DeleteAccount");
         await _mailService.SendVerifyDeleteEmailAsync(user.Email, user.Id, token);
     }
 
@@ -347,7 +352,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
-    public async Task SendTwoFactorEmailAsync(User user)
+    public async Task SendTwoFactorEmailAsync(User user, bool authentication = true)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
         if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
@@ -358,7 +363,26 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var email = ((string)provider.MetaData["Email"]).ToLowerInvariant();
         var token = await base.GenerateTwoFactorTokenAsync(user,
             CoreHelpers.CustomProviderName(TwoFactorProviderType.Email));
-        await _mailService.SendTwoFactorEmailAsync(email, token);
+
+        var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
+            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
+
+        await _mailService.SendTwoFactorEmailAsync(
+            email, user.Email, token, _currentContext.IpAddress, deviceType, authentication);
+    }
+
+    public async Task SendNewDeviceVerificationEmailAsync(User user)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+
+        var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+            "otp:" + user.Email);
+
+        var deviceType = _currentContext.DeviceType?.GetType().GetMember(_currentContext.DeviceType?.ToString())
+            .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? "Unknown Browser";
+
+        await _mailService.SendTwoFactorEmailAsync(
+            user.Email, user.Email, token, _currentContext.IpAddress, deviceType);
     }
 
     public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
@@ -521,6 +545,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
+        var managedUserValidationResult = await ValidateManagedUserDomainAsync(user, newEmail);
+
+        if (!managedUserValidationResult.Succeeded)
+        {
+            return managedUserValidationResult;
+        }
+
         if (!await base.VerifyUserTokenAsync(user, _identityOptions.Tokens.ChangeEmailTokenProvider,
             GetChangeEmailTokenPurpose(newEmail), token))
         {
@@ -584,6 +615,31 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _pushService.PushLogOutAsync(user.Id);
 
         return IdentityResult.Success;
+    }
+
+    public async Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail)
+    {
+        var managingOrganizations = await GetOrganizationsManagingUserAsync(user.Id);
+
+        if (!managingOrganizations.Any())
+        {
+            return IdentityResult.Success;
+        }
+
+        var newDomain = CoreHelpers.GetEmailDomain(newEmail);
+
+        var verifiedDomains = await _organizationDomainRepository.GetVerifiedDomainsByOrganizationIdsAsync(managingOrganizations.Select(org => org.Id));
+
+        if (verifiedDomains.Any(verifiedDomain => verifiedDomain.DomainName == newDomain))
+        {
+            return IdentityResult.Success;
+        }
+
+        return IdentityResult.Failed(new IdentityError
+        {
+            Code = "EmailDomainMismatch",
+            Description = "Your new email must match your organization domain."
+        });
     }
 
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
@@ -868,6 +924,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
     }
 
+    /// <summary>
+    /// To be removed when the feature flag pm-17128-recovery-code-login is removed PM-18175.
+    /// </summary>
+    [Obsolete("Two Factor recovery is handled in the TwoFactorAuthenticationValidator.")]
     public async Task<bool> RecoverTwoFactorAsync(string email, string secret, string recoveryCode)
     {
         var user = await _userRepository.GetByEmailAsync(email);
@@ -883,6 +943,25 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         if (!CoreHelpers.FixedTimeEquals(user.TwoFactorRecoveryCode, recoveryCode))
+        {
+            return false;
+        }
+
+        user.TwoFactorProviders = null;
+        user.TwoFactorRecoveryCode = CoreHelpers.SecureRandomString(32, upper: false, special: false);
+        await SaveUserAsync(user);
+        await _mailService.SendRecoverTwoFactorEmail(user.Email, DateTime.UtcNow, _currentContext.IpAddress);
+        await _eventService.LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+        await CheckPoliciesOnTwoFactorRemovalAsync(user);
+
+        return true;
+    }
+
+    public async Task<bool> RecoverTwoFactorAsync(User user, string recoveryCode)
+    {
+        if (!CoreHelpers.FixedTimeEquals(
+                user.TwoFactorRecoveryCode,
+                recoveryCode.Replace(" ", string.Empty).Trim().ToLower()))
         {
             return false;
         }
@@ -1081,7 +1160,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await EnablePremiumAsync(user, expirationDate);
     }
 
-    public async Task EnablePremiumAsync(User user, DateTime? expirationDate)
+    private async Task EnablePremiumAsync(User user, DateTime? expirationDate)
     {
         if (user != null && !user.Premium && user.Gateway.HasValue)
         {
@@ -1098,7 +1177,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await DisablePremiumAsync(user, expirationDate);
     }
 
-    public async Task DisablePremiumAsync(User user, DateTime? expirationDate)
+    private async Task DisablePremiumAsync(User user, DateTime? expirationDate)
     {
         if (user != null && user.Premium)
         {
@@ -1461,7 +1540,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (await VerifySecretAsync(user, secret))
         {
-            await SendOTPAsync(user);
+            await SendNewDeviceVerificationEmailAsync(user);
         }
     }
 

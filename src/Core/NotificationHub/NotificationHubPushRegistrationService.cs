@@ -2,36 +2,26 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.Azure.NotificationHubs;
-using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.NotificationHub;
 
 public class NotificationHubPushRegistrationService : IPushRegistrationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
-    private readonly GlobalSettings _globalSettings;
     private readonly INotificationHubPool _notificationHubPool;
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<NotificationHubPushRegistrationService> _logger;
 
     public NotificationHubPushRegistrationService(
         IInstallationDeviceRepository installationDeviceRepository,
-        GlobalSettings globalSettings,
-        INotificationHubPool notificationHubPool,
-        IServiceProvider serviceProvider,
-        ILogger<NotificationHubPushRegistrationService> logger)
+        INotificationHubPool notificationHubPool)
     {
         _installationDeviceRepository = installationDeviceRepository;
-        _globalSettings = globalSettings;
         _notificationHubPool = notificationHubPool;
-        _serviceProvider = serviceProvider;
-        _logger = logger;
     }
 
     public async Task CreateOrUpdateRegistrationAsync(string pushToken, string deviceId, string userId,
-        string identifier, DeviceType type)
+        string identifier, DeviceType type, IEnumerable<string> organizationIds, Guid installationId)
     {
         if (string.IsNullOrWhiteSpace(pushToken))
         {
@@ -45,14 +35,24 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Templates = new Dictionary<string, InstallationTemplate>()
         };
 
-        installation.Tags = new List<string>
-        {
-            $"userId:{userId}"
-        };
+        var clientType = DeviceTypes.ToClientType(type);
+
+        installation.Tags = new List<string> { $"userId:{userId}", $"clientType:{clientType}" };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             installation.Tags.Add("deviceIdentifier:" + identifier);
+        }
+
+        var organizationIdsList = organizationIds.ToList();
+        foreach (var organizationId in organizationIdsList)
+        {
+            installation.Tags.Add($"organizationId:{organizationId}");
+        }
+
+        if (installationId != Guid.Empty)
+        {
+            installation.Tags.Add($"installationId:{installationId}");
         }
 
         string payloadTemplate = null, messageTemplate = null, badgeMessageTemplate = null;
@@ -84,10 +84,12 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
                 break;
         }
 
-        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier);
-        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier);
+        BuildInstallationTemplate(installation, "payload", payloadTemplate, userId, identifier, clientType,
+            organizationIdsList, installationId);
+        BuildInstallationTemplate(installation, "message", messageTemplate, userId, identifier, clientType,
+            organizationIdsList, installationId);
         BuildInstallationTemplate(installation, "badgeMessage", badgeMessageTemplate ?? messageTemplate,
-            userId, identifier);
+            userId, identifier, clientType, organizationIdsList, installationId);
 
         await ClientFor(GetComb(deviceId)).CreateOrUpdateInstallationAsync(installation);
         if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
@@ -97,7 +99,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
     }
 
     private void BuildInstallationTemplate(Installation installation, string templateId, string templateBody,
-        string userId, string identifier)
+        string userId, string identifier, ClientType clientType, List<string> organizationIds, Guid installationId)
     {
         if (templateBody == null)
         {
@@ -111,14 +113,23 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
             Body = templateBody,
             Tags = new List<string>
             {
-                fullTemplateId,
-                $"{fullTemplateId}_userId:{userId}"
+                fullTemplateId, $"{fullTemplateId}_userId:{userId}", $"clientType:{clientType}"
             }
         };
 
         if (!string.IsNullOrWhiteSpace(identifier))
         {
             template.Tags.Add($"{fullTemplateId}_deviceIdentifier:{identifier}");
+        }
+
+        foreach (var organizationId in organizationIds)
+        {
+            template.Tags.Add($"organizationId:{organizationId}");
+        }
+
+        if (installationId != Guid.Empty)
+        {
+            template.Tags.Add($"installationId:{installationId}");
         }
 
         installation.Templates.Add(fullTemplateId, template);
@@ -197,7 +208,7 @@ public class NotificationHubPushRegistrationService : IPushRegistrationService
         }
     }
 
-    private NotificationHubClient ClientFor(Guid deviceId)
+    private INotificationHubClient ClientFor(Guid deviceId)
     {
         return _notificationHubPool.ClientFor(deviceId);
     }

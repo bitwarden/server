@@ -1,6 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Jobs;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -24,6 +25,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISchedulerFactory _schedulerFactory;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationEnableCommand _organizationEnableCommand;
 
     public SubscriptionUpdatedHandler(
         IStripeEventService stripeEventService,
@@ -35,7 +37,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IPushNotificationService pushNotificationService,
         IOrganizationRepository organizationRepository,
         ISchedulerFactory schedulerFactory,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationEnableCommand organizationEnableCommand)
     {
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
@@ -47,6 +50,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _organizationRepository = organizationRepository;
         _schedulerFactory = schedulerFactory;
         _featureService = featureService;
+        _organizationEnableCommand = organizationEnableCommand;
     }
 
     /// <summary>
@@ -55,7 +59,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     /// <param name="parsedEvent"></param>
     public async Task HandleAsync(Event parsedEvent)
     {
-        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts"]);
+        var subscription = await _stripeEventService.GetSubscription(parsedEvent, true, ["customer", "discounts", "latest_invoice"]);
         var (organizationId, userId, providerId) = _stripeEventUtilityService.GetIdsFromMetadata(subscription.Metadata);
 
         switch (subscription.Status)
@@ -64,7 +68,8 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 when organizationId.HasValue:
                 {
                     await _organizationService.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
-                    if (subscription.Status == StripeSubscriptionStatus.Unpaid)
+                    if (subscription.Status == StripeSubscriptionStatus.Unpaid &&
+                        subscription.LatestInvoice is { BillingReason: "subscription_cycle" or "subscription_create" })
                     {
                         await ScheduleCancellationJobAsync(subscription.Id, organizationId.Value);
                     }
@@ -90,9 +95,12 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 }
             case StripeSubscriptionStatus.Active when organizationId.HasValue:
                 {
-                    await _organizationService.EnableAsync(organizationId.Value);
+                    await _organizationEnableCommand.EnableAsync(organizationId.Value);
                     var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
-                    await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
+                    if (organization != null)
+                    {
+                        await _pushNotificationService.PushSyncOrganizationStatusAsync(organization);
+                    }
                     break;
                 }
             case StripeSubscriptionStatus.Active:
@@ -200,23 +208,24 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private async Task ScheduleCancellationJobAsync(string subscriptionId, Guid organizationId)
     {
         var isResellerManagedOrgAlertEnabled = _featureService.IsEnabled(FeatureFlagKeys.ResellerManagedOrgAlert);
-
-        if (isResellerManagedOrgAlertEnabled)
+        if (!isResellerManagedOrgAlertEnabled)
         {
-            var scheduler = await _schedulerFactory.GetScheduler();
-
-            var job = JobBuilder.Create<SubscriptionCancellationJob>()
-                .WithIdentity($"cancel-sub-{subscriptionId}", "subscription-cancellations")
-                .UsingJobData("subscriptionId", subscriptionId)
-                .UsingJobData("organizationId", organizationId.ToString())
-                .Build();
-
-            var trigger = TriggerBuilder.Create()
-                .WithIdentity($"cancel-trigger-{subscriptionId}", "subscription-cancellations")
-                .StartAt(DateTimeOffset.UtcNow.AddDays(7))
-                .Build();
-
-            await scheduler.ScheduleJob(job, trigger);
+            return;
         }
+
+        var scheduler = await _schedulerFactory.GetScheduler();
+
+        var job = JobBuilder.Create<SubscriptionCancellationJob>()
+            .WithIdentity($"cancel-sub-{subscriptionId}", "subscription-cancellations")
+            .UsingJobData("subscriptionId", subscriptionId)
+            .UsingJobData("organizationId", organizationId.ToString())
+            .Build();
+
+        var trigger = TriggerBuilder.Create()
+            .WithIdentity($"cancel-trigger-{subscriptionId}", "subscription-cancellations")
+            .StartAt(DateTimeOffset.UtcNow.AddDays(7))
+            .Build();
+
+        await scheduler.ScheduleJob(job, trigger);
     }
 }

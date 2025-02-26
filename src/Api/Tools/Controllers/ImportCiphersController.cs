@@ -96,12 +96,6 @@ public class ImportCiphersController : Controller
             return true;
         }
 
-        //Users allowed to import if they CanCreate Collections
-        if (!(await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
-        {
-            return false;
-        }
-
         //Calling Repository instead of Service as we want to get all the collections, regardless of permission
         //Permissions check will be done later on AuthorizationService
         var orgCollectionIds =
@@ -117,6 +111,12 @@ public class ImportCiphersController : Controller
         {
             return false;
         };
+
+        //Users allowed to import if they CanCreate Collections
+        if (!(await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
+        {
+            return false;
+        }
 
         return true;
     }
