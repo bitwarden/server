@@ -24,8 +24,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public record SignUpOrganizationResponse(
     Organization Organization,
-    OrganizationUser OrganizationUser,
-    Collection DefaultCollection);
+    OrganizationUser OrganizationUser);
 
 public interface ICloudOrganizationSignUpCommand
 {
@@ -34,7 +33,6 @@ public interface ICloudOrganizationSignUpCommand
 
 public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IPaymentService paymentService,
     IPolicyService policyService,
@@ -144,7 +142,7 @@ public class CloudOrganizationSignUpCommand(
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
 
-        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser, returnValue.defaultCollection);
+        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser);
     }
 
     public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)
