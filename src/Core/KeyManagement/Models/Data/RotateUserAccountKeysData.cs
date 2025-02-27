@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Tools.Entities;
@@ -21,7 +20,7 @@ public class RotateUserAccountKeysData
     public IEnumerable<EmergencyAccess> EmergencyAccesses { get; set; }
     public IReadOnlyList<OrganizationUser> OrganizationUsers { get; set; }
     public IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }
-    public IEnumerable<OtherDeviceKeysUpdateRequestModel> DeviceKeys { get; set; }
+    public IEnumerable<Device> DeviceKeys { get; set; }
 
     // User vault data encrypted by the userkey
     public IEnumerable<Cipher> Ciphers { get; set; }

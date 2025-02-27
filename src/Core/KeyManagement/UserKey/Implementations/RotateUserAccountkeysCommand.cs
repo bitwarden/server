@@ -132,13 +132,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
 
         if (model.DeviceKeys.Any())
         {
-            foreach (var device in model.DeviceKeys)
-            {
-                var dbDevice = await _deviceRepository.GetByIdentifierAsync(device.DeviceId.ToString());
-                dbDevice.EncryptedUserKey = device.EncryptedUserKey;
-                dbDevice.EncryptedPublicKey = device.EncryptedPublicKey;
-                await _deviceRepository.ReplaceAsync(dbDevice);
-            }
+            saveEncryptedDataActions.Add(_deviceRepository.UpdateKeysForRotationAsync(user.Id, model.DeviceKeys));
         }
 
         await _userRepository.UpdateUserKeyAndEncryptedDataV2Async(user, saveEncryptedDataActions);
