@@ -20,6 +20,7 @@ public class RotateUserAccountKeysData
     public IEnumerable<EmergencyAccess> EmergencyAccesses { get; set; }
     public IReadOnlyList<OrganizationUser> OrganizationUsers { get; set; }
     public IEnumerable<WebAuthnLoginRotateKeyData> WebAuthnKeys { get; set; }
+    public IEnumerable<Device> DeviceKeys { get; set; }
 
     // User vault data encrypted by the userkey
     public IEnumerable<Cipher> Ciphers { get; set; }

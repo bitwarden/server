@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Api.Request;
@@ -125,7 +124,7 @@ public class DevicesController : Controller
     }
 
     [HttpPost("{identifier}/retrieve-keys")]
-    public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(string identifier, [FromBody] SecretVerificationRequestModel model)
+    public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(string identifier)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -134,14 +133,7 @@ public class DevicesController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!await _userService.VerifySecretAsync(user, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
-        }
-
         var device = await _deviceRepository.GetByIdentifierAsync(identifier, user.Id);
-
         if (device == null)
         {
             throw new NotFoundException();
