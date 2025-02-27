@@ -15,6 +15,7 @@ using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Models.Data;
 using HandlebarsDotNet;
 
 namespace Bit.Core.Services;
@@ -74,6 +75,7 @@ public class HandlebarsMailService : IMailService
     }
 
     public async Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -82,6 +84,7 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage("Verify your email", email);
         var model = new TrialInitiationVerifyEmail
         {
+            IsExistingUser = isExistingUser,
             Token = WebUtility.UrlEncode(token),
             Email = WebUtility.UrlEncode(email),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -144,7 +147,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendChangeEmailEmailAsync(string newEmailAddress, string token)
     {
         var message = CreateDefaultMessage("Your Email Change", newEmailAddress);
-        var model = new EmailTokenViewModel
+        var model = new UserVerificationEmailTokenViewModel
         {
             Token = token,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -156,14 +159,22 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendTwoFactorEmailAsync(string email, string token)
+    public async Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
     {
-        var message = CreateDefaultMessage("Your Two-step Login Verification Code", email);
-        var model = new EmailTokenViewModel
+        var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
+        var requestDateTime = DateTime.UtcNow;
+        var model = new TwoFactorEmailTokenViewModel
         {
             Token = token,
+            EmailTotpAction = authentication ? "logging in" : "setting up two-step login",
+            AccountEmail = accountEmail,
+            TheDate = requestDateTime.ToLongDateString(),
+            TheTime = requestDateTime.ToShortTimeString(),
+            TimeZone = _utcTimeZoneDisplay,
+            DeviceIp = deviceIp,
+            DeviceType = deviceType,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
+            SiteName = _globalSettings.SiteName,
         };
         await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
@@ -644,6 +655,10 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("TitleContactUsHtmlLayout", titleContactUsHtmlLayoutSource);
         var titleContactUsTextLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.text");
         Handlebars.RegisterTemplate("TitleContactUsTextLayout", titleContactUsTextLayoutSource);
+        var securityTasksHtmlLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.html");
+        Handlebars.RegisterTemplate("SecurityTasksHtmlLayout", securityTasksHtmlLayoutSource);
+        var securityTasksTextLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.text");
+        Handlebars.RegisterTemplate("SecurityTasksTextLayout", securityTasksTextLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
@@ -1010,7 +1025,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendOTPEmailAsync(string email, string token)
     {
         var message = CreateDefaultMessage("Your Bitwarden Verification Code", email);
-        var model = new EmailTokenViewModel
+        var model = new UserVerificationEmailTokenViewModel
         {
             Token = token,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
@@ -1186,9 +1201,26 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    {
+        MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
+        {
+            var message = CreateDefaultMessage($"{orgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var model = new SecurityTaskNotificationViewModel
+            {
+                OrgName = orgName,
+                TaskCount = notification.TaskCount,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            };
+            message.Category = "SecurityTasksNotification";
+            return new MailQueueMessage(message, "SecurityTasksNotification", model);
+        }
+        var messageModels = securityTaskNotificaitons.Select(CreateMessage);
+        await EnqueueMailAsync(messageModels.ToList());
+    }
+
     private static string GetUserIdentifier(string email, string userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
 }
-

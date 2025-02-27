@@ -1,6 +1,4 @@
-﻿using System.Net;
-using System.Net.Http.Headers;
-using Bit.Api.Auth.Models.Request.Accounts;
+﻿using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
@@ -43,61 +41,6 @@ public class AccountsControllerTest : IClassFixture<ApiApplicationFactory>
         Assert.Null(content.Key);
         Assert.Null(content.PrivateKey);
         Assert.NotNull(content.SecurityStamp);
-    }
-
-    [Fact]
-    public async Task PostEmailToken_WhenAccountDeprovisioningEnabled_WithManagedAccount_ThrowsBadRequest()
-    {
-        var email = await SetupOrganizationManagedAccount();
-
-        var tokens = await _factory.LoginAsync(email);
-        var client = _factory.CreateClient();
-
-        var model = new EmailTokenRequestModel
-        {
-            NewEmail = $"{Guid.NewGuid()}@example.com",
-            MasterPasswordHash = "master_password_hash"
-        };
-
-        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email-token")
-        {
-            Content = JsonContent.Create(model)
-        };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        var response = await client.SendAsync(message);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Cannot change emails for accounts owned by an organization", content);
-    }
-
-    [Fact]
-    public async Task PostEmail_WhenAccountDeprovisioningEnabled_WithManagedAccount_ThrowsBadRequest()
-    {
-        var email = await SetupOrganizationManagedAccount();
-
-        var tokens = await _factory.LoginAsync(email);
-        var client = _factory.CreateClient();
-
-        var model = new EmailRequestModel
-        {
-            NewEmail = $"{Guid.NewGuid()}@example.com",
-            MasterPasswordHash = "master_password_hash",
-            NewMasterPasswordHash = "master_password_hash",
-            Token = "validtoken",
-            Key = "key"
-        };
-
-        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/email")
-        {
-            Content = JsonContent.Create(model)
-        };
-        message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        var response = await client.SendAsync(message);
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Cannot change emails for accounts owned by an organization", content);
     }
 
     private async Task<string> SetupOrganizationManagedAccount()

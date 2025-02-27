@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +19,11 @@ using Notification = Bit.Core.NotificationCenter.Entities.Notification;
 
 namespace Bit.Core.NotificationHub;
 
+/// <summary>
+/// Sends mobile push notifications to the Azure Notification Hub.
+/// Used by Cloud-Hosted environments.
+/// Received by Firebase for Android or APNS for iOS.
+/// </summary>
 public class NotificationHubPushNotificationService : IPushNotificationService
 {
     private readonly IInstallationDeviceRepository _installationDeviceRepository;
@@ -25,17 +31,25 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     private readonly bool _enableTracing = false;
     private readonly INotificationHubPool _notificationHubPool;
     private readonly ILogger _logger;
+    private readonly IGlobalSettings _globalSettings;
 
     public NotificationHubPushNotificationService(
         IInstallationDeviceRepository installationDeviceRepository,
         INotificationHubPool notificationHubPool,
         IHttpContextAccessor httpContextAccessor,
-        ILogger<NotificationsApiPushNotificationService> logger)
+        ILogger<NotificationHubPushNotificationService> logger,
+        IGlobalSettings globalSettings)
     {
         _installationDeviceRepository = installationDeviceRepository;
         _httpContextAccessor = httpContextAccessor;
         _notificationHubPool = notificationHubPool;
         _logger = logger;
+        _globalSettings = globalSettings;
+
+        if (globalSettings.Installation.Id == Guid.Empty)
+        {
+            logger.LogWarning("Installation ID is not set. Push notifications for installations will not work.");
+        }
     }
 
     public async Task PushSyncCipherCreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
@@ -185,6 +199,10 @@ public class NotificationHubPushNotificationService : IPushNotificationService
 
     public async Task PushNotificationAsync(Notification notification)
     {
+        Guid? installationId = notification.Global && _globalSettings.Installation.Id != Guid.Empty
+            ? _globalSettings.Installation.Id
+            : null;
+
         var message = new NotificationPushNotification
         {
             Id = notification.Id,
@@ -193,26 +211,49 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = installationId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
-        if (notification.UserId.HasValue)
+        if (notification.Global)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotification, message, true,
+            if (installationId.HasValue)
+            {
+                await SendPayloadToInstallationAsync(installationId.Value, PushType.Notification, message, true,
+                    notification.ClientType);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Invalid global notification id {NotificationId} push notification. No installation id provided.",
+                    notification.Id);
+            }
+        }
+        else if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.Notification, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotification, message,
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.Notification, message,
                 true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification id {NotificationId} push notification", notification.Id);
         }
     }
 
     public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
     {
+        Guid? installationId = notification.Global && _globalSettings.Installation.Id != Guid.Empty
+            ? _globalSettings.Installation.Id
+            : null;
+
         var message = new NotificationPushNotification
         {
             Id = notification.Id,
@@ -221,6 +262,7 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = installationId,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
@@ -229,15 +271,33 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             DeletedDate = notificationStatus.DeletedDate
         };
 
-        if (notification.UserId.HasValue)
+        if (notification.Global)
         {
-            await SendPayloadToUserAsync(notification.UserId.Value, PushType.SyncNotificationStatus, message, true,
+            if (installationId.HasValue)
+            {
+                await SendPayloadToInstallationAsync(installationId.Value, PushType.NotificationStatus, message, true,
+                    notification.ClientType);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Invalid global notification status id {NotificationId} push notification. No installation id provided.",
+                    notification.Id);
+            }
+        }
+        else if (notification.UserId.HasValue)
+        {
+            await SendPayloadToUserAsync(notification.UserId.Value, PushType.NotificationStatus, message, true,
                 notification.ClientType);
         }
         else if (notification.OrganizationId.HasValue)
         {
-            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.SyncNotificationStatus, message,
-                true, notification.ClientType);
+            await SendPayloadToOrganizationAsync(notification.OrganizationId.Value, PushType.NotificationStatus,
+                message, true, notification.ClientType);
+        }
+        else
+        {
+            _logger.LogWarning("Invalid notification status id {NotificationId} push notification", notification.Id);
         }
     }
 
@@ -246,6 +306,13 @@ public class NotificationHubPushNotificationService : IPushNotificationService
         var message = new AuthRequestPushNotification { Id = authRequest.Id, UserId = authRequest.UserId };
 
         await SendPayloadToUserAsync(authRequest.UserId, type, message, true);
+    }
+
+    private async Task SendPayloadToInstallationAsync(Guid installationId, PushType type, object payload,
+        bool excludeCurrentContext, ClientType? clientType = null)
+    {
+        await SendPayloadToInstallationAsync(installationId.ToString(), type, payload,
+            GetContextIdentifier(excludeCurrentContext), clientType: clientType);
     }
 
     private async Task SendPayloadToUserAsync(Guid userId, PushType type, object payload, bool excludeCurrentContext,
@@ -260,6 +327,22 @@ public class NotificationHubPushNotificationService : IPushNotificationService
     {
         await SendPayloadToOrganizationAsync(orgId.ToString(), type, payload,
             GetContextIdentifier(excludeCurrentContext), clientType: clientType);
+    }
+
+    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        await PushUserAsync(userId, PushType.PendingSecurityTasks);
+    }
+
+    public async Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload,
+        string? identifier, string? deviceId = null, ClientType? clientType = null)
+    {
+        var tag = BuildTag($"template:payload && installationId:{installationId}", identifier, clientType);
+        await SendPayloadAsync(tag, type, payload);
+        if (InstallationDeviceEntity.IsInstallationDeviceId(deviceId))
+        {
+            await _installationDeviceRepository.UpsertAsync(new InstallationDeviceEntity(deviceId));
+        }
     }
 
     public async Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
