@@ -13,7 +13,7 @@ using Xunit;
 namespace Bit.Api.Test.KeyManagement.Validators;
 
 [SutProviderCustomize]
-public class DeviceRotationValidatorTests
+public class EmergencyAccessRotationValidatorTests
 {
     [Theory]
     [BitAutoData]

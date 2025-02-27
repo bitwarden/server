@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -40,6 +41,15 @@ public class DeviceRotationValidator : IRotationValidator<IEnumerable<OtherDevic
             if (device == null)
             {
                 throw new BadRequestException("All existing sends must be included in the rotation.");
+            }
+
+            if (existing.IsTrusted() && (device.EncryptedUserKey == null || device.EncryptedPublicKey == null))
+            {
+                throw new BadRequestException("Rotated encryption keys must be provided for all devices that are trusted.");
+            }
+            else if (!existing.IsTrusted() && (device.EncryptedUserKey != null || device.EncryptedPublicKey != null))
+            {
+                throw new BadRequestException("Rotated encryption keys must not be provided for devices that are not trusted.");
             }
 
             result.Add(device.ToDevice(existing));
