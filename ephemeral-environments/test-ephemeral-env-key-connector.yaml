@@ -1,0 +1,4 @@
+component:
+  keyConnector:
+    enabled: true
+    tag: "2024.4.0"
