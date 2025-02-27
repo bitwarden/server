@@ -4,6 +4,7 @@ using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Repositories;
@@ -21,6 +22,7 @@ public class OrganizationBillingController(
     IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
+    IPricingClient pricingClient,
     ISubscriberService subscriberService,
     IPaymentHistoryService paymentHistoryService,
     IUserService userService) : BaseBillingController
@@ -279,7 +281,7 @@ public class OrganizationBillingController(
         }
         var organizationSignup = model.ToOrganizationSignup(user);
         var sale = OrganizationSale.From(organization, organizationSignup);
-        var plan = StaticStore.GetPlan(model.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(model.PlanType);
         sale.Organization.PlanType = plan.Type;
         sale.Organization.Plan = plan.Name;
         sale.SubscriptionSetup.SkipTrial = true;

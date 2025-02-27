@@ -10,6 +10,7 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -203,9 +204,11 @@ public class OrganizationServiceTests
     {
         signup.Plan = PlanType.TeamsMonthly;
 
-        var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
-
         var plan = StaticStore.GetPlan(signup.Plan);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(signup.Plan).Returns(plan);
+
+        var (organization, _, _) = await sutProvider.Sut.SignupClientAsync(signup);
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(Arg.Is<Organization>(org =>
             org.Id == organization.Id &&
@@ -894,6 +897,8 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
         SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType).Returns(StaticStore.GetPlan(organization.PlanType));
+
         await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites);
 
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
@@ -932,6 +937,9 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         // Throw error at the end of the try block
         sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default)
             .ThrowsForAnyArgs<BadRequestException>();
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
 
         await Assert.ThrowsAsync<AggregateException>(async () =>
             await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, systemUser: null, invites));
@@ -1338,6 +1346,9 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
         organization.MaxAutoscaleSeats = currentMaxAutoscaleSeats;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
             seatAdjustment, maxAutoscaleSeats));
 
@@ -1359,6 +1370,9 @@ OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = 100;
         organization.SmSeats = 100;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 

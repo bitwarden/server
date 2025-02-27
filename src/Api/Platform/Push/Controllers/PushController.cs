@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -42,9 +43,8 @@ public class PushController : Controller
     public async Task RegisterAsync([FromBody] PushRegistrationRequestModel model)
     {
         CheckUsage();
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.OrganizationIds.Select(Prefix),
-            model.InstallationId);
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new PushRegistrationData(model.PushToken), Prefix(model.DeviceId),
+            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.OrganizationIds.Select(Prefix), model.InstallationId);
     }
 
     [HttpPost("delete")]
