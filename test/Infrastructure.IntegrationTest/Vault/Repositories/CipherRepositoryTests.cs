@@ -704,4 +704,183 @@ public class CipherRepositoryTests
             Data = ""
         });
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetUserSecurityTasksByCipherIdsAsync_Works(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository
+        )
+    {
+        // Users
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Organization
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user1.Email,
+            Plan = "Test"
+        });
+
+        // Org Users
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user1.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user2.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        // A group that will be assigned Edit permissions to any collections
+        var editGroup = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = organization.Id,
+            Name = "Edit Group",
+        });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id });
+
+        // Add collections to Org
+        var manageCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Manage Collection",
+            OrganizationId = organization.Id
+        });
+
+        // Use a 2nd collection to differentiate between the two users
+        var manageCollection2 = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Manage Collection 2",
+            OrganizationId = organization.Id
+        });
+        var viewOnlyCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "View Only Collection",
+            OrganizationId = organization.Id
+        });
+
+        // Ciphers
+        var manageCipher1 = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var manageCipher2 = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var viewOnlyCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher1.Id, organization.Id,
+            new List<Guid> { manageCollection.Id });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher2.Id, organization.Id,
+            new List<Guid> { manageCollection2.Id });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(viewOnlyCipher.Id, organization.Id,
+            new List<Guid> { viewOnlyCollection.Id });
+
+        await collectionRepository.UpdateUsersAsync(manageCollection.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser1.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+             new()
+            {
+                Id = orgUser2.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            }
+        });
+
+        // Only add second user to the second manage collection
+        await collectionRepository.UpdateUsersAsync(manageCollection2.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser2.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+        });
+
+        await collectionRepository.UpdateUsersAsync(viewOnlyCollection.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser1.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = false
+            }
+        });
+
+        var securityTasks = new List<SecurityTask>
+        {
+            new SecurityTask { CipherId = manageCipher1.Id, Id = Guid.NewGuid() },
+            new SecurityTask { CipherId = manageCipher2.Id, Id = Guid.NewGuid() },
+            new SecurityTask { CipherId = viewOnlyCipher.Id, Id = Guid.NewGuid() }
+        };
+
+        var userSecurityTaskCiphers = await cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organization.Id, securityTasks);
+
+        Assert.NotEmpty(userSecurityTaskCiphers);
+        Assert.Equal(3, userSecurityTaskCiphers.Count);
+
+        var user1TaskCiphers = userSecurityTaskCiphers.Where(t => t.UserId == user1.Id);
+        Assert.Single(user1TaskCiphers);
+        Assert.Equal(user1.Email, user1TaskCiphers.First().Email);
+        Assert.Equal(user1.Id, user1TaskCiphers.First().UserId);
+        Assert.Equal(manageCipher1.Id, user1TaskCiphers.First().CipherId);
+
+        var user2TaskCiphers = userSecurityTaskCiphers.Where(t => t.UserId == user2.Id);
+        Assert.NotNull(user2TaskCiphers);
+        Assert.Equal(2, user2TaskCiphers.Count());
+        Assert.Equal(user2.Email, user2TaskCiphers.Last().Email);
+        Assert.Equal(user2.Id, user2TaskCiphers.Last().UserId);
+        Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher1.Id && t.TaskId == securityTasks[0].Id);
+        Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher2.Id && t.TaskId == securityTasks[1].Id);
+    }
 }
