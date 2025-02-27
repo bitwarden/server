@@ -120,6 +120,13 @@ public class DeviceValidator(
             return DeviceValidationResultType.Success;
         }
 
+        // User is newly registered, so don't require new device verification
+        var createdSpan = DateTime.UtcNow - user.CreationDate;
+        if (createdSpan < TimeSpan.FromHours(24))
+        {
+            return DeviceValidationResultType.Success;
+        }
+
         // CS exception flow
         // Check cache for user information
         var cacheKey = string.Format(AuthConstants.NewDeviceVerificationExceptionCacheKeyFormat, user.Id.ToString());
