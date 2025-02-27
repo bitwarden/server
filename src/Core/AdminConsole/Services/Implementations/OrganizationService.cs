@@ -16,6 +16,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -74,6 +75,7 @@ public class OrganizationService : IOrganizationService
     private readonly ITwoFactorIsEnabledQuery _twoFactorIsEnabledQuery;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -108,7 +110,8 @@ public class OrganizationService : IOrganizationService
         IFeatureService featureService,
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationBillingService organizationBillingService,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -143,6 +146,7 @@ public class OrganizationService : IOrganizationService
         _twoFactorIsEnabledQuery = twoFactorIsEnabledQuery;
         _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -210,11 +214,7 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.PasswordManager.HasAdditionalStorageOption)
         {
@@ -268,7 +268,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException($"Cannot set max seat autoscaling below current seat count.");
         }
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
         if (plan == null)
         {
             throw new BadRequestException("Existing plan not found.");
@@ -320,11 +320,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("No subscription found.");
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.PasswordManager.HasAdditionalSeatsOption)
         {
@@ -442,7 +438,7 @@ public class OrganizationService : IOrganizationService
 
     public async Task<(Organization organization, OrganizationUser organizationUser, Collection defaultCollection)> SignupClientAsync(OrganizationSignup signup)
     {
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = await _pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePlan(plan, signup.AdditionalSeats, "Password Manager");
 
@@ -528,17 +524,6 @@ public class OrganizationService : IOrganizationService
         if (!canUse)
         {
             throw new BadRequestException(exception);
-        }
-
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == license.PlanType);
-        if (plan is null)
-        {
-            throw new BadRequestException($"Server must be updated to support {license.Plan}.");
-        }
-
-        if (license.PlanType != PlanType.Custom && plan.Disabled)
-        {
-            throw new BadRequestException($"Plan {plan.Name} is disabled.");
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
@@ -882,7 +867,8 @@ public class OrganizationService : IOrganizationService
         var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
         if (additionalSmSeatsRequired > 0)
         {
-            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
         }
 
@@ -1008,7 +994,8 @@ public class OrganizationService : IOrganizationService
             if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
                 currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
             {
-                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
+                var plan = await _pricingClient.GetPlanOrThrow(currentOrganization.PlanType);
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, plan, false)
                 {
                     SmSeats = initialSmSeatCount.Value
                 };
@@ -2237,13 +2224,6 @@ public class OrganizationService : IOrganizationService
 
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        if (plan!.Disabled)
-        {
-            throw new BadRequestException("Plan not found.");
-        }
-
         organization.Id = CoreHelpers.GenerateComb();
         organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;

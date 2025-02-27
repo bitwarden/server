@@ -1,12 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Stripe;
 using Event = Stripe.Event;
 
@@ -16,6 +15,7 @@ public class UpcomingInvoiceHandler(
     ILogger<StripeEventProcessor> logger,
     IMailService mailService,
     IOrganizationRepository organizationRepository,
+    IPricingClient pricingClient,
     IProviderRepository providerRepository,
     IStripeFacade stripeFacade,
     IStripeEventService stripeEventService,
@@ -52,7 +52,9 @@ public class UpcomingInvoiceHandler(
 
             await TryEnableAutomaticTaxAsync(subscription);
 
-            if (!HasAnnualPlan(organization))
+            var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            if (!plan.IsAnnual)
             {
                 return;
             }
@@ -136,7 +138,7 @@ public class UpcomingInvoiceHandler(
     {
         if (subscription.AutomaticTax.Enabled ||
             !subscription.Customer.HasBillingLocation() ||
-            IsNonTaxableNonUSBusinessUseSubscription(subscription))
+            await IsNonTaxableNonUSBusinessUseSubscription(subscription))
         {
             return;
         }
@@ -150,14 +152,12 @@ public class UpcomingInvoiceHandler(
 
         return;
 
-        bool IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
+        async Task<bool> IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
         {
-            var familyPriceIds = new List<string>
-            {
-                // TODO: Replace with the PricingClient
-                StaticStore.GetPlan(PlanType.FamiliesAnnually2019).PasswordManager.StripePlanId,
-                StaticStore.GetPlan(PlanType.FamiliesAnnually).PasswordManager.StripePlanId
-            };
+            var familyPriceIds = (await Task.WhenAll(
+                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
+                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
+                .Select(plan => plan.PasswordManager.StripePlanId);
 
             return localSubscription.Customer.Address.Country != "US" &&
                    localSubscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
@@ -165,6 +165,4 @@ public class UpcomingInvoiceHandler(
                    !localSubscription.Customer.TaxIds.Any();
         }
     }
-
-    private static bool HasAnnualPlan(Organization org) => StaticStore.GetPlan(org.PlanType).IsAnnual;
 }
