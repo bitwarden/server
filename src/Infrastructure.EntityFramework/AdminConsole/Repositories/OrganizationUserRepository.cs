@@ -249,6 +249,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+#nullable enable
     public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
@@ -269,6 +270,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return (organizationUserUserDetails, collections);
         }
     }
+#nullable disable
 
     public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null)
     {
