@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -11,14 +12,27 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 public interface IPolicyRequirement;
 
 /// <summary>
-/// A factory function that takes a sequence of <see cref="PolicyDetails"/> and transforms them into a single
-/// <see cref="IPolicyRequirement"/> for consumption by the relevant domain. This will receive *all* policy types
-/// that may be enforced against a user; when implementing this delegate, you must filter out irrelevant policy types
-/// as well as policies that should not be enforced against a user (e.g. due to the user's role or status).
+/// An interface that defines how to create a single <see cref="IPolicyRequirement"/> from a sequence of
+/// <see cref="PolicyDetails"/>.
 /// </summary>
-/// <remarks>
-/// See <see cref="PolicyRequirementHelpers"/> for extension methods to handle common requirements when implementing
-/// this delegate.
-/// </remarks>
-public delegate T RequirementFactory<out T>(IEnumerable<PolicyDetails> policyDetails)
-    where T : IPolicyRequirement;
+public interface IRequirementFactory<out T> where T : IPolicyRequirement
+{
+    /// <summary>
+    /// The <see cref="PolicyType"/> that the requirement relates to.
+    /// </summary>
+    PolicyType PolicyType { get; }
+
+    /// <summary>
+    /// A predicate that determines whether a policy should be enforced against the user.
+    /// </summary>
+    /// <remarks>Use this to exempt users based on their role, status or other attributes.</remarks>
+    /// <param name="policyDetails">Policy details for the defined PolicyType.</param>
+    /// <returns>True if the policy should be enforced against the user, false otherwise.</returns>
+    bool Enforce(PolicyDetails policyDetails);
+
+    /// <summary>
+    /// A reducer method that creates a single <see cref="IPolicyRequirement"/> from a set of PolicyDetails.
+    /// </summary>
+    /// <param name="policyDetails">PolicyDetails for the specified PolicyType, after they have been filtered by the Enforce predicate.</param>
+    T Create(IEnumerable<PolicyDetails> policyDetails);
+}
