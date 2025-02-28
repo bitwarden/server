@@ -13,9 +13,9 @@ public class TwoFactorAuthenticatorResponseModel : ResponseModel
         ArgumentNullException.ThrowIfNull(user);
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Authenticator);
-        if (provider?.MetaData?.ContainsKey("Key") ?? false)
+        if (provider?.MetaData?.TryGetValue("Key", out var keyValue) ?? false)
         {
-            Key = (string)provider.MetaData["Key"];
+            Key = (string)keyValue;
             Enabled = provider.Enabled;
         }
         else
