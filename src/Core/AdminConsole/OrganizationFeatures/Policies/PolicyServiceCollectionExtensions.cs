@@ -33,6 +33,7 @@ public static class PolicyServiceCollectionExtensions
     {
         // Register policy requirement factories here
         services.AddPolicyRequirement(SendPolicyRequirement.Create);
+        services.AddPolicyRequirement(PersonalOwnershipPolicyRequirement.Create);
     }
 
     /// <summary>
