@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
@@ -248,7 +249,7 @@ public class PushControllerTests
         Assert.Equal("Not correctly configured for push relays.", exception.Message);
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(0)
-            .CreateOrUpdateRegistrationAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+            .CreateOrUpdateRegistrationAsync(Arg.Any<PushRegistrationData>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
                 Arg.Any<DeviceType>(), Arg.Any<IEnumerable<string>>(), Arg.Any<Guid>());
     }
 
@@ -265,7 +266,7 @@ public class PushControllerTests
         var expectedDeviceId = $"{installationId}_{deviceId}";
         var expectedOrganizationId = $"{installationId}_{organizationId}";
 
-        await sutProvider.Sut.RegisterAsync(new PushRegistrationRequestModel
+        var model = new PushRegistrationRequestModel
         {
             DeviceId = deviceId.ToString(),
             PushToken = "test-push-token",
@@ -274,10 +275,12 @@ public class PushControllerTests
             Identifier = identifier.ToString(),
             OrganizationIds = [organizationId.ToString()],
             InstallationId = installationId
-        });
+        };
+
+        await sutProvider.Sut.RegisterAsync(model);
 
         await sutProvider.GetDependency<IPushRegistrationService>().Received(1)
-            .CreateOrUpdateRegistrationAsync("test-push-token", expectedDeviceId, expectedUserId,
+            .CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(data => data == new PushRegistrationData(model.PushToken)), expectedDeviceId, expectedUserId,
                 expectedIdentifier, DeviceType.Android, Arg.Do<IEnumerable<string>>(organizationIds =>
                 {
                     var organizationIdsList = organizationIds.ToList();

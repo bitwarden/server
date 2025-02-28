@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings;
+﻿using Bit.Core.NotificationHub;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Xunit;
 
