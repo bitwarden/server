@@ -339,12 +339,17 @@ public class LicensingService : ILicensingService
         }
     }
 
-    public async Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    public async Task<string> CreateOrganizationTokenAsync(
+        Organization organization,
+        Guid installationId,
+        SubscriptionInfo subscriptionInfo,
+        int? smMaxProjects)
     {
         var licenseContext = new LicenseContext
         {
             InstallationId = installationId,
             SubscriptionInfo = subscriptionInfo,
+            SmMaxProjects = smMaxProjects
         };
 
         var claims = await _organizationLicenseClaimsFactory.GenerateClaims(organization, licenseContext);
