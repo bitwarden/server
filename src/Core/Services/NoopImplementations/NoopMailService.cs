@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Services;
 
@@ -26,6 +27,7 @@ public class NoopMailService : IMailService
     }
 
     public Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -86,7 +88,7 @@ public class NoopMailService : IMailService
     public Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email) =>
         Task.CompletedTask;
 
-    public Task SendTwoFactorEmailAsync(string email, string token)
+    public Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true)
     {
         return Task.FromResult(0);
     }
@@ -321,5 +323,9 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
-}
 
+    public Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    {
+        return Task.FromResult(0);
+    }
+}

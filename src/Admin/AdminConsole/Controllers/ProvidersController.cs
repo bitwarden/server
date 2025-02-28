@@ -3,7 +3,6 @@ using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -133,11 +132,6 @@ public class ProvidersController : Controller
     [HttpGet("providers/create/multi-organization-enterprise")]
     public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-        {
-            return RedirectToAction("Create");
-        }
-
         return View(new CreateMultiOrganizationEnterpriseProviderModel
         {
             OwnerEmail = ownerEmail,
@@ -211,10 +205,6 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-        {
-            return RedirectToAction("Create");
-        }
         await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
             provider,
             model.OwnerEmail,
@@ -235,7 +225,8 @@ public class ProvidersController : Controller
 
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderViewModel(provider, users, providerOrganizations));
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        return View(new ProviderViewModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -248,6 +239,18 @@ public class ProvidersController : Controller
         }
 
         return View(provider);
+    }
+
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var provider = await GetEditModel(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        return RedirectToAction("Edit", new { id });
     }
 
     [HttpPost]

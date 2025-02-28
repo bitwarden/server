@@ -83,6 +83,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
+    public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
+
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
@@ -241,7 +243,18 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set
+            {
+                // On development environment, the self-hosted overrides would not override the read-only connection string, since it is already set from the non-self-hosted connection string.
+                // This causes a bug, where the read-only connection string is pointing to self-hosted database.
+                if (!string.IsNullOrWhiteSpace(_readOnlyConnectionString) &&
+                    _readOnlyConnectionString == _connectionString)
+                {
+                    _readOnlyConnectionString = null;
+                }
+
+                _connectionString = value.Trim('"');
+            }
         }
 
         public string ReadOnlyConnectionString
@@ -260,7 +273,30 @@ public class GlobalSettings : IGlobalSettings
 
     public class EventLoggingSettings
     {
+        public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
+        public virtual string WebhookUrl { get; set; }
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+
+        public class AzureServiceBusSettings
+        {
+            private string _connectionString;
+            private string _topicName;
+
+            public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
+            public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set => _connectionString = value.Trim('"');
+            }
+
+            public string TopicName
+            {
+                get => _topicName;
+                set => _topicName = value.Trim('"');
+            }
+        }
 
         public class RabbitMqSettings
         {
@@ -270,8 +306,7 @@ public class GlobalSettings : IGlobalSettings
             private string _exchangeName;
 
             public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
-            public virtual string HttpPostQueueName { get; set; } = "events-httpPost-queue";
-            public virtual string HttpPostUrl { get; set; }
+            public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
 
             public string HostName
             {
@@ -643,5 +678,10 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+    }
+
+    public class WebPushSettings : IWebPushSettings
+    {
+        public string VapidPublicKey { get; set; }
     }
 }

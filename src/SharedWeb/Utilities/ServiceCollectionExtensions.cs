@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -49,7 +50,7 @@ using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using DnsClient;
-using IdentityModel;
+using Duende.IdentityModel;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -281,9 +282,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
         {
+            if (globalSettings.Installation.Id == Guid.Empty)
+            {
+                throw new InvalidOperationException("Installation Id must be set for self-hosted installations.");
+            }
+
             if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-                globalSettings.Installation?.Id != null &&
-                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+                CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
             {
                 services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
@@ -299,14 +304,17 @@ public static class ServiceCollectionExtensions
                 services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
             }
         }
-        else if (!globalSettings.SelfHosted)
+        else
         {
             services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
             services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
-                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
+                services.AddKeyedSingleton("notifications",
+                    (_, _) => new QueueClient(globalSettings.Notifications.ConnectionString, "notifications"));
+                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>(
+                    "implementation");
             }
         }
 
@@ -321,7 +329,15 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+            {
+                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
         }
         else if (globalSettings.SelfHosted)
         {

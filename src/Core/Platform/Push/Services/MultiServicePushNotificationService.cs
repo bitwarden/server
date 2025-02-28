@@ -1,6 +1,8 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Enums;
+using Bit.Core.NotificationCenter.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -23,7 +25,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
 
         _logger = logger;
         _logger.LogInformation("Hub services: {Services}", _services.Count());
-        globalSettings?.NotificationHubPool?.NotificationHubs?.ForEach(hub =>
+        globalSettings.NotificationHubPool?.NotificationHubs?.ForEach(hub =>
         {
             _logger.LogInformation("HubName: {HubName}, EnableSendTracing: {EnableSendTracing}, RegistrationStartDate: {RegistrationStartDate}, RegistrationEndDate: {RegistrationEndDate}", hub.HubName, hub.EnableSendTracing, hub.RegistrationStartDate, hub.RegistrationEndDate);
         });
@@ -131,20 +133,6 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId));
-        return Task.FromResult(0);
-    }
-
-    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string identifier,
-        string deviceId = null)
-    {
-        PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId));
-        return Task.FromResult(0);
-    }
-
     public Task PushSyncOrganizationStatusAsync(Organization organization)
     {
         PushToServices((s) => s.PushSyncOrganizationStatusAsync(organization));
@@ -157,14 +145,58 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.CompletedTask;
     }
 
+    public Task PushNotificationAsync(Notification notification)
+    {
+        PushToServices((s) => s.PushNotificationAsync(notification));
+        return Task.CompletedTask;
+    }
+
+    public Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
+    {
+        PushToServices((s) => s.PushNotificationStatusAsync(notification, notificationStatus));
+        return Task.CompletedTask;
+    }
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
+    {
+        PushToServices((s) =>
+            s.SendPayloadToInstallationAsync(installationId, type, payload, identifier, deviceId, clientType));
+        return Task.CompletedTask;
+    }
+
+    public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
+    {
+        PushToServices((s) => s.SendPayloadToUserAsync(userId, type, payload, identifier, deviceId, clientType));
+        return Task.FromResult(0);
+    }
+
+    public Task SendPayloadToOrganizationAsync(string orgId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null)
+    {
+        PushToServices((s) => s.SendPayloadToOrganizationAsync(orgId, type, payload, identifier, deviceId, clientType));
+        return Task.FromResult(0);
+    }
+
+    public Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        PushToServices((s) => s.PushPendingSecurityTasksAsync(userId));
+        return Task.CompletedTask;
+    }
+
     private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
     {
-        if (_services != null)
+        if (!_services.Any())
         {
-            foreach (var service in _services)
-            {
-                pushFunc(service);
-            }
+            _logger.LogWarning("No services found to push notification");
+            return;
+        }
+
+        foreach (var service in _services)
+        {
+            _logger.LogDebug("Pushing notification to service {ServiceName}", service.GetType().Name);
+            pushFunc(service);
         }
     }
 }
