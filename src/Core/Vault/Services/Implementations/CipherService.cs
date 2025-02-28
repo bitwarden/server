@@ -173,7 +173,7 @@ public class CipherService : ICipherService
                 {
                     // Check if user has permission to change passwords
                     var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-                    if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !permission.ViewPassword)
+                    if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
                     {
                         // replace the new cipher's password with the existing cipher's password to prevent password changes
                         var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
