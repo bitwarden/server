@@ -203,27 +203,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
 
     private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
     {
-        if (_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
-        {
-            try
-            {
-                var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-                if (authEmailDecoded != context.UserName)
-                {
-                    return false;
-                }
-            }
-            catch (Exception e) when (e is InvalidOperationException || e is FormatException)
-            {
-                // Invalid B64 encoding
-                return false;
-            }
-        }
-        else
-        {
-            return false;
-        }
-
+        // Auth-Email header is now deprecated and completely optional
+        // We no longer validate it even if it's present
         return true;
     }
 }
