@@ -13,7 +13,9 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Services;
@@ -38,6 +40,7 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
+    private readonly IGetCipherPermissionsForUserQuery _getCipherPermissionsForUserQuery;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -54,7 +57,8 @@ public class CipherService : ICipherService
         IPolicyService policyService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IGetCipherPermissionsForUserQuery getCipherPermissionsForUserQuery)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -71,6 +75,7 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
+        _getCipherPermissionsForUserQuery = getCipherPermissionsForUserQuery;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -161,6 +166,23 @@ public class CipherService : ICipherService
         {
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
+            if (cipher.Type == CipherType.Login && cipher.Data != null)
+            {
+                var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
+                if (existingCipher != null)
+                {
+                    // Check if user has permission to change passwords
+                    var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
+                    if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !permission.ViewPassword)
+                    {
+                        // replace the new cipher's password with the existing cipher's password to prevent password changes
+                        var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
+                        var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+                        newCipherData.Password = existingCipherPassword;
+                        cipher.Data = JsonSerializer.Serialize(newCipherData);
+                    }
+                }
+            }
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 

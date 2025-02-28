@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -9,7 +10,9 @@ using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
@@ -723,6 +726,39 @@ public class CipherServiceTests
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
             Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_PasswordNotChangedWithoutPermission(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipherDetails,
+        Cipher existingCipher)
+    {
+        cipherDetails.OrganizationId = Guid.NewGuid();
+        cipherDetails.Type = CipherType.Login;
+        var newLoginData = new CipherLoginData { Username = "user", Password = "NewPassword" };
+        cipherDetails.Data = JsonSerializer.Serialize(newLoginData);
+
+        var originalLoginData = new CipherLoginData { Username = "user", Password = "OriginalPassword" };
+        existingCipher.Id = cipherDetails.Id;
+        existingCipher.Data = JsonSerializer.Serialize(originalLoginData);
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherDetails.Id)
+            .Returns(existingCipher);
+
+        var permissions = new Dictionary<Guid, OrganizationCipherPermission>
+        {
+            { cipherDetails.Id, new OrganizationCipherPermission { ViewPassword = false } }
+        };
+        sutProvider.GetDependency<IGetCipherPermissionsForUserQuery>()
+            .GetByOrganization(cipherDetails.OrganizationId.Value)
+            .Returns(permissions);
+
+        await sutProvider.Sut.SaveDetailsAsync(cipherDetails, cipherDetails.UserId.Value, cipherDetails.RevisionDate, null, true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(cipherDetails.Data);
+        Assert.Equal("OriginalPassword", updatedLoginData.Password);
     }
 
     private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)
