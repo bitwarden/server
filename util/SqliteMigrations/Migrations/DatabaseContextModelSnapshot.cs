@@ -201,6 +201,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("UseTotp")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseViewPolicies")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UsersGetPremium")
                         .HasColumnType("INTEGER");
 

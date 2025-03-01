@@ -11,6 +11,7 @@ public class Permissions
     public bool EditAnyCollection { get; set; }
     public bool DeleteAnyCollection { get; set; }
     public bool ManageGroups { get; set; }
+    public bool AccessPolicies { get; set; }
     public bool ManagePolicies { get; set; }
     public bool ManageSso { get; set; }
     public bool ManageUsers { get; set; }
@@ -27,6 +28,7 @@ public class Permissions
         (EditAnyCollection, "editanycollection"),
         (DeleteAnyCollection, "deleteanycollection"),
         (ManageGroups, "managegroups"),
+        (AccessPolicies, "accesspolicies"),
         (ManagePolicies, "managepolicies"),
         (ManageSso, "managesso"),
         (ManageUsers, "manageusers"),

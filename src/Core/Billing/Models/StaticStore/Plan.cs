@@ -16,6 +16,7 @@ public abstract record Plan
     public bool CanBeUsedByBusiness { get; protected init; }
     public int? TrialPeriodDays { get; protected init; }
     public bool HasSelfHost { get; protected init; }
+    public bool HasViewPolicies { get; protected init; }
     public bool HasPolicies { get; protected init; }
     public bool HasGroups { get; protected init; }
     public bool HasDirectory { get; protected init; }

@@ -49,6 +49,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
     public PlanType PlanType { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
+    public bool UseViewPolicies { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
     public bool UseKeyConnector { get; set; }
@@ -296,6 +297,7 @@ public class Organization : ITableObject<Guid>, IStorableSubscriber, IRevisable,
         UseTotp = license.UseTotp;
         Use2fa = license.Use2fa;
         UseApi = license.UseApi;
+        UseViewPolicies = license.UseViewPolicies;
         UsePolicies = license.UsePolicies;
         UseSso = license.UseSso;
         UseKeyConnector = license.UseKeyConnector;

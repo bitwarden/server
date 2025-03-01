@@ -27,6 +27,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         Name = o.Name,
                         Enabled = o.Enabled,
                         PlanType = o.PlanType,
+                        UseViewPolicies = o.UseViewPolicies,
                         UsePolicies = o.UsePolicies,
                         UseSso = o.UseSso,
                         UseKeyConnector = o.UseKeyConnector,

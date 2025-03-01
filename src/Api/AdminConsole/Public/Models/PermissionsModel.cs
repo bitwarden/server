@@ -26,6 +26,7 @@ public class PermissionsModel
         EditAnyCollection = data.EditAnyCollection;
         DeleteAnyCollection = data.DeleteAnyCollection;
         ManageGroups = data.ManageGroups;
+        AccessPolicies = data.AccessPolicies;
         ManagePolicies = data.ManagePolicies;
         ManageSso = data.ManageSso;
         ManageUsers = data.ManageUsers;
@@ -40,6 +41,7 @@ public class PermissionsModel
     public bool EditAnyCollection { get; set; }
     public bool DeleteAnyCollection { get; set; }
     public bool ManageGroups { get; set; }
+    public bool AccessPolicies { get; set; }
     public bool ManagePolicies { get; set; }
     public bool ManageSso { get; set; }
     public bool ManageUsers { get; set; }
@@ -57,6 +59,7 @@ public class PermissionsModel
             EditAnyCollection = EditAnyCollection,
             DeleteAnyCollection = DeleteAnyCollection,
             ManageGroups = ManageGroups,
+            AccessPolicies = AccessPolicies,
             ManagePolicies = ManagePolicies,
             ManageSso = ManageSso,
             ManageUsers = ManageUsers,

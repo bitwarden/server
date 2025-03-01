@@ -17,6 +17,7 @@ public record TeamsPlan : Plan
 
         TrialPeriodDays = 7;
 
+        HasViewPolicies = true;
         HasGroups = true;
         HasDirectory = true;
         HasEvents = true;
