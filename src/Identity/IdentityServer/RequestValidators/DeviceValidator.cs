@@ -69,6 +69,10 @@ public class DeviceValidator(
             request.GrantType == "password" &&
             request.Raw["AuthRequest"] == null &&
             !context.TwoFactorRequired &&
+            // Here we want to allow a successful recovery code flow through. In the recovery
+            // code flow we disable TwoFactorRequired so we want to be able to skip this check
+            // in the event the recovery code is valid.
+            !context.InRecoveryFlowAndValidCode &&
             !context.SsoRequired &&
             _globalSettings.EnableNewDeviceVerification)
         {
