@@ -284,7 +284,7 @@ public class RestoreOrganizationUserCommand(
         if (!singleOrgCompliant && !twoFactorCompliant)
         {
             throw new BadRequestException(user.Email +
-                                          " is not compliant with the single organization and two-step login polciy");
+                                          " is not compliant with the single organization and two-step login policy");
         }
         else if (!singleOrgCompliant)
         {
