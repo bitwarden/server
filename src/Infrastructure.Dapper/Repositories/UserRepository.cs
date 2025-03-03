@@ -264,10 +264,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         await using var transaction = connection.BeginTransaction();
         try
         {
-            if (user.AccountRevisionDate == null)
-            {
-                user.AccountRevisionDate = user.RevisionDate;
-            }
+            user.AccountRevisionDate = user.RevisionDate;
 
             ProtectData(user);
             await connection.ExecuteAsync(
