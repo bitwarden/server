@@ -26,27 +26,23 @@ public class DeviceRotationValidator : IRotationValidator<IEnumerable<OtherDevic
     {
         var result = new List<Device>();
 
-        var existingDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-        if (existingDevices == null || existingDevices.Count == 0)
+        var existingTrustedDevices = (await _deviceRepository.GetManyByUserIdAsync(user.Id)).Where(d => d.IsTrusted()).ToList();
+        if (existingTrustedDevices == null || existingTrustedDevices.Count == 0)
         {
             return result;
         }
 
-        foreach (var existing in existingDevices)
+        foreach (var existing in existingTrustedDevices)
         {
             var device = devices.FirstOrDefault(c => c.DeviceId == existing.Id);
             if (device == null)
             {
-                throw new BadRequestException("All existing devices must be included in the rotation.");
+                throw new BadRequestException("All existing trusted devices must be included in the rotation.");
             }
 
-            if (existing.IsTrusted() && (device.EncryptedUserKey == null || device.EncryptedPublicKey == null))
+            if (device.EncryptedUserKey == null || device.EncryptedPublicKey == null)
             {
                 throw new BadRequestException("Rotated encryption keys must be provided for all devices that are trusted.");
-            }
-            else if (!existing.IsTrusted() && (device.EncryptedUserKey != null || device.EncryptedPublicKey != null))
-            {
-                throw new BadRequestException("Rotated encryption keys must not be provided for devices that are not trusted.");
             }
 
             result.Add(device.ToDevice(existing));

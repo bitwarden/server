@@ -36,18 +36,6 @@ public class DeviceRotationValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_SentDevicesUntrustedButDatabaseTrusted_Throws(
-        SutProvider<DeviceRotationValidator> sutProvider, User user, IEnumerable<OtherDeviceKeysUpdateRequestModel> devices)
-    {
-        var userCiphers = devices.Select(c => new Device { Id = c.DeviceId, EncryptedPrivateKey = null, EncryptedPublicKey = null, EncryptedUserKey = null }).ToList().Slice(0, 1);
-        sutProvider.GetDependency<IDeviceRepository>().GetManyByUserIdAsync(user.Id)
-            .Returns(userCiphers);
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, [
-            new OtherDeviceKeysUpdateRequestModel { DeviceId = userCiphers.First().Id, EncryptedPublicKey = "Key", EncryptedUserKey = "Key" }
-        ]));
-    }
-
-    [Theory, BitAutoData]
     public async Task ValidateAsync_Validates(
         SutProvider<DeviceRotationValidator> sutProvider, User user, IEnumerable<OtherDeviceKeysUpdateRequestModel> devices)
     {
