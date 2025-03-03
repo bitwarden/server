@@ -17,7 +17,7 @@ public class DeviceRotationValidatorTests
     public async Task ValidateAsync_SentDevicesAreEmptyButDatabaseDevicesAreNot_Throws(
         SutProvider<DeviceRotationValidator> sutProvider, User user, IEnumerable<OtherDeviceKeysUpdateRequestModel> devices)
     {
-        var userCiphers = devices.Select(c => new Device { Id = c.DeviceId }).ToList();
+        var userCiphers = devices.Select(c => new Device { Id = c.DeviceId, EncryptedPrivateKey = "EncryptedPrivateKey", EncryptedPublicKey = "EncryptedPublicKey", EncryptedUserKey = "EncryptedUserKey" }).ToList();
         sutProvider.GetDependency<IDeviceRepository>().GetManyByUserIdAsync(user.Id)
             .Returns(userCiphers);
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>()));
