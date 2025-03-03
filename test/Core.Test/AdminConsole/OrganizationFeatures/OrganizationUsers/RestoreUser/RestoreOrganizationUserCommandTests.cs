@@ -389,7 +389,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Contains("test@bitwarden.com is not compliant with the single organization and two-step login polciy", exception.Message.ToLowerInvariant());
+        Assert.Contains("test@bitwarden.com is not compliant with the single organization and two-step login policy", exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
