@@ -236,13 +236,14 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task DeleteAdmin_WithAdminAndAccessToAllCollectionItems_DeletesCipher(
-        Cipher cipher, Guid userId,
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task DeleteAdmin_WithAdminOrOwnerAndAccessToAllCollectionItems_DeletesCipher(
+        OrganizationUserType organizationUserType, Cipher cipher, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         cipher.OrganizationId = organization.Id;
-        organization.Type = OrganizationUserType.Owner;
+        organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -312,14 +313,15 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task DeleteManyAdmin_WithAdminAndAccessToAllCollectionItems_DeletesCiphers(
-        CipherBulkDeleteRequestModel model, Guid userId, List<Cipher> ciphers,
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task DeleteManyAdmin_WithAdminOrOwnerAndAccessToAllCollectionItems_DeletesCiphers(
+        OrganizationUserType organizationUserType, CipherBulkDeleteRequestModel model, Guid userId, List<Cipher> ciphers,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id.ToString();
         model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
-        organization.Type = OrganizationUserType.Owner;
+        organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -410,13 +412,14 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task PutDeleteAdmin_WithAdminAndAccessToAllCollectionItems_SoftDeletesCipher(
-        Cipher cipher, Guid userId,
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task PutDeleteAdmin_WithAdminOrOwnerAndAccessToAllCollectionItems_SoftDeletesCipher(
+        OrganizationUserType organizationUserType, Cipher cipher, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         cipher.OrganizationId = organization.Id;
-        organization.Type = OrganizationUserType.Owner;
+        organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
@@ -486,14 +489,15 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task PutDeleteManyAdmin_WithAdminAndAccessToAllCollectionItems_SoftDeletesCiphers(
-        CipherBulkDeleteRequestModel model, Guid userId, List<Cipher> ciphers,
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task PutDeleteManyAdmin_WithAdminOrOwnerAndAccessToAllCollectionItems_SoftDeletesCiphers(
+        OrganizationUserType organizationUserType, CipherBulkDeleteRequestModel model, Guid userId, List<Cipher> ciphers,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id.ToString();
         model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
-        organization.Type = OrganizationUserType.Owner;
+        organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -584,15 +588,16 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task PutRestoreAdmin_WithAdminAndAccessToAllCollectionItems_RestoresCipher(
-        CipherDetails cipher, Guid userId,
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task PutRestoreAdmin_WithAdminOrOwnerAndAccessToAllCollectionItems_RestoresCipher(
+        OrganizationUserType organizationUserType, CipherDetails cipher, Guid userId,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         cipher.OrganizationId = organization.Id;
         cipher.Type = CipherType.Login;
         cipher.Data = JsonSerializer.Serialize(new CipherLoginData());
-        organization.Type = OrganizationUserType.Owner;
+        organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
@@ -671,14 +676,15 @@ public class CiphersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task PutRestoreManyAdmin_WithAdminAndAccessToAllCollectionItems_RestoresCiphers(
-        CipherBulkRestoreRequestModel model, Guid userId, List<Cipher> ciphers,
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.Admin)]
+    public async Task PutRestoreManyAdmin_WithAdminOrOwnerAndAccessToAllCollectionItems_RestoresCiphers(
+        OrganizationUserType organizationUserType, CipherBulkRestoreRequestModel model, Guid userId, List<Cipher> ciphers,
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id;
         model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
-        organization.Type = OrganizationUserType.Owner;
+        organization.Type = organizationUserType;
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
