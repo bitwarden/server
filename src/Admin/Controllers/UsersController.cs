@@ -102,12 +102,13 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, withOrganizations: false);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         var billingHistoryInfo = await _paymentService.GetBillingHistoryAsync(user);
         var isTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var verifiedDomain = await AccountDeprovisioningEnabled(user.Id);
         var deviceVerificationRequired = await _userService.ActiveNewDeviceVerificationException(user.Id);
+
         return View(new UserEditModel(user, isTwoFactorEnabled, ciphers, billingInfo, billingHistoryInfo, _globalSettings, verifiedDomain, deviceVerificationRequired));
     }
 
