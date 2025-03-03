@@ -214,9 +214,9 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
-            OrganizationId = organization.Id,
             InitialSeatCount = initialSeatCount,
             CurrentSeatCount = organization.Seats.Value,
+            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
@@ -229,8 +229,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -1103,8 +1103,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1118,8 +1118,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxServiceAccountsCount = maxSeatCount,
+            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1223,4 +1223,11 @@ public class HandlebarsMailService : IMailService
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
+
+    public string VaultSubscriptionUrl(Guid organizationId)
+        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
+        {
+            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
+            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
+        };
 }

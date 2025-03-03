@@ -2,6 +2,6 @@
 
 public class OrganizationSeatsMaxReachedViewModel : BaseMailModel
 {
-    public Guid OrganizationId { get; set; }
     public int MaxSeatCount { get; set; }
+    public string VaultSubscriptionUrl { get; set; }
 }
