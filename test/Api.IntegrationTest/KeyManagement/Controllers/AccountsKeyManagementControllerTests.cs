@@ -238,6 +238,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         ];
         request.AccountUnlockData.MasterPasswordUnlockData.MasterKeyEncryptedUserKey = _mockEncryptedString;
         request.AccountUnlockData.PasskeyUnlockData = [];
+        request.AccountUnlockData.DeviceKeyUnlockData = [];
         request.AccountUnlockData.EmergencyAccessUnlockData = [];
         request.AccountUnlockData.OrganizationAccountRecoveryUnlockData = [];
 
