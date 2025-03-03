@@ -407,6 +407,14 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("City")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("CountryName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -421,6 +429,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("PublicKey")
                         .HasColumnType("text");
+
+                    b.Property<string>("Region")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("RequestDeviceIdentifier")
                         .HasMaxLength(50)
