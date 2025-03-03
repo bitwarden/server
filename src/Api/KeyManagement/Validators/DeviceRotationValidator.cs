@@ -3,26 +3,23 @@ using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
 namespace Bit.Api.KeyManagement.Validators;
 
 /// <summary>
-/// Send implementation for <see cref="IRotationValidator{T,R}"/>
+/// Device implementation for <see cref="IRotationValidator{T,R}"/>
 /// </summary>
 public class DeviceRotationValidator : IRotationValidator<IEnumerable<OtherDeviceKeysUpdateRequestModel>, IEnumerable<Device>>
 {
     private readonly IDeviceRepository _deviceRepository;
-    private readonly IDeviceService _deviceService;
 
     /// <summary>
     /// Instantiates a new <see cref="DeviceRotationValidator"/>
     /// </summary>
-    /// <param name="deviceService">Retrieves all user <see cref="Device"/>s</param>
-    public DeviceRotationValidator(IDeviceRepository deviceRepository, IDeviceService deviceService)
+    /// <param name="deviceRepository">Retrieves all user <see cref="Device"/>s</param>
+    public DeviceRotationValidator(IDeviceRepository deviceRepository)
     {
         _deviceRepository = deviceRepository;
-        _deviceService = deviceService;
     }
 
     public async Task<IEnumerable<Device>> ValidateAsync(User user, IEnumerable<OtherDeviceKeysUpdateRequestModel> devices)
@@ -40,7 +37,7 @@ public class DeviceRotationValidator : IRotationValidator<IEnumerable<OtherDevic
             var device = devices.FirstOrDefault(c => c.DeviceId == existing.Id);
             if (device == null)
             {
-                throw new BadRequestException("All existing sends must be included in the rotation.");
+                throw new BadRequestException("All existing devices must be included in the rotation.");
             }
 
             if (existing.IsTrusted() && (device.EncryptedUserKey == null || device.EncryptedPublicKey == null))
