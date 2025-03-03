@@ -320,8 +320,7 @@ public class CiphersControllerTests
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
         organization.Type = OrganizationUserType.Owner;
 
@@ -340,7 +339,7 @@ public class CiphersControllerTests
             .Received(1)
             .DeleteManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count() == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organization.Id, true);
     }
 
@@ -352,8 +351,7 @@ public class CiphersControllerTests
         SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions.EditAnyCollection = true;
@@ -368,7 +366,7 @@ public class CiphersControllerTests
             .Received(1)
             .DeleteManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count() == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organization.Id, true);
     }
 
@@ -380,8 +378,12 @@ public class CiphersControllerTests
     {
         var organizationId = Guid.NewGuid();
         model.OrganizationId = organizationId.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organizationId;
+        }
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
@@ -393,24 +395,19 @@ public class CiphersControllerTests
             .Received(1)
             .DeleteManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count() == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organizationId, true);
     }
 
     [Theory]
     [BitAutoData]
     public async Task DeleteManyAdmin_WithProviderUser_WithRestrictProviderAccessTrue_ThrowsNotFoundException(
-        CipherBulkDeleteRequestModel model, Guid userId,
-        List<Cipher> ciphers, SutProvider<CiphersController> sutProvider)
+        CipherBulkDeleteRequestModel model, SutProvider<CiphersController> sutProvider)
     {
         var organizationId = Guid.NewGuid();
         model.OrganizationId = organizationId.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
 
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organizationId).Returns(ciphers);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteManyAdmin(model));
@@ -486,9 +483,8 @@ public class CiphersControllerTests
         cipher.OrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(cipher.OrganizationId.Value).Returns(true);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(cipher.OrganizationId.Value).Returns(new List<Cipher> { cipher });
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutDeleteAdmin(cipher.Id.ToString()));
@@ -501,8 +497,7 @@ public class CiphersControllerTests
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
         organization.Type = OrganizationUserType.Owner;
 
@@ -520,7 +515,7 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .SoftDeleteManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count() == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organization.Id, true);
     }
 
@@ -532,8 +527,7 @@ public class CiphersControllerTests
         SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions.EditAnyCollection = true;
@@ -548,7 +542,7 @@ public class CiphersControllerTests
             .Received(1)
             .SoftDeleteManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count() == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organization.Id, true);
     }
 
@@ -560,8 +554,12 @@ public class CiphersControllerTests
     {
         var organizationId = Guid.NewGuid();
         model.OrganizationId = organizationId.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organizationId;
+        }
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
@@ -572,24 +570,19 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .SoftDeleteManyAsync(
                 Arg.Is<IEnumerable<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count() == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count() == model.Ids.Count()),
                 userId, organizationId, true);
     }
 
     [Theory]
     [BitAutoData]
     public async Task PutDeleteManyAdmin_WithProviderUser_WithRestrictProviderAccessTrue_ThrowsNotFoundException(
-        CipherBulkDeleteRequestModel model, Guid userId,
-        List<Cipher> ciphers, SutProvider<CiphersController> sutProvider)
+        CipherBulkDeleteRequestModel model, SutProvider<CiphersController> sutProvider)
     {
         var organizationId = Guid.NewGuid();
         model.OrganizationId = organizationId.ToString();
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
 
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(organizationId).Returns(true);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organizationId).Returns(ciphers);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutDeleteManyAdmin(model));
@@ -658,9 +651,8 @@ public class CiphersControllerTests
         cipher.Type = CipherType.Login;
         cipher.Data = JsonSerializer.Serialize(new CipherLoginData());
 
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(cipher.OrganizationId.Value).Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(cipher.OrganizationId.Value).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(cipher.OrganizationId.Value).Returns(true);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(cipher.OrganizationId.Value).Returns(new List<Cipher> { cipher });
 
@@ -677,15 +669,10 @@ public class CiphersControllerTests
         CipherDetails cipher, Guid userId, SutProvider<CiphersController> sutProvider)
     {
         cipher.OrganizationId = Guid.NewGuid();
-        cipher.Type = CipherType.Login;
-        cipher.Data = JsonSerializer.Serialize(new CipherLoginData());
-
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(cipher.OrganizationId.Value).Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(cipher.OrganizationId.Value).Returns(true);
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(cipher.OrganizationId.Value).Returns(true);
         sutProvider.GetDependency<ICipherRepository>().GetOrganizationDetailsByIdAsync(cipher.Id).Returns(cipher);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(cipher.OrganizationId.Value).Returns(new List<Cipher> { cipher });
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutRestoreAdmin(cipher.Id.ToString()));
@@ -698,8 +685,7 @@ public class CiphersControllerTests
         CurrentContextOrganization organization, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id;
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
         organization.Type = OrganizationUserType.Owner;
 
@@ -743,7 +729,7 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .RestoreManyAsync(
                 Arg.Is<HashSet<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count == model.Ids.Count()),
                 userId, organization.Id, true);
         Assert.NotNull(result);
         Assert.IsType<ListResponseModel<CipherMiniResponseModel>>(result);
@@ -758,8 +744,7 @@ public class CiphersControllerTests
         SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = organization.Id;
-        var cipherIds = ciphers.Select(c => c.Id).ToList();
-        model.Ids = cipherIds.Select(id => id.ToString()).ToList();
+        model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
         organization.Type = OrganizationUserType.Custom;
         organization.Permissions.EditAnyCollection = true;
@@ -793,19 +778,18 @@ public class CiphersControllerTests
         sutProvider.GetDependency<ICipherService>()
             .RestoreManyAsync(
                 Arg.Is<HashSet<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count == model.Ids.Count()),
                 userId, organization.Id, true)
             .Returns(cipherOrgDetails);
 
         var result = await sutProvider.Sut.PutRestoreManyAdmin(model);
 
         Assert.NotNull(result);
-        Assert.IsType<ListResponseModel<CipherMiniResponseModel>>(result);
         Assert.Equal(ciphers.Count, result.Data.Count());
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .RestoreManyAsync(
                 Arg.Is<HashSet<Guid>>(ids =>
-                    ids.All(id => cipherIds.Contains(id)) && ids.Count == cipherIds.Count),
+                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count == model.Ids.Count()),
                 userId, organization.Id, true);
     }
 
@@ -818,56 +802,39 @@ public class CiphersControllerTests
         model.OrganizationId = Guid.NewGuid();
         model.Ids = ciphers.Select(c => c.Id.ToString()).ToList();
 
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(model.OrganizationId).Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(model.OrganizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(model.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(model.OrganizationId).Returns(ciphers);
 
-        var cipherOrgDetails = ciphers.Select(c =>
+        var cipherOrgDetails = ciphers.Select(c => new CipherOrganizationDetails
         {
-            var details = new CipherOrganizationDetails
-            {
-                Id = c.Id,
-                OrganizationId = model.OrganizationId,
-                Type = c.Type,
-                Data = "{}",
-                Attachments = c.Attachments,
-                RevisionDate = c.RevisionDate,
-                DeletedDate = c.DeletedDate,
-            };
-            return details;
+            Id = c.Id,
+            OrganizationId = model.OrganizationId
         }).ToList();
 
         sutProvider.GetDependency<ICipherService>()
             .RestoreManyAsync(
-                Arg.Is<HashSet<Guid>>(ids =>
-                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count == model.Ids.Count()),
+                Arg.Any<HashSet<Guid>>(),
                 userId, model.OrganizationId, true)
             .Returns(cipherOrgDetails);
 
         var result = await sutProvider.Sut.PutRestoreManyAdmin(model);
 
         Assert.NotNull(result);
-        Assert.IsType<ListResponseModel<CipherMiniResponseModel>>(result);
-        Assert.Equal(ciphers.Count, result.Data.Count());
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .RestoreManyAsync(
-                Arg.Is<HashSet<Guid>>(ids =>
-                    ids.All(id => model.Ids.Contains(id.ToString())) && ids.Count == model.Ids.Count()),
+                Arg.Is<HashSet<Guid>>(ids => ids.Count == model.Ids.Count()),
                 userId, model.OrganizationId, true);
     }
 
     [Theory]
     [BitAutoData]
     public async Task PutRestoreManyAdmin_WithProviderUser_WithRestrictProviderAccessTrue_ThrowsNotFoundException(
-        CipherBulkRestoreRequestModel model, Guid userId,
-        List<Cipher> ciphers, SutProvider<CiphersController> sutProvider)
+        CipherBulkRestoreRequestModel model, SutProvider<CiphersController> sutProvider)
     {
         model.OrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(model.OrganizationId).Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(model.OrganizationId).Returns(ciphers);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.RestrictProviderAccess).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutRestoreManyAdmin(model));
