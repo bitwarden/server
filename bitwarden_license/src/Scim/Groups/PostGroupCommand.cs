@@ -1,11 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Scim.Context;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 
@@ -14,17 +11,13 @@ namespace Bit.Scim.Groups;
 public class PostGroupCommand : IPostGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IScimContext _scimContext;
     private readonly ICreateGroupCommand _createGroupCommand;
 
     public PostGroupCommand(
         IGroupRepository groupRepository,
-        IOrganizationRepository organizationRepository,
-        IScimContext scimContext,
         ICreateGroupCommand createGroupCommand)
     {
         _groupRepository = groupRepository;
-        _scimContext = scimContext;
         _createGroupCommand = createGroupCommand;
     }
 
@@ -50,11 +43,6 @@ public class PostGroupCommand : IPostGroupCommand
 
     private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model)
     {
-        if (_scimContext.RequestScimProvider != ScimProviderType.Okta)
-        {
-            return;
-        }
-
         if (model.Members == null)
         {
             return;

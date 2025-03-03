@@ -8,6 +8,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -17,6 +18,8 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationEditModel : OrganizationViewModel
 {
+    private readonly List<Plan> _plans;
+
     public OrganizationEditModel() { }
 
     public OrganizationEditModel(Provider provider)
@@ -40,6 +43,7 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingHistoryInfo billingHistoryInfo,
         IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings,
+        List<Plan> plans,
         int secrets,
         int projects,
         int serviceAccounts,
@@ -96,6 +100,8 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
+
+        _plans = plans;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -183,7 +189,7 @@ public class OrganizationEditModel : OrganizationViewModel
      * Add mappings for individual properties as you need them
      */
     public object GetPlansHelper() =>
-        StaticStore.Plans
+        _plans
             .Select(p =>
             {
                 var plan = new

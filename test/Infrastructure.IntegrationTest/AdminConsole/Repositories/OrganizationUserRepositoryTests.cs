@@ -2,9 +2,10 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class OrganizationUserRepositoryTests
 {
@@ -353,5 +354,74 @@ public class OrganizationUserRepositoryTests
         Assert.NotNull(responseModel);
         Assert.Single(responseModel);
         Assert.Equal(orgUser1.Id, responseModel.Single().Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateManyAsync_NoId_Works(IOrganizationRepository organizationRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateTestUserAsync("user1");
+        var user2 = await userRepository.CreateTestUserAsync("user2");
+        var user3 = await userRepository.CreateTestUserAsync("user3");
+        List<User> users = [user1, user2, user3];
+
+        var org = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"test-{Guid.NewGuid()}",
+            BillingEmail = "billing@example.com", // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+        });
+
+        var orgUsers = users.Select(u => new OrganizationUser
+        {
+            OrganizationId = org.Id,
+            UserId = u.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner
+        });
+
+        var createdOrgUserIds = await organizationUserRepository.CreateManyAsync(orgUsers);
+
+        var readOrgUsers = await organizationUserRepository.GetManyByOrganizationAsync(org.Id, null);
+        var readOrgUserIds = readOrgUsers.Select(ou => ou.Id);
+
+        Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateManyAsync_WithId_Works(IOrganizationRepository organizationRepository,
+        IUserRepository userRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user1 = await userRepository.CreateTestUserAsync("user1");
+        var user2 = await userRepository.CreateTestUserAsync("user2");
+        var user3 = await userRepository.CreateTestUserAsync("user3");
+        List<User> users = [user1, user2, user3];
+
+        var org = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"test-{Guid.NewGuid()}",
+            BillingEmail = "billing@example.com", // TODO: EF does not enforce this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
+        });
+
+        var orgUsers = users.Select(u => new OrganizationUser
+        {
+            Id = CoreHelpers.GenerateComb(),    // generate ID ahead of time
+            OrganizationId = org.Id,
+            UserId = u.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner
+        });
+
+        var createdOrgUserIds = await organizationUserRepository.CreateManyAsync(orgUsers);
+
+        var readOrgUsers = await organizationUserRepository.GetManyByOrganizationAsync(org.Id, null);
+        var readOrgUserIds = readOrgUsers.Select(ou => ou.Id);
+
+        Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
     }
 }
