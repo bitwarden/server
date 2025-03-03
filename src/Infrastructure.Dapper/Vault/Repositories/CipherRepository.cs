@@ -98,7 +98,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
             return results
                 .GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(og => og.Edit).First())
+                .Select(g => g.OrderByDescending(og => og.Edit).ThenByDescending(og => og.ViewPassword).First())
                 .ToList();
         }
     }
@@ -320,6 +320,28 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(
+        Guid organizationId, IEnumerable<SecurityTask> tasks)
+    {
+        var cipherIds = tasks.Where(t => t.CipherId.HasValue).Select(t => t.CipherId.Value).Distinct().ToList();
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+
+            var results = await connection.QueryAsync<UserCipherForTask>(
+                $"[{Schema}].[UserSecurityTasks_GetManyByCipherIds]",
+                new { OrganizationId = organizationId, CipherIds = cipherIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.Select(r => new UserSecurityTaskCipher
+            {
+                UserId = r.UserId,
+                Email = r.Email,
+                CipherId = r.CipherId,
+                TaskId = tasks.First(t => t.CipherId == r.CipherId).Id
+            }).ToList();
         }
     }
 

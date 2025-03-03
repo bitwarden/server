@@ -66,8 +66,8 @@ public class UserServiceTests
         user.EmailVerified = true;
         user.Email = userLicense.Email;
 
-        sutProvider.GetDependency<Settings.IGlobalSettings>().SelfHosted = true;
-        sutProvider.GetDependency<Settings.IGlobalSettings>().LicenseDirectory = tempDir.Directory;
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted = true;
+        sutProvider.GetDependency<IGlobalSettings>().LicenseDirectory = tempDir.Directory;
         sutProvider.GetDependency<ILicensingService>()
             .VerifyLicense(userLicense)
             .Returns(true);
@@ -96,6 +96,9 @@ public class UserServiceTests
     {
         var email = user.Email.ToLowerInvariant();
         var token = "thisisatokentocompare";
+        var authentication = true;
+        var IpAddress = "1.1.1.1";
+        var deviceType = "Android";
 
         var userTwoFactorTokenProvider = Substitute.For<IUserTwoFactorTokenProvider<User>>();
         userTwoFactorTokenProvider
@@ -104,6 +107,10 @@ public class UserServiceTests
         userTwoFactorTokenProvider
             .GenerateAsync("TwoFactor", Arg.Any<UserManager<User>>(), user)
             .Returns(Task.FromResult(token));
+
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = DeviceType.Android;
+        context.IpAddress = IpAddress;
 
         sutProvider.Sut.RegisterTokenProvider("Custom_Email", userTwoFactorTokenProvider);
 
@@ -119,7 +126,7 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendTwoFactorEmailAsync(email, token);
+            .SendTwoFactorEmailAsync(email, user.Email, token, IpAddress, deviceType, authentication);
     }
 
     [Theory, BitAutoData]
@@ -158,6 +165,44 @@ public class UserServiceTests
         });
 
         await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendNewDeviceVerificationEmailAsync_ExceptionBecauseUserNull(SutProvider<UserService> sutProvider)
+    {
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SendNewDeviceVerificationEmailAsync(null));
+    }
+
+    [Theory]
+    [BitAutoData(DeviceType.UnknownBrowser, "Unknown Browser")]
+    [BitAutoData(DeviceType.Android, "Android")]
+    public async Task SendNewDeviceVerificationEmailAsync_DeviceMatches(DeviceType deviceType, string deviceTypeName, SutProvider<UserService> sutProvider, User user)
+    {
+        SetupFakeTokenProvider(sutProvider, user);
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = deviceType;
+        context.IpAddress = "1.1.1.1";
+
+        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), deviceTypeName, Arg.Any<bool>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendNewDeviceVerificationEmailAsync_NullDeviceTypeShouldSendUnkownBrowserType(SutProvider<UserService> sutProvider, User user)
+    {
+        SetupFakeTokenProvider(sutProvider, user);
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = null;
+        context.IpAddress = "1.1.1.1";
+
+        await sutProvider.Sut.SendNewDeviceVerificationEmailAsync(user);
+
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), "Unknown Browser", Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -248,6 +293,7 @@ public class UserServiceTests
             sutProvider.GetDependency<ICipherRepository>(),
             sutProvider.GetDependency<IOrganizationUserRepository>(),
             sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IOrganizationDomainRepository>(),
             sutProvider.GetDependency<IMailService>(),
             sutProvider.GetDependency<IPushNotificationService>(),
             sutProvider.GetDependency<IUserStore<User>>(),
@@ -576,7 +622,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_UserNull_SendOTPAsyncNotCalled(
+    public async Task ResendNewDeviceVerificationEmail_UserNull_SendTwoFactorEmailAsyncNotCalled(
         SutProvider<UserService> sutProvider, string email, string secret)
     {
         sutProvider.GetDependency<IUserRepository>()
@@ -587,11 +633,11 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
-    public async Task ResendNewDeviceVerificationEmail_SecretNotValid_SendOTPAsyncNotCalled(
+    public async Task ResendNewDeviceVerificationEmail_SecretNotValid_SendTwoFactorEmailAsyncNotCalled(
     SutProvider<UserService> sutProvider, string email, string secret)
     {
         sutProvider.GetDependency<IUserRepository>()
@@ -602,7 +648,7 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .DidNotReceive()
-            .SendOTPEmailAsync(Arg.Any<string>(), Arg.Any<string>());
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -636,6 +682,10 @@ public class UserServiceTests
             .GetByEmailAsync(user.Email)
             .Returns(user);
 
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType = DeviceType.Android;
+        context.IpAddress = "1.1.1.1";
+
         // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
         var sut = RebuildSut(sutProvider);
 
@@ -643,7 +693,8 @@ public class UserServiceTests
 
         await sutProvider.GetDependency<IMailService>()
             .Received(1)
-            .SendOTPEmailAsync(user.Email, Arg.Any<string>());
+            .SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>());
+
     }
 
     [Theory]
@@ -730,6 +781,46 @@ public class UserServiceTests
                 .RemoveAsync(Arg.Any<string>());
     }
 
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_CorrectCode_ReturnsTrueAndProcessesPolicies(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = recoveryCode;
+
+        // Act
+        var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.True(response);
+        Assert.Null(user.TwoFactorProviders);
+        // Make sure a new code was generated for the user
+        Assert.NotEqual(recoveryCode, user.TwoFactorRecoveryCode);
+        await sutProvider.GetDependency<IMailService>()
+            .Received(1)
+            .SendRecoverTwoFactorEmail(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_Recovered2fa);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RecoverTwoFactorAsync_IncorrectCode_ReturnsFalse(
+        User user, SutProvider<UserService> sutProvider)
+    {
+        // Arrange
+        var recoveryCode = "1234";
+        user.TwoFactorRecoveryCode = "4567";
+
+        // Act
+        var response = await sutProvider.Sut.RecoverTwoFactorAsync(user, recoveryCode);
+
+        // Assert
+        Assert.False(response);
+        Assert.NotNull(user.TwoFactorProviders);
+    }
+
     private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
@@ -789,6 +880,7 @@ public class UserServiceTests
             sutProvider.GetDependency<ICipherRepository>(),
             sutProvider.GetDependency<IOrganizationUserRepository>(),
             sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IOrganizationDomainRepository>(),
             sutProvider.GetDependency<IMailService>(),
             sutProvider.GetDependency<IPushNotificationService>(),
             sutProvider.GetDependency<IUserStore<User>>(),

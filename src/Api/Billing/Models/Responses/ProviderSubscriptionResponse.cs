@@ -1,9 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
-using Bit.Core.Utilities;
 using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;
@@ -25,26 +23,24 @@ public record ProviderSubscriptionResponse(
 
     public static ProviderSubscriptionResponse From(
         Subscription subscription,
-        ICollection<ProviderPlan> providerPlans,
+        ICollection<ConfiguredProviderPlan> providerPlans,
         TaxInformation taxInformation,
         SubscriptionSuspension subscriptionSuspension,
         Provider provider)
     {
         var providerPlanResponses = providerPlans
-            .Where(providerPlan => providerPlan.IsConfigured())
-            .Select(ConfiguredProviderPlan.From)
-            .Select(configuredProviderPlan =>
+            .Select(providerPlan =>
             {
-                var plan = StaticStore.GetPlan(configuredProviderPlan.PlanType);
-                var cost = (configuredProviderPlan.SeatMinimum + configuredProviderPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
+                var plan = providerPlan.Plan;
+                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
                 return new ProviderPlanResponse(
                     plan.Name,
                     plan.Type,
                     plan.ProductTier,
-                    configuredProviderPlan.SeatMinimum,
-                    configuredProviderPlan.PurchasedSeats,
-                    configuredProviderPlan.AssignedSeats,
+                    providerPlan.SeatMinimum,
+                    providerPlan.PurchasedSeats,
+                    providerPlan.AssignedSeats,
                     cost,
                     cadence);
             });

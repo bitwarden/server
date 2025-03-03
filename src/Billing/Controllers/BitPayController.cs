@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Bit.Billing.Models;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Options;
 namespace Bit.Billing.Controllers;
 
 [Route("bitpay")]
+[ApiExplorerSettings(IgnoreApi = true)]
 public class BitPayController : Controller
 {
     private readonly BillingSettings _billingSettings;
@@ -24,6 +26,7 @@ public class BitPayController : Controller
     private readonly IMailService _mailService;
     private readonly IPaymentService _paymentService;
     private readonly ILogger<BitPayController> _logger;
+    private readonly IPremiumUserBillingService _premiumUserBillingService;
 
     public BitPayController(
         IOptions<BillingSettings> billingSettings,
@@ -34,7 +37,8 @@ public class BitPayController : Controller
         IProviderRepository providerRepository,
         IMailService mailService,
         IPaymentService paymentService,
-        ILogger<BitPayController> logger)
+        ILogger<BitPayController> logger,
+        IPremiumUserBillingService premiumUserBillingService)
     {
         _billingSettings = billingSettings?.Value;
         _bitPayClient = bitPayClient;
@@ -45,6 +49,7 @@ public class BitPayController : Controller
         _mailService = mailService;
         _paymentService = paymentService;
         _logger = logger;
+        _premiumUserBillingService = premiumUserBillingService;
     }
 
     [HttpPost("ipn")]
@@ -144,10 +149,7 @@ public class BitPayController : Controller
                 if (user != null)
                 {
                     billingEmail = user.BillingEmailAddress();
-                    if (await _paymentService.CreditAccountAsync(user, tx.Amount))
-                    {
-                        await _userRepository.ReplaceAsync(user);
-                    }
+                    await _premiumUserBillingService.Credit(user, tx.Amount);
                 }
             }
             else if (tx.ProviderId.HasValue)

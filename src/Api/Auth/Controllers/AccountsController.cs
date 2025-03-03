@@ -149,11 +149,11 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+        var managedUserValidationResult = await _userService.ValidateManagedUserDomainAsync(user, model.NewEmail);
+
+        if (!managedUserValidationResult.Succeeded)
         {
-            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException(managedUserValidationResult.Errors);
         }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
@@ -171,13 +171,6 @@ public class AccountsController : Controller
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
-        }
-
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
-        {
-            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
         }
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
@@ -266,8 +259,18 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        try
+        {
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
+            throw new BadRequestException(ModelState);
+        }
+
         var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            model.ToUser(user),
+            user,
             model.MasterPasswordHash,
             model.Key,
             model.OrgIdentifier);
@@ -975,7 +978,6 @@ public class AccountsController : Controller
         await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
     }
 
-    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
     [HttpPost("verify-devices")]
     [HttpPut("verify-devices")]
     public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
