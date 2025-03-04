@@ -284,9 +284,12 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [InlineData(false)]
     public async Task Post_Success(bool isScimInviteUserOptimizationEnabled)
     {
-        _factory.SubstituteService((IFeatureService featureService)
+        var localFactory = new ScimApplicationFactory();
+        localFactory.SubstituteService((IFeatureService featureService)
             => featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization)
                 .Returns(isScimInviteUserOptimizationEnabled));
+
+        localFactory.ReinitializeDbForTests(localFactory.GetDatabaseContext());
 
         var email = "user5@example.com";
         var displayName = "Test User 5";
@@ -315,7 +318,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
         };
 
-        var context = await _factory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
+        var context = await localFactory.UsersPostAsync(ScimApplicationFactory.TestOrganizationId1, inputModel);
 
         Assert.Equal(StatusCodes.Status201Created, context.Response.StatusCode);
 
@@ -325,7 +328,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
 
-        var databaseContext = _factory.GetDatabaseContext();
+        var databaseContext = localFactory.GetDatabaseContext();
         Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
     }
 
