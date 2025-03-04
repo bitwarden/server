@@ -15,15 +15,16 @@ public class PolicyRequirementQueryTests
     [Theory, BitAutoData]
     public async Task GetAsync_IgnoresOtherPolicyTypes(Guid userId)
     {
-        var policyRepository = Substitute.For<IPolicyRepository>();
-        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.RequireSso };
         var thisPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
-        var factory = new TestPolicyRequirementFactory(_ => true);
-
-        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.RequireSso };
+        var policyRepository = Substitute.For<IPolicyRepository>();
         policyRepository.GetPolicyDetailsByUserId(userId).Returns([otherPolicy, thisPolicy]);
 
+        var factory = new TestPolicyRequirementFactory(_ => true);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
         var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
+
         Assert.Contains(thisPolicy, requirement.Policies);
         Assert.DoesNotContain(otherPolicy, requirement.Policies);
     }
@@ -32,13 +33,12 @@ public class PolicyRequirementQueryTests
     public async Task GetAsync_CallsEnforceCallback(Guid userId)
     {
         var policyRepository = Substitute.For<IPolicyRepository>();
-        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
         var thisPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
+        var otherPolicy = new PolicyDetails { PolicyType = PolicyType.SingleOrg };
+        policyRepository.GetPolicyDetailsByUserId(userId).Returns([thisPolicy, otherPolicy]);
 
         var factory = new TestPolicyRequirementFactory(x => x == thisPolicy);
-
         var sut = new PolicyRequirementQuery(policyRepository, [factory]);
-        policyRepository.GetPolicyDetailsByUserId(userId).Returns([thisPolicy, otherPolicy]);
 
         var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
 
@@ -61,12 +61,13 @@ public class PolicyRequirementQueryTests
     public async Task GetAsync_HandlesNoPolicies(Guid userId)
     {
         var policyRepository = Substitute.For<IPolicyRepository>();
-        var factory = new TestPolicyRequirementFactory(x => x.IsProvider);
-
-        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
         policyRepository.GetPolicyDetailsByUserId(userId).Returns([]);
 
+        var factory = new TestPolicyRequirementFactory(x => x.IsProvider);
+        var sut = new PolicyRequirementQuery(policyRepository, [factory]);
+
         var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
+
         Assert.Empty(requirement.Policies);
     }
 
@@ -75,7 +76,7 @@ public class PolicyRequirementQueryTests
     /// </summary>
     private class TestPolicyRequirement : IPolicyRequirement
     {
-        public IEnumerable<PolicyDetails> Policies { get; set; } = [];
+        public IEnumerable<PolicyDetails> Policies { get; init; } = [];
     }
 
     private class TestPolicyRequirementFactory(Func<PolicyDetails, bool> enforce) : IPolicyRequirementFactory<TestPolicyRequirement>
