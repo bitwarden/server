@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -69,23 +68,5 @@ public class PolicyRequirementQueryTests
         var requirement = await sut.GetAsync<TestPolicyRequirement>(userId);
 
         Assert.Empty(requirement.Policies);
-    }
-
-    /// <summary>
-    /// Intentionally simplified PolicyRequirement that just holds the input PolicyDetails for us to assert against.
-    /// </summary>
-    private class TestPolicyRequirement : IPolicyRequirement
-    {
-        public IEnumerable<PolicyDetails> Policies { get; init; } = [];
-    }
-
-    private class TestPolicyRequirementFactory(Func<PolicyDetails, bool> enforce) : IPolicyRequirementFactory<TestPolicyRequirement>
-    {
-        public PolicyType PolicyType => PolicyType.SingleOrg;
-
-        public bool Enforce(PolicyDetails policyDetails) => enforce(policyDetails);
-
-        public TestPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
-            => new() { Policies = policyDetails };
     }
 }
