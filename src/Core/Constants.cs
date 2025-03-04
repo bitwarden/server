@@ -102,7 +102,6 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
