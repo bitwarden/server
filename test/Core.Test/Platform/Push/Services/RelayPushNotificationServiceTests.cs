@@ -1,4 +1,6 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿#nullable enable
+
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -441,7 +443,7 @@ public class RelayPushNotificationServiceTests
     {
         var userId = Guid.NewGuid();
 
-        JsonNode identifier = excludeCurrentContext ? _deviceIdentifier : null;
+        JsonNode? identifier = excludeCurrentContext ? _deviceIdentifier : null;
 
         var expectedPayload = new JsonObject
         {
@@ -646,7 +648,7 @@ public class RelayPushNotificationServiceTests
             RevisionDate = DateTime.UtcNow,
         };
 
-        JsonNode installationId = global ? _globalSettings.Installation.Id : null;
+        JsonNode? installationId = global ? _globalSettings.Installation.Id : null;
 
         var expectedPayload = new JsonObject
         {
@@ -707,7 +709,7 @@ public class RelayPushNotificationServiceTests
             DeletedDate = DateTime.UtcNow,
         };
 
-        JsonNode installationId = global ? _globalSettings.Installation.Id : null;
+        JsonNode? installationId = global ? _globalSettings.Installation.Id : null;
 
         var expectedPayload = new JsonObject
         {
@@ -900,13 +902,7 @@ public class RelayPushNotificationServiceTests
                 var actualString = JsonSerializer.Serialize(jsonContent.Value);
                 var actualNode = JsonNode.Parse(actualString);
 
-                if (!JsonNode.DeepEquals(actualNode, expectedRequestBody))
-                {
-                    Assert.Equal(expectedRequestBody.ToJsonString(), actualNode.ToJsonString());
-                    return false;
-                }
-
-                return true;
+                return JsonNode.DeepEquals(actualNode, expectedRequestBody);
             })
             .Respond(HttpStatusCode.OK);
 
