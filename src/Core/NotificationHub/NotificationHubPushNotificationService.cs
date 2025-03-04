@@ -329,6 +329,11 @@ public class NotificationHubPushNotificationService : IPushNotificationService
             GetContextIdentifier(excludeCurrentContext), clientType: clientType);
     }
 
+    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        await PushUserAsync(userId, PushType.PendingSecurityTasks);
+    }
+
     public async Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload,
         string? identifier, string? deviceId = null, ClientType? clientType = null)
     {

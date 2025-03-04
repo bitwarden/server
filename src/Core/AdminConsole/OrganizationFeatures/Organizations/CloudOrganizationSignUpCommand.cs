@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -23,8 +24,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 
 public record SignUpOrganizationResponse(
     Organization Organization,
-    OrganizationUser OrganizationUser,
-    Collection DefaultCollection);
+    OrganizationUser OrganizationUser);
 
 public interface ICloudOrganizationSignUpCommand
 {
@@ -33,7 +33,6 @@ public interface ICloudOrganizationSignUpCommand
 
 public class CloudOrganizationSignUpCommand(
     IOrganizationUserRepository organizationUserRepository,
-    IFeatureService featureService,
     IOrganizationBillingService organizationBillingService,
     IPaymentService paymentService,
     IPolicyService policyService,
@@ -45,11 +44,12 @@ public class CloudOrganizationSignUpCommand(
     IPushRegistrationService pushRegistrationService,
     IPushNotificationService pushNotificationService,
     ICollectionRepository collectionRepository,
-    IDeviceRepository deviceRepository) : ICloudOrganizationSignUpCommand
+    IDeviceRepository deviceRepository,
+    IPricingClient pricingClient) : ICloudOrganizationSignUpCommand
 {
     public async Task<SignUpOrganizationResponse> SignUpOrganizationAsync(OrganizationSignup signup)
     {
-        var plan = StaticStore.GetPlan(signup.Plan);
+        var plan = await pricingClient.GetPlanOrThrow(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
 
@@ -142,7 +142,7 @@ public class CloudOrganizationSignUpCommand(
                 // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
 
-        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser, returnValue.defaultCollection);
+        return new SignUpOrganizationResponse(returnValue.organization, returnValue.organizationUser);
     }
 
     public void ValidatePasswordManagerPlan(Plan plan, OrganizationUpgrade upgrade)

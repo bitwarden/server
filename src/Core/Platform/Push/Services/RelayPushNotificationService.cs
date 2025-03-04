@@ -300,6 +300,11 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             false
         );
 
+    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        await PushUserAsync(userId, PushType.PendingSecurityTasks);
+    }
+
     private async Task SendPayloadToInstallationAsync(PushType type, object payload, bool excludeCurrentContext,
         ClientType? clientType = null)
     {
