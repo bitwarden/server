@@ -216,7 +216,7 @@ public class HandlebarsMailService : IMailService
         {
             InitialSeatCount = initialSeatCount,
             CurrentSeatCount = organization.Seats.Value,
-            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
@@ -230,7 +230,7 @@ public class HandlebarsMailService : IMailService
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             MaxSeatCount = maxSeatCount,
-            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -1104,7 +1104,7 @@ public class HandlebarsMailService : IMailService
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             MaxSeatCount = maxSeatCount,
-            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1119,7 +1119,7 @@ public class HandlebarsMailService : IMailService
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             MaxServiceAccountsCount = maxSeatCount,
-            VaultSubscriptionUrl = VaultSubscriptionUrl(organization.Id)
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1224,7 +1224,7 @@ public class HandlebarsMailService : IMailService
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
 
-    public string VaultSubscriptionUrl(Guid organizationId)
+    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
         => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
         {
             "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
