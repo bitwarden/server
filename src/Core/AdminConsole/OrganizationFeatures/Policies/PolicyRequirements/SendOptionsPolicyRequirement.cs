@@ -1,13 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
-/// Policy requirements for the Disable Send and Send Options policies.
+/// Policy requirements for the Send Options policy.
 /// </summary>
-public class SendOptionsRequirement : IPolicyRequirement
+public class SendOptionsPolicyRequirement : IPolicyRequirement
 {
     /// <summary>
     /// Indicates whether the user is prohibited from hiding their email from the recipient of a Send.
@@ -15,20 +14,17 @@ public class SendOptionsRequirement : IPolicyRequirement
     public bool DisableHideEmail { get; init; }
 }
 
-public class SendPolicyRequirementFactory : BasePolicyRequirementFactory<SendOptionsRequirement>
+public class SendOptionsPolicyRequirementFactory : BasePolicyRequirementFactory<SendOptionsPolicyRequirement>
 {
-    protected override IEnumerable<OrganizationUserType> ExemptRoles =>
-        [OrganizationUserType.Owner, OrganizationUserType.Admin];
-
     public override PolicyType PolicyType => PolicyType.SendOptions;
 
-    public override SendOptionsRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+    public override SendOptionsPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = policyDetails
             .Select(p => p.GetDataModel<SendOptionsPolicyData>())
             .Aggregate(
-                new SendOptionsRequirement(),
-                (result, data) => new SendOptionsRequirement
+                new SendOptionsPolicyRequirement(),
+                (result, data) => new SendOptionsPolicyRequirement
                 {
                     DisableHideEmail = result.DisableHideEmail || data.DisableHideEmail
                 });

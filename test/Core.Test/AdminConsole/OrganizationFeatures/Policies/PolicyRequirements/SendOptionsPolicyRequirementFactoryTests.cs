@@ -3,7 +3,7 @@
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 [SutProviderCustomize]
-public class SendPolicyRequirementFactoryTests
+public class SendOptionsPolicyRequirementFactoryTests
 {
     // [Theory, BitAutoData]
     // public void DisableSend_IsFalse_IfNoDisableSendPolicies(

@@ -1,13 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
 /// <summary>
-/// Policy requirements for the Disable Send and Send Options policies.
+/// Policy requirements for the Disable Send policy.
 /// </summary>
-public class DisableSendRequirement : IPolicyRequirement
+public class DisableSendPolicyRequirement : IPolicyRequirement
 {
     /// <summary>
     /// Indicates whether Send is disabled for the user. If true, the user should not be able to create or edit Sends.
@@ -16,16 +15,13 @@ public class DisableSendRequirement : IPolicyRequirement
     public bool DisableSend { get; init; }
 }
 
-public class DisableSendPolicyRequirementFactory : BasePolicyRequirementFactory<DisableSendRequirement>
+public class DisableSendPolicyRequirementFactory : BasePolicyRequirementFactory<DisableSendPolicyRequirement>
 {
-    protected override IEnumerable<OrganizationUserType> ExemptRoles =>
-        [OrganizationUserType.Owner, OrganizationUserType.Admin];
-
     public override PolicyType PolicyType => PolicyType.DisableSend;
 
-    public override DisableSendRequirement Create(IEnumerable<PolicyDetails> policyDetails)
+    public override DisableSendPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
-        var result = new DisableSendRequirement { DisableSend = policyDetails.Any() };
+        var result = new DisableSendPolicyRequirement { DisableSend = policyDetails.Any() };
         return result;
     }
 }
