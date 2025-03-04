@@ -37,7 +37,7 @@ public abstract class BasePolicyRequirementFactory<T> : IPolicyRequirementFactor
     public bool Enforce(PolicyDetails policyDetails)
         => !policyDetails.HasRole(ExemptRoles) &&
             !policyDetails.HasStatus(ExemptStatuses) &&
-            (!policyDetails.IsProvider || ExemptProviders);
+            (!policyDetails.IsProvider || !ExemptProviders);
 
     /// <inheritdoc />
     public abstract T Create(IEnumerable<PolicyDetails> policyDetails);
