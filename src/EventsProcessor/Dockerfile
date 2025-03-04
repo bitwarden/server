@@ -22,8 +22,7 @@ RUN apt-get update \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-ENV HOME=/home/app
-ENV ASPNETCORE_URLS http://+:5000
+ENV ASPNETCORE_URLS=http://+:5000
 
 EXPOSE 5000
 WORKDIR /app
