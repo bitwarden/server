@@ -146,7 +146,7 @@ jobs:
           # Unified MariaDB
           BW_TEST_DATABASES__4__TYPE: "MySql"
           BW_TEST_DATABASES__4__CONNECTIONSTRING: "server=localhost;port=4306;uid=root;pwd=mariadb-password;database=vault_dev;Allow User Variables=true"
-        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx" /p:CoverletOutputFormatter="cobertura" --collect:"XPlat Code Coverage"
         shell: pwsh
 
       - name: Print MySQL Logs
@@ -173,6 +173,9 @@ jobs:
           path: "**/*-test-results.trx"
           reporter: dotnet-trx
           fail-on-error: true
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@1e68e06f1dbfde0e4cefc87efeba9e4643565303 # v5.1.2
 
       - name: Docker Compose down
         if: always()
