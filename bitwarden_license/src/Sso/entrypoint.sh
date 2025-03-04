@@ -60,9 +60,15 @@ fi
 
 if [[ $globalSettings__selfHosted == "true" ]]; then
     cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx || \
-        if [[ -z $globalSettings__identityServer__certificateLocation ]]; then
-            export globalSettings__identityServer__certificateLocation=/home/app/config/identity.pfx
-        fi
+        {
+            # infer a non-root location for the certificate
+            if [[ -z $globalSettings__identityServer__certificateLocation ]]; then
+                export globalSettings__identityServer__certificateLocation=/home/app/config/identity.pfx
+            fi
+            # copy the certificate to the non-root location to avoid permission issues
+            mkdir -p "$(dirname "$globalSettings__identityServer__certificateLocation")"
+            cp /etc/bitwarden/identity/identity.pfx "$globalSettings__identityServer__certificateLocation"
+        }
 fi
 
 exec $gosu_cmd /app/"${PROJECT_NAME}"
