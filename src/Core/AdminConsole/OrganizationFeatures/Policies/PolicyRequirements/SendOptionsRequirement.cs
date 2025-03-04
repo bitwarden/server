@@ -15,7 +15,7 @@ public class SendOptionsRequirement : IPolicyRequirement
     public bool DisableHideEmail { get; init; }
 }
 
-public class SendPolicyRequirementFactory : SimpleRequirementFactory<SendOptionsRequirement>
+public class SendPolicyRequirementFactory : BasePolicyRequirementFactory<SendOptionsRequirement>
 {
     protected override IEnumerable<OrganizationUserType> ExemptRoles =>
         [OrganizationUserType.Owner, OrganizationUserType.Admin];

@@ -31,6 +31,6 @@ public static class PolicyServiceCollectionExtensions
 
     private static void AddPolicyRequirements(this IServiceCollection services)
     {
-        services.AddScoped<IRequirementFactory<IPolicyRequirement>, SendPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendPolicyRequirementFactory>();
     }
 }

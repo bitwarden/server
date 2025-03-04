@@ -78,7 +78,7 @@ public class PolicyRequirementQueryTests
         public IEnumerable<PolicyDetails> Policies { get; set; } = [];
     }
 
-    private class TestPolicyRequirementFactory(Func<PolicyDetails, bool> enforce) : IRequirementFactory<TestPolicyRequirement>
+    private class TestPolicyRequirementFactory(Func<PolicyDetails, bool> enforce) : IPolicyRequirementFactory<TestPolicyRequirement>
     {
         public PolicyType PolicyType => PolicyType.SingleOrg;
 

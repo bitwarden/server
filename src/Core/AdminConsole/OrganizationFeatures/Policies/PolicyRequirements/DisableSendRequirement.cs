@@ -16,7 +16,7 @@ public class DisableSendRequirement : IPolicyRequirement
     public bool DisableSend { get; init; }
 }
 
-public class DisableSendRequirementFactory : SimpleRequirementFactory<DisableSendRequirement>
+public class DisableSendPolicyRequirementFactory : BasePolicyRequirementFactory<DisableSendRequirement>
 {
     protected override IEnumerable<OrganizationUserType> ExemptRoles =>
         [OrganizationUserType.Owner, OrganizationUserType.Admin];

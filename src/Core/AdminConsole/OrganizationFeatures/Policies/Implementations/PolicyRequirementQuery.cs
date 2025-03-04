@@ -8,12 +8,12 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.Implementations;
 
 public class PolicyRequirementQuery(
     IPolicyRepository policyRepository,
-    IEnumerable<IRequirementFactory<IPolicyRequirement>> factories)
+    IEnumerable<IPolicyRequirementFactory<IPolicyRequirement>> factories)
     : IPolicyRequirementQuery
 {
     public async Task<T> GetAsync<T>(Guid userId) where T : IPolicyRequirement
     {
-        var factory = factories.OfType<IRequirementFactory<T>>().SingleOrDefault();
+        var factory = factories.OfType<IPolicyRequirementFactory<T>>().SingleOrDefault();
         if (factory is null)
         {
             throw new NotImplementedException("No Requirement Factory found for " + typeof(T));
