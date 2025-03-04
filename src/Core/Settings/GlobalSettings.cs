@@ -84,6 +84,8 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
+    public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
+
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
@@ -688,5 +690,10 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+    }
+
+    public class WebPushSettings : IWebPushSettings
+    {
+        public string VapidPublicKey { get; set; }
     }
 }

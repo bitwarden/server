@@ -28,6 +28,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
             throw new NotFoundException();
         }
 
+        // TODO: PRICING -> https://bitwarden.atlassian.net/browse/PM-17122
         var plan = StaticStore.GetPlan(org.PlanType);
         if (plan?.SecretsManager == null)
         {

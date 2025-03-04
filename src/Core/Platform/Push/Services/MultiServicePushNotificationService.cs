@@ -179,6 +179,12 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        PushToServices((s) => s.PushPendingSecurityTasksAsync(userId));
+        return Task.CompletedTask;
+    }
+
     private void PushToServices(Func<IPushNotificationService, Task> pushFunc)
     {
         if (!_services.Any())

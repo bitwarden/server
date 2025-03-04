@@ -149,6 +149,12 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
+        var managedUserValidationResult = await _userService.ValidateManagedUserDomainAsync(user, model.NewEmail);
+
+        if (!managedUserValidationResult.Succeeded)
+        {
+            throw new BadRequestException(managedUserValidationResult.Errors);
+        }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
     }
@@ -166,7 +172,6 @@ public class AccountsController : Controller
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
         }
-
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
             model.NewMasterPasswordHash, model.Token, model.Key);
