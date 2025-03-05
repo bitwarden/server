@@ -17,7 +17,7 @@ public class AuthRequest : ITableObject<Guid>
     [MaxLength(50)]
     public string RequestIpAddress { get; set; }
     [MaxLength(200)]
-    public string CountryName { get; set; }
+    public string RequestCountryName { get; set; }
     public Guid? ResponseDeviceId { get; set; }
     [MaxLength(25)]
     public string AccessCode { get; set; }
