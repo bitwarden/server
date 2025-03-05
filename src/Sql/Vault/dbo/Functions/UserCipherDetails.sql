@@ -24,6 +24,11 @@ SELECT
     	ELSE 0
     END [ViewPassword],
     CASE
+        WHEN COALESCE(CU.[Manage], CG.[Manage], 0) = 1
+        THEN 1
+        ELSE 0
+    END [Manage],
+    CASE
         WHEN O.[UseTotp] = 1
         THEN 1
         ELSE 0
@@ -54,6 +59,7 @@ SELECT
     *,
     1 [Edit],
     1 [ViewPassword],
+    1 [Manage],
     0 [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId)

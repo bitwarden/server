@@ -9,7 +9,6 @@ using Bit.Sso.Models;
 using Bit.Sso.Utilities;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Infrastructure;
-using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Options;

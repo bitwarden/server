@@ -1,11 +1,9 @@
 ﻿using Bit.Admin.AdminConsole.Controllers;
 using Bit.Admin.AdminConsole.Models;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.Billing.Enums;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Mvc;
@@ -86,9 +84,6 @@ public class ProvidersControllerTests
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
 
         // Act
         var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
@@ -102,9 +97,6 @@ public class ProvidersControllerTests
                 model.OwnerEmail,
                 Arg.Is<PlanType>(y => y == model.Plan),
                 model.EnterpriseSeatMinimum);
-        sutProvider.GetDependency<IFeatureService>()
-            .Received(Quantity.Exactly(1))
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
     }
 
     [BitAutoData]
@@ -129,10 +121,6 @@ public class ProvidersControllerTests
                 providerArgument.Id = expectedProviderId;
             });
 
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
-
         // Act
         var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
 
@@ -143,53 +131,6 @@ public class ProvidersControllerTests
         Assert.Equal("Edit", actualResult.ActionName);
         Assert.Null(actualResult.ControllerName);
         Assert.Equal(expectedProviderId, actualResult.RouteValues["Id"]);
-    }
-
-    [BitAutoData]
-    [SutProviderCustomize]
-    [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_ChecksFeatureFlag(
-        CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
-
-        // Act
-        await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
-
-        // Assert
-        sutProvider.GetDependency<IFeatureService>()
-            .Received(Quantity.Exactly(1))
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
-    }
-
-    [BitAutoData]
-    [SutProviderCustomize]
-    [Theory]
-    public async Task CreateMultiOrganizationEnterpriseAsync_RedirectsToProviderTypeSelectionPage_WhenFeatureFlagIsDisabled(
-        CreateMultiOrganizationEnterpriseProviderModel model,
-        SutProvider<ProvidersController> sutProvider)
-    {
-        // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(false);
-
-        // Act
-        var actual = await sutProvider.Sut.CreateMultiOrganizationEnterprise(model);
-
-        // Assert
-        sutProvider.GetDependency<IFeatureService>()
-            .Received(Quantity.Exactly(1))
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises);
-
-        Assert.IsType<RedirectToActionResult>(actual);
-        var actualResult = (RedirectToActionResult)actual;
-        Assert.Equal("Create", actualResult.ActionName);
-        Assert.Null(actualResult.ControllerName);
     }
     #endregion
 
@@ -202,9 +143,6 @@ public class ProvidersControllerTests
         SutProvider<ProvidersController> sutProvider)
     {
         // Arrange
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises)
-            .Returns(true);
 
         // Act
         var actual = await sutProvider.Sut.CreateReseller(model);

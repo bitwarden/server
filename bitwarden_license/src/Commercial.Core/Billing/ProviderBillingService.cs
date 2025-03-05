@@ -10,6 +10,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
@@ -32,6 +33,7 @@ public class ProviderBillingService(
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
     IPaymentService paymentService,
+    IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
     IProviderPlanRepository providerPlanRepository,
@@ -77,8 +79,7 @@ public class ProviderBillingService(
 
         var managedPlanType = await GetManagedPlanTypeAsync(provider, organization);
 
-        // TODO: Replace with PricingClient
-        var plan = StaticStore.GetPlan(managedPlanType);
+        var plan = await pricingClient.GetPlanOrThrow(managedPlanType);
         organization.Plan = plan.Name;
         organization.PlanType = plan.Type;
         organization.MaxCollections = plan.PasswordManager.MaxCollections;
@@ -111,11 +112,29 @@ public class ProviderBillingService(
             Key = key
         };
 
+        /*
+         * We have to scale the provider's seats before the ProviderOrganization
+         * row is inserted so the added organization's seats don't get double counted.
+         */
+        await ScaleSeats(provider, organization.PlanType, organization.Seats!.Value);
+
         await Task.WhenAll(
             organizationRepository.ReplaceAsync(organization),
-            providerOrganizationRepository.CreateAsync(providerOrganization),
-            ScaleSeats(provider, organization.PlanType, organization.Seats!.Value)
+            providerOrganizationRepository.CreateAsync(providerOrganization)
         );
+
+        var clientCustomer = await subscriberService.GetCustomer(organization);
+
+        if (clientCustomer.Balance != 0)
+        {
+            await stripeAdapter.CustomerBalanceTransactionCreate(provider.GatewayCustomerId,
+                new CustomerBalanceTransactionCreateOptions
+                {
+                    Amount = clientCustomer.Balance,
+                    Currency = "USD",
+                    Description = $"Unused, prorated time for client organization with ID {organization.Id}."
+                });
+        }
 
         await eventService.LogProviderOrganizationEventAsync(
             providerOrganization,
@@ -136,7 +155,8 @@ public class ProviderBillingService(
             return;
         }
 
-        var oldPlanConfiguration = StaticStore.GetPlan(plan.PlanType);
+        var oldPlanConfiguration = await pricingClient.GetPlanOrThrow(plan.PlanType);
+        var newPlanConfiguration = await pricingClient.GetPlanOrThrow(command.NewPlan);
 
         plan.PlanType = command.NewPlan;
         await providerPlanRepository.ReplaceAsync(plan);
@@ -160,7 +180,7 @@ public class ProviderBillingService(
             [
                 new SubscriptionItemOptions
                 {
-                    Price = StaticStore.GetPlan(command.NewPlan).PasswordManager.StripeProviderPortalSeatPlanId,
+                    Price = newPlanConfiguration.PasswordManager.StripeProviderPortalSeatPlanId,
                     Quantity = oldSubscriptionItem!.Quantity
                 },
                 new SubscriptionItemOptions
@@ -186,7 +206,7 @@ public class ProviderBillingService(
                 throw new ConflictException($"Organization '{providerOrganization.Id}' not found.");
             }
             organization.PlanType = command.NewPlan;
-            organization.Plan = StaticStore.GetPlan(command.NewPlan).Name;
+            organization.Plan = newPlanConfiguration.Name;
             await organizationRepository.ReplaceAsync(organization);
         }
     }
@@ -329,7 +349,7 @@ public class ProviderBillingService(
         {
             var (organization, _) = pair;
 
-            var planName = DerivePlanName(provider, organization);
+            var planName = await DerivePlanName(provider, organization);
 
             var addable = new AddableOrganization(
                 organization.Id,
@@ -350,7 +370,7 @@ public class ProviderBillingService(
             return addable with { Disabled = requiresPurchase };
         }));
 
-        string DerivePlanName(Provider localProvider, Organization localOrganization)
+        async Task<string> DerivePlanName(Provider localProvider, Organization localOrganization)
         {
             if (localProvider.Type == ProviderType.Msp)
             {
@@ -362,8 +382,7 @@ public class ProviderBillingService(
                 };
             }
 
-            // TODO: Replace with PricingClient
-            var plan = StaticStore.GetPlan(localOrganization.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(localOrganization.PlanType);
             return plan.Name;
         }
     }
@@ -456,20 +475,17 @@ public class ProviderBillingService(
         Provider provider,
         TaxInfo taxInfo)
     {
-        ArgumentNullException.ThrowIfNull(provider);
-        ArgumentNullException.ThrowIfNull(taxInfo);
-
-        if (string.IsNullOrEmpty(taxInfo.BillingAddressCountry) ||
-            string.IsNullOrEmpty(taxInfo.BillingAddressPostalCode))
+        if (taxInfo is not
+            {
+                BillingAddressCountry: not null and not "",
+                BillingAddressPostalCode: not null and not ""
+            })
         {
             logger.LogError("Cannot create customer for provider ({ProviderID}) without both a country and postal code", provider.Id);
-
             throw new BillingException();
         }
 
-        var providerDisplayName = provider.DisplayName();
-
-        var customerCreateOptions = new CustomerCreateOptions
+        var options = new CustomerCreateOptions
         {
             Address = new AddressOptions
             {
@@ -489,9 +505,9 @@ public class ProviderBillingService(
                     new CustomerInvoiceSettingsCustomFieldOptions
                     {
                         Name = provider.SubscriberType(),
-                        Value = providerDisplayName?.Length <= 30
-                            ? providerDisplayName
-                            : providerDisplayName?[..30]
+                        Value = provider.DisplayName()?.Length <= 30
+                            ? provider.DisplayName()
+                            : provider.DisplayName()?[..30]
                     }
                 ]
             },
@@ -503,7 +519,8 @@ public class ProviderBillingService(
 
         if (!string.IsNullOrEmpty(taxInfo.TaxIdNumber))
         {
-            var taxIdType = taxService.GetStripeTaxCode(taxInfo.BillingAddressCountry,
+            var taxIdType = taxService.GetStripeTaxCode(
+                taxInfo.BillingAddressCountry,
                 taxInfo.TaxIdNumber);
 
             if (taxIdType == null)
@@ -514,15 +531,20 @@ public class ProviderBillingService(
                 throw new BadRequestException("billingTaxIdTypeInferenceError");
             }
 
-            customerCreateOptions.TaxIdData =
+            options.TaxIdData =
             [
                 new CustomerTaxIdDataOptions { Type = taxIdType, Value = taxInfo.TaxIdNumber }
             ];
         }
 
+        if (!string.IsNullOrEmpty(provider.DiscountId))
+        {
+            options.Coupon = provider.DiscountId;
+        }
+
         try
         {
-            return await stripeAdapter.CustomerCreateAsync(customerCreateOptions);
+            return await stripeAdapter.CustomerCreateAsync(options);
         }
         catch (StripeException stripeException) when (stripeException.StripeError?.Code == StripeConstants.ErrorCodes.TaxIdInvalid)
         {
@@ -550,7 +572,7 @@ public class ProviderBillingService(
 
         foreach (var providerPlan in providerPlans)
         {
-            var plan = StaticStore.GetPlan(providerPlan.PlanType);
+            var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
             if (!providerPlan.IsConfigured())
             {
@@ -634,8 +656,10 @@ public class ProviderBillingService(
 
             if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
             {
-                var priceId = StaticStore.GetPlan(newPlanConfiguration.Plan).PasswordManager
-                    .StripeProviderPortalSeatPlanId;
+                var newPlan = await pricingClient.GetPlanOrThrow(newPlanConfiguration.Plan);
+
+                var priceId = newPlan.PasswordManager.StripeProviderPortalSeatPlanId;
+
                 var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
 
                 if (providerPlan.PurchasedSeats == 0)
@@ -699,7 +723,7 @@ public class ProviderBillingService(
         ProviderPlan providerPlan,
         int newlyAssignedSeats) => async (currentlySubscribedSeats, newlySubscribedSeats) =>
     {
-        var plan = StaticStore.GetPlan(providerPlan.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
 
         await paymentService.AdjustSeats(
             provider,
@@ -723,7 +747,7 @@ public class ProviderBillingService(
         var providerOrganizations =
             await providerOrganizationRepository.GetManyDetailsByProviderAsync(provider.Id);
 
-        var plan = StaticStore.GetPlan(planType);
+        var plan = await pricingClient.GetPlanOrThrow(planType);
 
         return providerOrganizations
             .Where(providerOrganization => providerOrganization.Plan == plan.Name && providerOrganization.Status == OrganizationStatusType.Managed)

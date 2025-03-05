@@ -36,8 +36,6 @@ public static class ServiceCollectionExtensions
                 }
             });
 
-            config.CustomSchemaIds(type => type.FullName);
-
             config.SwaggerDoc("internal", new OpenApiInfo { Title = "Bitwarden Internal API", Version = "latest" });
 
             config.AddSecurityDefinition("oauth2-client-credentials", new OpenApiSecurityScheme

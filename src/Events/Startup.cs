@@ -6,7 +6,6 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
 
 namespace Bit.Events;
 

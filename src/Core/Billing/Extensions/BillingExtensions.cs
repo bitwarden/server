@@ -11,6 +11,17 @@ namespace Bit.Core.Billing.Extensions;
 
 public static class BillingExtensions
 {
+    public static ProductTierType GetProductTier(this PlanType planType)
+        => planType switch
+        {
+            PlanType.Custom or PlanType.Free => ProductTierType.Free,
+            PlanType.FamiliesAnnually or PlanType.FamiliesAnnually2019 => ProductTierType.Families,
+            PlanType.TeamsStarter or PlanType.TeamsStarter2023 => ProductTierType.TeamsStarter,
+            _ when planType.ToString().Contains("Teams") => ProductTierType.Teams,
+            _ when planType.ToString().Contains("Enterprise") => ProductTierType.Enterprise,
+            _ => throw new BillingException($"PlanType {planType} could not be matched to a ProductTierType")
+        };
+
     public static bool IsBillable(this Provider provider) =>
         provider is
         {

@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -24,6 +25,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
@@ -34,7 +36,8 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         ICollectionRepository collectionRepository,
         IGroupRepository groupRepository,
-        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
         _organizationService = organizationService;
@@ -45,6 +48,7 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         _collectionRepository = collectionRepository;
         _groupRepository = groupRepository;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     /// <summary>
@@ -59,10 +63,10 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         List<CollectionAccessSelection>? collectionAccess, IEnumerable<Guid>? groupAccess)
     {
         // Avoid multiple enumeration
-        collectionAccess = collectionAccess?.ToList();
+        var collectionAccessList = collectionAccess?.ToList() ?? [];
         groupAccess = groupAccess?.ToList();
 
-        if (organizationUser.Id.Equals(default(Guid)))
+        if (organizationUser.Id.Equals(Guid.Empty))
         {
             throw new BadRequestException("Invite the user first.");
         }
@@ -89,9 +93,9 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             }
         }
 
-        if (collectionAccess?.Any() == true)
+        if (collectionAccessList.Count != 0)
         {
-            await ValidateCollectionAccessAsync(originalOrganizationUser, collectionAccess.ToList());
+            await ValidateCollectionAccessAsync(originalOrganizationUser, collectionAccessList);
         }
 
         if (groupAccess?.Any() == true)
@@ -107,14 +111,15 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
         await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(organizationUser.OrganizationId, organizationUser.Type);
 
         if (organizationUser.Type != OrganizationUserType.Owner &&
-            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+            !await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId,
+                [organizationUser.Id]))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        if (collectionAccess?.Count > 0)
+        if (collectionAccessList.Count > 0)
         {
-            var invalidAssociations = collectionAccess.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
+            var invalidAssociations = collectionAccessList.Where(cas => cas.Manage && (cas.ReadOnly || cas.HidePasswords));
             if (invalidAssociations.Any())
             {
                 throw new BadRequestException("The Manage property is mutually exclusive and cannot be true while the ReadOnly or HidePasswords properties are also true.");
@@ -128,13 +133,15 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organizationUser.OrganizationId, 1);
             if (additionalSmSeatsRequired > 0)
             {
-                var update = new SecretsManagerSubscriptionUpdate(organization, true)
-                   .AdjustSeats(additionalSmSeatsRequired);
+                // TODO: https://bitwarden.atlassian.net/browse/PM-17012
+                var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+                var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
+                    .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 
-        await _organizationUserRepository.ReplaceAsync(organizationUser, collectionAccess);
+        await _organizationUserRepository.ReplaceAsync(organizationUser, collectionAccessList);
 
         if (groupAccess != null)
         {
