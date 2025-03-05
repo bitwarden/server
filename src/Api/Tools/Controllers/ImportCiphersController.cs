@@ -107,17 +107,17 @@ public class ImportCiphersController : Controller
         var existingCollections = collections.Where(tc => orgCollectionIds.Contains(tc.Id));
 
         //When importing into existing collection, we need to verify if the user has permissions
-        if (existingCollections.Any() && !(await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
+        if (existingCollections.Any() && (await _authorizationService.AuthorizeAsync(User, existingCollections, BulkCollectionOperations.ImportCiphers)).Succeeded)
         {
-            return false;
+            return true;
         };
 
         //Users allowed to import if they CanCreate Collections
-        if (!(await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
+        if ((await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Create)).Succeeded)
         {
-            return false;
+            return true;
         }
 
-        return true;
+        return false;
     }
 }
