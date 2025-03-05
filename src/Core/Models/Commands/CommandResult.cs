@@ -13,14 +13,31 @@ public class CommandResult(IEnumerable<string> errors)
     public CommandResult() : this(Array.Empty<string>()) { }
 }
 
+public class FailureCommandResult : CommandResult
+{
+    public FailureCommandResult(IEnumerable<string> errorMessages) : base(errorMessages)
+    {
+
+    }
+    public FailureCommandResult(string errorMessage) : base(errorMessage)
+    {
+
+    }
+}
+
+public class SuccessCommandResult : CommandResult
+{
+}
+
 public abstract class CommandResult<T>
 {
-    public T? Data { get; init; }
-    public IEnumerable<string> Errors { get; init; } = [];
+
 }
 
 public class SuccessCommandResult<T> : CommandResult<T>
 {
+    public T? Data { get; init; }
+
     public SuccessCommandResult(T data)
     {
         Data = data;
@@ -29,14 +46,16 @@ public class SuccessCommandResult<T> : CommandResult<T>
 
 public class FailureCommandResult<T> : CommandResult<T>
 {
+    public IEnumerable<string> ErrorMessages { get; init; }
+
     public FailureCommandResult(IEnumerable<string> errorMessage)
     {
-        Errors = errorMessage;
+        ErrorMessages = errorMessage;
     }
 
     public FailureCommandResult(string errorMessage)
     {
-        Errors = new[] { errorMessage };
+        ErrorMessages = new[] { errorMessage };
     }
 }
 

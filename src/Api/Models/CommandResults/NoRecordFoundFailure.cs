@@ -12,3 +12,15 @@ public class NoRecordFoundFailure<T> : FailureCommandResult<T>
     {
     }
 }
+
+public class NoRecordFoundFailure : FailureCommandResult
+{
+    public NoRecordFoundFailure(IEnumerable<string> errorMessage) : base(errorMessage)
+    {
+    }
+
+    public NoRecordFoundFailure(string errorMessage) : base(errorMessage)
+    {
+    }
+}
+

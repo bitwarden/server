@@ -12,3 +12,14 @@ public class BadRequestFailure<T> : FailureCommandResult<T>
     {
     }
 }
+
+public class BadRequestFailure : FailureCommandResult
+{
+    public BadRequestFailure(IEnumerable<string> errorMessage) : base(errorMessage)
+    {
+    }
+
+    public BadRequestFailure(string errorMessage) : base(errorMessage)
+    {
+    }
+}

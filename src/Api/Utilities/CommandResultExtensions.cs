@@ -10,9 +10,22 @@ public static class CommandResultExtensions
     {
         return commandResult switch
         {
-            NoRecordFoundFailure<T> => new ObjectResult(commandResult.Errors) { StatusCode = StatusCodes.Status404NotFound },
-            BadRequestFailure<T> or FailureCommandResult<T> => new ObjectResult(commandResult.Errors) { StatusCode = StatusCodes.Status400BadRequest },
-            SuccessCommandResult<T> => new ObjectResult(commandResult.Data) { StatusCode = StatusCodes.Status200OK },
+            NoRecordFoundFailure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status404NotFound },
+            BadRequestFailure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
+            FailureCommandResult<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
+            SuccessCommandResult<T> success => new ObjectResult(success.Data) { StatusCode = StatusCodes.Status200OK },
+            _ => throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}")
+        };
+    }
+
+    public static IActionResult MapToActionResult(this CommandResult commandResult)
+    {
+        return commandResult switch
+        {
+            NoRecordFoundFailure failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status404NotFound },
+            BadRequestFailure failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
+            FailureCommandResult failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
+            SuccessCommandResult => new ObjectResult(new { }) { StatusCode = StatusCodes.Status200OK },
             _ => throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}")
         };
     }
