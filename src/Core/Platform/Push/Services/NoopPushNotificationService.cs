@@ -108,14 +108,22 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
+    public Task PushNotificationAsync(Notification notification) => Task.CompletedTask;
+
+    public Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus) =>
+        Task.CompletedTask;
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) => Task.CompletedTask;
+
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)
     {
         return Task.FromResult(0);
     }
 
-    public Task PushNotificationAsync(Notification notification) => Task.CompletedTask;
-
-    public Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus) =>
-        Task.CompletedTask;
+    public Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        return Task.FromResult(0);
+    }
 }

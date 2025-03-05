@@ -41,6 +41,7 @@ public static class StripeConstants
     public static class InvoiceStatus
     {
         public const string Draft = "draft";
+        public const string Open = "open";
     }
 
     public static class MetadataKeys

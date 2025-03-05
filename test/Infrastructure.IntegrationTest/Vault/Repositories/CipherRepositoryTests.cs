@@ -433,4 +433,454 @@ public class CipherRepositoryTests
         Assert.False(unassignedCipherPermission.Read);
         Assert.False(unassignedCipherPermission.ViewPassword);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetCipherPermissionsForOrganizationAsync_ManageProperty_RespectsCollectionUserRules(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var manageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: true, "Manage Collection");
+
+        var nonManageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: false, "Non-Manage Collection");
+
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+        Assert.Equal(2, permissions.Count);
+
+        var managePermission = permissions.FirstOrDefault(c => c.Id == manageCipher.Id);
+        Assert.NotNull(managePermission);
+        Assert.True(managePermission.Manage, "Collection with Manage=true should grant Manage permission");
+
+        var nonManagePermission = permissions.FirstOrDefault(c => c.Id == nonManageCipher.Id);
+        Assert.NotNull(nonManagePermission);
+        Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetCipherPermissionsForOrganizationAsync_ManageProperty_RespectsCollectionGroupRules(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = organization.Id,
+            Name = "Test Group",
+        });
+        await groupRepository.UpdateUsersAsync(group.Id, new[] { orgUser.Id });
+
+        var (manageCipher, nonManageCipher) = await CreateCipherInOrganizationCollectionWithGroup(
+            organization, group, cipherRepository, collectionRepository, collectionCipherRepository, groupRepository);
+
+        var permissions = await cipherRepository.GetCipherPermissionsForOrganizationAsync(organization.Id, user.Id);
+        Assert.Equal(2, permissions.Count);
+
+        var managePermission = permissions.FirstOrDefault(c => c.Id == manageCipher.Id);
+        Assert.NotNull(managePermission);
+        Assert.True(managePermission.Manage, "Collection with Group Manage=true should grant Manage permission");
+
+        var nonManagePermission = permissions.FirstOrDefault(c => c.Id == nonManageCipher.Id);
+        Assert.NotNull(nonManagePermission);
+        Assert.False(nonManagePermission.Manage, "Collection with Group Manage=false should not grant Manage permission");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByUserIdAsync_ManageProperty_RespectsCollectionAndOwnershipRules(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var manageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: true, "Manage Collection");
+
+        var nonManageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: false, "Non-Manage Collection");
+
+        var personalCipher = await CreatePersonalCipher(user, cipherRepository);
+
+        var userCiphers = await cipherRepository.GetManyByUserIdAsync(user.Id);
+        Assert.Equal(3, userCiphers.Count);
+
+        var managePermission = userCiphers.FirstOrDefault(c => c.Id == manageCipher.Id);
+        Assert.NotNull(managePermission);
+        Assert.True(managePermission.Manage, "Collection with Manage=true should grant Manage permission");
+
+        var nonManagePermission = userCiphers.FirstOrDefault(c => c.Id == nonManageCipher.Id);
+        Assert.NotNull(nonManagePermission);
+        Assert.False(nonManagePermission.Manage, "Collection with Manage=false should not grant Manage permission");
+
+        var personalPermission = userCiphers.FirstOrDefault(c => c.Id == personalCipher.Id);
+        Assert.NotNull(personalPermission);
+        Assert.True(personalPermission.Manage, "Personal ciphers should always have Manage permission");
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetByIdAsync_ManageProperty_RespectsCollectionAndOwnershipRules(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var (user, organization, orgUser) = await CreateTestUserAndOrganization(userRepository, organizationRepository, organizationUserRepository);
+
+        var manageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: true, "Manage Collection");
+
+        var nonManageCipher = await CreateCipherInOrganizationCollection(
+            organization, orgUser, cipherRepository, collectionRepository, collectionCipherRepository,
+            hasManagePermission: false, "Non-Manage Collection");
+
+        var personalCipher = await CreatePersonalCipher(user, cipherRepository);
+
+        var manageDetails = await cipherRepository.GetByIdAsync(manageCipher.Id, user.Id);
+        Assert.NotNull(manageDetails);
+        Assert.True(manageDetails.Manage, "Collection with Manage=true should grant Manage permission");
+
+        var nonManageDetails = await cipherRepository.GetByIdAsync(nonManageCipher.Id, user.Id);
+        Assert.NotNull(nonManageDetails);
+        Assert.False(nonManageDetails.Manage, "Collection with Manage=false should not grant Manage permission");
+
+        var personalDetails = await cipherRepository.GetByIdAsync(personalCipher.Id, user.Id);
+        Assert.NotNull(personalDetails);
+        Assert.True(personalDetails.Manage, "Personal ciphers should always have Manage permission");
+    }
+
+    private async Task<(User user, Organization org, OrganizationUser orgUser)> CreateTestUserAndOrganization(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user.Email,
+            Plan = "Test"
+        });
+
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        return (user, organization, orgUser);
+    }
+
+    private async Task<Cipher> CreateCipherInOrganizationCollection(
+        Organization organization,
+        OrganizationUser orgUser,
+        ICipherRepository cipherRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        bool hasManagePermission,
+        string collectionName)
+    {
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = collectionName,
+            OrganizationId = organization.Id,
+        });
+
+        var cipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organization.Id,
+            new List<Guid> { collection.Id });
+
+        await collectionRepository.UpdateUsersAsync(collection.Id, new List<CollectionAccessSelection>
+        {
+            new() { Id = orgUser.Id, HidePasswords = false, ReadOnly = false, Manage = hasManagePermission }
+        });
+
+        return cipher;
+    }
+
+    private async Task<(Cipher manageCipher, Cipher nonManageCipher)> CreateCipherInOrganizationCollectionWithGroup(
+        Organization organization,
+        Group group,
+        ICipherRepository cipherRepository,
+        ICollectionRepository collectionRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        IGroupRepository groupRepository)
+    {
+        var manageCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Group Manage Collection",
+            OrganizationId = organization.Id,
+        });
+
+        var nonManageCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Group Non-Manage Collection",
+            OrganizationId = organization.Id,
+        });
+
+        var manageCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var nonManageCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher.Id, organization.Id,
+            new List<Guid> { manageCollection.Id });
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(nonManageCipher.Id, organization.Id,
+            new List<Guid> { nonManageCollection.Id });
+
+        await groupRepository.ReplaceAsync(group,
+            new[]
+            {
+                new CollectionAccessSelection
+                {
+                    Id = manageCollection.Id,
+                    HidePasswords = false,
+                    ReadOnly = false,
+                    Manage = true
+                },
+                new CollectionAccessSelection
+                {
+                    Id = nonManageCollection.Id,
+                    HidePasswords = false,
+                    ReadOnly = false,
+                    Manage = false
+                }
+            });
+
+        return (manageCipher, nonManageCipher);
+    }
+
+    private async Task<Cipher> CreatePersonalCipher(User user, ICipherRepository cipherRepository)
+    {
+        return await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            UserId = user.Id,
+            Data = ""
+        });
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetUserSecurityTasksByCipherIdsAsync_Works(
+        ICipherRepository cipherRepository,
+        IUserRepository userRepository,
+        ICollectionCipherRepository collectionCipherRepository,
+        ICollectionRepository collectionRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository
+        )
+    {
+        // Users
+        var user1 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 1",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var user2 = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User 2",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        // Organization
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Organization",
+            BillingEmail = user1.Email,
+            Plan = "Test"
+        });
+
+        // Org Users
+        var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user1.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.Owner,
+        });
+
+        var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
+        {
+            UserId = user2.Id,
+            OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
+        });
+
+        // A group that will be assigned Edit permissions to any collections
+        var editGroup = await groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = organization.Id,
+            Name = "Edit Group",
+        });
+        await groupRepository.UpdateUsersAsync(editGroup.Id, new[] { orgUser1.Id });
+
+        // Add collections to Org
+        var manageCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Manage Collection",
+            OrganizationId = organization.Id
+        });
+
+        // Use a 2nd collection to differentiate between the two users
+        var manageCollection2 = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Manage Collection 2",
+            OrganizationId = organization.Id
+        });
+        var viewOnlyCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "View Only Collection",
+            OrganizationId = organization.Id
+        });
+
+        // Ciphers
+        var manageCipher1 = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var manageCipher2 = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        var viewOnlyCipher = await cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Login,
+            OrganizationId = organization.Id,
+            Data = ""
+        });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher1.Id, organization.Id,
+            new List<Guid> { manageCollection.Id });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(manageCipher2.Id, organization.Id,
+            new List<Guid> { manageCollection2.Id });
+
+        await collectionCipherRepository.UpdateCollectionsForAdminAsync(viewOnlyCipher.Id, organization.Id,
+            new List<Guid> { viewOnlyCollection.Id });
+
+        await collectionRepository.UpdateUsersAsync(manageCollection.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser1.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+             new()
+            {
+                Id = orgUser2.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            }
+        });
+
+        // Only add second user to the second manage collection
+        await collectionRepository.UpdateUsersAsync(manageCollection2.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser2.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = true
+            },
+        });
+
+        await collectionRepository.UpdateUsersAsync(viewOnlyCollection.Id, new List<CollectionAccessSelection>
+        {
+            new()
+            {
+                Id = orgUser1.Id,
+                HidePasswords = false,
+                ReadOnly = false,
+                Manage = false
+            }
+        });
+
+        var securityTasks = new List<SecurityTask>
+        {
+            new SecurityTask { CipherId = manageCipher1.Id, Id = Guid.NewGuid() },
+            new SecurityTask { CipherId = manageCipher2.Id, Id = Guid.NewGuid() },
+            new SecurityTask { CipherId = viewOnlyCipher.Id, Id = Guid.NewGuid() }
+        };
+
+        var userSecurityTaskCiphers = await cipherRepository.GetUserSecurityTasksByCipherIdsAsync(organization.Id, securityTasks);
+
+        Assert.NotEmpty(userSecurityTaskCiphers);
+        Assert.Equal(3, userSecurityTaskCiphers.Count);
+
+        var user1TaskCiphers = userSecurityTaskCiphers.Where(t => t.UserId == user1.Id);
+        Assert.Single(user1TaskCiphers);
+        Assert.Equal(user1.Email, user1TaskCiphers.First().Email);
+        Assert.Equal(user1.Id, user1TaskCiphers.First().UserId);
+        Assert.Equal(manageCipher1.Id, user1TaskCiphers.First().CipherId);
+
+        var user2TaskCiphers = userSecurityTaskCiphers.Where(t => t.UserId == user2.Id);
+        Assert.NotNull(user2TaskCiphers);
+        Assert.Equal(2, user2TaskCiphers.Count());
+        Assert.Equal(user2.Email, user2TaskCiphers.Last().Email);
+        Assert.Equal(user2.Id, user2TaskCiphers.Last().UserId);
+        Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher1.Id && t.TaskId == securityTasks[0].Id);
+        Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher2.Id && t.TaskId == securityTasks[1].Id);
+    }
 }

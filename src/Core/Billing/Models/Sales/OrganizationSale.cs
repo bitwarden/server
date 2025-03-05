@@ -77,8 +77,6 @@ public class OrganizationSale
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
-        var plan = Core.Utilities.StaticStore.GetPlan(upgrade.Plan);
-
         var passwordManagerOptions = new SubscriptionSetup.PasswordManager
         {
             Seats = upgrade.AdditionalSeats,
@@ -96,7 +94,7 @@ public class OrganizationSale
 
         return new SubscriptionSetup
         {
-            Plan = plan,
+            PlanType = upgrade.Plan,
             PasswordManagerOptions = passwordManagerOptions,
             SecretsManagerOptions = secretsManagerOptions
         };
