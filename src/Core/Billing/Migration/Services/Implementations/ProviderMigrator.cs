@@ -254,7 +254,7 @@ public class ProviderMigrator(
 
             await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
             {
-                Coupon = StripeConstants.CouponIDs.MSPDiscount35
+                Coupon = StripeConstants.CouponIDs.LegacyMSPDiscount
             });
 
             provider.GatewayCustomerId = customer.Id;
