@@ -11,6 +11,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Services;
@@ -45,7 +46,6 @@ namespace Bit.Core.Services;
 public class UserService : UserManager<User>, IUserService, IDisposable
 {
     private const string PremiumPlanId = "premium-annually";
-    private const string StoragePlanId = "personal-storage-gb-annually";
 
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
@@ -1106,12 +1106,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
 
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
-            StoragePlanId);
+            StripeConstants.Prices.StoragePlanPersonal);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustStorage, user, _currentContext)
             {
                 Storage = storageAdjustmentGb,
-                PlanName = StoragePlanId,
+                PlanName = StripeConstants.Prices.StoragePlanPersonal,
             });
         await SaveUserAsync(user);
         return secret;

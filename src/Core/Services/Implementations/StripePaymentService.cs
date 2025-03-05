@@ -26,7 +26,6 @@ namespace Bit.Core.Services;
 public class StripePaymentService : IPaymentService
 {
     private const string PremiumPlanId = "premium-annually";
-    private const string StoragePlanId = "personal-storage-gb-annually";
     private const string ProviderDiscountId = "msp-discount-35";
     private const string SecretsManagerStandaloneDiscountId = "sm-standalone";
 
@@ -578,7 +577,7 @@ public class StripePaymentService : IPaymentService
         {
             subCreateOptions.Items.Add(new SubscriptionItemOptions
             {
-                Plan = StoragePlanId,
+                Plan = StripeConstants.Prices.StoragePlanPersonal,
                 Quantity = additionalStorageGb
             });
         }
@@ -1870,7 +1869,7 @@ public class StripePaymentService : IPaymentService
                     new()
                     {
                         Quantity = parameters.PasswordManager.AdditionalStorage,
-                        Plan = "storage-gb-annually"
+                        Plan = StripeConstants.Prices.StoragePlanPersonal
                     }
                 ]
             },
