@@ -303,7 +303,7 @@ public class GroupsControllerPutTests
 
         // Arrange repositories
         sutProvider.GetDependency<IGroupRepository>().GetManyUserIdsByIdAsync(group.Id).Returns(currentGroupUsers ?? []);
-        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)!
+        sutProvider.GetDependency<IGroupRepository>().GetByIdWithCollectionsAsync(group.Id)
             .Returns(new Tuple<Group, ICollection<CollectionAccessSelection>>(group, currentCollectionAccess ?? []));
         if (savingUser != null)
         {
