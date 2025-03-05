@@ -38,7 +38,7 @@ public class InviteOrganizationUserCommandTests
         // Arrange
         user.Email = address.Address;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
 
         var request = new InviteScimOrganizationUserRequest(user.Email,
             true,
@@ -86,7 +86,7 @@ public class InviteOrganizationUserCommandTests
         // Arrange
         user.Email = address.Address;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
 
         var request = new InviteScimOrganizationUserRequest(user.Email,
             true,
@@ -139,7 +139,7 @@ public class InviteOrganizationUserCommandTests
 
         user.Email = address.Address;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
 
         var request = new InviteScimOrganizationUserRequest(user.Email,
             true,
@@ -194,7 +194,7 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
 
         var request = new InviteScimOrganizationUserRequest(user.Email,
             true,
@@ -250,7 +250,7 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
 
         var request = new InviteScimOrganizationUserRequest(user.Email,
             true,
@@ -313,7 +313,7 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
 
         var request = new InviteScimOrganizationUserRequest(user.Email,
             true,

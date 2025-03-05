@@ -16,17 +16,21 @@ public record OrganizationDto
     public string GatewaySubscriptionId { get; init; }
     public bool UseSecretsManager { get; init; }
 
-    public static OrganizationDto FromOrganization(Organization organization) =>
-        new()
-        {
-            OrganizationId = organization.Id,
-            Seats = organization.Seats,
-            MaxAutoScaleSeats = organization.MaxAutoscaleSeats,
-            SmSeats = organization.SmSeats,
-            SmMaxAutoScaleSeats = organization.MaxAutoscaleSmSeats,
-            Plan = StaticStore.GetPlan(organization.PlanType),
-            GatewayCustomerId = organization.GatewayCustomerId,
-            GatewaySubscriptionId = organization.GatewaySubscriptionId,
-            UseSecretsManager = organization.UseSecretsManager
-        };
+    public OrganizationDto()
+    {
+
+    }
+
+    public OrganizationDto(Organization organization)
+    {
+        OrganizationId = organization.Id;
+        Seats = organization.Seats;
+        MaxAutoScaleSeats = organization.MaxAutoscaleSeats;
+        SmSeats = organization.SmSeats;
+        SmMaxAutoScaleSeats = organization.MaxAutoscaleSmSeats;
+        Plan = StaticStore.GetPlan(organization.PlanType);
+        GatewayCustomerId = organization.GatewayCustomerId;
+        GatewaySubscriptionId = organization.GatewaySubscriptionId;
+        UseSecretsManager = organization.UseSecretsManager;
+    }
 }

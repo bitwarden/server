@@ -21,7 +21,7 @@ public class SecretsManagerInviteUserValidationTests
     {
         organization.UseSecretsManager = false;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -48,7 +48,7 @@ public class SecretsManagerInviteUserValidationTests
     {
         organization.UseSecretsManager = false;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var invite = OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true);
@@ -79,7 +79,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.SmSeats = null;
         organization.UseSecretsManager = true;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -109,7 +109,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -140,7 +140,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = OrganizationDto.FromOrganization(organization);
+        var organizationDto = new OrganizationDto(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest

@@ -62,7 +62,7 @@ public class PostUserCommand(
             return await InviteScimOrganizationUserAsync(model.ToRequest(
                 scimProvider: scimProvider,
                 hasSecretsManager: hasStandaloneSecretsManager,
-                organization: OrganizationDto.FromOrganization(organization),
+                organization: new OrganizationDto(organization),
                 performedAt: timeProvider.GetUtcNow()));
         }
 
