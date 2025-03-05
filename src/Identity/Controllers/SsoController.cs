@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Identity.Models;
+using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;

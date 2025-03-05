@@ -30,6 +30,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
+using Duende.IdentityModel;
 
 
 #if !OSS

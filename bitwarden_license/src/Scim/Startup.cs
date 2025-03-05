@@ -8,6 +8,7 @@ using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Utilities;
 using Bit.SharedWeb.Utilities;
+using Duende.IdentityModel;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
