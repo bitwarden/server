@@ -105,7 +105,7 @@ public class BaseRequestValidatorTests
         // Assert
         await _eventService.Received(1)
                            .LogUserEventAsync(context.CustomValidatorRequestContext.User.Id,
-                                             Core.Enums.EventType.User_FailedLogIn);
+                                             EventType.User_FailedLogIn);
         Assert.True(context.GrantResult.IsError);
         Assert.Equal("Username or password is incorrect. Try again.", errorResponse.Message);
     }

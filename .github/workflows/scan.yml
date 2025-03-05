@@ -46,7 +46,7 @@ jobs:
             --output-path . ${{ env.INCREMENTAL }}
 
       - name: Upload Checkmarx results to GitHub
-        uses: github/codeql-action/upload-sarif@48ab28a6f5dbc2a99bf1e0131198dd8f1df78169 # v3.28.0
+        uses: github/codeql-action/upload-sarif@dd746615b3b9d728a6a37ca2045b68ca76d4841a # v3.28.8
         with:
           sarif_file: cx_result.sarif
 
@@ -85,6 +85,6 @@ jobs:
           /d:sonar.test.inclusions=test/,bitwarden_license/test/ \
           /d:sonar.exclusions=test/,bitwarden_license/test/ \
           /o:"${{ github.repository_owner }}" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" \
-          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.host.url="https://sonarcloud.io" ${{ contains(github.event_name, 'pull_request') && format('/d:sonar.pullrequest.key={0}', github.event.pull_request.number) || '' }}
           dotnet build
           dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"

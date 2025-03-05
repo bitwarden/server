@@ -25,7 +25,7 @@ public class EncryptedStringAttributeTests
     [InlineData("Rsa2048_OaepSha256_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha256_HmacSha256_B64 as a string
     [InlineData("6.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")] // Valid Rsa2048_OaepSha1_HmacSha256_B64 as a number
     [InlineData("Rsa2048_OaepSha1_HmacSha256_B64.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==")]
-    public void IsValid_ReturnsTrue_WhenValid(string input)
+    public void IsValid_ReturnsTrue_WhenValid(string? input)
     {
         var sut = new EncryptedStringAttribute();
 

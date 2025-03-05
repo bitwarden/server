@@ -227,7 +227,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewDeviceVerificationFeatureFlagFalse_SendsEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsync_ExistingUserNewDeviceLogin_SendNewDeviceLoginEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -237,8 +237,6 @@ public class DeviceValidatorTests
         _globalSettings.DisableEmailNewDevice = false;
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(false);
         // set user creation to more than 10 minutes ago
         context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromMinutes(11);
 
@@ -253,7 +251,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewDeviceVerificationFeatureFlagFalse_NewUser_DoesNotSendEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsync_NewUserNewDeviceLogin_DoesNotSendNewDeviceLoginEmail_ReturnsTrue(
     CustomValidatorRequestContext context,
     [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -263,8 +261,6 @@ public class DeviceValidatorTests
         _globalSettings.DisableEmailNewDevice = false;
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(false);
         // set user creation to less than 10 minutes ago
         context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromMinutes(9);
 
@@ -279,7 +275,7 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async void ValidateRequestDeviceAsync_NewDeviceVerificationFeatureFlagFalse_DisableEmailTrue_DoesNotSendEmail_ReturnsTrue(
+    public async void ValidateRequestDeviceAsynce_DisableNewDeviceLoginEmailTrue_DoesNotSendNewDeviceEmail_ReturnsTrue(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
     {
@@ -289,8 +285,6 @@ public class DeviceValidatorTests
         _globalSettings.DisableEmailNewDevice = true;
         _deviceRepository.GetByIdentifierAsync(context.Device.Identifier, context.User.Id)
             .Returns(null as Device);
-        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification)
-            .Returns(false);
 
         // Act
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
@@ -454,6 +448,31 @@ public class DeviceValidatorTests
     }
 
     [Theory, BitAutoData]
+    public async void HandleNewDeviceVerificationAsync_NewlyCreated_ReturnsSuccess(
+        CustomValidatorRequestContext context,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
+    {
+        // Arrange
+        ArrangeForHandleNewDeviceVerificationTest(context, request);
+        _featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification).Returns(true);
+        _globalSettings.EnableNewDeviceVerification = true;
+        _distributedCache.GetAsync(Arg.Any<string>()).Returns(null as byte[]);
+        context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromHours(23);
+
+        // Act
+        var result = await _sut.ValidateRequestDeviceAsync(request, context);
+
+        // Assert
+        await _userService.Received(0).SendOTPAsync(context.User);
+        await _deviceService.Received(1).SaveAsync(Arg.Any<Device>());
+
+        Assert.True(result);
+        Assert.False(context.CustomResponse.ContainsKey("ErrorModel"));
+        Assert.Equal(context.User.Id, context.Device.UserId);
+        Assert.NotNull(context.Device);
+    }
+
+    [Theory, BitAutoData]
     public async void HandleNewDeviceVerificationAsync_UserHasCacheValue_ReturnsSuccess(
         CustomValidatorRequestContext context,
         [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest request)
@@ -580,7 +599,7 @@ public class DeviceValidatorTests
         var result = await _sut.ValidateRequestDeviceAsync(request, context);
 
         // Assert
-        await _userService.Received(1).SendOTPAsync(context.User);
+        await _userService.Received(1).SendNewDeviceVerificationEmailAsync(context.User);
         await _deviceService.Received(0).SaveAsync(Arg.Any<Device>());
 
         Assert.False(result);
@@ -639,5 +658,9 @@ public class DeviceValidatorTests
         request.GrantType = "password";
         context.TwoFactorRequired = false;
         context.SsoRequired = false;
+        if (context.User != null)
+        {
+            context.User.CreationDate = DateTime.UtcNow - TimeSpan.FromDays(365);
+        }
     }
 }
