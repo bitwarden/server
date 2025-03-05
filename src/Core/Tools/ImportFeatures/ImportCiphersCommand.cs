@@ -54,12 +54,11 @@ public class ImportCiphersCommand : IImportCiphersCommand
     public async Task ImportIntoIndividualVaultAsync(
         List<Folder> folders,
         List<CipherDetails> ciphers,
-        IEnumerable<KeyValuePair<int, int>> folderRelationships)
+        IEnumerable<KeyValuePair<int, int>> folderRelationships,
+        Guid importingUserId)
     {
-        var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
-
         // Make sure the user can save new ciphers to their personal vault
-        var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value, PolicyType.PersonalOwnership);
+        var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership);
         if (anyPersonalOwnershipPolicies)
         {
             throw new BadRequestException("You cannot import items into your personal vault because you are " +
@@ -76,7 +75,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
             }
         }
 
-        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(userId ?? Guid.Empty)).Select(f => f.Id).ToList();
+        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(importingUserId)).Select(f => f.Id).ToList();
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships
@@ -109,10 +108,7 @@ public class ImportCiphersCommand : IImportCiphersCommand
         await _cipherRepository.CreateAsync(ciphers, newFolders);
 
         // push
-        if (userId.HasValue)
-        {
-            await _pushService.PushSyncVaultAsync(userId.Value);
-        }
+        await _pushService.PushSyncVaultAsync(importingUserId);
     }
 
     public async Task ImportIntoOrganizationalVaultAsync(
