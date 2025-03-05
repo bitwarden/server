@@ -2,28 +2,27 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.SqliteMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AlterAuthRequestTable : Migration
 {
     /// <inheritdoc />
-    public partial class AlterAuthRequestTable : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<string>(
-                name: "CountryName",
-                table: "AuthRequest",
-                type: "TEXT",
-                maxLength: 200,
-                nullable: true);
-        }
+        migrationBuilder.AddColumn<string>(
+            name: "RequestCountryName",
+            table: "AuthRequest",
+            type: "TEXT",
+            maxLength: 200,
+            nullable: true);
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "CountryName",
-                table: "AuthRequest");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "RequestCountryName",
+            table: "AuthRequest");
     }
 }

@@ -402,7 +402,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("CountryName")
+                    b.Property<string>("RequestCountryName")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 

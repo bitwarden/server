@@ -404,7 +404,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("CountryName")
+                    b.Property<string>("RequestCountryName")
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
