@@ -2,7 +2,7 @@
 
 namespace Bit.Api.Models.CommandResults;
 
-public class NoRecordFoundFailure<T> : FailureCommandResult<T>
+public class NoRecordFoundFailure<T> : Failure<T>
 {
     public NoRecordFoundFailure(IEnumerable<string> errorMessage) : base(errorMessage)
     {
@@ -13,7 +13,7 @@ public class NoRecordFoundFailure<T> : FailureCommandResult<T>
     }
 }
 
-public class NoRecordFoundFailure : FailureCommandResult
+public class NoRecordFoundFailure : Failure
 {
     public NoRecordFoundFailure(IEnumerable<string> errorMessage) : base(errorMessage)
     {

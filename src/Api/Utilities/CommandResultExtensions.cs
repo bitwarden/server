@@ -12,8 +12,8 @@ public static class CommandResultExtensions
         {
             NoRecordFoundFailure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status404NotFound },
             BadRequestFailure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
-            FailureCommandResult<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
-            SuccessCommandResult<T> success => new ObjectResult(success.Data) { StatusCode = StatusCodes.Status200OK },
+            Failure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
+            Success<T> success => new ObjectResult(success.Data) { StatusCode = StatusCodes.Status200OK },
             _ => throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}")
         };
     }
@@ -24,8 +24,8 @@ public static class CommandResultExtensions
         {
             NoRecordFoundFailure failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status404NotFound },
             BadRequestFailure failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
-            FailureCommandResult failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
-            SuccessCommandResult => new ObjectResult(new { }) { StatusCode = StatusCodes.Status200OK },
+            Failure failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
+            Success => new ObjectResult(new { }) { StatusCode = StatusCodes.Status200OK },
             _ => throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}")
         };
     }

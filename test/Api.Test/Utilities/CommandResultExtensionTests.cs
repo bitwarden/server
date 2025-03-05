@@ -24,14 +24,14 @@ public class CommandResultExtensionTests
         };
         yield return new object[]
         {
-            new FailureCommandResult<Cipher>("Error 4"),
+            new Failure<Cipher>("Error 4"),
             new ObjectResult(new[] { "Error 4" }) { StatusCode = StatusCodes.Status400BadRequest }
         };
         var cipher = new Cipher() { Id = Guid.NewGuid() };
 
         yield return new object[]
         {
-            new SuccessCommandResult<Cipher>(cipher),
+            new Success<Cipher>(cipher),
             new ObjectResult(cipher) { StatusCode = StatusCodes.Status200OK }
         };
     }
@@ -69,12 +69,12 @@ public class CommandResultExtensionTests
         };
         yield return new object[]
         {
-            new FailureCommandResult("Error 4"),
+            new Failure("Error 4"),
             new ObjectResult(new[] { "Error 4" }) { StatusCode = StatusCodes.Status400BadRequest }
         };
         yield return new object[]
         {
-            new SuccessCommandResult(),
+            new Success(),
             new ObjectResult(new { }) { StatusCode = StatusCodes.Status200OK }
         };
     }
