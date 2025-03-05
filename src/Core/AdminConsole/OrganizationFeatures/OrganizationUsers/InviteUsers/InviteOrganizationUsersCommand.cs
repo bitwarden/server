@@ -59,13 +59,13 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     private async Task<CommandResult<IEnumerable<OrganizationUser>>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
     {
         var existingEmails = new HashSet<string>(await organizationUserRepository.SelectKnownEmailsAsync(
-                request.Organization.OrganizationId, request.Invites.SelectMany(i => i.Emails), false),
+                request.InviteOrganization.OrganizationId, request.Invites.SelectMany(i => i.Emails), false),
             StringComparer.InvariantCultureIgnoreCase);
 
         var invitesToSend = request.Invites
             .SelectMany(invite => invite.Emails
                 .Where(email => !existingEmails.Contains(email))
-                .Select(email => OrganizationUserInviteDto.Create(email, invite, request.Organization.OrganizationId))
+                .Select(email => OrganizationUserInviteDto.Create(email, invite, request.InviteOrganization.OrganizationId))
             ).ToArray();
 
         if (invitesToSend.Length == 0)
@@ -76,11 +76,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         var validationResult = await inviteUsersValidation.ValidateAsync(new InviteUserOrganizationValidationRequest
         {
             Invites = invitesToSend.ToArray(),
-            Organization = request.Organization,
+            InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
-            OccupiedPmSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.Organization.OrganizationId),
-            OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.Organization.OrganizationId)
+            OccupiedPmSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId),
+            OccupiedSmSeats = await organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(request.InviteOrganization.OrganizationId)
         });
 
         if (validationResult is Invalid<InviteUserOrganizationValidationRequest> invalid)
@@ -94,7 +94,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(MapToDataModel(request.PerformedAt))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.Organization.OrganizationId);
+        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
         try
         {
             await organizationUserRepository.CreateManyAsync(organizationUserCollection);
@@ -129,7 +129,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0)
         {
-            await paymentService.AdjustSeatsAsync(organization, valid.Value.Organization.Plan, -valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
+            await paymentService.AdjustSeatsAsync(organization, valid.Value.InviteOrganization.Plan, -valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
             organization.Seats = (short?)valid.Value.PasswordManagerSubscriptionUpdate.Seats;
 
@@ -142,7 +142,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (valid.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd < 0)
         {
-            var updateRevert = new SecretsManagerSubscriptionUpdate(organization, valid.Value.Organization.Plan, false)
+            var updateRevert = new SecretsManagerSubscriptionUpdate(organization, valid.Value.InviteOrganization.Plan, false)
             {
                 SmSeats = valid.Value.SecretsManagerSubscriptionUpdate.Seats
             };
@@ -180,7 +180,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         try
         {
             var ownerEmails = (await organizationUserRepository
-                    .GetManyByMinimumRoleAsync(valid.Value.Organization.OrganizationId, OrganizationUserType.Owner))
+                    .GetManyByMinimumRoleAsync(valid.Value.InviteOrganization.OrganizationId, OrganizationUserType.Owner))
                 .Select(x => x.Email)
                 .Distinct();
 
@@ -200,7 +200,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return;
         }
 
-        var subscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, valid.Value.Organization.Plan, true)
+        var subscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, valid.Value.InviteOrganization.Plan, true)
             .AdjustSeats(valid.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
         await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(subscriptionUpdate);
@@ -213,7 +213,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return;
         }
 
-        await paymentService.AdjustSeatsAsync(organization, valid.Value.Organization.Plan, valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
+        await paymentService.AdjustSeatsAsync(organization, valid.Value.InviteOrganization.Plan, valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
         organization.Seats = (short?)valid.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
 
@@ -223,8 +223,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         await referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, currentContext)
             {
-                PlanName = valid.Value.Organization.Plan.Name,
-                PlanType = valid.Value.Organization.Plan.Type,
+                PlanName = valid.Value.InviteOrganization.Plan.Name,
+                PlanType = valid.Value.InviteOrganization.Plan.Type,
                 Seats = valid.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal,
                 PreviousSeats = valid.Value.PasswordManagerSubscriptionUpdate.Seats
             });

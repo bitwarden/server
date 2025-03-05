@@ -30,12 +30,12 @@ public class ScimUserRequestModel : BaseScimUserModel
     public InviteScimOrganizationUserRequest ToRequest(
         ScimProviderType scimProvider,
         bool hasSecretsManager,
-        OrganizationDto organization,
+        InviteOrganization inviteOrganization,
         DateTimeOffset performedAt) =>
         new(
             email: EmailForInvite(scimProvider),
             hasSecretsManager: hasSecretsManager,
-            organization: organization,
+            inviteOrganization: inviteOrganization,
             performedAt: performedAt,
             externalId: ExternalIdForInvite());
 

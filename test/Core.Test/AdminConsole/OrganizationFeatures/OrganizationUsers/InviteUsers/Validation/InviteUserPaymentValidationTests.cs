@@ -20,7 +20,7 @@ public class InviteUserPaymentValidationTests
         var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
         {
             SubscriptionStatus = StripeConstants.SubscriptionStatus.Active,
-            ProductTierType = new OrganizationDto(organization).Plan.ProductTier
+            ProductTierType = new InviteOrganization(organization).Plan.ProductTier
         });
 
         Assert.IsType<Valid<PaymentSubscriptionDto>>(result);

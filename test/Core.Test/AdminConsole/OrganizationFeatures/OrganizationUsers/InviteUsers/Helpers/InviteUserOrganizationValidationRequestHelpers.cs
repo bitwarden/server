@@ -7,28 +7,28 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Invi
 public static class InviteUserOrganizationValidationRequestHelpers
 {
     public static InviteUserOrganizationValidationRequest GetInviteValidationRequestMock(InviteScimOrganizationUserRequest request,
-        OrganizationDto organizationDto) =>
+        InviteOrganization inviteOrganization) =>
         new()
         {
             Invites =
             [
                 OrganizationUserInviteDto.Create(request.Email,
-                    OrganizationUserInvite.Create(request, request.ExternalId), organizationDto.OrganizationId)
+                    OrganizationUserInvite.Create(request, request.ExternalId), inviteOrganization.OrganizationId)
             ],
-            Organization = organizationDto,
+            InviteOrganization = inviteOrganization,
             PerformedBy = Guid.Empty,
             PerformedAt = request.PerformedAt,
             OccupiedPmSeats = 0,
             OccupiedSmSeats = 0,
-            PasswordManagerSubscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0),
-            SecretsManagerSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(organizationDto, 0, 0, 0)
+            PasswordManagerSubscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(inviteOrganization, 0, 0),
+            SecretsManagerSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(inviteOrganization, 0, 0, 0)
         };
 
     public static InviteUserOrganizationValidationRequest WithPasswordManagerUpdate(this InviteUserOrganizationValidationRequest request, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate) =>
         new()
         {
             Invites = request.Invites,
-            Organization = request.Organization,
+            InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
             OccupiedPmSeats = request.OccupiedPmSeats,
@@ -41,7 +41,7 @@ public static class InviteUserOrganizationValidationRequestHelpers
         new()
         {
             Invites = request.Invites,
-            Organization = request.Organization,
+            InviteOrganization = request.InviteOrganization,
             PerformedBy = request.PerformedBy,
             PerformedAt = request.PerformedAt,
             OccupiedPmSeats = request.OccupiedPmSeats,

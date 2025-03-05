@@ -28,7 +28,7 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidEnvironment.ErrorMessageString);
         }
 
-        if (InvitingUserOrganizationValidation.Validate(request.Organization) is Invalid<OrganizationDto> organizationValidation)
+        if (InvitingUserOrganizationValidation.Validate(request.InviteOrganization) is Invalid<InviteOrganization> organizationValidation)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(organizationValidation.ErrorMessageString);
         }
@@ -49,7 +49,7 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidSmSubscriptionUpdate.ErrorMessageString);
         }
 
-        var provider = await providerRepository.GetByOrganizationIdAsync(request.Organization.OrganizationId);
+        var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
 
         if (provider is not null &&
             InvitingUserOrganizationProviderValidation.Validate(ProviderDto.FromProviderEntity(provider)) is
@@ -58,9 +58,9 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidProviderValidation.ErrorMessageString);
         }
 
-        var paymentSubscription = await paymentService.GetSubscriptionAsync(await organizationRepository.GetByIdAsync(request.Organization.OrganizationId));
+        var paymentSubscription = await paymentService.GetSubscriptionAsync(await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId));
 
-        if (InviteUserPaymentValidation.Validate(PaymentSubscriptionDto.FromSubscriptionInfo(paymentSubscription, request.Organization)) is
+        if (InviteUserPaymentValidation.Validate(PaymentSubscriptionDto.FromSubscriptionInfo(paymentSubscription, request.InviteOrganization)) is
             Invalid<PaymentSubscriptionDto> invalidPaymentValidation)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidPaymentValidation.ErrorMessageString);

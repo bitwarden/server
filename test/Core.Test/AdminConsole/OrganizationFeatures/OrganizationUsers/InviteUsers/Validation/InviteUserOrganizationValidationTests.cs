@@ -12,9 +12,9 @@ public class InviteUserOrganizationValidationTests
     [BitAutoData]
     public void Validate_WhenOrganizationIsFreeTier_ShouldReturnValidResponse(Organization organization)
     {
-        var result = InvitingUserOrganizationValidation.Validate(new OrganizationDto(organization));
+        var result = InvitingUserOrganizationValidation.Validate(new InviteOrganization(organization));
 
-        Assert.IsType<Valid<OrganizationDto>>(result);
+        Assert.IsType<Valid<InviteOrganization>>(result);
     }
 
     [Theory]
@@ -24,9 +24,9 @@ public class InviteUserOrganizationValidationTests
     {
         organization.GatewayCustomerId = string.Empty;
 
-        var result = InvitingUserOrganizationValidation.Validate(new OrganizationDto(organization));
+        var result = InvitingUserOrganizationValidation.Validate(new InviteOrganization(organization));
 
-        Assert.IsType<Invalid<OrganizationDto>>(result);
+        Assert.IsType<Invalid<InviteOrganization>>(result);
         Assert.Equal(InviteUserValidationErrorMessages.NoPaymentMethodFoundError, result.ErrorMessageString);
     }
 
@@ -37,9 +37,9 @@ public class InviteUserOrganizationValidationTests
     {
         organization.GatewaySubscriptionId = string.Empty;
 
-        var result = InvitingUserOrganizationValidation.Validate(new OrganizationDto(organization));
+        var result = InvitingUserOrganizationValidation.Validate(new InviteOrganization(organization));
 
-        Assert.IsType<Invalid<OrganizationDto>>(result);
+        Assert.IsType<Invalid<InviteOrganization>>(result);
         Assert.Equal(InviteUserValidationErrorMessages.NoSubscriptionFoundError, result.ErrorMessageString);
     }
 }

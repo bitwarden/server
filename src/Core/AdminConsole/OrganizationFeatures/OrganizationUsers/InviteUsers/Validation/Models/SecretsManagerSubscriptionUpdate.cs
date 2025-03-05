@@ -34,25 +34,25 @@ public class SecretsManagerSubscriptionUpdate
         SecretsManagerPlan = plan;
     }
 
-    public static SecretsManagerSubscriptionUpdate Create(OrganizationDto organizationDto, int occupiedSeats, int seatsToAdd, int passwordManagerSeatTotal)
+    public static SecretsManagerSubscriptionUpdate Create(InviteOrganization inviteOrganization, int occupiedSeats, int seatsToAdd, int passwordManagerSeatTotal)
     {
-        return new SecretsManagerSubscriptionUpdate(organizationDto.UseSecretsManager,
-            organizationDto.SmSeats,
-            organizationDto.SmMaxAutoScaleSeats,
+        return new SecretsManagerSubscriptionUpdate(inviteOrganization.UseSecretsManager,
+            inviteOrganization.SmSeats,
+            inviteOrganization.SmMaxAutoScaleSeats,
             occupiedSeats,
             seatsToAdd,
             passwordManagerSeatTotal,
-            organizationDto.Plan.SecretsManager);
+            inviteOrganization.Plan.SecretsManager);
     }
 
     public static SecretsManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest refined, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate)
     {
-        return new SecretsManagerSubscriptionUpdate(refined.Organization.UseSecretsManager,
-            refined.Organization.SmSeats,
-            refined.Organization.SmMaxAutoScaleSeats,
+        return new SecretsManagerSubscriptionUpdate(refined.InviteOrganization.UseSecretsManager,
+            refined.InviteOrganization.SmSeats,
+            refined.InviteOrganization.SmMaxAutoScaleSeats,
             refined.OccupiedSmSeats,
             refined.Invites.Count(x => x.AccessSecretsManager),
             passwordManagerSubscriptionUpdate.UpdatedSeatTotal,
-            refined.Organization.Plan.SecretsManager);
+            refined.InviteOrganization.Plan.SecretsManager);
     }
 }

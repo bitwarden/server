@@ -5,24 +5,24 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class InviteOrganizationUsersRequest
 {
     public OrganizationUserInvite[] Invites { get; } = [];
-    public OrganizationDto Organization { get; }
+    public InviteOrganization InviteOrganization { get; }
     public Guid PerformedBy { get; }
     public DateTimeOffset PerformedAt { get; }
 
     public InviteOrganizationUsersRequest(OrganizationUserInvite[] invites,
-        OrganizationDto organization,
+        InviteOrganization inviteOrganization,
         Guid performedBy,
         DateTimeOffset performedAt)
     {
         Invites = invites;
-        Organization = organization;
+        InviteOrganization = inviteOrganization;
         PerformedBy = performedBy;
         PerformedAt = performedAt;
     }
 
     public InviteOrganizationUsersRequest(InviteScimOrganizationUserRequest request) :
         this([OrganizationUserInvite.Create(request, request.ExternalId)],
-            request.Organization,
+            request.InviteOrganization,
             Guid.Empty,
             request.PerformedAt)
     { }

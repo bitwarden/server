@@ -10,7 +10,7 @@ public class InviteUserOrganizationValidationRequest
     public InviteUserOrganizationValidationRequest(InviteUserOrganizationValidationRequest request, PasswordManagerSubscriptionUpdate subscriptionUpdate, SecretsManagerSubscriptionUpdate smSubscriptionUpdate)
     {
         Invites = request.Invites;
-        Organization = request.Organization;
+        InviteOrganization = request.InviteOrganization;
         PerformedBy = request.PerformedBy;
         PerformedAt = request.PerformedAt;
         OccupiedPmSeats = request.OccupiedPmSeats;
@@ -20,7 +20,7 @@ public class InviteUserOrganizationValidationRequest
     }
 
     public OrganizationUserInviteDto[] Invites { get; init; } = [];
-    public OrganizationDto Organization { get; init; }
+    public InviteOrganization InviteOrganization { get; init; }
     public Guid PerformedBy { get; init; }
     public DateTimeOffset PerformedAt { get; init; }
     public int OccupiedPmSeats { get; init; }

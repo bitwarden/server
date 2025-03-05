@@ -9,10 +9,10 @@ public class PaymentSubscriptionDto
     public ProductTierType ProductTierType { get; init; }
     public string SubscriptionStatus { get; init; }
 
-    public static PaymentSubscriptionDto FromSubscriptionInfo(SubscriptionInfo subscriptionInfo, OrganizationDto organizationDto) =>
+    public static PaymentSubscriptionDto FromSubscriptionInfo(SubscriptionInfo subscriptionInfo, InviteOrganization inviteOrganization) =>
         new()
         {
             SubscriptionStatus = subscriptionInfo?.Subscription?.Status ?? string.Empty,
-            ProductTierType = organizationDto.Plan.ProductTier
+            ProductTierType = inviteOrganization.Plan.ProductTier
         };
 }

@@ -5,23 +5,23 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class InvitingUserOrganizationValidation
 {
-    public static ValidationResult<OrganizationDto> Validate(OrganizationDto organization)
+    public static ValidationResult<InviteOrganization> Validate(InviteOrganization inviteOrganization)
     {
-        if (organization.Seats is null)
+        if (inviteOrganization.Seats is null)
         {
-            return new Valid<OrganizationDto>(organization);
+            return new Valid<InviteOrganization>(inviteOrganization);
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        if (string.IsNullOrWhiteSpace(inviteOrganization.GatewayCustomerId))
         {
-            return new Invalid<OrganizationDto>(NoPaymentMethodFoundError);
+            return new Invalid<InviteOrganization>(NoPaymentMethodFoundError);
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+        if (string.IsNullOrWhiteSpace(inviteOrganization.GatewaySubscriptionId))
         {
-            return new Invalid<OrganizationDto>(NoSubscriptionFoundError);
+            return new Invalid<InviteOrganization>(NoSubscriptionFoundError);
         }
 
-        return new Valid<OrganizationDto>(organization);
+        return new Valid<InviteOrganization>(inviteOrganization);
     }
 }

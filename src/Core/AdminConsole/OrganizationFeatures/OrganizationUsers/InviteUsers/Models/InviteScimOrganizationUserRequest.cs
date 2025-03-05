@@ -6,13 +6,13 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public record InviteScimOrganizationUserRequest : OrganizationUserSingleEmailInvite
 {
-    public OrganizationDto Organization { get; private init; }
+    public InviteOrganization InviteOrganization { get; private init; }
     public DateTimeOffset PerformedAt { get; private init; }
     public string ExternalId { get; private init; } = string.Empty;
 
     public InviteScimOrganizationUserRequest(string email,
         bool hasSecretsManager,
-        OrganizationDto organization,
+        InviteOrganization inviteOrganization,
         DateTimeOffset performedAt,
         string externalId) : base(
         email: email,
@@ -21,7 +21,7 @@ public record InviteScimOrganizationUserRequest : OrganizationUserSingleEmailInv
         permissions: new Permissions(),
         accessSecretsManager: hasSecretsManager)
     {
-        Organization = organization;
+        InviteOrganization = inviteOrganization;
         PerformedAt = performedAt;
         ExternalId = externalId;
     }

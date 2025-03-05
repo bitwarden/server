@@ -21,13 +21,13 @@ public class SecretsManagerInviteUserValidationTests
     {
         organization.UseSecretsManager = false;
 
-        var organizationDto = new OrganizationDto(organization);
+        var organizationDto = new InviteOrganization(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
             Invites = [new OrganizationUserInviteDto()],
-            Organization = organizationDto,
+            InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
             OccupiedPmSeats = 0,
@@ -48,7 +48,7 @@ public class SecretsManagerInviteUserValidationTests
     {
         organization.UseSecretsManager = false;
 
-        var organizationDto = new OrganizationDto(organization);
+        var organizationDto = new InviteOrganization(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var invite = OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true);
@@ -56,7 +56,7 @@ public class SecretsManagerInviteUserValidationTests
         var request = new InviteUserOrganizationValidationRequest
         {
             Invites = [OrganizationUserInviteDto.Create(invite.Emails.First(), invite, organizationDto.OrganizationId)],
-            Organization = organizationDto,
+            InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
             OccupiedPmSeats = 0,
@@ -79,13 +79,13 @@ public class SecretsManagerInviteUserValidationTests
         organization.SmSeats = null;
         organization.UseSecretsManager = true;
 
-        var organizationDto = new OrganizationDto(organization);
+        var organizationDto = new InviteOrganization(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
             Invites = [new OrganizationUserInviteDto()],
-            Organization = organizationDto,
+            InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
             OccupiedPmSeats = 0,
@@ -109,13 +109,13 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = new OrganizationDto(organization);
+        var organizationDto = new InviteOrganization(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
             Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true), organization.Id)],
-            Organization = organizationDto,
+            InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
             OccupiedPmSeats = 0,
@@ -140,13 +140,13 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = new OrganizationDto(organization);
+        var organizationDto = new InviteOrganization(organization);
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
             Invites = [OrganizationUserInviteDto.Create("email@test.com", OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true), organization.Id)],
-            Organization = organizationDto,
+            InviteOrganization = organizationDto,
             PerformedBy = Guid.Empty,
             PerformedAt = default,
             OccupiedPmSeats = 0,

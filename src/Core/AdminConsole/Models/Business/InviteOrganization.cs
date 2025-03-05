@@ -4,7 +4,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Business;
 
-public record OrganizationDto
+public record InviteOrganization
 {
     public Guid OrganizationId { get; init; }
     public int? Seats { get; init; }
@@ -16,13 +16,13 @@ public record OrganizationDto
     public string GatewaySubscriptionId { get; init; }
     public bool UseSecretsManager { get; init; }
 
-    public OrganizationDto()
+    public InviteOrganization()
     {
 
     }
 
 
-    public OrganizationDto(Organization organization, Plan plan)
+    public InviteOrganization(Organization organization, Plan plan)
     {
         OrganizationId = organization.Id;
         Seats = organization.Seats;
@@ -35,7 +35,7 @@ public record OrganizationDto
         UseSecretsManager = organization.UseSecretsManager;
     }
 
-    public OrganizationDto(Organization organization) : this(organization, StaticStore.GetPlan(organization.PlanType))
+    public InviteOrganization(Organization organization) : this(organization, StaticStore.GetPlan(organization.PlanType))
     {
     }
 }
