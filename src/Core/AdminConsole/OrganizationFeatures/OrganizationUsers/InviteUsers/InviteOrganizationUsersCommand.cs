@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.Context;
@@ -17,17 +18,6 @@ using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Invite
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
-public static class InviteOrganizationUsersErrorMessages
-{
-    public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
-    public const string FailedToInviteUsers = "Failed to invite user(s).";
-}
-
-public interface IInviteOrganizationUsersCommand
-{
-    Task<CommandResult<OrganizationUser>> InviteScimOrganizationUserAsync(InviteScimOrganizationUserRequest request);
-}
-
 public class InviteOrganizationUsersCommand(IEventService eventService,
     IOrganizationUserRepository organizationUserRepository,
     IInviteUsersValidation inviteUsersValidation,
@@ -42,23 +32,28 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand
     ) : IInviteOrganizationUsersCommand
 {
-    public async Task<CommandResult<OrganizationUser>> InviteScimOrganizationUserAsync(InviteScimOrganizationUserRequest request)
+
+    public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
+    public const string FailedToInviteUsers = "Failed to invite user(s).";
+
+    public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteScimOrganizationUserRequest request)
     {
         var result = await InviteOrganizationUsersAsync(InviteOrganizationUsersRequest.Create(request));
 
         if (result is Failure<IEnumerable<OrganizationUser>> failure)
         {
-            return new Failure<OrganizationUser>(failure.ErrorMessage);
+            return new Failure<ScimInviteOrganizationUsersResponse>(failure.ErrorMessage);
         }
 
         if (result.Value.Any())
         {
-            (OrganizationUser User, EventType type, EventSystemUser system, DateTime performedAt) log = (result.Value.First(), EventType.OrganizationUser_Invited, EventSystemUser.SCIM, request.PerformedAt.UtcDateTime);
-
-            await eventService.LogOrganizationUserEventsAsync([log]);
+            await eventService.LogOrganizationUserEventAsync((IOrganizationUser)result.Value.First(), EventType.OrganizationUser_Invited, EventSystemUser.SCIM, request.PerformedAt.UtcDateTime);
         }
 
-        return new Success<OrganizationUser>(result.Value.FirstOrDefault());
+        return new Success<ScimInviteOrganizationUsersResponse>(new ScimInviteOrganizationUsersResponse
+        {
+            InvitedUser = result.Value.FirstOrDefault()
+        });
     }
 
     private async Task<CommandResult<IEnumerable<OrganizationUser>>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
@@ -71,9 +66,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .SelectMany(invite => invite.Emails
                 .Where(email => !existingEmails.Contains(email))
                 .Select(email => OrganizationUserInviteDto.Create(email, invite, request.Organization.OrganizationId))
-            );
+            ).ToArray();
 
-        if (invitesToSend.Any() is false)
+        if (invitesToSend.Length == 0)
         {
             return new Success<IEnumerable<OrganizationUser>>([]);
         }
@@ -93,38 +88,38 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return new Failure<IEnumerable<OrganizationUser>>(invalid.ErrorMessageString);
         }
 
-        var valid = validationResult as Valid<InviteUserOrganizationValidationRequest>;
+        var validatedRequest = validationResult as Valid<InviteUserOrganizationValidationRequest>;
 
         var organizationUserCollection = invitesToSend
             .Select(MapToDataModel(request.PerformedAt))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(valid.Value.Organization.OrganizationId);
+        var organization = await organizationRepository.GetByIdAsync(validatedRequest.Value.Organization.OrganizationId);
         try
         {
             await organizationUserRepository.CreateManyAsync(organizationUserCollection);
 
-            await AdjustPasswordManagerSeatsAsync(valid, organization);
+            await AdjustPasswordManagerSeatsAsync(validatedRequest, organization);
 
-            await AdjustSecretsManagerSeatsAsync(valid, organization);
+            await AdjustSecretsManagerSeatsAsync(validatedRequest, organization);
 
-            await SendNotificationsAsync(valid, organization);
+            await SendAdditionalEmailsAsync(validatedRequest, organization);
 
             await SendInvitesAsync(organizationUserCollection, organization);
 
-            await PublishEventAsync(valid, organization);
+            await PublishReferenceEventAsync(validatedRequest, organization);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, InviteOrganizationUsersErrorMessages.FailedToInviteUsers);
+            logger.LogError(ex, FailedToInviteUsers);
 
             await organizationUserRepository.DeleteManyAsync(organizationUserCollection.Select(x => x.User.Id));
 
-            await RevertSecretsManagerChangesAsync(valid, organization);
+            await RevertSecretsManagerChangesAsync(validatedRequest, organization);
 
-            await RevertPasswordManagerChangesAsync(valid, organization);
+            await RevertPasswordManagerChangesAsync(validatedRequest, organization);
 
-            return new Failure<IEnumerable<OrganizationUser>>(InviteOrganizationUsersErrorMessages.FailedToInviteUsers);
+            return new Failure<IEnumerable<OrganizationUser>>(FailedToInviteUsers);
         }
 
         return new Success<IEnumerable<OrganizationUser>>(organizationUserCollection.Select(x => x.User));
@@ -132,7 +127,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> valid, Organization organization)
     {
-        if (valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd < 0)
+        if (valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0)
         {
             await paymentService.AdjustSeatsAsync(organization, valid.Value.Organization.Plan, -valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
@@ -156,7 +151,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
     }
 
-    private async Task PublishEventAsync(Valid<InviteUserOrganizationValidationRequest> valid,
+    private async Task PublishReferenceEventAsync(Valid<InviteUserOrganizationValidationRequest> valid,
         Organization organization) =>
         await referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, currentContext)
@@ -170,7 +165,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 users.Select(x => x.User),
                 organization));
 
-    private async Task SendNotificationsAsync(Valid<InviteUserOrganizationValidationRequest> valid, Organization organization)
+    private async Task SendAdditionalEmailsAsync(Valid<InviteUserOrganizationValidationRequest> valid, Organization organization)
     {
         await SendPasswordManagerMaxSeatLimitEmailsAsync(valid, organization);
     }
@@ -194,7 +189,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, InviteOrganizationUsersErrorMessages.IssueNotifyingOwnersOfSeatLimitReached);
+            logger.LogError(ex, IssueNotifyingOwnersOfSeatLimitReached);
         }
     }
 
@@ -218,7 +213,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return;
         }
 
-        // These are the important steps
         await paymentService.AdjustSeatsAsync(organization, valid.Value.Organization.Plan, valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
         organization.Seats = (short?)valid.Value.PasswordManagerSubscriptionUpdate.UpdatedSeatTotal;
@@ -226,7 +220,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         await organizationRepository.ReplaceAsync(organization); // could optimize this with only a property update
         await applicationCacheService.UpsertOrganizationAbilityAsync(organization);
 
-        // Do we want to fail if this fails?
         await referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, currentContext)
             {

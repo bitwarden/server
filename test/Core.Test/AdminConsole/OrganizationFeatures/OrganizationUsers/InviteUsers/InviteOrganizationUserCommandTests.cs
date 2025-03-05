@@ -161,8 +161,8 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Failure<OrganizationUser>>(result);
-        var failure = result as Failure<OrganizationUser>;
+        Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
+        var failure = result as Failure<ScimInviteOrganizationUsersResponse>;
 
         Assert.Equal(errorMessage, failure.ErrorMessage);
 

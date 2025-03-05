@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -65,9 +66,9 @@ public class PostUserCommand(
 
             var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
 
-            if (result.Success)
+            if (result is Success<ScimInviteOrganizationUsersResponse> successfulResponse)
             {
-                var invitedUser = await organizationUserRepository.GetDetailsByIdAsync(result.Value.Id);
+                var invitedUser = await organizationUserRepository.GetDetailsByIdAsync(successfulResponse.Value.InvitedUser.Id);
 
                 return invitedUser;
             }
