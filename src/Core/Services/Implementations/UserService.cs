@@ -41,7 +41,7 @@ namespace Bit.Core.Services;
 public class UserService : UserManager<User>, IUserService, IDisposable
 {
     private const string PremiumPlanId = "premium-annually";
-    private const string StoragePlanId = "storage-gb-annually";
+    private const string StoragePlanId = "personal-storage-gb-annually";
 
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
