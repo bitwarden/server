@@ -94,7 +94,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .Select(MapToDataModel(request.PerformedAt))
             .ToArray();
 
-        var organization = await organizationRepository.GetByIdAsync(validatedRequest.Value.Organization.OrganizationId);
+        var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.Organization.OrganizationId);
         try
         {
             await organizationUserRepository.CreateManyAsync(organizationUserCollection);
@@ -142,7 +142,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (valid.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd < 0)
         {
-            var updateRevert = new SecretsManagerSubscriptionUpdate(organization, false)
+            var updateRevert = new SecretsManagerSubscriptionUpdate(organization, valid.Value.Organization.Plan, false)
             {
                 SmSeats = valid.Value.SecretsManagerSubscriptionUpdate.Seats
             };
@@ -185,7 +185,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 .Distinct();
 
             await mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization,
-                valid.Value.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats.Value, ownerEmails);
+                valid.Value.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats.Value!, ownerEmails);
         }
         catch (Exception ex)
         {
@@ -200,7 +200,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return;
         }
 
-        var subscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
+        var subscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, valid.Value.Organization.Plan, true)
             .AdjustSeats(valid.Value.SecretsManagerSubscriptionUpdate.SeatsRequiredToAdd);
 
         await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(subscriptionUpdate);

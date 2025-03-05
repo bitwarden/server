@@ -21,16 +21,21 @@ public record OrganizationDto
 
     }
 
-    public OrganizationDto(Organization organization)
+
+    public OrganizationDto(Organization organization, Plan plan)
     {
         OrganizationId = organization.Id;
         Seats = organization.Seats;
         MaxAutoScaleSeats = organization.MaxAutoscaleSeats;
         SmSeats = organization.SmSeats;
         SmMaxAutoScaleSeats = organization.MaxAutoscaleSmSeats;
-        Plan = StaticStore.GetPlan(organization.PlanType);
+        Plan = plan;
         GatewayCustomerId = organization.GatewayCustomerId;
         GatewaySubscriptionId = organization.GatewaySubscriptionId;
         UseSecretsManager = organization.UseSecretsManager;
+    }
+
+    public OrganizationDto(Organization organization) : this(organization, StaticStore.GetPlan(organization.PlanType))
+    {
     }
 }
