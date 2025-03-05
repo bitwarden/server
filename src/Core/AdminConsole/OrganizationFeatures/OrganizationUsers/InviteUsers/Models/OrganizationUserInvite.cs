@@ -12,7 +12,6 @@ public class OrganizationUserInvite
     public string[] Emails { get; private init; } = [];
     public CollectionAccessSelection[] AccessibleCollections { get; private init; } = [];
     public OrganizationUserType Type { get; private init; } = OrganizationUserType.User;
-
     public Permissions Permissions { get; private init; } = new();
     public string ExternalId { get; private init; } = string.Empty;
     public bool AccessSecretsManager { get; private init; }

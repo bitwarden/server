@@ -11,11 +11,4 @@ public class ScimInviteOrganizationUsersResponse
 {
     public OrganizationUser InvitedUser { get; init; }
 
-    public static ScimInviteOrganizationUsersResponse Create(OrganizationUser invitedUser)
-    {
-        return new ScimInviteOrganizationUsersResponse
-        {
-            InvitedUser = invitedUser
-        };
-    }
 }

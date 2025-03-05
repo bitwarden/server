@@ -590,12 +590,12 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             $"[{Schema}].[OrganizationUser_CreateManyWithCollectionsAndGroups]",
             new
             {
-                OrganizationUserData = JsonSerializer.Serialize(organizationUserCollection.Select(x => x.User)),
+                OrganizationUserData = JsonSerializer.Serialize(organizationUserCollection.Select(x => x.OrganizationUser)),
                 CollectionData = JsonSerializer.Serialize(organizationUserCollection
                     .SelectMany(x => x.Collections, (user, collection) => new CollectionUser
                     {
                         CollectionId = collection.Id,
-                        OrganizationUserId = user.User.Id,
+                        OrganizationUserId = user.OrganizationUser.Id,
                         ReadOnly = collection.ReadOnly,
                         HidePasswords = collection.HidePasswords,
                         Manage = collection.Manage
@@ -604,7 +604,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                     .SelectMany(x => x.Groups, (user, group) => new GroupUser
                     {
                         GroupId = group,
-                        OrganizationUserId = user.User.Id
+                        OrganizationUserId = user.OrganizationUser.Id
                     }))
             },
             commandType: CommandType.StoredProcedure);

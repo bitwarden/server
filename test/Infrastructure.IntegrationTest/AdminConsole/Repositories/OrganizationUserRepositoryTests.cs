@@ -396,9 +396,9 @@ public class OrganizationUserRepositoryTests
 
         var orgUserCollection = new List<CreateOrganizationUser>
         {
-            new CreateOrganizationUser
+            new()
             {
-                User = new OrganizationUser
+                OrganizationUser = new OrganizationUser
                 {
                     Id = CoreHelpers.GenerateComb(),
                     OrganizationId = organization.Id,
@@ -425,6 +425,7 @@ public class OrganizationUserRepositoryTests
 
         await organizationUserRepository.CreateManyAsync(orgUserCollection);
 
-        var orgUser = await organizationUserRepository.GetDetailsByIdAsync(orgUserCollection.First().User.Id);
+        var orgUser = await organizationUserRepository.GetDetailsByIdAsync(orgUserCollection.First().OrganizationUser.Id);
+        Assert.Equal(orgUserCollection.First().OrganizationUser.Id, orgUser.Id);
     }
 }

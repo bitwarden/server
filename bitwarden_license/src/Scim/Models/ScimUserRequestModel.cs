@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -26,13 +27,17 @@ public class ScimUserRequestModel : BaseScimUserModel
         };
     }
 
-    public OrganizationUserSingleEmailInvite ToInvite(ScimProviderType scimProvider, bool hasSecretsManager) =>
-        OrganizationUserSingleEmailInvite.Create(
-            EmailForInvite(scimProvider),
-            [],
-            OrganizationUserType.User,
-            new Permissions(),
-            hasSecretsManager);
+    public InviteScimOrganizationUserRequest ToRequest(
+        ScimProviderType scimProvider,
+        bool hasSecretsManager,
+        OrganizationDto organization,
+        DateTimeOffset performedAt) =>
+        new(
+            email: EmailForInvite(scimProvider),
+            hasSecretsManager: hasSecretsManager,
+            organization: organization,
+            performedAt: performedAt,
+            externalId: ExternalIdForInvite());
 
     private string EmailForInvite(ScimProviderType scimProvider)
     {

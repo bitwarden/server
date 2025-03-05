@@ -18,7 +18,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using Xunit;
-using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteScimOrganizationUserRequestHelpers;
 using static Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Helpers.InviteUserOrganizationValidationRequestHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -41,7 +40,8 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = OrganizationDto.FromOrganization(organization);
 
-        var request = GetInviteScimOrganizationUserRequestDefault(user.Email,
+        var request = new InviteScimOrganizationUserRequest(user.Email,
+            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -58,7 +58,7 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Success<OrganizationUser>>(result);
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         sutProvider.GetDependency<IPaymentService>()
             .DidNotReceiveWithAnyArgs()
@@ -88,7 +88,8 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = OrganizationDto.FromOrganization(organization);
 
-        var request = GetInviteScimOrganizationUserRequestDefault(user.Email,
+        var request = new InviteScimOrganizationUserRequest(user.Email,
+            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -109,12 +110,12 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Success<OrganizationUser>>(result);
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<CreateOrganizationUser>>(users =>
-                users.Any(user => user.User.Email == request.Invite.Email)));
+                users.Any(user => user.OrganizationUser.Email == request.Email)));
 
         sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .Received(1)
@@ -140,7 +141,8 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = OrganizationDto.FromOrganization(organization);
 
-        var request = GetInviteScimOrganizationUserRequestDefault(user.Email,
+        var request = new InviteScimOrganizationUserRequest(user.Email,
+            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -194,7 +196,8 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = OrganizationDto.FromOrganization(organization);
 
-        var request = GetInviteScimOrganizationUserRequestDefault(user.Email,
+        var request = new InviteScimOrganizationUserRequest(user.Email,
+            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -221,7 +224,7 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Success<OrganizationUser>>(result);
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         sutProvider.GetDependency<IMailService>()
             .Received(1)
@@ -249,7 +252,8 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = OrganizationDto.FromOrganization(organization);
 
-        var request = GetInviteScimOrganizationUserRequestDefault(user.Email,
+        var request = new InviteScimOrganizationUserRequest(user.Email,
+            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -279,7 +283,7 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Success<OrganizationUser>>(result);
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         sutProvider.GetDependency<IPaymentService>()
             .AdjustSeatsAsync(organization, organizationDto.Plan, passwordManagerUpdate.SeatsRequiredToAdd);
@@ -311,7 +315,8 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = OrganizationDto.FromOrganization(organization);
 
-        var request = GetInviteScimOrganizationUserRequestDefault(user.Email,
+        var request = new InviteScimOrganizationUserRequest(user.Email,
+            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -345,7 +350,7 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Success<OrganizationUser>>(result);
+        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
             .Received(1)

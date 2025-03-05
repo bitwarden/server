@@ -7,7 +7,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class CreateOrganizationUser
 {
-    public OrganizationUser User { get; set; }
+    public OrganizationUser OrganizationUser { get; set; }
     public CollectionAccessSelection[] Collections { get; set; } = [];
     public Guid[] Groups { get; set; } = [];
 }
@@ -17,7 +17,7 @@ public static class CreateOrganizationUserExtensions
     public static Func<OrganizationUserInviteDto, CreateOrganizationUser> MapToDataModel(DateTimeOffset performedAt) =>
         o => new CreateOrganizationUser
         {
-            User = new OrganizationUser
+            OrganizationUser = new OrganizationUser
             {
                 Id = CoreHelpers.GenerateComb(),
                 OrganizationId = o.OrganizationId,

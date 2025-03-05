@@ -1,4 +1,6 @@
-﻿using Bit.Core;
+﻿#nullable enable
+
+using Bit.Core;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
@@ -25,7 +27,7 @@ public class PostUserCommand(
     TimeProvider timeProvider)
     : IPostUserCommand
 {
-    public async Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
+    public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
     {
         var scimProvider = scimContext.RequestScimProvider;
         var invite = model.ToOrganizationUserInvite(scimProvider);
@@ -57,23 +59,11 @@ public class PostUserCommand(
 
         if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
         {
-            var request = InviteScimOrganizationUserRequest.Create(
-                model.ToInvite(scimProvider, hasStandaloneSecretsManager),
-                OrganizationDto.FromOrganization(organization),
-                timeProvider.GetUtcNow(),
-                model.ExternalIdForInvite()
-            );
-
-            var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
-
-            if (result is Success<ScimInviteOrganizationUsersResponse> successfulResponse)
-            {
-                var invitedUser = await organizationUserRepository.GetDetailsByIdAsync(successfulResponse.Value.InvitedUser.Id);
-
-                return invitedUser;
-            }
-
-            return null;
+            return await InviteScimOrganizationUserAsync(model.ToRequest(
+                scimProvider: scimProvider,
+                hasSecretsManager: hasStandaloneSecretsManager,
+                organization: OrganizationDto.FromOrganization(organization),
+                performedAt: timeProvider.GetUtcNow()));
         }
 
         var invitedOrgUser = await organizationService.InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
@@ -81,5 +71,20 @@ public class PostUserCommand(
         var orgUser = await organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;
+    }
+
+    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(InviteScimOrganizationUserRequest request)
+    {
+        var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
+
+        if (result is not Success<ScimInviteOrganizationUsersResponse> successfulResponse)
+        {
+            return null;
+        }
+
+        var invitedUser = await organizationUserRepository.GetDetailsByIdAsync(successfulResponse.Value.InvitedUser.Id);
+
+        return invitedUser;
+
     }
 }

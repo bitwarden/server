@@ -762,19 +762,19 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
         await using var dbContext = GetDatabaseContext(scope);
 
-        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.User)));
+        dbContext.OrganizationUsers.AddRange(Mapper.Map<List<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser)));
         dbContext.CollectionUsers.AddRange(organizationUserCollection.SelectMany(x => x.Collections, (user, collection) => new CollectionUser
         {
             CollectionId = collection.Id,
             HidePasswords = collection.HidePasswords,
-            OrganizationUserId = user.User.Id,
+            OrganizationUserId = user.OrganizationUser.Id,
             Manage = collection.Manage,
             ReadOnly = collection.ReadOnly
         }));
         dbContext.GroupUsers.AddRange(organizationUserCollection.SelectMany(x => x.Groups, (user, group) => new GroupUser
         {
             GroupId = group,
-            OrganizationUserId = user.User.Id
+            OrganizationUserId = user.OrganizationUser.Id
         }));
 
         await dbContext.SaveChangesAsync();

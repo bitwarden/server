@@ -1,26 +1,28 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
-public class InviteScimOrganizationUserRequest
+public record InviteScimOrganizationUserRequest : OrganizationUserSingleEmailInvite
 {
-    public OrganizationUserSingleEmailInvite Invite { get; }
-    public OrganizationDto Organization { get; }
-    public DateTimeOffset PerformedAt { get; }
-    public string ExternalId { get; } = string.Empty;
+    public OrganizationDto Organization { get; private init; }
+    public DateTimeOffset PerformedAt { get; private init; }
+    public string ExternalId { get; private init; } = string.Empty;
 
-    private InviteScimOrganizationUserRequest(OrganizationUserSingleEmailInvite invite,
+    public InviteScimOrganizationUserRequest(string email,
+        bool hasSecretsManager,
         OrganizationDto organization,
         DateTimeOffset performedAt,
-        string externalId)
+        string externalId) : base(
+        email: email,
+        accessibleCollections: [],
+        type: OrganizationUserType.User,
+        permissions: new Permissions(),
+        accessSecretsManager: hasSecretsManager)
     {
-        Invite = invite;
         Organization = organization;
         PerformedAt = performedAt;
         ExternalId = externalId;
     }
-
-    public static InviteScimOrganizationUserRequest Create(OrganizationUserSingleEmailInvite invite,
-        OrganizationDto organization, DateTimeOffset performedAt, string externalId) =>
-        new(invite, organization, performedAt, externalId);
 }

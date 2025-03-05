@@ -9,20 +9,21 @@ public class InviteOrganizationUsersRequest
     public Guid PerformedBy { get; }
     public DateTimeOffset PerformedAt { get; }
 
-    public InviteOrganizationUsersRequest(OrganizationUserInvite[] Invites,
-        OrganizationDto Organization,
-        Guid PerformedBy,
-        DateTimeOffset PerformedAt)
+    public InviteOrganizationUsersRequest(OrganizationUserInvite[] invites,
+        OrganizationDto organization,
+        Guid performedBy,
+        DateTimeOffset performedAt)
     {
-        this.Invites = Invites;
-        this.Organization = Organization;
-        this.PerformedBy = PerformedBy;
-        this.PerformedAt = PerformedAt;
+        Invites = invites;
+        Organization = organization;
+        PerformedBy = performedBy;
+        PerformedAt = performedAt;
     }
 
-    public static InviteOrganizationUsersRequest Create(InviteScimOrganizationUserRequest request) =>
-        new([OrganizationUserInvite.Create(request.Invite, request.ExternalId)],
+    public InviteOrganizationUsersRequest(InviteScimOrganizationUserRequest request) :
+        this([OrganizationUserInvite.Create(request, request.ExternalId)],
             request.Organization,
             Guid.Empty,
-            request.PerformedAt);
+            request.PerformedAt)
+    { }
 }

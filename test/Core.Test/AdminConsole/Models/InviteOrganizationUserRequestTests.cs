@@ -15,7 +15,7 @@ public class InviteOrganizationUserRequestTests
     public void Create_WhenPassedInvalidEmail_ThrowsException(string email,
         OrganizationUserType type, Permissions permissions, bool accessSecretsManager)
     {
-        var action = () => OrganizationUserSingleEmailInvite.Create(email, [], type, permissions, accessSecretsManager);
+        var action = () => new OrganizationUserSingleEmailInvite(email, [], type, permissions, accessSecretsManager);
 
         var exception = Assert.Throws<BadRequestException>(action);
 
@@ -30,8 +30,7 @@ public class InviteOrganizationUserRequestTests
 
         var invalidCollectionConfiguration = new CollectionAccessSelection { Manage = true, HidePasswords = true };
 
-        var action = () =>
-            OrganizationUserSingleEmailInvite.Create(validEmail, [invalidCollectionConfiguration], type, permissions, accessSecretsManager);
+        var action = () => new OrganizationUserSingleEmailInvite(validEmail, [invalidCollectionConfiguration], type, permissions, accessSecretsManager);
 
         var exception = Assert.Throws<BadRequestException>(action);
 
@@ -45,7 +44,7 @@ public class InviteOrganizationUserRequestTests
         const string validEmail = "test@email.com";
         var validCollectionConfiguration = new CollectionAccessSelection { Id = Guid.NewGuid(), Manage = true };
 
-        var invite = OrganizationUserSingleEmailInvite.Create(validEmail, [validCollectionConfiguration], type, permissions, accessSecretsManager);
+        var invite = new OrganizationUserSingleEmailInvite(validEmail, [validCollectionConfiguration], type, permissions, accessSecretsManager);
 
         Assert.NotNull(invite);
         Assert.Equal(validEmail, invite.Email);

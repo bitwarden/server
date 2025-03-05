@@ -38,7 +38,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteScimOrganizationUserRequest request)
     {
-        var result = await InviteOrganizationUsersAsync(InviteOrganizationUsersRequest.Create(request));
+        var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request));
 
         if (result is Failure<IEnumerable<OrganizationUser>> failure)
         {
@@ -47,7 +47,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         if (result.Value.Any())
         {
-            await eventService.LogOrganizationUserEventAsync((IOrganizationUser)result.Value.First(), EventType.OrganizationUser_Invited, EventSystemUser.SCIM, request.PerformedAt.UtcDateTime);
+            await eventService.LogOrganizationUserEventAsync<IOrganizationUser>(result.Value.First(), EventType.OrganizationUser_Invited, EventSystemUser.SCIM, request.PerformedAt.UtcDateTime);
         }
 
         return new Success<ScimInviteOrganizationUsersResponse>(new ScimInviteOrganizationUsersResponse
@@ -113,7 +113,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             logger.LogError(ex, FailedToInviteUsers);
 
-            await organizationUserRepository.DeleteManyAsync(organizationUserCollection.Select(x => x.User.Id));
+            await organizationUserRepository.DeleteManyAsync(organizationUserCollection.Select(x => x.OrganizationUser.Id));
 
             await RevertSecretsManagerChangesAsync(validatedRequest, organization);
 
@@ -122,7 +122,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return new Failure<IEnumerable<OrganizationUser>>(FailedToInviteUsers);
         }
 
-        return new Success<IEnumerable<OrganizationUser>>(organizationUserCollection.Select(x => x.User));
+        return new Success<IEnumerable<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser));
     }
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> valid, Organization organization)
@@ -162,7 +162,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     private async Task SendInvitesAsync(IEnumerable<CreateOrganizationUser> users, Organization organization) =>
         await sendOrganizationInvitesCommand.SendInvitesAsync(
             new SendInvitesRequest(
-                users.Select(x => x.User),
+                users.Select(x => x.OrganizationUser),
                 organization));
 
     private async Task SendAdditionalEmailsAsync(Valid<InviteUserOrganizationValidationRequest> valid, Organization organization)

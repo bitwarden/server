@@ -7,15 +7,15 @@ using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Invite
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
-public class OrganizationUserSingleEmailInvite
+public record OrganizationUserSingleEmailInvite
 {
-    public string Email { get; private init; } = string.Empty;
-    public CollectionAccessSelection[] AccessibleCollections { get; private init; } = [];
-    public Permissions Permissions { get; private init; } = new();
-    public OrganizationUserType Type { get; private init; } = OrganizationUserType.User;
-    public bool AccessSecretsManager { get; private init; }
+    public string Email { get; init; } = string.Empty;
+    public CollectionAccessSelection[] AccessibleCollections { get; init; } = [];
+    public Permissions Permissions { get; init; } = new();
+    public OrganizationUserType Type { get; init; } = OrganizationUserType.User;
+    public bool AccessSecretsManager { get; init; }
 
-    public static OrganizationUserSingleEmailInvite Create(string email,
+    public OrganizationUserSingleEmailInvite(string email,
         IEnumerable<CollectionAccessSelection> accessibleCollections,
         OrganizationUserType type,
         Permissions permissions,
@@ -31,13 +31,10 @@ public class OrganizationUserSingleEmailInvite
             throw new BadRequestException(InvalidCollectionConfigurationErrorMessage);
         }
 
-        return new OrganizationUserSingleEmailInvite
-        {
-            Email = email,
-            AccessibleCollections = accessibleCollections.ToArray(),
-            Type = type,
-            Permissions = permissions,
-            AccessSecretsManager = accessSecretsManager
-        };
+        Email = email;
+        AccessibleCollections = accessibleCollections.ToArray();
+        Type = type;
+        Permissions = permissions;
+        AccessSecretsManager = accessSecretsManager;
     }
 }
