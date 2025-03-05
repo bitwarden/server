@@ -264,4 +264,18 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
 
         await SendPayloadToOrganizationAsync(organization.Id, PushType.SyncOrganizationStatusChanged, message, false);
     }
+
+    public async Task PushSyncOrganizationCollectionManagementSettingsAsync(Organization organization) =>
+        await SendPayloadToOrganizationAsync(
+            organization.Id,
+            PushType.SyncOrganizationCollectionSettingChanged,
+            new OrganizationCollectionManagementPushNotification
+            {
+                OrganizationId = organization.Id,
+                LimitCollectionCreation = organization.LimitCollectionCreation,
+                LimitCollectionDeletion = organization.LimitCollectionDeletion,
+                LimitItemDeletion = organization.LimitItemDeletion
+            },
+            false
+        );
 }

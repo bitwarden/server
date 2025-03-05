@@ -41,6 +41,9 @@ public class DatabaseDataAttribute : DataAttribute
 
     protected virtual IEnumerable<IServiceProvider> GetDatabaseProviders(IConfiguration config)
     {
+        // This is for the device repository integration testing.
+        var userRequestExpiration = 15;
+
         var configureLogging = (ILoggingBuilder builder) =>
         {
             if (!config.GetValue<bool>("Quiet"))
@@ -67,11 +70,15 @@ public class DatabaseDataAttribute : DataAttribute
                     {
                         ConnectionString = database.ConnectionString,
                     },
+                    PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
+                    {
+                        UserRequestExpiration = TimeSpan.FromMinutes(userRequestExpiration),
+                    }
                 };
                 dapperSqlServerCollection.AddSingleton(globalSettings);
                 dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
                 dapperSqlServerCollection.AddSingleton(database);
-                dapperSqlServerCollection.AddDistributedSqlServerCache((o) =>
+                dapperSqlServerCollection.AddDistributedSqlServerCache(o =>
                 {
                     o.ConnectionString = database.ConnectionString;
                     o.SchemaName = "dbo";
@@ -91,6 +98,17 @@ public class DatabaseDataAttribute : DataAttribute
                 AddCommonServices(efCollection, configureLogging);
                 efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
                 efCollection.AddPasswordManagerEFRepositories(SelfHosted);
+
+                var globalSettings = new GlobalSettings
+                {
+                    PasswordlessAuth = new GlobalSettings.PasswordlessAuthSettings
+                    {
+                        UserRequestExpiration = TimeSpan.FromMinutes(userRequestExpiration),
+                    }
+                };
+                efCollection.AddSingleton(globalSettings);
+                efCollection.AddSingleton<IGlobalSettings>(globalSettings);
+
                 efCollection.AddSingleton(database);
                 efCollection.AddSingleton<IDistributedCache, EntityFrameworkCache>();
 
@@ -117,7 +135,7 @@ public class DatabaseDataAttribute : DataAttribute
 
     private void AddSqlMigrationTester(IServiceCollection services, string connectionString, string migrationName)
     {
-        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(sp => new SqlMigrationTesterService(connectionString, migrationName));
+        services.AddSingleton<IMigrationTesterService, SqlMigrationTesterService>(_ => new SqlMigrationTesterService(connectionString, migrationName));
     }
 
     private void AddEfMigrationTester(IServiceCollection services, SupportedDatabaseProviders databaseType, string migrationName)

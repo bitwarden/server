@@ -12,6 +12,7 @@ public static class LoginApprovingDeviceTypes
         var deviceTypes = new List<DeviceType>();
         deviceTypes.AddRange(DeviceTypes.DesktopTypes);
         deviceTypes.AddRange(DeviceTypes.MobileTypes);
+        deviceTypes.AddRange(DeviceTypes.BrowserTypes);
         _deviceTypes = deviceTypes.AsReadOnly();
     }
 
