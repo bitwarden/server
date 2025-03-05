@@ -1,6 +1,20 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ENV PROJECT_NAME=Sso
+
+WORKDIR /build
+COPY ../../ ./
+
+WORKDIR /build/bitwarden_license/src/${PROJECT_NAME}
+
+RUN dotnet publish --self-contained /p:PublishSingleFile=true -o out
+
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 LABEL com.bitwarden.product="bitwarden"
+
+ENV PROJECT_NAME=Sso
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -9,11 +23,12 @@ RUN apt-get update \
     krb5-user \
     && rm -rf /var/lib/apt/lists/*
 
-ENV ASPNETCORE_URLS http://+:5000
-WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:5000
+
 EXPOSE 5000
-COPY obj/build-output/publish .
-COPY entrypoint.sh /
+WORKDIR /app
+COPY --from=build /build/bitwarden_license/src/${PROJECT_NAME}/out /app
+COPY ./bitwarden_license/src/${PROJECT_NAME}/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
