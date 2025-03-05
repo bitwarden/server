@@ -39,7 +39,7 @@ public class ReadOnlyEnvIdentityUserStore : ReadOnlyIdentityUserStore
             }
         }
 
-        var userStamp = usersDict.ContainsKey(normalizedEmail) ? usersDict[normalizedEmail] : null;
+        var userStamp = usersDict.GetValueOrDefault(normalizedEmail);
         if (userStamp == null)
         {
             return Task.FromResult<IdentityUser>(null);
