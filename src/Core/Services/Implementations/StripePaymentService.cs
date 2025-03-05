@@ -7,6 +7,7 @@ using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Models.Api.Requests.Organizations;
 using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Models.Business;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -34,6 +35,7 @@ public class StripePaymentService : IPaymentService
     private readonly IFeatureService _featureService;
     private readonly ITaxService _taxService;
     private readonly ISubscriberService _subscriberService;
+    private readonly IPricingClient _pricingClient;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -43,7 +45,8 @@ public class StripePaymentService : IPaymentService
         IGlobalSettings globalSettings,
         IFeatureService featureService,
         ITaxService taxService,
-        ISubscriberService subscriberService)
+        ISubscriberService subscriberService,
+        IPricingClient pricingClient)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -53,6 +56,7 @@ public class StripePaymentService : IPaymentService
         _featureService = featureService;
         _taxService = taxService;
         _subscriberService = subscriberService;
+        _pricingClient = pricingClient;
     }
 
     private async Task ChangeOrganizationSponsorship(
@@ -60,7 +64,7 @@ public class StripePaymentService : IPaymentService
         OrganizationSponsorship sponsorship,
         bool applySponsorship)
     {
-        var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
+        var existingPlan = await _pricingClient.GetPlanOrThrow(org.PlanType);
         var sponsoredPlan = sponsorship?.PlanSponsorshipType != null ?
             Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;
@@ -198,18 +202,21 @@ public class StripePaymentService : IPaymentService
         return paymentIntentClientSecret;
     }
 
-    public Task<string> AdjustSubscription(
+    public async Task<string> AdjustSubscription(
         Organization organization,
         StaticStore.Plan updatedPlan,
         int newlyPurchasedPasswordManagerSeats,
         bool subscribedToSecretsManager,
         int? newlyPurchasedSecretsManagerSeats,
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
-        int newlyPurchasedAdditionalStorage) =>
-        FinalizeSubscriptionChangeAsync(
+        int newlyPurchasedAdditionalStorage)
+    {
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+        return await FinalizeSubscriptionChangeAsync(
             organization,
             new CompleteSubscriptionUpdate(
                 organization,
+                plan,
                 new SubscriptionData
                 {
                     Plan = updatedPlan,
@@ -220,6 +227,7 @@ public class StripePaymentService : IPaymentService
                         newlyPurchasedAdditionalSecretsManagerServiceAccounts,
                     PurchasedAdditionalStorage = newlyPurchasedAdditionalStorage
                 }), true);
+    }
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats) =>
         FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats));
@@ -232,7 +240,7 @@ public class StripePaymentService : IPaymentService
         => FinalizeSubscriptionChangeAsync(
             provider,
             new ProviderSubscriptionUpdate(
-                plan.Type,
+                plan,
                 currentlySubscribedSeats,
                 newlySubscribedSeats));
 
@@ -1247,7 +1255,7 @@ public class StripePaymentService : IPaymentService
         string gatewayCustomerId,
         string gatewaySubscriptionId)
     {
-        var plan = Utilities.StaticStore.GetPlan(parameters.PasswordManager.Plan);
+        var plan = await _pricingClient.GetPlanOrThrow(parameters.PasswordManager.Plan);
 
         var options = new InvoiceCreatePreviewOptions
         {

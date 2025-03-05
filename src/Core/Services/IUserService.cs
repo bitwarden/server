@@ -137,6 +137,16 @@ public interface IUserService
     Task<bool> IsManagedByAnyOrganizationAsync(Guid userId);
 
     /// <summary>
+    /// Verify whether the new email domain meets the requirements for managed users.
+    /// </summary>
+    /// <remarks>
+    /// </remarks>
+    /// <returns>
+    /// IdentityResult 
+    /// </returns>
+    Task<IdentityResult> ValidateManagedUserDomainAsync(User user, string newEmail);
+
+    /// <summary>
     /// Gets the organizations that manage the user.
     /// </summary>
     /// <returns>
