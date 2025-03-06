@@ -1,6 +1,4 @@
-﻿using Bit.Core.Models.Commands;
-
-namespace Bit.Api.Models.CommandResults;
+﻿namespace Bit.Core.Models.Commands;
 
 public class NoRecordFoundFailure<T> : Failure<T>
 {

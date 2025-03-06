@@ -1,5 +1,4 @@
-﻿using Bit.Api.Models.CommandResults;
-using Bit.Api.Utilities;
+﻿using Bit.Api.Utilities;
 using Bit.Core.Models.Commands;
 using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;

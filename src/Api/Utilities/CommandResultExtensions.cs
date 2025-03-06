@@ -1,5 +1,4 @@
-﻿using Bit.Api.Models.CommandResults;
-using Bit.Core.Models.Commands;
+﻿using Bit.Core.Models.Commands;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Utilities;
