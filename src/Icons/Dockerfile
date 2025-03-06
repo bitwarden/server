@@ -32,4 +32,4 @@ COPY ./src/${PROJECT_NAME}/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 HEALTHCHECK CMD curl -f http://localhost:5000/google.com/icon.png || exit 1
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/entrypoint.sh"]
