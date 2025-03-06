@@ -15,9 +15,9 @@ using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
 using LinqToDB;
 using NSubstitute;
 using Xunit;
@@ -67,7 +67,12 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         string emailToken = null;
         factory.SubstituteService<IMailService>(mailService =>
         {
-            mailService.SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => emailToken = t))
+            mailService.SendTwoFactorEmailAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Do<string>(t => emailToken = t),
+                    Arg.Any<string>(),
+                    Arg.Any<string>())
                 .Returns(Task.CompletedTask);
         });
 
@@ -273,7 +278,12 @@ public class IdentityServerTwoFactorTests : IClassFixture<IdentityApplicationFac
         string emailToken = null;
         localFactory.SubstituteService<IMailService>(mailService =>
         {
-            mailService.SendTwoFactorEmailAsync(Arg.Any<string>(), Arg.Do<string>(t => emailToken = t))
+            mailService.SendTwoFactorEmailAsync(
+                    Arg.Any<string>(),
+                    Arg.Any<string>(),
+                    Arg.Do<string>(t => emailToken = t),
+                    Arg.Any<string>(),
+                    Arg.Any<string>())
                 .Returns(Task.CompletedTask);
         });
 

@@ -41,12 +41,9 @@ public class RabbitMqEventWriteService : IEventWriteService, IAsyncDisposable
         using var channel = await connection.CreateChannelAsync();
         await channel.ExchangeDeclareAsync(exchange: _exchangeName, type: ExchangeType.Fanout, durable: true);
 
-        foreach (var e in events)
-        {
-            var body = JsonSerializer.SerializeToUtf8Bytes(e);
+        var body = JsonSerializer.SerializeToUtf8Bytes(events);
 
-            await channel.BasicPublishAsync(exchange: _exchangeName, routingKey: string.Empty, body: body);
-        }
+        await channel.BasicPublishAsync(exchange: _exchangeName, routingKey: string.Empty, body: body);
     }
 
     public async ValueTask DisposeAsync()

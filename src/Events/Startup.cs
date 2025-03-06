@@ -1,11 +1,12 @@
 ﻿using System.Globalization;
+using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Context;
 using Bit.Core.IdentityServer;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 
 namespace Bit.Events;
 
@@ -63,11 +64,29 @@ public class Startup
         services.AddScoped<IEventService, EventService>();
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+            {
+                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
         }
         else
         {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+            {
+                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
         }
 
         services.AddOptionality();
@@ -95,20 +114,20 @@ public class Startup
                 new RabbitMqEventListenerService(
                     provider.GetRequiredService<EventRepositoryHandler>(),
                     provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                    provider.GetRequiredService<GlobalSettings>(),
+                    globalSettings,
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
 
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HttpPostUrl))
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.WebhookUrl))
             {
-                services.AddSingleton<HttpPostEventHandler>();
-                services.AddHttpClient(HttpPostEventHandler.HttpClientName);
+                services.AddSingleton<WebhookEventHandler>();
+                services.AddHttpClient(WebhookEventHandler.HttpClientName);
 
                 services.AddSingleton<IHostedService>(provider =>
                     new RabbitMqEventListenerService(
-                        provider.GetRequiredService<HttpPostEventHandler>(),
+                        provider.GetRequiredService<WebhookEventHandler>(),
                         provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                        provider.GetRequiredService<GlobalSettings>(),
-                        globalSettings.EventLogging.RabbitMq.HttpPostQueueName));
+                        globalSettings,
+                        globalSettings.EventLogging.RabbitMq.WebhookQueueName));
             }
         }
     }
