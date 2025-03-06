@@ -290,21 +290,29 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
+        using var scope = ServiceScopeFactory.CreateScope();
 
-            var query = from u in dbContext.Users
-                        join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
-                        join o in dbContext.Organizations on ou.OrganizationId equals o.Id
-                        join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+        var dbContext = GetDatabaseContext(scope);
+
+        var userQuery = from u in dbContext.Users
                         where u.Id == userId
-                              && od.VerifiedDate != null
-                              && u.Email.ToLower().EndsWith("@" + od.DomainName.ToLower())
-                        select o;
+                        select new { User = u, EmailDomain = u.Email.Substring(u.Email.IndexOf('@') + 1) };
 
-            return await query.ToArrayAsync();
+        var userWithDomain = await userQuery.FirstOrDefaultAsync();
+
+        if (userWithDomain is null)
+        {
+            return new List<Core.AdminConsole.Entities.Organization>();
         }
+
+        var query = from o in dbContext.Organizations
+                    join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
+                    join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                    where userWithDomain.EmailDomain == od.DomainName &&
+                          o.Enabled == true
+                    select o;
+
+        return await query.ToArrayAsync();
     }
 
     public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetAddableToProviderByUserIdAsync(
