@@ -759,7 +759,7 @@ public class NotificationHubPushNotificationServiceTests
         );
     }
 
-     [Fact]
+    [Fact]
     public async Task PushSyncSendDeleteAsync_SendExpectedData()
     {
         var userId = Guid.NewGuid();
@@ -1063,7 +1063,7 @@ public class NotificationHubPushNotificationServiceTests
         );
     }
 
-    private async Task VerifyNotificationAsync(Func<NotificationHubPushNotificationService, Task> test, 
+    private async Task VerifyNotificationAsync(Func<NotificationHubPushNotificationService, Task> test,
         PushType type, JsonNode expectedPayload, string tag)
     {
         var installationDeviceRepository = Substitute.For<IInstallationDeviceRepository>();

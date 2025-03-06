@@ -46,7 +46,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
             ["ContextId"] = DeviceIdentifier,
         };
     }
-    protected override JsonNode GetPushSyncCipherUpdatePayload(Cipher cipher, Guid collectionId) 
+    protected override JsonNode GetPushSyncCipherUpdatePayload(Cipher cipher, Guid collectionId)
     {
         return new JsonObject
         {
@@ -62,7 +62,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
             ["ContextId"] = DeviceIdentifier,
         };
     }
-    protected override JsonNode GetPushSyncCipherDeletePayload(Cipher cipher) 
+    protected override JsonNode GetPushSyncCipherDeletePayload(Cipher cipher)
     {
         return new JsonObject
         {
@@ -79,7 +79,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncFolderCreatePayload(Folder folder) 
+    protected override JsonNode GetPushSyncFolderCreatePayload(Folder folder)
     {
         return new JsonObject
         {
@@ -94,7 +94,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncFolderUpdatePayload(Folder folder) 
+    protected override JsonNode GetPushSyncFolderUpdatePayload(Folder folder)
     {
         return new JsonObject
         {
@@ -109,7 +109,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncFolderDeletePayload(Folder folder) 
+    protected override JsonNode GetPushSyncFolderDeletePayload(Folder folder)
     {
         return new JsonObject
         {
@@ -124,7 +124,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncCiphersPayload(Guid userId) 
+    protected override JsonNode GetPushSyncCiphersPayload(Guid userId)
     {
         return new JsonObject
         {
@@ -138,7 +138,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncVaultPayload(Guid userId) 
+    protected override JsonNode GetPushSyncVaultPayload(Guid userId)
     {
         return new JsonObject
         {
@@ -152,7 +152,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncOrganizationsPayload(Guid userId) 
+    protected override JsonNode GetPushSyncOrganizationsPayload(Guid userId)
     {
         return new JsonObject
         {
@@ -166,7 +166,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncOrgKeysPayload(Guid userId) 
+    protected override JsonNode GetPushSyncOrgKeysPayload(Guid userId)
     {
         return new JsonObject
         {
@@ -180,7 +180,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncSettingsPayload(Guid userId) 
+    protected override JsonNode GetPushSyncSettingsPayload(Guid userId)
     {
         return new JsonObject
         {
@@ -194,7 +194,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext) 
+    protected override JsonNode GetPushLogOutPayload(Guid userId, bool excludeCurrentContext)
     {
         JsonNode? contextId = excludeCurrentContext ? DeviceIdentifier : null;
 
@@ -210,7 +210,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSendCreatePayload(Send send) 
+    protected override JsonNode GetPushSendCreatePayload(Send send)
     {
         return new JsonObject
         {
@@ -225,7 +225,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSendUpdatePayload(Send send) 
+    protected override JsonNode GetPushSendUpdatePayload(Send send)
     {
         return new JsonObject
         {
@@ -240,7 +240,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSendDeletePayload(Send send) 
+    protected override JsonNode GetPushSendDeletePayload(Send send)
     {
         return new JsonObject
         {
@@ -255,7 +255,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushAuthRequestPayload(AuthRequest authRequest) 
+    protected override JsonNode GetPushAuthRequestPayload(AuthRequest authRequest)
     {
         return new JsonObject
         {
@@ -269,7 +269,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushAuthRequestResponsePayload(AuthRequest authRequest) 
+    protected override JsonNode GetPushAuthRequestResponsePayload(AuthRequest authRequest)
     {
         return new JsonObject
         {
@@ -283,7 +283,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushNotificationResponsePayload(Notification notification, Guid? userId, Guid? organizationId) 
+    protected override JsonNode GetPushNotificationResponsePayload(Notification notification, Guid? userId, Guid? organizationId)
     {
         JsonNode? installationId = notification.Global ? GlobalSettings.Installation.Id : null;
 
@@ -310,7 +310,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushNotificationStatusResponsePayload(Notification notification, NotificationStatus notificationStatus, Guid? userId, Guid? organizationId) 
+    protected override JsonNode GetPushNotificationStatusResponsePayload(Notification notification, NotificationStatus notificationStatus, Guid? userId, Guid? organizationId)
     {
         JsonNode? installationId = notification.Global ? GlobalSettings.Installation.Id : null;
 
@@ -337,7 +337,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncOrganizationStatusResponsePayload(Organization organization) 
+    protected override JsonNode GetPushSyncOrganizationStatusResponsePayload(Organization organization)
     {
         return new JsonObject
         {
@@ -351,7 +351,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushSyncOrganizationCollectionManagementSettingsResponsePayload(Organization organization) 
+    protected override JsonNode GetPushSyncOrganizationCollectionManagementSettingsResponsePayload(Organization organization)
     {
         return new JsonObject
         {
@@ -367,7 +367,7 @@ public class NotificationsApiPushNotificationServiceTests : PushTestBase
         };
     }
 
-    protected override JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId) 
+    protected override JsonNode GetPushPendingSecurityTasksResponsePayload(Guid userId)
     {
         return new JsonObject
         {

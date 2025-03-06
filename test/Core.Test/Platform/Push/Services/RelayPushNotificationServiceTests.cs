@@ -57,7 +57,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
     {
         var sut = CreateService();
         await Assert.ThrowsAsync<NotImplementedException>(
-            async () => await sut.SendPayloadToInstallationAsync("installation_id", PushType.AuthRequest, new {}, null)
+            async () => await sut.SendPayloadToInstallationAsync("installation_id", PushType.AuthRequest, new { }, null)
         );
     }
 
@@ -66,7 +66,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
     {
         var sut = CreateService();
         await Assert.ThrowsAsync<NotImplementedException>(
-            async () => await sut.SendPayloadToUserAsync("user_id", PushType.AuthRequest, new {}, null)
+            async () => await sut.SendPayloadToUserAsync("user_id", PushType.AuthRequest, new { }, null)
         );
     }
 
@@ -75,7 +75,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
     {
         var sut = CreateService();
         await Assert.ThrowsAsync<NotImplementedException>(
-            async () => await sut.SendPayloadToOrganizationAsync("organization_id", PushType.AuthRequest, new {}, null)
+            async () => await sut.SendPayloadToOrganizationAsync("organization_id", PushType.AuthRequest, new { }, null)
         );
     }
 
@@ -388,7 +388,7 @@ public class RelayPushNotificationServiceTests : PushTestBase
             ["UserId"] = authRequest.UserId,
             ["OrganizationId"] = null,
             ["DeviceId"] = _deviceId,
-["Identifier"] = DeviceIdentifier,
+            ["Identifier"] = DeviceIdentifier,
             ["Type"] = 15,
             ["Payload"] = new JsonObject
             {

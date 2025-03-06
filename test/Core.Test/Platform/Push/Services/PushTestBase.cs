@@ -1,4 +1,4 @@
-// TODO: Move to own file
+﻿// TODO: Move to own file
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
