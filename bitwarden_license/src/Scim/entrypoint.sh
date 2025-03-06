@@ -59,16 +59,9 @@ if [[ -f "/etc/bitwarden/kerberos/bitwarden.keytab" && -f "/etc/bitwarden/kerber
 fi
 
 if [[ $globalSettings__selfHosted == "true" ]]; then
-    cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx || \
-        {
-            # infer a non-root location for the certificate
-            if [[ -z $globalSettings__identityServer__certificateLocation ]]; then
-                export globalSettings__identityServer__certificateLocation=/home/app/config/identity.pfx
-            fi
-            # copy the certificate to the non-root location to avoid permission issues
-            mkdir -p "$(dirname "$globalSettings__identityServer__certificateLocation")"
-            cp /etc/bitwarden/identity/identity.pfx "$globalSettings__identityServer__certificateLocation"
-        }
+    if [[ -z $globalSettings__identityServer__certificateLocation ]]; then
+        export globalSettings__identityServer__certificateLocation=/etc/bitwarden/identity/identity.pfx
+    fi
 fi
 
 exec $gosu_cmd /app/"${PROJECT_NAME}"
