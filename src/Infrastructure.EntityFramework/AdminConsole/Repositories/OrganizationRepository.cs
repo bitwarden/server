@@ -296,19 +296,23 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var userQuery = from u in dbContext.Users
                         where u.Id == userId
-                        select new { User = u, EmailDomain = u.Email.Substring(u.Email.IndexOf('@') + 1) };
+                        select u;
 
-        var userWithDomain = await userQuery.FirstOrDefaultAsync();
+        var user = await userQuery.FirstOrDefaultAsync();
 
-        if (userWithDomain is null)
+        if (user is null)
         {
             return new List<Core.AdminConsole.Entities.Organization>();
         }
 
+        var userWithDomain = new { UserId = user.Id, EmailDomain = user.Email.Split('@').Last() };
+
         var query = from o in dbContext.Organizations
                     join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
                     join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
-                    where userWithDomain.EmailDomain == od.DomainName &&
+                    where ou.UserId == userWithDomain.UserId &&
+                          od.DomainName == userWithDomain.EmailDomain &&
+                          od.VerifiedDate != null &&
                           o.Enabled == true
                     select o;
 
