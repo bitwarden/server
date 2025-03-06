@@ -10,10 +10,7 @@ public class CreateOrganizationUser
     public OrganizationUser OrganizationUser { get; set; }
     public CollectionAccessSelection[] Collections { get; set; } = [];
     public Guid[] Groups { get; set; } = [];
-}
 
-public static class CreateOrganizationUserExtensions
-{
     public static Func<OrganizationUserInviteDto, CreateOrganizationUser> MapToDataModel(DateTimeOffset performedAt) =>
         o => new CreateOrganizationUser
         {
