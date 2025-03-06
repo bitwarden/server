@@ -1,32 +1,38 @@
-﻿using System.Text.Json;
+﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Settings;
+using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 
 public class SlackEventHandler(
-    GlobalSettings globalSettings,
-    SlackMessageSender slackMessageSender)
-    : IEventMessageHandler
+    IOrganizationIntegrationConfigurationRepository configurationRepository,
+    SlackMessageSender slackMessageSender
+    ) : IEventMessageHandler
 {
-    private readonly string _token = globalSettings.EventLogging.SlackToken;
-    private readonly string _email = globalSettings.EventLogging.SlackUserEmail;
-
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        await slackMessageSender.SendDirectMessageByEmailAsync(
-            _token,
-            JsonSerializer.Serialize(eventMessage),
-            _email
-        );
+        Guid organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
+
+        var configuration = await configurationRepository.GetConfigurationAsync<SlackConfiguration>(
+            organizationId,
+            IntegrationType.Slack,
+            eventMessage.Type);
+        if (configuration is not null)
+        {
+            await slackMessageSender.SendDirectMessageByEmailAsync(
+                configuration.Configuration.Token,
+                configuration.Template,
+                configuration.Configuration.UserEmails.First()
+            );
+        }
     }
 
     public async Task HandleManyEventsAsync(IEnumerable<EventMessage> eventMessages)
     {
-        await slackMessageSender.SendDirectMessageByEmailAsync(
-            _token,
-            JsonSerializer.Serialize(eventMessages),
-            _email
-        );
+        foreach (var eventMessage in eventMessages)
+        {
+            await HandleEventAsync(eventMessage);
+        }
     }
 }

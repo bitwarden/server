@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Context;
 using Bit.Core.IdentityServer;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -117,33 +118,26 @@ public class Startup
                     globalSettings,
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
 
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.SlackToken) &&
-                CoreHelpers.SettingHasValue(globalSettings.EventLogging.SlackUserEmail))
-            {
-                services.AddHttpClient(SlackMessageSender.HttpClientName);
-                services.AddSingleton<SlackMessageSender>();
-                services.AddSingleton<SlackEventHandler>();
+            services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
 
-                services.AddSingleton<IHostedService>(provider =>
-                    new RabbitMqEventListenerService(
-                        provider.GetRequiredService<SlackEventHandler>(),
-                        provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                        globalSettings,
-                        globalSettings.EventLogging.RabbitMq.SlackQueueName));
-            }
+            services.AddHttpClient(SlackMessageSender.HttpClientName);
+            services.AddSingleton<SlackMessageSender>();
+            services.AddSingleton<SlackEventHandler>();
 
-            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.WebhookUrl))
-            {
-                services.AddSingleton<WebhookEventHandler>();
-                services.AddHttpClient(WebhookEventHandler.HttpClientName);
+            services.AddSingleton<IHostedService>(provider =>
+                new RabbitMqEventListenerService(
+                    provider.GetRequiredService<SlackEventHandler>(),
+                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                    globalSettings,
+                    globalSettings.EventLogging.RabbitMq.SlackQueueName));
 
-                services.AddSingleton<IHostedService>(provider =>
-                    new RabbitMqEventListenerService(
-                        provider.GetRequiredService<WebhookEventHandler>(),
-                        provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
-                        globalSettings,
-                        globalSettings.EventLogging.RabbitMq.WebhookQueueName));
-            }
+            services.AddSingleton<WebhookEventHandler>();
+            services.AddSingleton<IHostedService>(provider =>
+                new RabbitMqEventListenerService(
+                    provider.GetRequiredService<WebhookEventHandler>(),
+                    provider.GetRequiredService<ILogger<RabbitMqEventListenerService>>(),
+                    globalSettings,
+                    globalSettings.EventLogging.RabbitMq.WebhookQueueName));
         }
     }
 
