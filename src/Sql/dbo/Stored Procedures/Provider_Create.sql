@@ -17,7 +17,8 @@
     @RevisionDate DATETIME2(7),
     @Gateway TINYINT = 0,
     @GatewayCustomerId VARCHAR(50) = NULL,
-    @GatewaySubscriptionId VARCHAR(50) = NULL
+    @GatewaySubscriptionId VARCHAR(50) = NULL,
+    @DiscountId VARCHAR(50) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -42,7 +43,8 @@ BEGIN
         [RevisionDate],
         [Gateway],
         [GatewayCustomerId],
-        [GatewaySubscriptionId]
+        [GatewaySubscriptionId],
+        [DiscountId]
     )
     VALUES
     (
@@ -64,6 +66,7 @@ BEGIN
         @RevisionDate,
         @Gateway,
         @GatewayCustomerId,
-        @GatewaySubscriptionId
+        @GatewaySubscriptionId,
+        @DiscountId
     )
 END

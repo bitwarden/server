@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -45,7 +46,8 @@ public class OrganizationsController(
     IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
     IReferenceEventService referenceEventService,
     ISubscriberService subscriberService,
-    IOrganizationInstallationRepository organizationInstallationRepository)
+    IOrganizationInstallationRepository organizationInstallationRepository,
+    IPricingClient pricingClient)
     : Controller
 {
     [HttpGet("{id:guid}/subscription")]
@@ -62,26 +64,28 @@ public class OrganizationsController(
             throw new NotFoundException();
         }
 
-        if (!globalSettings.SelfHosted && organization.Gateway != null)
-        {
-            var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
-            if (subscriptionInfo == null)
-            {
-                throw new NotFoundException();
-            }
-
-            var hideSensitiveData = !await currentContext.EditSubscription(id);
-
-            return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
-        }
-
         if (globalSettings.SelfHosted)
         {
             var orgLicense = await licensingService.ReadOrganizationLicenseAsync(organization);
             return new OrganizationSubscriptionResponseModel(organization, orgLicense);
         }
 
-        return new OrganizationSubscriptionResponseModel(organization);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        if (string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            return new OrganizationSubscriptionResponseModel(organization, plan);
+        }
+
+        var subscriptionInfo = await paymentService.GetSubscriptionAsync(organization);
+        if (subscriptionInfo == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var hideSensitiveData = !await currentContext.EditSubscription(id);
+
+        return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, plan, hideSensitiveData);
     }
 
     [HttpGet("{id:guid}/license")]
@@ -165,7 +169,8 @@ public class OrganizationsController(
 
         organization = await AdjustOrganizationSeatsForSmTrialAsync(id, organization, model);
 
-        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, plan);
 
         await updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
 

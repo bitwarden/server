@@ -1,5 +1,6 @@
 ﻿using System.Collections.Immutable;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -137,6 +138,7 @@ public static class StaticStore
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
+    [Obsolete("Use PricingClient.ListPlans to retrieve all plans.")]
     public static IEnumerable<Plan> Plans { get; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
@@ -147,10 +149,11 @@ public static class StaticStore
                 SponsoringProductTierType = ProductTierType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).ProductTier == ProductTierType.Enterprise,
+                    org.PlanType.GetProductTier() == ProductTierType.Enterprise,
             }
         };
 
+    [Obsolete("Use PricingClient.GetPlan to retrieve a plan.")]
     public static Plan GetPlan(PlanType planType) => Plans.SingleOrDefault(p => p.Type == planType);
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
