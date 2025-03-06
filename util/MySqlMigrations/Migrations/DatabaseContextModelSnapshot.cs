@@ -284,6 +284,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("DiscountId")
+                        .HasColumnType("longtext");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("tinyint(1)");
 
