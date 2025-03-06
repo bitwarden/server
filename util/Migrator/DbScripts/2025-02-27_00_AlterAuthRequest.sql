@@ -4,6 +4,9 @@ ADD
   [RequestCountryName] NVARCHAR(200) NULL;
 GO
 
+EXECUTE sp_refreshview 'dbo.AuthRequestView'
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[AuthRequest_Create]
   @Id UNIQUEIDENTIFIER OUTPUT,
   @UserId UNIQUEIDENTIFIER,
