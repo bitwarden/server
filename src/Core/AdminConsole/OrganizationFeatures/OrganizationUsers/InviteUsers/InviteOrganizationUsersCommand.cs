@@ -14,7 +14,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Microsoft.Extensions.Logging;
-using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.CreateOrganizationUserExtensions;
+using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models.CreateOrganizationUser;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
@@ -40,20 +40,28 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request));
 
-        if (result is Failure<IEnumerable<OrganizationUser>> failure)
+        switch (result)
         {
-            return new Failure<ScimInviteOrganizationUsersResponse>(failure.ErrorMessage);
-        }
+            case Failure<IEnumerable<OrganizationUser>> failure:
+                return new Failure<ScimInviteOrganizationUsersResponse>(failure.ErrorMessage);
 
-        if (result.Value.Any())
-        {
-            await eventService.LogOrganizationUserEventAsync<IOrganizationUser>(result.Value.First(), EventType.OrganizationUser_Invited, EventSystemUser.SCIM, request.PerformedAt.UtcDateTime);
-        }
+            case Success<IEnumerable<OrganizationUser>> success when success.Value.Any():
+                var user = success.Value.First();
 
-        return new Success<ScimInviteOrganizationUsersResponse>(new ScimInviteOrganizationUsersResponse
-        {
-            InvitedUser = result.Value.FirstOrDefault()
-        });
+                await eventService.LogOrganizationUserEventAsync<IOrganizationUser>(
+                    organizationUser: user,
+                    type: EventType.OrganizationUser_Invited,
+                    systemUser: EventSystemUser.SCIM,
+                    date: request.PerformedAt.UtcDateTime);
+
+                return new Success<ScimInviteOrganizationUsersResponse>(new ScimInviteOrganizationUsersResponse
+                {
+                    InvitedUser = result.Value.FirstOrDefault()
+                });
+
+            default:
+                return new Failure<ScimInviteOrganizationUsersResponse>("WAHT");
+        }
     }
 
     private async Task<CommandResult<IEnumerable<OrganizationUser>>> InviteOrganizationUsersAsync(InviteOrganizationUsersRequest request)
@@ -95,6 +103,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             .ToArray();
 
         var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
+
+        // consider separate try catches for adjusting seats
         try
         {
             await organizationUserRepository.CreateManyAsync(organizationUserCollection);
@@ -129,7 +139,11 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     {
         if (valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd > 0)
         {
-            await paymentService.AdjustSeatsAsync(organization, valid.Value.InviteOrganization.Plan, -valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd);
+            // When reverting seats, we have to tell payments service that the seats are going back down by what we attempted to add.
+            // However, this might lead to a problem if we don't actually update stripe but throw any ways.
+            // stripe could not be updated, and then we would decrement the number of seats in stripe accidentally.
+            var seatsToRemove = -valid.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd;
+            await paymentService.AdjustSeatsAsync(organization, valid.Value.InviteOrganization.Plan, -seatsToRemove);
 
             organization.Seats = (short?)valid.Value.PasswordManagerSubscriptionUpdate.Seats;
 
