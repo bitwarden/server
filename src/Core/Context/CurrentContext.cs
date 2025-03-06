@@ -106,7 +106,7 @@ public class CurrentContext : ICurrentContext
             ClientVersionIsPrerelease = clientVersionIsPrerelease == "1";
         }
 
-        if (httpContext.Request.Headers.TryGetValue("country_name", out var countryName))
+        if (httpContext.Request.Headers.TryGetValue("country-name", out var countryName))
         {
             CountryName = countryName;
         }
