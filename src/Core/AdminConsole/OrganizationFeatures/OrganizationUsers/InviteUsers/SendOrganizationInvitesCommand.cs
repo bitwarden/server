@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -11,25 +12,6 @@ using Bit.Core.Services;
 using Bit.Core.Tokens;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
-
-public interface ISendOrganizationInvitesCommand
-{
-    Task SendInvitesAsync(SendInvitesRequest request);
-
-    Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers,
-        Organization organization, bool initOrganization = false);
-}
-
-public class SendInvitesRequest
-{
-    public SendInvitesRequest() { }
-
-    public SendInvitesRequest(IEnumerable<OrganizationUser> users, Organization organization) =>
-        (Users, Organization) = (users.ToArray(), organization);
-
-    public OrganizationUser[] Users { get; set; } = [];
-    public Organization Organization { get; set; } = null!;
-}
 
 public class SendOrganizationInvitesCommand(
     IUserRepository userRepository,
