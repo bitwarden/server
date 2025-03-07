@@ -12,7 +12,7 @@ public static class CommandResultExtensions
             NoRecordFoundFailure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status404NotFound },
             BadRequestFailure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
             Failure<T> failure => new ObjectResult(failure.ErrorMessages) { StatusCode = StatusCodes.Status400BadRequest },
-            Success<T> success => new ObjectResult(success.Data) { StatusCode = StatusCodes.Status200OK },
+            Success<T> success => new ObjectResult(success.Value) { StatusCode = StatusCodes.Status200OK },
             _ => throw new InvalidOperationException($"Unhandled commandResult type: {commandResult.GetType().Name}")
         };
     }

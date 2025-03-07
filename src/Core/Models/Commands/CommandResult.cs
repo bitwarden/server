@@ -9,7 +9,6 @@ public class CommandResult(IEnumerable<string> errors)
     public bool Success => ErrorMessages.Count == 0;
     public bool HasErrors => ErrorMessages.Count > 0;
     public List<string> ErrorMessages { get; } = errors.ToList();
-
     public CommandResult() : this(Array.Empty<string>()) { }
 }
 
@@ -29,22 +28,18 @@ public class Success : CommandResult
 {
 }
 
-public abstract class CommandResult<T>
-{
+public abstract class CommandResult<T> { }
 
+public class Success<T>(T value) : CommandResult<T>
+{
+    public T Value { get; } = value;
 }
 
-public class Success<T>(T data) : CommandResult<T>
+public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
 {
-    public T? Data { get; init; } = data;
+    public List<string> ErrorMessages { get; } = errorMessages.ToList();
+
+    public string ErrorMessage => string.Join(" ", ErrorMessages);
+
+    public Failure(string error) : this([error]) { }
 }
-
-public class Failure<T>(IEnumerable<string> errorMessage) : CommandResult<T>
-{
-    public IEnumerable<string> ErrorMessages { get; init; } = errorMessage;
-
-    public Failure(string errorMessage) : this(new[] { errorMessage })
-    {
-    }
-}
-
