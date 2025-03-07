@@ -19,7 +19,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
@@ -37,7 +37,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, seatsOccupiedByUsers, additionalSeats);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
         var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
@@ -56,7 +56,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, seatsOccupiedByUsers, additionalSeats);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
         var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
@@ -75,7 +75,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, seatsOccupiedByUsers, additionalSeats);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
         var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 

@@ -17,37 +17,37 @@ public class InviteUserPaymentValidationTests
     {
         organization.PlanType = PlanType.Free;
 
-        var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
+        var result = InviteUserPaymentValidation.Validate(new PaymentsSubscription
         {
             SubscriptionStatus = StripeConstants.SubscriptionStatus.Active,
             ProductTierType = new InviteOrganization(organization).Plan.ProductTier
         });
 
-        Assert.IsType<Valid<PaymentSubscriptionDto>>(result);
+        Assert.IsType<Valid<PaymentsSubscription>>(result);
     }
 
     [Fact]
     public void Validate_WhenSubscriptionIsCanceled_ReturnsInvalidResponse()
     {
-        var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
+        var result = InviteUserPaymentValidation.Validate(new PaymentsSubscription
         {
             SubscriptionStatus = StripeConstants.SubscriptionStatus.Canceled,
             ProductTierType = ProductTierType.Enterprise
         });
 
-        Assert.IsType<Invalid<PaymentSubscriptionDto>>(result);
+        Assert.IsType<Invalid<PaymentsSubscription>>(result);
         Assert.Equal(InviteUserValidationErrorMessages.CancelledSubscriptionError, result.ErrorMessageString);
     }
 
     [Fact]
     public void Validate_WhenSubscriptionIsActive_ReturnsValidResponse()
     {
-        var result = InviteUserPaymentValidation.Validate(new PaymentSubscriptionDto
+        var result = InviteUserPaymentValidation.Validate(new PaymentsSubscription
         {
             SubscriptionStatus = StripeConstants.SubscriptionStatus.Active,
             ProductTierType = ProductTierType.Enterprise
         });
 
-        Assert.IsType<Valid<PaymentSubscriptionDto>>(result);
+        Assert.IsType<Valid<PaymentsSubscription>>(result);
     }
 }

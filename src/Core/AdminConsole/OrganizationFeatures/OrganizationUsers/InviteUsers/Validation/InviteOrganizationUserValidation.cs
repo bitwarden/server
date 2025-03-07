@@ -36,7 +36,7 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(organizationValidation.ErrorMessageString);
         }
 
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(request);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(request);
         var passwordManagerValidationResult = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
         if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
@@ -44,7 +44,7 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidSubscriptionUpdate.ErrorMessageString);
         }
 
-        var smSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
         var secretsManagerValidationResult = SecretsManagerInviteUserValidation.Validate(smSubscriptionUpdate);
 
         if (secretsManagerValidationResult is Invalid<SecretsManagerSubscriptionUpdate> invalidSmSubscriptionUpdate)

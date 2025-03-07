@@ -22,7 +22,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = false;
 
         var organizationDto = new InviteOrganization(organization);
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
@@ -34,7 +34,7 @@ public class SecretsManagerInviteUserValidationTests
             OccupiedSmSeats = 0
         };
 
-        var update = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var update = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
 
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
@@ -49,7 +49,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = false;
 
         var organizationDto = new InviteOrganization(organization);
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var invite = OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true);
 
@@ -63,7 +63,7 @@ public class SecretsManagerInviteUserValidationTests
             OccupiedSmSeats = 0
         };
 
-        var update = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var update = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
 
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
@@ -80,7 +80,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
 
         var organizationDto = new InviteOrganization(organization);
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
@@ -92,7 +92,7 @@ public class SecretsManagerInviteUserValidationTests
             OccupiedSmSeats = 0
         };
 
-        var update = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var update = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
 
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
@@ -110,7 +110,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.PlanType = PlanType.EnterpriseAnnually;
 
         var organizationDto = new InviteOrganization(organization);
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
@@ -122,7 +122,7 @@ public class SecretsManagerInviteUserValidationTests
             OccupiedSmSeats = 4
         };
 
-        var update = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var update = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
 
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
@@ -141,7 +141,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.PlanType = PlanType.EnterpriseAnnually;
 
         var organizationDto = new InviteOrganization(organization);
-        var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, 0, 0);
+        var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
         {
@@ -153,7 +153,7 @@ public class SecretsManagerInviteUserValidationTests
             OccupiedSmSeats = 4
         };
 
-        var update = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var update = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
 
         var result = SecretsManagerInviteUserValidation.Validate(update);
 

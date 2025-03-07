@@ -6,18 +6,18 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class InviteUserPaymentValidation
 {
-    public static ValidationResult<PaymentSubscriptionDto> Validate(PaymentSubscriptionDto subscription)
+    public static ValidationResult<PaymentsSubscription> Validate(PaymentsSubscription subscription)
     {
         if (subscription.ProductTierType is ProductTierType.Free)
         {
-            return new Valid<PaymentSubscriptionDto>(subscription);
+            return new Valid<PaymentsSubscription>(subscription);
         }
 
         if (subscription.SubscriptionStatus == StripeConstants.SubscriptionStatus.Canceled)
         {
-            return new Invalid<PaymentSubscriptionDto>(InviteUserValidationErrorMessages.CancelledSubscriptionError);
+            return new Invalid<PaymentsSubscription>(InviteUserValidationErrorMessages.CancelledSubscriptionError);
         }
 
-        return new Valid<PaymentSubscriptionDto>(subscription);
+        return new Valid<PaymentsSubscription>(subscription);
     }
 }

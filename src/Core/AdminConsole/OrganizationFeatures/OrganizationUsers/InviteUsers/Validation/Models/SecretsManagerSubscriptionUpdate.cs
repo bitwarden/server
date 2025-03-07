@@ -34,25 +34,26 @@ public class SecretsManagerSubscriptionUpdate
         SecretsManagerPlan = plan;
     }
 
-    public static SecretsManagerSubscriptionUpdate Create(InviteOrganization inviteOrganization, int occupiedSeats, int seatsToAdd, int passwordManagerSeatTotal)
-    {
-        return new SecretsManagerSubscriptionUpdate(inviteOrganization.UseSecretsManager,
-            inviteOrganization.SmSeats,
-            inviteOrganization.SmMaxAutoScaleSeats,
-            occupiedSeats,
-            seatsToAdd,
-            passwordManagerSeatTotal,
-            inviteOrganization.Plan.SecretsManager);
-    }
+    public SecretsManagerSubscriptionUpdate(InviteOrganization inviteOrganization, int occupiedSeats, int seatsToAdd, int passwordManagerSeatTotal) :
+        this(
+            useSecretsManger: inviteOrganization.UseSecretsManager,
+            organizationSeats: inviteOrganization.SmSeats,
+            organizationAutoScaleSeatLimit: inviteOrganization.SmMaxAutoScaleSeats,
+            currentSeats: occupiedSeats,
+            seatsToAdd: seatsToAdd,
+            passwordManagerUpdatedSeatTotal: passwordManagerSeatTotal,
+            plan: inviteOrganization.Plan.SecretsManager)
+    { }
 
-    public static SecretsManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest refined, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate)
-    {
-        return new SecretsManagerSubscriptionUpdate(refined.InviteOrganization.UseSecretsManager,
-            refined.InviteOrganization.SmSeats,
-            refined.InviteOrganization.SmMaxAutoScaleSeats,
-            refined.OccupiedSmSeats,
-            refined.Invites.Count(x => x.AccessSecretsManager),
-            passwordManagerSubscriptionUpdate.UpdatedSeatTotal,
-            refined.InviteOrganization.Plan.SecretsManager);
-    }
+    public SecretsManagerSubscriptionUpdate(InviteUserOrganizationValidationRequest request,
+        PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate) :
+        this(
+            useSecretsManger: request.InviteOrganization.UseSecretsManager,
+            organizationSeats: request.InviteOrganization.SmSeats,
+            organizationAutoScaleSeatLimit: request.InviteOrganization.SmMaxAutoScaleSeats,
+            currentSeats: request.OccupiedSmSeats,
+            seatsToAdd: request.Invites.Count(x => x.AccessSecretsManager),
+            passwordManagerUpdatedSeatTotal: passwordManagerSubscriptionUpdate.UpdatedSeatTotal,
+            plan: request.InviteOrganization.Plan.SecretsManager)
+    { }
 }

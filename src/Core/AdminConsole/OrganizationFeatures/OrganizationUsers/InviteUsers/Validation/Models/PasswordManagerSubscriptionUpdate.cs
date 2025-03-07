@@ -40,23 +40,21 @@ public class PasswordManagerSubscriptionUpdate
         PasswordManagerPlan = plan;
     }
 
-    public static PasswordManagerSubscriptionUpdate Create(InviteOrganization inviteOrganization, int occupiedSeats, int seatsToAdd)
-    {
-        return new PasswordManagerSubscriptionUpdate(
-            inviteOrganization.Seats,
-            inviteOrganization.MaxAutoScaleSeats,
-            occupiedSeats,
-            seatsToAdd,
-            inviteOrganization.Plan.PasswordManager);
-    }
+    public PasswordManagerSubscriptionUpdate(InviteOrganization inviteOrganization, int occupiedSeats, int seatsToAdd) :
+        this(
+            organizationSeats: inviteOrganization.Seats,
+            organizationAutoScaleSeatLimit: inviteOrganization.MaxAutoScaleSeats,
+            currentSeats: occupiedSeats,
+            seatsToAdd: seatsToAdd,
+            plan: inviteOrganization.Plan.PasswordManager)
+    { }
 
-    public static PasswordManagerSubscriptionUpdate Create(InviteUserOrganizationValidationRequest validationRequest)
-    {
-        return new PasswordManagerSubscriptionUpdate(
-            validationRequest.InviteOrganization.Seats,
-            validationRequest.InviteOrganization.MaxAutoScaleSeats,
-            validationRequest.OccupiedPmSeats,
-            validationRequest.Invites.Length,
-            validationRequest.InviteOrganization.Plan.PasswordManager);
-    }
+    public PasswordManagerSubscriptionUpdate(InviteUserOrganizationValidationRequest validationRequest) :
+        this(
+            organizationSeats: validationRequest.InviteOrganization.Seats,
+            organizationAutoScaleSeatLimit: validationRequest.InviteOrganization.MaxAutoScaleSeats,
+            currentSeats: validationRequest.OccupiedPmSeats,
+            seatsToAdd: validationRequest.Invites.Length,
+            plan: validationRequest.InviteOrganization.Plan.PasswordManager)
+    { }
 }

@@ -218,7 +218,7 @@ public class InviteOrganizationUserCommandTests
         sutProvider.GetDependency<IInviteUsersValidation>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
             .Returns(new Valid<InviteUserOrganizationValidationRequest>(GetInviteValidationRequestMock(request, organizationDto)
-                .WithPasswordManagerUpdate(PasswordManagerSubscriptionUpdate.Create(organizationDto, organization.Seats.Value, 1))));
+                .WithPasswordManagerUpdate(new PasswordManagerSubscriptionUpdate(organizationDto, organization.Seats.Value, 1))));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
@@ -260,7 +260,7 @@ public class InviteOrganizationUserCommandTests
             timeProvider.GetUtcNow(),
             externalId);
 
-        var passwordManagerUpdate = PasswordManagerSubscriptionUpdate.Create(organizationDto, organization.Seats.Value, 1);
+        var passwordManagerUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, organization.Seats.Value, 1);
 
         var orgUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
 
@@ -323,7 +323,7 @@ public class InviteOrganizationUserCommandTests
             timeProvider.GetUtcNow(),
             externalId);
 
-        var secretsManagerSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
             organizationDto,
             organization.SmSeats.Value,
             1,

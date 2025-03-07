@@ -20,8 +20,8 @@ public static class InviteUserOrganizationValidationRequestHelpers
             PerformedAt = request.PerformedAt,
             OccupiedPmSeats = 0,
             OccupiedSmSeats = 0,
-            PasswordManagerSubscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(inviteOrganization, 0, 0),
-            SecretsManagerSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(inviteOrganization, 0, 0, 0)
+            PasswordManagerSubscriptionUpdate = new PasswordManagerSubscriptionUpdate(inviteOrganization, 0, 0),
+            SecretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(inviteOrganization, 0, 0, 0)
         };
 
     public static InviteUserOrganizationValidationRequest WithPasswordManagerUpdate(this InviteUserOrganizationValidationRequest request, PasswordManagerSubscriptionUpdate passwordManagerSubscriptionUpdate) =>
