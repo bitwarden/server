@@ -10,6 +10,7 @@ using SecretsManagerSubscriptionUpdate = Bit.Core.AdminConsole.OrganizationFeatu
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
+// TODO move into own file ... and change name to validator
 public interface IInviteUsersValidation
 {
     Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request);
@@ -28,40 +29,44 @@ public class InviteUsersValidation(
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidEnvironment.ErrorMessageString);
         }
 
-        if (InvitingUserOrganizationValidation.Validate(request.InviteOrganization) is Invalid<InviteOrganization> organizationValidation)
+        var organizationValidationResult = InvitingUserOrganizationValidation.Validate(request.InviteOrganization);
+
+        if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(organizationValidation.ErrorMessageString);
         }
 
         var subscriptionUpdate = PasswordManagerSubscriptionUpdate.Create(request);
+        var passwordManagerValidationResult = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
-        if (PasswordManagerInviteUserValidation.Validate(subscriptionUpdate) is
-            Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
+        if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidSubscriptionUpdate.ErrorMessageString);
         }
 
         var smSubscriptionUpdate = SecretsManagerSubscriptionUpdate.Create(request, subscriptionUpdate);
+        var secretsManagerValidationResult = SecretsManagerInviteUserValidation.Validate(smSubscriptionUpdate);
 
-        if (SecretsManagerInviteUserValidation.Validate(smSubscriptionUpdate) is
-            Invalid<SecretsManagerSubscriptionUpdate> invalidSmSubscriptionUpdate)
+        if (secretsManagerValidationResult is Invalid<SecretsManagerSubscriptionUpdate> invalidSmSubscriptionUpdate)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidSmSubscriptionUpdate.ErrorMessageString);
         }
 
         var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
-
-        if (provider is not null &&
-            InvitingUserOrganizationProviderValidation.Validate(ProviderDto.FromProviderEntity(provider)) is
-            Invalid<ProviderDto> invalidProviderValidation)
+        if (provider is not null)
         {
-            return new Invalid<InviteUserOrganizationValidationRequest>(invalidProviderValidation.ErrorMessageString);
+            var providerValidationResult = InvitingUserOrganizationProviderValidation.Validate(ProviderDto.FromProviderEntity(provider));
+
+            if (providerValidationResult is Invalid<ProviderDto> invalidProviderValidation)
+            {
+                return new Invalid<InviteUserOrganizationValidationRequest>(invalidProviderValidation.ErrorMessageString);
+            }
         }
 
         var paymentSubscription = await paymentService.GetSubscriptionAsync(await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId));
+        var paymentValidationResult = InviteUserPaymentValidation.Validate(new PaymentsSubscription(paymentSubscription, request.InviteOrganization));
 
-        if (InviteUserPaymentValidation.Validate(PaymentSubscriptionDto.FromSubscriptionInfo(paymentSubscription, request.InviteOrganization)) is
-            Invalid<PaymentSubscriptionDto> invalidPaymentValidation)
+        if (paymentValidationResult is Invalid<PaymentsSubscription> invalidPaymentValidation)
         {
             return new Invalid<InviteUserOrganizationValidationRequest>(invalidPaymentValidation.ErrorMessageString);
         }
