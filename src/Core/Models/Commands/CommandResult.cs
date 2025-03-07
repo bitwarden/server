@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Models.Commands;
+﻿#nullable enable
+
+namespace Bit.Core.Models.Commands;
 
 public class CommandResult(IEnumerable<string> errors)
 {
@@ -10,20 +12,34 @@ public class CommandResult(IEnumerable<string> errors)
     public CommandResult() : this(Array.Empty<string>()) { }
 }
 
-public abstract class CommandResult<T> : CommandResult
+public class Failure : CommandResult
 {
+    protected Failure(IEnumerable<string> errorMessages) : base(errorMessages)
+    {
 
-    public T Value { get; set; }
+    }
+    public Failure(string errorMessage) : base(errorMessage)
+    {
+
+    }
 }
 
-public class Success<T> : CommandResult<T>
+public class Success : CommandResult
 {
-    public Success(T value) => Value = value;
 }
 
-public class Failure<T> : CommandResult<T>
+public abstract class CommandResult<T> { }
+
+public class Success<T>(T value) : CommandResult<T>
 {
-    public Failure(string error) => ErrorMessages.Add(error);
+    public T? Value { get; } = value;
+}
+
+public class Failure<T>(IEnumerable<string> errorMessage) : CommandResult<T>
+{
+    public List<string> ErrorMessages { get; } = [];
 
     public string ErrorMessage => string.Join(" ", ErrorMessages);
+
+    public Failure(string error) : this([error]) { }
 }
