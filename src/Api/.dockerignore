@@ -1,4 +1,4 @@
-*
-!obj/build-output/publish/*
-!obj/Docker/empty/
-!entrypoint.sh
+# *
+# !obj/build-output/publish/*
+# !obj/Docker/empty/
+# !entrypoint.sh
