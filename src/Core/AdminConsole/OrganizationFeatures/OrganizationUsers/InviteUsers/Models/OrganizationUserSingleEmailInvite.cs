@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -14,6 +15,25 @@ public record OrganizationUserSingleEmailInvite
     public Permissions Permissions { get; init; } = new();
     public OrganizationUserType Type { get; init; } = OrganizationUserType.User;
     public bool AccessSecretsManager { get; init; }
+    public InviteOrganization InviteOrganization { get; private init; }
+    public DateTimeOffset PerformedAt { get; private init; }
+    public string ExternalId { get; private init; } = string.Empty;
+
+    public OrganizationUserSingleEmailInvite(string email,
+        bool hasSecretsManager,
+        InviteOrganization inviteOrganization,
+        DateTimeOffset performedAt,
+        string externalId) : this(
+        email: email,
+        accessibleCollections: [],
+        type: OrganizationUserType.User,
+        permissions: new Permissions(),
+        accessSecretsManager: hasSecretsManager)
+    {
+        InviteOrganization = inviteOrganization;
+        PerformedAt = performedAt;
+        ExternalId = externalId;
+    }
 
     public OrganizationUserSingleEmailInvite(string email,
         IEnumerable<CollectionAccessSelection> accessibleCollections,

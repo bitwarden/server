@@ -20,8 +20,8 @@ public class InviteOrganizationUsersRequest
         PerformedAt = performedAt;
     }
 
-    public InviteOrganizationUsersRequest(InviteScimOrganizationUserRequest request) :
-        this([OrganizationUserInvite.Create(request, request.ExternalId)],
+    public InviteOrganizationUsersRequest(OrganizationUserSingleEmailInvite request) :
+        this([OrganizationUserInvite.Create(request)],
             request.InviteOrganization,
             Guid.Empty,
             request.PerformedAt)

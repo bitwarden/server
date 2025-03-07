@@ -42,12 +42,12 @@ public class OrganizationUserInvite
         };
     }
 
-    public static OrganizationUserInvite Create(OrganizationUserSingleEmailInvite invite, string externalId) =>
+    public static OrganizationUserInvite Create(OrganizationUserSingleEmailInvite invite) =>
         Create([invite.Email],
             invite.AccessibleCollections,
             invite.Type,
             invite.Permissions,
-            externalId,
+            invite.ExternalId,
             invite.AccessSecretsManager);
 
     private static void ValidateEmailAddresses(string[] emails)

@@ -36,7 +36,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
     public const string FailedToInviteUsers = "Failed to invite user(s).";
 
-    public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(InviteScimOrganizationUserRequest request)
+    public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
     {
         var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request));
 

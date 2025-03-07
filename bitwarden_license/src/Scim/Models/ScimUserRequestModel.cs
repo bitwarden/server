@@ -27,7 +27,7 @@ public class ScimUserRequestModel : BaseScimUserModel
         };
     }
 
-    public InviteScimOrganizationUserRequest ToRequest(
+    public OrganizationUserSingleEmailInvite ToRequest(
         ScimProviderType scimProvider,
         bool hasSecretsManager,
         InviteOrganization inviteOrganization,
