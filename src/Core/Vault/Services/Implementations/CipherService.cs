@@ -407,7 +407,7 @@ public class CipherService : ICipherService
 
     public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
     {
-        if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+        if (!orgAdmin && !(await UserCanManageAsync(cipher, deletingUserId)))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
         }
@@ -689,7 +689,7 @@ public class CipherService : ICipherService
 
     public async Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
     {
-        if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
+        if (!orgAdmin && !(await UserCanManageAsync(cipher, deletingUserId)))
         {
             throw new BadRequestException("You do not have permissions to soft delete this.");
         }
@@ -826,6 +826,11 @@ public class CipherService : ICipherService
         }
 
         return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
+    }
+
+    private async Task<bool> UserCanManageAsync(Cipher cipher, Guid userId)
+    {
+        return await _cipherRepository.GetCanManageByIdAsync(userId, cipher.Id);
     }
 
     private void ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
