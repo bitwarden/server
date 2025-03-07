@@ -1,4 +1,5 @@
-﻿using Bit.Identity.Models.Request.Accounts;
+﻿using Bit.Core.Platform.Infrastructure;
+using Bit.Identity.Models.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
@@ -31,6 +32,16 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             // Remove scheduled background jobs to prevent errors in parallel test execution
             var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
             services.Remove(jobService);
+
+            // Integration tests are not configured to use Azurite yet
+            var azureScaffolder = services.FirstOrDefault(
+                sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(AzureScaffolder)
+            );
+
+            if (azureScaffolder != null)
+            {
+                services.Remove(azureScaffolder);
+            }
 
             services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
