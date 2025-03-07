@@ -25,7 +25,7 @@ public class AccountsController(
     IUserService userService) : Controller
 {
     [HttpPost("premium")]
-    public async Task<PaymentResponseModel> PostPremium(
+    public async Task<PaymentResponseModel> PostPremiumAsync(
         PremiumRequestModel model,
         [FromServices] GlobalSettings globalSettings)
     {
@@ -71,9 +71,9 @@ public class AccountsController(
     }
 
     [HttpGet("subscription")]
-    public async Task<SubscriptionResponseModel> GetSubscription(
+    public async Task<SubscriptionResponseModel> GetSubscriptionAsync(
         [FromServices] GlobalSettings globalSettings,
-        [FromServices] IPaymentService _paymentService)
+        [FromServices] IPaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -83,7 +83,7 @@ public class AccountsController(
 
         if (!globalSettings.SelfHosted && user.Gateway != null)
         {
-            var subscriptionInfo = await _paymentService.GetSubscriptionAsync(user);
+            var subscriptionInfo = await paymentService.GetSubscriptionAsync(user);
             var license = await userService.GenerateLicenseAsync(user, subscriptionInfo);
             return new SubscriptionResponseModel(user, subscriptionInfo, license);
         }
@@ -100,7 +100,7 @@ public class AccountsController(
 
     [HttpPost("payment")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostPayment([FromBody] PaymentRequestModel model)
+    public async Task PostPaymentAsync([FromBody] PaymentRequestModel model)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -123,7 +123,7 @@ public class AccountsController(
 
     [HttpPost("storage")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostStorage([FromBody] StorageRequestModel model)
+    public async Task<PaymentResponseModel> PostStorageAsync([FromBody] StorageRequestModel model)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -139,7 +139,7 @@ public class AccountsController(
 
     [HttpPost("license")]
     [SelfHosted(SelfHostedOnly = true)]
-    public async Task PostLicense(LicenseRequestModel model)
+    public async Task PostLicenseAsync(LicenseRequestModel model)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -157,11 +157,11 @@ public class AccountsController(
     }
 
     [HttpPost("cancel")]
-    public async Task PostCancel(
+    public async Task PostCancelAsync(
         [FromBody] SubscriptionCancellationRequestModel request,
         [FromServices] ICurrentContext currentContext,
         [FromServices] IReferenceEventService referenceEventService,
-        [FromServices] ISubscriberService _subscriberService)
+        [FromServices] ISubscriberService subscriberService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
 
@@ -170,7 +170,7 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        await _subscriberService.CancelSubscription(user,
+        await subscriberService.CancelSubscription(user,
             new OffboardingSurveyResponse { UserId = user.Id, Reason = request.Reason, Feedback = request.Feedback },
             user.IsExpired());
 
@@ -183,7 +183,7 @@ public class AccountsController(
 
     [HttpPost("reinstate-premium")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostReinstate()
+    public async Task PostReinstateAsync()
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -196,8 +196,8 @@ public class AccountsController(
 
     [HttpGet("tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<TaxInfoResponseModel> GetTaxInfo(
-        [FromServices] IPaymentService _paymentService)
+    public async Task<TaxInfoResponseModel> GetTaxInfoAsync(
+        [FromServices] IPaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -205,15 +205,15 @@ public class AccountsController(
             throw new UnauthorizedAccessException();
         }
 
-        var taxInfo = await _paymentService.GetTaxInfoAsync(user);
+        var taxInfo = await paymentService.GetTaxInfoAsync(user);
         return new TaxInfoResponseModel(taxInfo);
     }
 
     [HttpPut("tax")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PutTaxInfo(
+    public async Task PutTaxInfoAsync(
         [FromBody] TaxInfoUpdateRequestModel model,
-        [FromServices] IPaymentService _paymentService)
+        [FromServices] IPaymentService paymentService)
     {
         var user = await userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -226,7 +226,7 @@ public class AccountsController(
             BillingAddressPostalCode = model.PostalCode,
             BillingAddressCountry = model.Country,
         };
-        await _paymentService.SaveTaxInfoAsync(user, taxInfo);
+        await paymentService.SaveTaxInfoAsync(user, taxInfo);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)
