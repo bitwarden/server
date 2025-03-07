@@ -196,4 +196,15 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             return result.ToList();
         }
     }
+
+    public async Task<ICollection<Organization>> GetManyByIdsAsync(IEnumerable<Guid> ids)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return (await connection.QueryAsync<Organization>(
+            $"[{Schema}].[{Table}_ReadManyByIds]",
+            new { OrganizationIds = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure))
+            .ToList();
+    }
 }
