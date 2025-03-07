@@ -122,18 +122,6 @@ public class DeleteManagedOrganizationUserAccountCommand : IDeleteManagedOrganiz
 
     private async Task<CommandResult> ValidateAsync(Guid organizationId, OrganizationUser orgUser, User user, Guid? deletingUserId, IDictionary<Guid, bool> managementStatus)
     {
-        var result1 = EnsureUserStatusIsNotInvited(orgUser);
-        if (result1 is not Success)
-        {
-            return result1;
-        }
-
-        var result2 = PreventSelfDeletion(orgUser, deletingUserId);
-        if (result2 is not Success)
-        {
-            return result2;
-        }
-
         var validators = new[]
         {
             () => EnsureUserStatusIsNotInvited(orgUser),
