@@ -15,8 +15,14 @@ using Microsoft.Extensions.Logging;
 // This service is not in the `Internal` namespace because it has direct external references.
 namespace Bit.Core.Platform.Push;
 
+/// <summary>
+/// Sends non-mobile push notifications to the Azure Queue Api, later received by Notifications Api.
+/// Used by Cloud-Hosted environments.
+/// Received by AzureQueueHostedService message receiver in Notifications project.
+/// </summary>
 public class NotificationsApiPushNotificationService : BaseIdentityClientService, IPushNotificationService
 {
+    private readonly IGlobalSettings _globalSettings;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public NotificationsApiPushNotificationService(
@@ -33,6 +39,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             globalSettings.InternalIdentityKey,
             logger)
     {
+        _globalSettings = globalSettings;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -193,13 +200,14 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
             RevisionDate = notification.RevisionDate
         };
 
-        await SendMessageAsync(PushType.SyncNotification, message, true);
+        await SendMessageAsync(PushType.Notification, message, true);
     }
 
     public async Task PushNotificationStatusAsync(Notification notification, NotificationStatus notificationStatus)
@@ -212,6 +220,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             ClientType = notification.ClientType,
             UserId = notification.UserId,
             OrganizationId = notification.OrganizationId,
+            InstallationId = notification.Global ? _globalSettings.Installation.Id : null,
             Title = notification.Title,
             Body = notification.Body,
             CreationDate = notification.CreationDate,
@@ -220,7 +229,12 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             DeletedDate = notificationStatus.DeletedDate
         };
 
-        await SendMessageAsync(PushType.SyncNotificationStatus, message, true);
+        await SendMessageAsync(PushType.NotificationStatus, message, true);
+    }
+
+    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        await PushUserAsync(userId, PushType.PendingSecurityTasks);
     }
 
     private async Task PushSendAsync(Send send, PushType type)
@@ -256,6 +270,11 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             _httpContextAccessor.HttpContext?.RequestServices.GetService(typeof(ICurrentContext)) as ICurrentContext;
         return currentContext?.DeviceIdentifier;
     }
+
+    public Task SendPayloadToInstallationAsync(string installationId, PushType type, object payload, string? identifier,
+        string? deviceId = null, ClientType? clientType = null) =>
+        // Noop
+        Task.CompletedTask;
 
     public Task SendPayloadToUserAsync(string userId, PushType type, object payload, string? identifier,
         string? deviceId = null, ClientType? clientType = null)

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -22,14 +23,14 @@ public class PushController : Controller
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IWebHostEnvironment _environment;
     private readonly ICurrentContext _currentContext;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IGlobalSettings _globalSettings;
 
     public PushController(
         IPushRegistrationService pushRegistrationService,
         IPushNotificationService pushNotificationService,
         IWebHostEnvironment environment,
         ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        IGlobalSettings globalSettings)
     {
         _currentContext = currentContext;
         _environment = environment;
@@ -39,22 +40,23 @@ public class PushController : Controller
     }
 
     [HttpPost("register")]
-    public async Task PostRegister([FromBody] PushRegistrationRequestModel model)
+    public async Task RegisterAsync([FromBody] PushRegistrationRequestModel model)
     {
         CheckUsage();
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(model.PushToken, Prefix(model.DeviceId),
-            Prefix(model.UserId), Prefix(model.Identifier), model.Type, model.OrganizationIds.Select(Prefix));
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(new PushRegistrationData(model.PushToken),
+            Prefix(model.DeviceId), Prefix(model.UserId), Prefix(model.Identifier), model.Type,
+            model.OrganizationIds?.Select(Prefix) ?? [], model.InstallationId);
     }
 
     [HttpPost("delete")]
-    public async Task PostDelete([FromBody] PushDeviceRequestModel model)
+    public async Task DeleteAsync([FromBody] PushDeviceRequestModel model)
     {
         CheckUsage();
         await _pushRegistrationService.DeleteRegistrationAsync(Prefix(model.Id));
     }
 
     [HttpPut("add-organization")]
-    public async Task PutAddOrganization([FromBody] PushUpdateRequestModel model)
+    public async Task AddOrganizationAsync([FromBody] PushUpdateRequestModel model)
     {
         CheckUsage();
         await _pushRegistrationService.AddUserRegistrationOrganizationAsync(
@@ -63,7 +65,7 @@ public class PushController : Controller
     }
 
     [HttpPut("delete-organization")]
-    public async Task PutDeleteOrganization([FromBody] PushUpdateRequestModel model)
+    public async Task DeleteOrganizationAsync([FromBody] PushUpdateRequestModel model)
     {
         CheckUsage();
         await _pushRegistrationService.DeleteUserRegistrationOrganizationAsync(
@@ -72,11 +74,22 @@ public class PushController : Controller
     }
 
     [HttpPost("send")]
-    public async Task PostSend([FromBody] PushSendRequestModel model)
+    public async Task SendAsync([FromBody] PushSendRequestModel model)
     {
         CheckUsage();
 
-        if (!string.IsNullOrWhiteSpace(model.UserId))
+        if (!string.IsNullOrWhiteSpace(model.InstallationId))
+        {
+            if (_currentContext.InstallationId!.Value.ToString() != model.InstallationId!)
+            {
+                throw new BadRequestException("InstallationId does not match current context.");
+            }
+
+            await _pushNotificationService.SendPayloadToInstallationAsync(
+                _currentContext.InstallationId.Value.ToString(), model.Type, model.Payload, Prefix(model.Identifier),
+                Prefix(model.DeviceId), model.ClientType);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.UserId))
         {
             await _pushNotificationService.SendPayloadToUserAsync(Prefix(model.UserId),
                 model.Type, model.Payload, Prefix(model.Identifier), Prefix(model.DeviceId), model.ClientType);
@@ -95,7 +108,7 @@ public class PushController : Controller
             return null;
         }
 
-        return $"{_currentContext.InstallationId.Value}_{value}";
+        return $"{_currentContext.InstallationId!.Value}_{value}";
     }
 
     private void CheckUsage()

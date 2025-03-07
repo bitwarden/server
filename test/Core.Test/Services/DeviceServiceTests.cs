@@ -4,9 +4,11 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -20,7 +22,7 @@ public class DeviceServiceTests
     [Theory]
     [BitAutoData]
     public async Task SaveAsync_IdProvided_UpdatedRevisionDateAndPushRegistration(Guid id, Guid userId,
-        Guid organizationId1, Guid organizationId2,
+        Guid organizationId1, Guid organizationId2, Guid installationId,
         OrganizationUserOrganizationDetails organizationUserOrganizationDetails1,
         OrganizationUserOrganizationDetails organizationUserOrganizationDetails2)
     {
@@ -32,7 +34,9 @@ public class DeviceServiceTests
         var organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         organizationUserRepository.GetManyDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType?>())
             .Returns([organizationUserOrganizationDetails1, organizationUserOrganizationDetails2]);
-        var deviceService = new DeviceService(deviceRepo, pushRepo, organizationUserRepository);
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Id.Returns(installationId);
+        var deviceService = new DeviceService(deviceRepo, pushRepo, organizationUserRepository, globalSettings);
 
         var device = new Device
         {
@@ -40,13 +44,13 @@ public class DeviceServiceTests
             Name = "test device",
             Type = DeviceType.Android,
             UserId = userId,
-            PushToken = "testtoken",
+            PushToken = "testToken",
             Identifier = "testid"
         };
         await deviceService.SaveAsync(device);
 
         Assert.True(device.RevisionDate - DateTime.UtcNow < TimeSpan.FromSeconds(1));
-        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync("testtoken", id.ToString(),
+        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(v => v.Token == "testToken"), id.ToString(),
             userId.ToString(), "testid", DeviceType.Android,
             Arg.Do<IEnumerable<string>>(organizationIds =>
             {
@@ -54,13 +58,13 @@ public class DeviceServiceTests
                 Assert.Equal(2, organizationIdsList.Count);
                 Assert.Contains(organizationId1.ToString(), organizationIdsList);
                 Assert.Contains(organizationId2.ToString(), organizationIdsList);
-            }));
+            }), installationId);
     }
 
     [Theory]
     [BitAutoData]
     public async Task SaveAsync_IdNotProvided_CreatedAndPushRegistration(Guid userId, Guid organizationId1,
-        Guid organizationId2,
+        Guid organizationId2, Guid installationId,
         OrganizationUserOrganizationDetails organizationUserOrganizationDetails1,
         OrganizationUserOrganizationDetails organizationUserOrganizationDetails2)
     {
@@ -72,19 +76,21 @@ public class DeviceServiceTests
         var organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         organizationUserRepository.GetManyDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<OrganizationUserStatusType?>())
             .Returns([organizationUserOrganizationDetails1, organizationUserOrganizationDetails2]);
-        var deviceService = new DeviceService(deviceRepo, pushRepo, organizationUserRepository);
+        var globalSettings = Substitute.For<IGlobalSettings>();
+        globalSettings.Installation.Id.Returns(installationId);
+        var deviceService = new DeviceService(deviceRepo, pushRepo, organizationUserRepository, globalSettings);
 
         var device = new Device
         {
             Name = "test device",
             Type = DeviceType.Android,
             UserId = userId,
-            PushToken = "testtoken",
+            PushToken = "testToken",
             Identifier = "testid"
         };
         await deviceService.SaveAsync(device);
 
-        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync("testtoken",
+        await pushRepo.Received(1).CreateOrUpdateRegistrationAsync(Arg.Is<PushRegistrationData>(v => v.Token == "testToken"),
             Arg.Do<string>(id => Guid.TryParse(id, out var _)), userId.ToString(), "testid", DeviceType.Android,
             Arg.Do<IEnumerable<string>>(organizationIds =>
             {
@@ -92,7 +98,7 @@ public class DeviceServiceTests
                 Assert.Equal(2, organizationIdsList.Count);
                 Assert.Contains(organizationId1.ToString(), organizationIdsList);
                 Assert.Contains(organizationId2.ToString(), organizationIdsList);
-            }));
+            }), installationId);
     }
 
     /// <summary>
