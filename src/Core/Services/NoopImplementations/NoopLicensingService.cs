@@ -60,7 +60,7 @@ public class NoopLicensingService : ILicensingService
         return null;
     }
 
-    public Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo)
+    public Task<string> CreateOrganizationTokenAsync(Organization organization, Guid installationId, SubscriptionInfo subscriptionInfo, int? smMaxProjects)
     {
         return Task.FromResult<string>(null);
     }
