@@ -848,7 +848,7 @@ public class CiphersController : Controller
     public async Task DeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(id);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
@@ -915,7 +915,7 @@ public class CiphersController : Controller
     public async Task PutDeleteAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetByIdAsync(id);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
@@ -984,7 +984,7 @@ public class CiphersController : Controller
     public async Task<CipherMiniResponseModel> PutRestoreAdmin(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+        var cipher = await GetByIdAsync(id, userId);
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await CanDeleteOrRestoreCipherAsAdminAsync(cipher.OrganizationId.Value, new[] { cipher.Id }))
         {
