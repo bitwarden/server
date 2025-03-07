@@ -116,11 +116,17 @@ public class EmergencyAccessViewResponseModel : ResponseModel
     public EmergencyAccessViewResponseModel(
         IGlobalSettings globalSettings,
         EmergencyAccess emergencyAccess,
-        IEnumerable<CipherDetails> ciphers)
+        IEnumerable<CipherDetails> ciphers,
+        User user)
         : base("emergencyAccessView")
     {
         KeyEncrypted = emergencyAccess.KeyEncrypted;
-        Ciphers = ciphers.Select(c => new CipherResponseModel(c, globalSettings));
+        Ciphers = ciphers.Select(cipher =>
+            new CipherResponseModel(
+                cipher,
+                user,
+                organizationAbilities: null, // Emergency access only retrieves personal ciphers so organizationAbilities is not needed
+                globalSettings));
     }
 
     public string KeyEncrypted { get; set; }
