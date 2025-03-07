@@ -32,10 +32,10 @@ public abstract class CommandResult<T> { }
 
 public class Success<T>(T value) : CommandResult<T>
 {
-    public T? Value { get; } = value;
+    public T Value { get; } = value;
 }
 
-public class Failure<T>(IEnumerable<string> errorMessage) : CommandResult<T>
+public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
 {
     public List<string> ErrorMessages { get; } = [];
 

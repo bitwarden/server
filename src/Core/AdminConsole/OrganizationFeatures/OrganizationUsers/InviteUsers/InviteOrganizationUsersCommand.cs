@@ -56,7 +56,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
                 return new Success<ScimInviteOrganizationUsersResponse>(new ScimInviteOrganizationUsersResponse
                 {
-                    InvitedUser = result.Value.FirstOrDefault()
+                    InvitedUser = user
                 });
 
             default:
