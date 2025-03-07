@@ -46,7 +46,7 @@ public class OrganizationIntegrationConfigurationRepository(GlobalSettings globa
                     {
                         Url = _webhookUrl,
                     },
-                    Template = "{ \"newObject\": true }"
+                    Template = "{ \"Date\": \"#Date#\", \"Type\": \"#Type#\", \"UserId\": \"#UserId#\" }"
                 } as IntegrationConfiguration<T>;
             default:
                 return null;

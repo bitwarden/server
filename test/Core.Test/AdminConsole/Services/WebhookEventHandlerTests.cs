@@ -1,6 +1,9 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -8,7 +11,6 @@ using Bit.Test.Common.Helpers;
 using Bit.Test.Common.MockedHttpClient;
 using NSubstitute;
 using Xunit;
-using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -16,7 +18,7 @@ namespace Bit.Core.Test.Services;
 public class WebhookEventHandlerTests
 {
     private readonly MockedHttpMessageHandler _handler;
-    private HttpClient _httpClient;
+    private readonly HttpClient _httpClient;
 
     private const string _webhookUrl = "http://localhost/test/event";
 
@@ -29,16 +31,26 @@ public class WebhookEventHandlerTests
         _httpClient = _handler.ToHttpClient();
     }
 
-    public SutProvider<WebhookEventHandler> GetSutProvider()
+    private SutProvider<WebhookEventHandler> GetSutProvider()
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
         clientFactory.CreateClient(WebhookEventHandler.HttpClientName).Returns(_httpClient);
 
-        var globalSettings = new GlobalSettings();
-        globalSettings.EventLogging.WebhookUrl = _webhookUrl;
+        var repository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
+        repository.GetConfigurationAsync<WebhookConfiguration>(
+            Arg.Any<Guid>(),
+            IntegrationType.Webhook,
+            Arg.Any<EventType>()
+        ).Returns(
+            new IntegrationConfiguration<WebhookConfiguration>
+            {
+                Configuration = new WebhookConfiguration { ApiKey = "", Url = _webhookUrl },
+                Template = "{ \"Date\": \"#Date#\", \"Type\": \"#Type#\", \"UserId\": \"#UserId#\" }"
+            }
+        );
 
         return new SutProvider<WebhookEventHandler>()
-            .SetDependency(globalSettings)
+            .SetDependency(repository)
             .SetDependency(clientFactory)
             .Create();
     }
@@ -50,21 +62,22 @@ public class WebhookEventHandlerTests
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
-            Arg.Is(AssertHelper.AssertPropertyEqual<string>(WebhookEventHandler.HttpClientName))
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookEventHandler.HttpClientName))
         );
 
         Assert.Single(_handler.CapturedRequests);
         var request = _handler.CapturedRequests[0];
         Assert.NotNull(request);
-        var returned = await request.Content.ReadFromJsonAsync<EventMessage>();
+        var returned = await request.Content.ReadFromJsonAsync<MockEvent>();
+        var expected = MockEvent.From(eventMessage);
 
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal(_webhookUrl, request.RequestUri.ToString());
-        AssertHelper.AssertPropertyEqual(eventMessage, returned, new[] { "IdempotencyId" });
+        AssertHelper.AssertPropertyEqual(expected, returned);
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventManyAsync_PostsEventsToUrl(IEnumerable<EventMessage> eventMessages)
+    public async Task HandleEventManyAsync_PostsEventsToUrl(List<EventMessage> eventMessages)
     {
         var sutProvider = GetSutProvider();
 
@@ -73,13 +86,29 @@ public class WebhookEventHandlerTests
             Arg.Is(AssertHelper.AssertPropertyEqual<string>(WebhookEventHandler.HttpClientName))
         );
 
-        Assert.Single(_handler.CapturedRequests);
         var request = _handler.CapturedRequests[0];
         Assert.NotNull(request);
-        var returned = request.Content.ReadFromJsonAsAsyncEnumerable<EventMessage>();
+        var returned = await request.Content.ReadFromJsonAsync<MockEvent>();
+        var expected = MockEvent.From(eventMessages.First());
 
         Assert.Equal(HttpMethod.Post, request.Method);
         Assert.Equal(_webhookUrl, request.RequestUri.ToString());
-        AssertHelper.AssertPropertyEqual(eventMessages, returned, new[] { "IdempotencyId" });
+        AssertHelper.AssertPropertyEqual(expected, returned);
+    }
+}
+
+public class MockEvent(string date, string type, string userId)
+{
+    public string Date { get; set; } = date;
+    public string Type { get; set; } = type;
+    public string UserId { get; set; } = userId;
+
+    public static MockEvent From(EventMessage eventMessage)
+    {
+        return new MockEvent(
+            eventMessage.Date.ToString(),
+            eventMessage.Type.ToString(),
+            eventMessage.UserId.ToString()
+        );
     }
 }

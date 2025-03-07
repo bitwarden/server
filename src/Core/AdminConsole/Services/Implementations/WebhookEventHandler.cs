@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+﻿using System.Text;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Integrations;
@@ -27,7 +27,11 @@ public class WebhookEventHandler(
             eventMessage.Type);
         if (configuration is not null)
         {
-            var content = JsonContent.Create(configuration.Template);
+            var content = new StringContent(
+                TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
+                Encoding.UTF8,
+                "application/json"
+            );
             var response = await _httpClient.PostAsync(
                 configuration.Configuration.Url,
                 content);
