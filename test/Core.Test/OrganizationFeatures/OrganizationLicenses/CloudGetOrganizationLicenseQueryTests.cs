@@ -56,7 +56,6 @@ public class CloudGetOrganizationLicenseQueryTests
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
         sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor).Returns(false);
 
         var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
 
@@ -64,7 +63,7 @@ public class CloudGetOrganizationLicenseQueryTests
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(installationId, result.InstallationId);
         Assert.Equal(licenseSignature, result.SignatureBytes);
-        Assert.Null(result.Token);
+        Assert.Equal(string.Empty, result.Token);
     }
 
     [Theory]
@@ -77,7 +76,6 @@ public class CloudGetOrganizationLicenseQueryTests
         sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
         sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
         sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor).Returns(true);
         sutProvider.GetDependency<ILicensingService>()
             .CreateOrganizationTokenAsync(organization, installationId, subInfo)
             .Returns(token);
