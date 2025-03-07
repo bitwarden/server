@@ -412,19 +412,19 @@ public class CipherService : ICipherService
         return response;
     }
 
-    public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
+    public async Task DeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false)
     {
-        if (!orgAdmin && !await UserCanDeleteAsync(cipher, deletingUserId))
+        if (!orgAdmin && !await UserCanDeleteAsync(cipherDetails, deletingUserId))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
-        await _cipherRepository.DeleteAsync(cipher);
-        await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipher.Id);
-        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Deleted);
+        await _cipherRepository.DeleteAsync(cipherDetails);
+        await _attachmentStorageService.DeleteAttachmentsForCipherAsync(cipherDetails.Id);
+        await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Deleted);
 
         // push
-        await _pushService.PushSyncCipherDeleteAsync(cipher);
+        await _pushService.PushSyncCipherDeleteAsync(cipherDetails);
     }
 
     public async Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -694,33 +694,26 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
-    public async Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
+    public async Task SoftDeleteAsync(CipherDetails cipherDetails, Guid deletingUserId, bool orgAdmin = false)
     {
-        if (!orgAdmin && !await UserCanDeleteAsync(cipher, deletingUserId))
+        if (!orgAdmin && !await UserCanDeleteAsync(cipherDetails, deletingUserId))
         {
             throw new BadRequestException("You do not have permissions to soft delete this.");
         }
 
-        if (cipher.DeletedDate.HasValue)
+        if (cipherDetails.DeletedDate.HasValue)
         {
             // Already soft-deleted, we can safely ignore this
             return;
         }
 
-        cipher.DeletedDate = cipher.RevisionDate = DateTime.UtcNow;
+        cipherDetails.DeletedDate = cipherDetails.RevisionDate = DateTime.UtcNow;
 
-        if (cipher is CipherDetails details)
-        {
-            await _cipherRepository.UpsertAsync(details);
-        }
-        else
-        {
-            await _cipherRepository.UpsertAsync(cipher);
-        }
-        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
+        await _cipherRepository.UpsertAsync(cipherDetails);
+        await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_SoftDeleted);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        await _pushService.PushSyncCipherUpdateAsync(cipherDetails, null);
     }
 
     public async Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId, bool orgAdmin)
@@ -753,34 +746,27 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false)
+    public async Task RestoreAsync(CipherDetails cipherDetails, Guid restoringUserId, bool orgAdmin = false)
     {
-        if (!orgAdmin && !await UserCanRestoreAsync(cipher, restoringUserId))
+        if (!orgAdmin && !await UserCanRestoreAsync(cipherDetails, restoringUserId))
         {
             throw new BadRequestException("You do not have permissions to delete this.");
         }
 
-        if (!cipher.DeletedDate.HasValue)
+        if (!cipherDetails.DeletedDate.HasValue)
         {
             // Already restored, we can safely ignore this
             return;
         }
 
-        cipher.DeletedDate = null;
-        cipher.RevisionDate = DateTime.UtcNow;
+        cipherDetails.DeletedDate = null;
+        cipherDetails.RevisionDate = DateTime.UtcNow;
 
-        if (cipher is CipherDetails details)
-        {
-            await _cipherRepository.UpsertAsync(details);
-        }
-        else
-        {
-            await _cipherRepository.UpsertAsync(cipher);
-        }
-        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Restored);
+        await _cipherRepository.UpsertAsync(cipherDetails);
+        await _eventService.LogCipherEventAsync(cipherDetails, EventType.Cipher_Restored);
 
         // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+        await _pushService.PushSyncCipherUpdateAsync(cipherDetails, null);
     }
 
     public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -835,7 +821,7 @@ public class CipherService : ICipherService
         return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
     }
 
-    private async Task<bool> UserCanDeleteAsync(Cipher cipher, Guid userId)
+    private async Task<bool> UserCanDeleteAsync(CipherDetails cipher, Guid userId)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
         {
@@ -849,7 +835,7 @@ public class CipherService : ICipherService
         return NormalCipherPermissions.CanDelete(user, cipher, organizationAbility);
     }
 
-    private async Task<bool> UserCanRestoreAsync(Cipher cipher, Guid userId)
+    private async Task<bool> UserCanRestoreAsync(CipherDetails cipher, Guid userId)
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.LimitItemDeletion))
         {
