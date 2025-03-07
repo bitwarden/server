@@ -6,14 +6,14 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.Invi
 
 public static class InviteUserOrganizationValidationRequestHelpers
 {
-    public static InviteUserOrganizationValidationRequest GetInviteValidationRequestMock(InviteScimOrganizationUserRequest request,
+    public static InviteUserOrganizationValidationRequest GetInviteValidationRequestMock(OrganizationUserSingleEmailInvite request,
         InviteOrganization inviteOrganization) =>
         new()
         {
             Invites =
             [
                 OrganizationUserInviteDto.Create(request.Email,
-                    OrganizationUserInvite.Create(request, request.ExternalId), inviteOrganization.OrganizationId)
+                    OrganizationUserInvite.Create(request), inviteOrganization.OrganizationId)
             ],
             InviteOrganization = inviteOrganization,
             PerformedBy = Guid.Empty,

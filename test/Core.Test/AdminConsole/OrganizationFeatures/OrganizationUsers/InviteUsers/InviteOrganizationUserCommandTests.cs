@@ -40,7 +40,7 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var request = new InviteScimOrganizationUserRequest(user.Email,
+        var request = new OrganizationUserSingleEmailInvite(user.Email,
             true,
             organizationDto,
             timeProvider.GetUtcNow(),
@@ -88,7 +88,7 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var request = new InviteScimOrganizationUserRequest(orgUser.Email,
+        var request = new OrganizationUserSingleEmailInvite(orgUser.Email,
             true,
             organizationDto,
             timeProvider.GetUtcNow(),
@@ -141,7 +141,7 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var request = new InviteScimOrganizationUserRequest(user.Email,
+        var request = new OrganizationUserSingleEmailInvite(user.Email,
             true,
             organizationDto,
             timeProvider.GetUtcNow(),
@@ -196,7 +196,7 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var request = new InviteScimOrganizationUserRequest(user.Email,
+        var request = new OrganizationUserSingleEmailInvite(user.Email,
             true,
             organizationDto,
             timeProvider.GetUtcNow(),
@@ -254,7 +254,7 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var request = new InviteScimOrganizationUserRequest(user.Email,
+        var request = new OrganizationUserSingleEmailInvite(user.Email,
             true,
             organizationDto,
             timeProvider.GetUtcNow(),
@@ -317,7 +317,7 @@ public class InviteOrganizationUserCommandTests
 
         var organizationDto = new InviteOrganization(organization);
 
-        var request = new InviteScimOrganizationUserRequest(user.Email,
+        var request = new OrganizationUserSingleEmailInvite(user.Email,
             true,
             organizationDto,
             timeProvider.GetUtcNow(),
@@ -351,7 +351,7 @@ public class InviteOrganizationUserCommandTests
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
-        // Assert
+        // Assert;
         Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
 
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
