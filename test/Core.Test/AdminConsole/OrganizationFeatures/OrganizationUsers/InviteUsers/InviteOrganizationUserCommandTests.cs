@@ -58,7 +58,8 @@ public class InviteOrganizationUserCommandTests
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);
 
         // Assert
-        Assert.IsType<Success<ScimInviteOrganizationUsersResponse>>(result);
+        Assert.IsType<Failure<ScimInviteOrganizationUsersResponse>>(result);
+        Assert.Equal(InviteOrganizationUsersCommand.NoUsersToInvite, (result as Failure<ScimInviteOrganizationUsersResponse>).ErrorMessage);
 
         await sutProvider.GetDependency<IPaymentService>()
             .DidNotReceiveWithAnyArgs()

@@ -37,7 +37,7 @@ public class Success<T>(T value) : CommandResult<T>
 
 public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
 {
-    public List<string> ErrorMessages { get; } = [];
+    public List<string> ErrorMessages { get; } = errorMessages.ToList();
 
     public string ErrorMessage => string.Join(" ", ErrorMessages);
 

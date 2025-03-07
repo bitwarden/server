@@ -35,6 +35,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
     public const string FailedToInviteUsers = "Failed to invite user(s).";
+    public const string NoUsersToInvite = "No users to invite.";
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
     {
@@ -78,7 +79,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         if (invitesToSend.Length == 0)
         {
-            return new Success<IEnumerable<OrganizationUser>>([]);
+            return new Failure<IEnumerable<OrganizationUser>>(NoUsersToInvite);
         }
 
         var validationResult = await inviteUsersValidation.ValidateAsync(new InviteUserOrganizationValidationRequest
