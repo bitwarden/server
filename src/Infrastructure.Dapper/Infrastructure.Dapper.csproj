@@ -2,7 +2,7 @@
 
     <PropertyGroup>
       <!-- Temp exclusions until warnings are fixed -->
-      <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8618;CS4014</WarningsNotAsErrors>
+      <WarningsNotAsErrors>$(WarningsNotAsErrors);CS8618</WarningsNotAsErrors>
     </PropertyGroup>
 
     <ItemGroup>
