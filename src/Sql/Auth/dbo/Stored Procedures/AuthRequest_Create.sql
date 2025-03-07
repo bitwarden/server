@@ -6,6 +6,7 @@
     @RequestDeviceIdentifier NVARCHAR(50),
     @RequestDeviceType TINYINT,
     @RequestIpAddress VARCHAR(50),
+    @RequestCountryName NVARCHAR(200),
     @ResponseDeviceId UNIQUEIDENTIFIER,
     @AccessCode VARCHAR(25),
     @PublicKey VARCHAR(MAX),
@@ -20,7 +21,7 @@ BEGIN
     SET NOCOUNT ON
 
     INSERT INTO [dbo].[AuthRequest]
-    (
+        (
         [Id],
         [UserId],
         [OrganizationId],
@@ -28,6 +29,7 @@ BEGIN
         [RequestDeviceIdentifier],
         [RequestDeviceType],
         [RequestIpAddress],
+        [RequestCountryName],
         [ResponseDeviceId],
         [AccessCode],
         [PublicKey],
@@ -37,24 +39,25 @@ BEGIN
         [CreationDate],
         [ResponseDate],
         [AuthenticationDate]
-    )
+        )
     VALUES
-    (
-        @Id,
-        @UserId,
-        @OrganizationId,
-        @Type,
-        @RequestDeviceIdentifier,
-        @RequestDeviceType,
-        @RequestIpAddress,
-        @ResponseDeviceId,
-        @AccessCode,
-        @PublicKey,
-        @Key,
-        @MasterPasswordHash,
-        @Approved,
-        @CreationDate,
-        @ResponseDate,
-        @AuthenticationDate
+        (
+            @Id,
+            @UserId,
+            @OrganizationId,
+            @Type,
+            @RequestDeviceIdentifier,
+            @RequestDeviceType,
+            @RequestIpAddress,
+            @RequestCountryName,
+            @ResponseDeviceId,
+            @AccessCode,
+            @PublicKey,
+            @Key,
+            @MasterPasswordHash,
+            @Approved,
+            @CreationDate,
+            @ResponseDate,
+            @AuthenticationDate
     )
 END
