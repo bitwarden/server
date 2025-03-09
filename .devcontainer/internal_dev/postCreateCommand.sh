@@ -91,7 +91,7 @@ install_stripe_cli() {
 }
 
 # main
-if [[ -z "${CODESPACES}"]]; then
+if [[ -z "${CODESPACES}" ]]; then
   # TODO Write codespaces specific instructions and link here
   echo "Running in codespaces, follow instructions here: https://contributing.bitwarden.com/getting-started/server/guide/ to continue the setup"
 else
