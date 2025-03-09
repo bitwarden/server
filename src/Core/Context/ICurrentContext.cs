@@ -20,6 +20,7 @@ public interface ICurrentContext
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
+    string CountryName { get; set; }
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
