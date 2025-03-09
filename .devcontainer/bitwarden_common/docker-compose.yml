@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   bitwarden_server:
     image: mcr.microsoft.com/devcontainers/dotnet:8.0
