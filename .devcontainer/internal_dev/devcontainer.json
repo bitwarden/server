@@ -55,8 +55,5 @@
       "label": "Azurite Storage Table",
       "onAutoForward": "notify"
     }
-  },
-  "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
   }
 }

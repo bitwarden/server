@@ -251,13 +251,6 @@
             "type": "shell",
             "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
             "problemMatcher": []
-        },
-        {
-            "label": "Modify Database",
-            "detail": "A task to change database choice and help get it ready to use.",
-            "type": "shell",
-            "command": "pwsh -WorkingDirectory ${workspaceFolder}/dev -Command '${workspaceFolder}/dev/modify_database.ps1 -Provider ${input:databaseProvider} -RunMigrations:$${input:databaseRunMigrations}'",
-            "problemMatcher": []
         }
     ],
     "inputs": [
