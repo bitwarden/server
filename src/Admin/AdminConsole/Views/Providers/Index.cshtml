@@ -11,23 +11,27 @@
 
 <h1>Providers</h1>
 
-<div class="row mb-2">
-    <div class="col">
-        <form class="form-inline mb-2" method="get">
-            <label class="sr-only" asp-for="Name">Name</label>
-            <input type="text" class="form-control mb-2 mr-2" placeholder="Name" asp-for="Name" name="name">
-            <label class="sr-only" asp-for="UserEmail">User email</label>
-            <input type="text" class="form-control mb-2 mr-2" placeholder="User email" asp-for="UserEmail" name="userEmail">
-            <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
-        </form>
+<form class="row row-cols-lg-auto g-3 align-items-center mb-2" method="get">
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="Name">Name</label>
+        <input type="text" class="form-control" placeholder="Name" asp-for="Name" name="name">
+    </div>
+    <div class="col-12">
+        <label class="visually-hidden" asp-for="UserEmail">User email</label>
+        <input type="text" class="form-control" placeholder="User email" asp-for="UserEmail" name="userEmail">
+    </div>
+    <div class="col-12">
+        <button type="submit" class="btn btn-primary" title="Search">
+            <i class="fa fa-search"></i> Search
+        </button>
     </div>
     @if (canCreateProvider)
     {
-        <div class="col-auto">
+        <div class="col-auto ms-auto">
             <a asp-action="Create" class="btn btn-secondary">Create Provider</a>
         </div>
     }
-</div>
+</form>
 
 <div class="table-responsive">
     <table class="table table-striped table-hover">

@@ -43,7 +43,19 @@ public class NotificationHubPool : INotificationHubPool
     /// <param name="comb"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException">Thrown when no notification hub is found for a given comb.</exception>
-    public NotificationHubClient ClientFor(Guid comb)
+    public INotificationHubClient ClientFor(Guid comb)
+    {
+        var resolvedConnection = ConnectionFor(comb);
+        return resolvedConnection.HubClient;
+    }
+
+    /// <summary>
+    /// Gets the NotificationHubConnection for the given comb ID.
+    /// </summary>
+    /// <param name="comb"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException">Thrown when no notification hub is found for a given comb.</exception>
+    public NotificationHubConnection ConnectionFor(Guid comb)
     {
         var possibleConnections = _connections.Where(c => c.RegistrationEnabled(comb)).ToArray();
         if (possibleConnections.Length == 0)
@@ -55,7 +67,8 @@ public class NotificationHubPool : INotificationHubPool
         }
         var resolvedConnection = possibleConnections[CoreHelpers.BinForComb(comb, possibleConnections.Length)];
         _logger.LogTrace("Resolved notification hub for comb {Comb} out of {HubCount} hubs.\n{ConnectionInfo}", comb, possibleConnections.Length, resolvedConnection.LogString);
-        return resolvedConnection.HubClient;
+        return resolvedConnection;
+
     }
 
     public INotificationHubProxy AllClients { get { return new NotificationHubClientProxy(_clients); } }

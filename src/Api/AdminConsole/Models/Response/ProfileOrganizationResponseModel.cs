@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -37,7 +38,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).ProductTier == ProductTierType.Enterprise;
+        UseActivateAutofillPolicy = organization.PlanType.GetProductTier() == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -60,17 +61,17 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
-        ProductTierType = StaticStore.GetPlan(organization.PlanType).ProductTier;
+        ProductTierType = organization.PlanType.GetProductTier();
         FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
         AccessSecretsManager = organization.AccessSecretsManager;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
         {
@@ -129,8 +130,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
     /// <summary>
     /// Indicates if the organization manages the user.
@@ -143,4 +143,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     /// False if the Account Deprovisioning feature flag is disabled.
     /// </returns>
     public bool UserIsManagedByOrganization { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

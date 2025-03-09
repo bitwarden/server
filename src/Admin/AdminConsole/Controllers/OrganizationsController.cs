@@ -3,11 +3,14 @@ using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -53,8 +56,9 @@ public class OrganizationsController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
-    private readonly IFeatureService _featureService;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IOrganizationInitiateDeleteCommand _organizationInitiateDeleteCommand;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -80,8 +84,9 @@ public class OrganizationsController : Controller
         IServiceAccountRepository serviceAccountRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
-        IFeatureService featureService,
-        IProviderBillingService providerBillingService)
+        IProviderBillingService providerBillingService,
+        IOrganizationInitiateDeleteCommand organizationInitiateDeleteCommand,
+        IPricingClient pricingClient)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -106,8 +111,9 @@ public class OrganizationsController : Controller
         _serviceAccountRepository = serviceAccountRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
-        _featureService = featureService;
         _providerBillingService = providerBillingService;
+        _organizationInitiateDeleteCommand = organizationInitiateDeleteCommand;
+        _pricingClient = pricingClient;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -207,6 +213,8 @@ public class OrganizationsController : Controller
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
 
+        var plans = await _pricingClient.ListPlans();
+
         return View(new OrganizationEditModel(
             organization,
             provider,
@@ -219,6 +227,7 @@ public class OrganizationsController : Controller
             billingHistoryInfo,
             billingSyncConnection,
             _globalSettings,
+            plans,
             secrets,
             projects,
             serviceAccounts,
@@ -230,16 +239,38 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
-        var organization = await GetOrganization(id, model);
+        var organization = await _organizationRepository.GetByIdAsync(id);
 
-        if (organization.UseSecretsManager &&
-            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
+        if (organization == null)
+        {
+            TempData["Error"] = "Could not find organization to update.";
+            return RedirectToAction("Index");
+        }
+
+        var existingOrganizationData = new Organization
+        {
+            Id = organization.Id,
+            Status = organization.Status,
+            PlanType = organization.PlanType,
+            Seats = organization.Seats
+        };
+
+        UpdateOrganization(organization, model);
+
+        var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+
+        if (organization.UseSecretsManager && !plan.SupportsSecretsManager)
         {
             TempData["Error"] = "Plan does not support Secrets Manager";
             return RedirectToAction("Edit", new { id });
         }
 
+        await HandlePotentialProviderSeatScalingAsync(
+            existingOrganizationData,
+            model);
+
         await _organizationRepository.ReplaceAsync(organization);
+
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
         {
@@ -262,9 +293,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Index");
         }
 
-        var consolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        if (consolidatedBillingEnabled && organization.IsValidClient())
+        if (organization.IsValidClient())
         {
             var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
 
@@ -285,7 +314,7 @@ public class OrganizationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permission.Org_Delete)]
+    [RequirePermission(Permission.Org_RequestDelete)]
     public async Task<IActionResult> DeleteInitiation(Guid id, OrganizationInitiateDeleteModel model)
     {
         if (!ModelState.IsValid)
@@ -299,7 +328,7 @@ public class OrganizationsController : Controller
                 var organization = await _organizationRepository.GetByIdAsync(id);
                 if (organization != null)
                 {
-                    await _organizationService.InitiateDeleteAsync(organization, model.AdminEmail);
+                    await _organizationInitiateDeleteCommand.InitiateDeleteAsync(organization, model.AdminEmail);
                     TempData["Success"] = "The request to initiate deletion of the organization has been sent.";
                 }
             }
@@ -394,9 +423,13 @@ public class OrganizationsController : Controller
 
         return Json(null);
     }
-    private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
+
+    private void UpdateOrganization(Organization organization, OrganizationEditModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (_accessControlService.UserHasPermission(Permission.Org_Name_Edit))
+        {
+            organization.Name = WebUtility.HtmlEncode(model.Name);
+        }
 
         if (_accessControlService.UserHasPermission(Permission.Org_CheckEnabledBox))
         {
@@ -428,6 +461,7 @@ public class OrganizationsController : Controller
             organization.UseTotp = model.UseTotp;
             organization.UsersGetPremium = model.UsersGetPremium;
             organization.UseSecretsManager = model.UseSecretsManager;
+            organization.UseRiskInsights = model.UseRiskInsights;
 
             //secrets
             organization.SmSeats = model.SmSeats;
@@ -449,7 +483,54 @@ public class OrganizationsController : Controller
             organization.GatewayCustomerId = model.GatewayCustomerId;
             organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
         }
+    }
 
-        return organization;
+    private async Task HandlePotentialProviderSeatScalingAsync(
+        Organization organization,
+        OrganizationEditModel update)
+    {
+        var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        // No scaling required
+        if (provider is not { Type: ProviderType.Msp, Status: ProviderStatusType.Billable } ||
+            organization is not { Status: OrganizationStatusType.Managed } ||
+            !organization.Seats.HasValue ||
+            update is { Seats: null, PlanType: null } ||
+            update is { PlanType: not PlanType.TeamsMonthly and not PlanType.EnterpriseMonthly } ||
+            (PlanTypesMatch() && SeatsMatch()))
+        {
+            return;
+        }
+
+        // Only scale the plan
+        if (!PlanTypesMatch() && SeatsMatch())
+        {
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
+            await _providerBillingService.ScaleSeats(provider, update.PlanType!.Value, organization.Seats.Value);
+        }
+        // Only scale the seats
+        else if (PlanTypesMatch() && !SeatsMatch())
+        {
+            var seatAdjustment = update.Seats!.Value - organization.Seats.Value;
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, seatAdjustment);
+        }
+        // Scale both
+        else if (!PlanTypesMatch() && !SeatsMatch())
+        {
+            var seatAdjustment = update.Seats!.Value - organization.Seats.Value;
+            var planTypeAdjustment = organization.Seats.Value;
+            var totalAdjustment = seatAdjustment + planTypeAdjustment;
+
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats.Value);
+            await _providerBillingService.ScaleSeats(provider, update.PlanType!.Value, totalAdjustment);
+        }
+
+        return;
+
+        bool PlanTypesMatch()
+            => update.PlanType.HasValue && update.PlanType.Value == organization.PlanType;
+
+        bool SeatsMatch()
+            => update.Seats.HasValue && update.Seats.Value == organization.Seats;
     }
 }

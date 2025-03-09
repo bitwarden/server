@@ -141,13 +141,13 @@ public interface ISubscriberService
         TaxInformation taxInformation);
 
     /// <summary>
-    /// Verifies the subscriber's pending bank account using the provided <paramref name="microdeposits"/>.
+    /// Verifies the subscriber's pending bank account using the provided <paramref name="descriptorCode"/>.
     /// </summary>
     /// <param name="subscriber">The subscriber to verify the bank account for.</param>
-    /// <param name="microdeposits">Deposits made to the subscriber's bank account in order to ensure they have access to it.
+    /// <param name="descriptorCode">The code attached to a deposit made to the subscriber's bank account in order to ensure they have access to it.
     /// <a href="https://docs.stripe.com/payments/ach-debit/set-up-payment">Learn more.</a></param>
     /// <returns></returns>
     Task VerifyBankAccount(
         ISubscriber subscriber,
-        (long, long) microdeposits);
+        string descriptorCode);
 }

@@ -1,5 +1,5 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Services;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
+using Bit.Core.Context;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
@@ -7,14 +7,10 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authoriza
 public class OrganizationUserUserMiniDetailsAuthorizationHandler :
     AuthorizationHandler<OrganizationUserUserMiniDetailsOperationRequirement, OrganizationScope>
 {
-    private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICurrentContext _currentContext;
 
-    public OrganizationUserUserMiniDetailsAuthorizationHandler(
-        IApplicationCacheService applicationCacheService,
-        ICurrentContext currentContext)
+    public OrganizationUserUserMiniDetailsAuthorizationHandler(ICurrentContext currentContext)
     {
-        _applicationCacheService = applicationCacheService;
         _currentContext = currentContext;
     }
 

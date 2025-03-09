@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Azure.Storage.Queues;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Services;
@@ -10,6 +11,7 @@ using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -25,8 +27,13 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.KeyManagement;
+using Bit.Core.NotificationCenter;
 using Bit.Core.NotificationHub;
 using Bit.Core.OrganizationFeatures;
+using Bit.Core.Platform;
+using Bit.Core.Platform.Push;
+using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.SecretsManager.Repositories;
@@ -34,6 +41,8 @@ using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools.ImportFeatures;
+using Bit.Core.Tools.ReportFeatures;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault;
@@ -41,7 +50,7 @@ using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using DnsClient;
-using IdentityModel;
+using Duende.IdentityModel;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -112,10 +121,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
+        services.AddScoped<IDuoUniversalTokenService, DuoUniversalTokenService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
         services.AddVaultServices();
+        services.AddReportingServices();
+        services.AddKeyManagementServices();
+        services.AddNotificationCenterServices();
+        services.AddPlatformServices();
+        services.AddImportServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -267,9 +282,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
         {
+            if (globalSettings.Installation.Id == Guid.Empty)
+            {
+                throw new InvalidOperationException("Installation Id must be set for self-hosted installations.");
+            }
+
             if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-                globalSettings.Installation?.Id != null &&
-                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+                CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
             {
                 services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
@@ -285,14 +304,17 @@ public static class ServiceCollectionExtensions
                 services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
             }
         }
-        else if (!globalSettings.SelfHosted)
+        else
         {
             services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();
             services.AddKeyedSingleton<IPushNotificationService, NotificationHubPushNotificationService>("implementation");
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
-                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>("implementation");
+                services.AddKeyedSingleton("notifications",
+                    (_, _) => new QueueClient(globalSettings.Notifications.ConnectionString, "notifications"));
+                services.AddKeyedSingleton<IPushNotificationService, AzureQueuePushNotificationService>(
+                    "implementation");
             }
         }
 
@@ -307,11 +329,29 @@ public static class ServiceCollectionExtensions
 
         if (!globalSettings.SelfHosted && CoreHelpers.SettingHasValue(globalSettings.Events.ConnectionString))
         {
-            services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.ConnectionString) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.AzureServiceBus.TopicName))
+            {
+                services.AddSingleton<IEventWriteService, AzureServiceBusEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, AzureQueueEventWriteService>();
+            }
         }
         else if (globalSettings.SelfHosted)
         {
-            services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.HostName) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Username) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.Password) &&
+                CoreHelpers.SettingHasValue(globalSettings.EventLogging.RabbitMq.ExchangeName))
+            {
+                services.AddSingleton<IEventWriteService, RabbitMqEventWriteService>();
+            }
+            else
+            {
+                services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
+            }
         }
         else
         {
@@ -386,8 +426,7 @@ public static class ServiceCollectionExtensions
     public static IdentityBuilder AddCustomIdentityServices(
         this IServiceCollection services, GlobalSettings globalSettings)
     {
-        services.AddScoped<IOrganizationDuoWebTokenProvider, OrganizationDuoWebTokenProvider>();
-        services.AddScoped<ITemporaryDuoWebV4SDKService, TemporaryDuoWebV4SDKService>();
+        services.AddScoped<IOrganizationDuoUniversalTokenProvider, OrganizationDuoUniversalTokenProvider>();
         services.Configure<PasswordHasherOptions>(options => options.IterationCount = 100000);
         services.Configure<TwoFactorRememberTokenProviderOptions>(options =>
         {
@@ -428,7 +467,7 @@ public static class ServiceCollectionExtensions
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Email))
             .AddTokenProvider<YubicoOtpTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey))
-            .AddTokenProvider<DuoWebTokenProvider>(
+            .AddTokenProvider<DuoUniversalTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Duo))
             .AddTokenProvider<TwoFactorRememberTokenProvider>(
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember))

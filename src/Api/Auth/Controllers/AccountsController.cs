@@ -3,7 +3,7 @@ using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Api.Auth.Validators;
+using Bit.Api.KeyManagement.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -18,7 +18,6 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Services;
@@ -26,6 +25,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.KeyManagement.Models.Data;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
@@ -148,11 +149,11 @@ public class AccountsController : Controller
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+        var managedUserValidationResult = await _userService.ValidateManagedUserDomainAsync(user, model.NewEmail);
+
+        if (!managedUserValidationResult.Succeeded)
         {
-            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
+            throw new BadRequestException(managedUserValidationResult.Errors);
         }
 
         await _userService.InitiateEmailChangeAsync(user, model.NewEmail);
@@ -170,13 +171,6 @@ public class AccountsController : Controller
         if (user.UsesKeyConnector)
         {
             throw new BadRequestException("You cannot change your email when using Key Connector.");
-        }
-
-        // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
-            && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
-        {
-            throw new BadRequestException("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.");
         }
 
         var result = await _userService.ChangeEmailAsync(user, model.MasterPasswordHash, model.NewEmail,
@@ -265,8 +259,18 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        try
+        {
+            user = model.ToUser(user);
+        }
+        catch (Exception e)
+        {
+            ModelState.AddModelError(string.Empty, e.Message);
+            throw new BadRequestException(ModelState);
+        }
+
         var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
-            model.ToUser(user),
+            user,
             model.MasterPasswordHash,
             model.Key,
             model.OrgIdentifier);
@@ -580,6 +584,13 @@ public class AccountsController : Controller
         }
         else
         {
+            // If Account Deprovisioning is enabled, we need to check if the user is managed by any organization.
+            if (_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
+                && await _userService.IsManagedByAnyOrganizationAsync(user.Id))
+            {
+                throw new BadRequestException("Cannot delete accounts owned by an organization. Contact your organization administrator for additional details.");
+            }
+
             var result = await _userService.DeleteAsync(user);
             if (result.Succeeded)
             {
@@ -658,7 +669,7 @@ public class AccountsController : Controller
             new TaxInfo
             {
                 BillingAddressCountry = model.Country,
-                BillingAddressPostalCode = model.PostalCode,
+                BillingAddressPostalCode = model.PostalCode
             });
 
         var userTwoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
@@ -713,8 +724,13 @@ public class AccountsController : Controller
         await _userService.ReplacePaymentMethodAsync(user, model.PaymentToken, model.PaymentMethodType.Value,
             new TaxInfo
             {
+                BillingAddressLine1 = model.Line1,
+                BillingAddressLine2 = model.Line2,
+                BillingAddressCity = model.City,
+                BillingAddressState = model.State,
                 BillingAddressCountry = model.Country,
                 BillingAddressPostalCode = model.PostalCode,
+                TaxIdNumber = model.TaxId
             });
     }
 
@@ -951,6 +967,30 @@ public class AccountsController : Controller
             await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token");
         }
+    }
+
+    [RequireFeature(FeatureFlagKeys.NewDeviceVerification)]
+    [AllowAnonymous]
+    [HttpPost("resend-new-device-otp")]
+    public async Task ResendNewDeviceOtpAsync([FromBody] UnauthenticatedSecretVerificationRequestModel request)
+    {
+        await _userService.ResendNewDeviceVerificationEmail(request.Email, request.Secret);
+    }
+
+    [HttpPost("verify-devices")]
+    [HttpPut("verify-devices")]
+    public async Task SetUserVerifyDevicesAsync([FromBody] SetVerifyDevicesRequestModel request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
+
+        if (!await _userService.VerifySecretAsync(user, request.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+        user.VerifyDevices = request.VerifyDevices;
+
+        await _userService.SaveUserAsync(user);
     }
 
     private async Task<IEnumerable<Guid>> GetOrganizationIdsManagingUserAsync(Guid userId)

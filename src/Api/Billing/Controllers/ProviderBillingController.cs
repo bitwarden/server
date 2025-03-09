@@ -2,6 +2,7 @@
 using Bit.Api.Billing.Models.Responses;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -19,14 +20,14 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class ProviderBillingController(
     ICurrentContext currentContext,
-    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
+    IPricingClient pricingClient,
     IProviderBillingService providerBillingService,
     IProviderPlanRepository providerPlanRepository,
     IProviderRepository providerRepository,
     ISubscriberService subscriberService,
     IStripeAdapter stripeAdapter,
-    IUserService userService) : BaseProviderController(currentContext, featureService, logger, providerRepository, userService)
+    IUserService userService) : BaseProviderController(currentContext, logger, providerRepository, userService)
 {
     [HttpGet("invoices")]
     public async Task<IResult> GetInvoicesAsync([FromRoute] Guid providerId)
@@ -85,15 +86,28 @@ public class ProviderBillingController(
 
         var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
+        var configuredProviderPlans = await Task.WhenAll(providerPlans.Select(async providerPlan =>
+        {
+            var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
+            return new ConfiguredProviderPlan(
+                providerPlan.Id,
+                providerPlan.ProviderId,
+                plan,
+                providerPlan.SeatMinimum ?? 0,
+                providerPlan.PurchasedSeats ?? 0,
+                providerPlan.AllocatedSeats ?? 0);
+        }));
+
         var taxInformation = GetTaxInformation(subscription.Customer);
 
         var subscriptionSuspension = await GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
 
         var response = ProviderSubscriptionResponse.From(
             subscription,
-            providerPlans,
+            configuredProviderPlans,
             taxInformation,
-            subscriptionSuspension);
+            subscriptionSuspension,
+            provider);
 
         return TypedResults.Ok(response);
     }
@@ -119,6 +133,7 @@ public class ProviderBillingController(
             requestBody.Country,
             requestBody.PostalCode,
             requestBody.TaxId,
+            requestBody.TaxIdType,
             requestBody.Line1,
             requestBody.Line2,
             requestBody.City,

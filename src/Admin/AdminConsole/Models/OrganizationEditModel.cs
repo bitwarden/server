@@ -8,6 +8,7 @@ using Bit.Core.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -17,6 +18,8 @@ namespace Bit.Admin.AdminConsole.Models;
 
 public class OrganizationEditModel : OrganizationViewModel
 {
+    private readonly List<Plan> _plans;
+
     public OrganizationEditModel() { }
 
     public OrganizationEditModel(Provider provider)
@@ -40,6 +43,7 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingHistoryInfo billingHistoryInfo,
         IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings,
+        List<Plan> plans,
         int secrets,
         int projects,
         int serviceAccounts,
@@ -80,6 +84,7 @@ public class OrganizationEditModel : OrganizationViewModel
         Use2fa = org.Use2fa;
         UseApi = org.UseApi;
         UseSecretsManager = org.UseSecretsManager;
+        UseRiskInsights = org.UseRiskInsights;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
@@ -95,6 +100,8 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
+
+        _plans = plans;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -143,7 +150,9 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
     [Display(Name = "Secrets Manager")]
-    public bool UseSecretsManager { get; set; }
+    public new bool UseSecretsManager { get; set; }
+    [Display(Name = "Risk Insights")]
+    public new bool UseRiskInsights { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
@@ -180,7 +189,7 @@ public class OrganizationEditModel : OrganizationViewModel
      * Add mappings for individual properties as you need them
      */
     public object GetPlansHelper() =>
-        StaticStore.Plans
+        _plans
             .Select(p =>
             {
                 var plan = new
@@ -284,6 +293,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.Use2fa = Use2fa;
         existingOrganization.UseApi = UseApi;
         existingOrganization.UseSecretsManager = UseSecretsManager;
+        existingOrganization.UseRiskInsights = UseRiskInsights;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;

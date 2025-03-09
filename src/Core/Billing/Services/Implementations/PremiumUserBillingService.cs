@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -26,6 +27,57 @@ public class PremiumUserBillingService(
     ISubscriberService subscriberService,
     IUserRepository userRepository) : IPremiumUserBillingService
 {
+    public async Task Credit(User user, decimal amount)
+    {
+        var customer = await subscriberService.GetCustomer(user);
+
+        // Negative credit represents a balance and all Stripe denomination is in cents.
+        var credit = (long)amount * -100;
+
+        if (customer == null)
+        {
+            var options = new CustomerCreateOptions
+            {
+                Balance = credit,
+                Description = user.Name,
+                Email = user.Email,
+                InvoiceSettings = new CustomerInvoiceSettingsOptions
+                {
+                    CustomFields =
+                    [
+                        new CustomerInvoiceSettingsCustomFieldOptions
+                        {
+                            Name = user.SubscriberType(),
+                            Value = user.SubscriberName().Length <= 30
+                                ? user.SubscriberName()
+                                : user.SubscriberName()[..30]
+                        }
+                    ]
+                },
+                Metadata = new Dictionary<string, string>
+                {
+                    ["region"] = globalSettings.BaseServiceUri.CloudRegion,
+                    ["userId"] = user.Id.ToString()
+                }
+            };
+
+            customer = await stripeAdapter.CustomerCreateAsync(options);
+
+            user.Gateway = GatewayType.Stripe;
+            user.GatewayCustomerId = customer.Id;
+            await userRepository.ReplaceAsync(user);
+        }
+        else
+        {
+            var options = new CustomerUpdateOptions
+            {
+                Balance = customer.Balance + credit
+            };
+
+            await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
+        }
+    }
+
     public async Task Finalize(PremiumUserSale sale)
     {
         var (user, customerSetup, storage) = sale;
@@ -35,6 +87,12 @@ public class PremiumUserBillingService(
         var customer = string.IsNullOrEmpty(user.GatewayCustomerId)
             ? await CreateCustomerAsync(user, customerSetup)
             : await subscriberService.GetCustomerOrThrow(user, new CustomerGetOptions { Expand = expand });
+
+        /*
+         * If the customer was previously set up with credit, which does not require a billing location,
+         * we need to update the customer on the fly before we start the subscription.
+         */
+        customer = await ReconcileBillingLocationAsync(customer, customerSetup.TaxInformation);
 
         var subscription = await CreateSubscriptionAsync(user.Id, customer, storage);
 
@@ -58,10 +116,37 @@ public class PremiumUserBillingService(
         await userRepository.ReplaceAsync(user);
     }
 
+    public async Task UpdatePaymentMethod(
+        User user,
+        TokenizedPaymentSource tokenizedPaymentSource,
+        TaxInformation taxInformation)
+    {
+        if (string.IsNullOrEmpty(user.GatewayCustomerId))
+        {
+            var customer = await CreateCustomerAsync(user,
+                new CustomerSetup { TokenizedPaymentSource = tokenizedPaymentSource, TaxInformation = taxInformation });
+
+            user.Gateway = GatewayType.Stripe;
+            user.GatewayCustomerId = customer.Id;
+
+            await userRepository.ReplaceAsync(user);
+        }
+        else
+        {
+            await subscriberService.UpdatePaymentSource(user, tokenizedPaymentSource);
+            await subscriberService.UpdateTaxInformation(user, taxInformation);
+        }
+    }
+
     private async Task<Customer> CreateCustomerAsync(
         User user,
         CustomerSetup customerSetup)
     {
+        /*
+         * Creating a Customer via the adding of a payment method or the purchasing of a subscription requires
+         * an actual payment source. The only time this is not the case is when the Customer is created when the
+         * User purchases credit.
+         */
         if (customerSetup.TokenizedPaymentSource is not
             {
                 Type: PaymentMethodType.BankAccount or PaymentMethodType.Card or PaymentMethodType.PayPal,
@@ -82,13 +167,19 @@ public class PremiumUserBillingService(
             throw new BillingException();
         }
 
-        var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
-
         var subscriberName = user.SubscriberName();
 
         var customerCreateOptions = new CustomerCreateOptions
         {
-            Address = address,
+            Address = new AddressOptions
+            {
+                Line1 = customerSetup.TaxInformation.Line1,
+                Line2 = customerSetup.TaxInformation.Line2,
+                City = customerSetup.TaxInformation.City,
+                PostalCode = customerSetup.TaxInformation.PostalCode,
+                State = customerSetup.TaxInformation.State,
+                Country = customerSetup.TaxInformation.Country,
+            },
             Description = user.Name,
             Email = user.Email,
             Expand = ["tax"],
@@ -113,8 +204,7 @@ public class PremiumUserBillingService(
             Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
-            },
-            TaxIdData = taxIdData
+            }
         };
 
         var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
@@ -256,5 +346,35 @@ public class PremiumUserBillingService(
         }
 
         return subscription;
+    }
+
+    private async Task<Customer> ReconcileBillingLocationAsync(
+        Customer customer,
+        TaxInformation taxInformation)
+    {
+        if (customer is { Address: { Country: not null and not "", PostalCode: not null and not "" } })
+        {
+            return customer;
+        }
+
+        var options = new CustomerUpdateOptions
+        {
+            Address = new AddressOptions
+            {
+                Line1 = taxInformation.Line1,
+                Line2 = taxInformation.Line2,
+                City = taxInformation.City,
+                PostalCode = taxInformation.PostalCode,
+                State = taxInformation.State,
+                Country = taxInformation.Country,
+            },
+            Expand = ["tax"],
+            Tax = new CustomerTaxOptions
+            {
+                ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
+            }
+        };
+
+        return await stripeAdapter.CustomerUpdateAsync(customer.Id, options);
     }
 }

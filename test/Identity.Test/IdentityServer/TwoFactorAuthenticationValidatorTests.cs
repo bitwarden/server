@@ -1,8 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -28,8 +27,7 @@ public class TwoFactorAuthenticationValidatorTests
 {
     private readonly IUserService _userService;
     private readonly UserManagerTestWrapper<User> _userManager;
-    private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
-    private readonly ITemporaryDuoWebV4SDKService _temporaryDuoWebV4SDKService;
+    private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider;
     private readonly IFeatureService _featureService;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -42,8 +40,7 @@ public class TwoFactorAuthenticationValidatorTests
     {
         _userService = Substitute.For<IUserService>();
         _userManager = SubstituteUserManager();
-        _organizationDuoWebTokenProvider = Substitute.For<IOrganizationDuoWebTokenProvider>();
-        _temporaryDuoWebV4SDKService = Substitute.For<ITemporaryDuoWebV4SDKService>();
+        _organizationDuoUniversalTokenProvider = Substitute.For<IOrganizationDuoUniversalTokenProvider>();
         _featureService = Substitute.For<IFeatureService>();
         _applicationCacheService = Substitute.For<IApplicationCacheService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
@@ -54,8 +51,7 @@ public class TwoFactorAuthenticationValidatorTests
         _sut = new TwoFactorAuthenticationValidator(
                     _userService,
                     _userManager,
-                    _organizationDuoWebTokenProvider,
-                    _temporaryDuoWebV4SDKService,
+                    _organizationDuoUniversalTokenProvider,
                     _featureService,
                     _applicationCacheService,
                     _organizationUserRepository,
@@ -333,7 +329,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_PROVIDERS = ["email"];
 
         // Act
-        var result = await _sut.VerifyTwoFactor(
+        var result = await _sut.VerifyTwoFactorAsync(
             user, null, TwoFactorProviderType.U2f, token);
 
         // Assert
@@ -353,7 +349,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_PROVIDERS = ["email"];
 
         // Act
-        var result = await _sut.VerifyTwoFactor(
+        var result = await _sut.VerifyTwoFactorAsync(
             user, null, TwoFactorProviderType.Email, token);
 
         // Assert
@@ -373,7 +369,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_PROVIDERS = ["OrganizationDuo"];
 
         // Act
-        var result = await _sut.VerifyTwoFactor(
+        var result = await _sut.VerifyTwoFactorAsync(
             user, null, TwoFactorProviderType.OrganizationDuo, token);
 
         // Assert
@@ -399,7 +395,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
 
         // Act
-        var result = await _sut.VerifyTwoFactor(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
 
         // Assert
         Assert.True(result);
@@ -424,7 +420,7 @@ public class TwoFactorAuthenticationValidatorTests
         _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
 
         // Act
-        var result = await _sut.VerifyTwoFactor(user, null, providerType, token);
+        var result = await _sut.VerifyTwoFactorAsync(user, null, providerType, token);
 
         // Assert
         Assert.False(result);
@@ -439,7 +435,7 @@ public class TwoFactorAuthenticationValidatorTests
         string token)
     {
         // Arrange
-        _organizationDuoWebTokenProvider.ValidateAsync(
+        _organizationDuoUniversalTokenProvider.ValidateAsync(
             token, organization, user).Returns(true);
 
         _userManager.TWO_FACTOR_ENABLED = true;
@@ -450,7 +446,7 @@ public class TwoFactorAuthenticationValidatorTests
         organization.Enabled = true;
 
         // Act
-        var result = await _sut.VerifyTwoFactor(
+        var result = await _sut.VerifyTwoFactorAsync(
             user, organization, providerType, token);
 
         // Assert
@@ -458,31 +454,20 @@ public class TwoFactorAuthenticationValidatorTests
     }
 
     [Theory]
-    [BitAutoData(TwoFactorProviderType.Duo)]
-    [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
-    public async void VerifyTwoFactorAsync_TemporaryDuoService_ValidToken_ReturnsTrue(
+    [BitAutoData(TwoFactorProviderType.RecoveryCode)]
+    public async void VerifyTwoFactorAsync_RecoveryCode_ValidToken_ReturnsTrue(
         TwoFactorProviderType providerType,
         User user,
-        Organization organization,
-        string token)
+        Organization organization)
     {
-        // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.DuoRedirect).Returns(true);
-        _userService.TwoFactorProviderIsEnabledAsync(providerType, user).Returns(true);
-        _temporaryDuoWebV4SDKService.ValidateAsync(
-            token, Arg.Any<TwoFactorProvider>(), user).Returns(true);
+        var token = "1234";
+        user.TwoFactorRecoveryCode = token;
 
-        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
-        organization.Use2fa = true;
-        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
-        organization.Enabled = true;
-
-        _userManager.TWO_FACTOR_ENABLED = true;
-        _userManager.TWO_FACTOR_TOKEN = token;
-        _userManager.TWO_FACTOR_TOKEN_VERIFIED = true;
+        _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(true);
+        _featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin).Returns(true);
 
         // Act
-        var result = await _sut.VerifyTwoFactor(
+        var result = await _sut.VerifyTwoFactorAsync(
             user, organization, providerType, token);
 
         // Assert
@@ -490,35 +475,25 @@ public class TwoFactorAuthenticationValidatorTests
     }
 
     [Theory]
-    [BitAutoData(TwoFactorProviderType.Duo)]
-    [BitAutoData(TwoFactorProviderType.OrganizationDuo)]
-    public async void VerifyTwoFactorAsync_TemporaryDuoService_InvalidToken_ReturnsFalse(
-    TwoFactorProviderType providerType,
-    User user,
-    Organization organization,
-    string token)
+    [BitAutoData(TwoFactorProviderType.RecoveryCode)]
+    public async void VerifyTwoFactorAsync_RecoveryCode_InvalidToken_ReturnsFalse(
+        TwoFactorProviderType providerType,
+        User user,
+        Organization organization)
     {
         // Arrange
-        _featureService.IsEnabled(FeatureFlagKeys.DuoRedirect).Returns(true);
-        _userService.TwoFactorProviderIsEnabledAsync(providerType, user).Returns(true);
-        _temporaryDuoWebV4SDKService.ValidateAsync(
-            token, Arg.Any<TwoFactorProvider>(), user).Returns(true);
+        var token = "1234";
+        user.TwoFactorRecoveryCode = token;
 
-        user.TwoFactorProviders = GetTwoFactorIndividualProviderJson(providerType);
-        organization.Use2fa = true;
-        organization.TwoFactorProviders = GetTwoFactorOrganizationDuoProviderJson();
-        organization.Enabled = true;
-
-        _userManager.TWO_FACTOR_ENABLED = true;
-        _userManager.TWO_FACTOR_TOKEN = token;
-        _userManager.TWO_FACTOR_TOKEN_VERIFIED = false;
+        _userService.RecoverTwoFactorAsync(Arg.Is(user), Arg.Is(token)).Returns(false);
+        _featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin).Returns(true);
 
         // Act
-        var result = await _sut.VerifyTwoFactor(
+        var result = await _sut.VerifyTwoFactorAsync(
             user, organization, providerType, token);
 
         // Assert
-        Assert.True(result);
+        Assert.False(result);
     }
 
     private static UserManagerTestWrapper<User> SubstituteUserManager()

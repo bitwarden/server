@@ -9,12 +9,12 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.SubscriptionService _subscriptionService;
     private readonly Stripe.InvoiceService _invoiceService;
     private readonly Stripe.PaymentMethodService _paymentMethodService;
-    private readonly Stripe.TaxRateService _taxRateService;
     private readonly Stripe.TaxIdService _taxIdService;
     private readonly Stripe.ChargeService _chargeService;
     private readonly Stripe.RefundService _refundService;
     private readonly Stripe.CardService _cardService;
     private readonly Stripe.BankAccountService _bankAccountService;
+    private readonly Stripe.PlanService _planService;
     private readonly Stripe.PriceService _priceService;
     private readonly Stripe.SetupIntentService _setupIntentService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
@@ -26,13 +26,13 @@ public class StripeAdapter : IStripeAdapter
         _subscriptionService = new Stripe.SubscriptionService();
         _invoiceService = new Stripe.InvoiceService();
         _paymentMethodService = new Stripe.PaymentMethodService();
-        _taxRateService = new Stripe.TaxRateService();
         _taxIdService = new Stripe.TaxIdService();
         _chargeService = new Stripe.ChargeService();
         _refundService = new Stripe.RefundService();
         _cardService = new Stripe.CardService();
         _bankAccountService = new Stripe.BankAccountService();
         _priceService = new Stripe.PriceService();
+        _planService = new Stripe.PlanService();
         _setupIntentService = new SetupIntentService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
         _customerBalanceTransactionService = new CustomerBalanceTransactionService();
@@ -79,6 +79,20 @@ public class StripeAdapter : IStripeAdapter
         return _subscriptionService.GetAsync(id, options);
     }
 
+    public async Task<Subscription> ProviderSubscriptionGetAsync(
+        string id,
+        Guid providerId,
+        SubscriptionGetOptions options = null)
+    {
+        var subscription = await _subscriptionService.GetAsync(id, options);
+        if (subscription.Metadata.TryGetValue("providerId", out var value) && value == providerId.ToString())
+        {
+            return subscription;
+        }
+
+        throw new InvalidOperationException("Subscription does not belong to the provider.");
+    }
+
     public Task<Stripe.Subscription> SubscriptionUpdateAsync(string id,
         Stripe.SubscriptionUpdateOptions options = null)
     {
@@ -117,6 +131,11 @@ public class StripeAdapter : IStripeAdapter
         }
 
         return invoices;
+    }
+
+    public Task<Invoice> InvoiceCreatePreviewAsync(InvoiceCreatePreviewOptions options)
+    {
+        return _invoiceService.CreatePreviewAsync(options);
     }
 
     public async Task<List<Stripe.Invoice>> InvoiceSearchAsync(InvoiceSearchOptions options)
@@ -170,14 +189,9 @@ public class StripeAdapter : IStripeAdapter
         return _paymentMethodService.DetachAsync(id, options);
     }
 
-    public Task<Stripe.TaxRate> TaxRateCreateAsync(Stripe.TaxRateCreateOptions options)
+    public Task<Stripe.Plan> PlanGetAsync(string id, Stripe.PlanGetOptions options = null)
     {
-        return _taxRateService.CreateAsync(options);
-    }
-
-    public Task<Stripe.TaxRate> TaxRateUpdateAsync(string id, Stripe.TaxRateUpdateOptions options)
-    {
-        return _taxRateService.UpdateAsync(id, options);
+        return _planService.GetAsync(id, options);
     }
 
     public Task<Stripe.TaxId> TaxIdCreateAsync(string id, Stripe.TaxIdCreateOptions options)

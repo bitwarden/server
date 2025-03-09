@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Utilities;
 using Constants = Bit.Core.Constants;
 
@@ -11,8 +12,10 @@ namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationResponseModel : ResponseModel
 {
-    public OrganizationResponseModel(Organization organization, string obj = "organization")
-        : base(obj)
+    public OrganizationResponseModel(
+        Organization organization,
+        Plan plan,
+        string obj = "organization") : base(obj)
     {
         if (organization == null)
         {
@@ -28,7 +31,8 @@ public class OrganizationResponseModel : ResponseModel
         BusinessCountry = organization.BusinessCountry;
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
-        Plan = new PlanResponseModel(StaticStore.GetPlan(organization.PlanType));
+        // Self-Host instances only require plan information that can be derived from the Organization record.
+        Plan = plan != null ? new PlanResponseModel(plan) : new PlanResponseModel(organization);
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
@@ -57,9 +61,9 @@ public class OrganizationResponseModel : ResponseModel
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 
     public Guid Id { get; set; }
@@ -103,14 +107,16 @@ public class OrganizationResponseModel : ResponseModel
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deperectated: https://bitwarden.atlassian.net/browse/PM-10863
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 {
-    public OrganizationSubscriptionResponseModel(Organization organization) : base(organization, "organizationSubscription")
+    public OrganizationSubscriptionResponseModel(
+        Organization organization,
+        Plan plan) : base(organization, plan, "organizationSubscription")
     {
         Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
@@ -119,8 +125,11 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
     }
 
-    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
-        : this(organization)
+    public OrganizationSubscriptionResponseModel(
+        Organization organization,
+        SubscriptionInfo subscription,
+        Plan plan,
+        bool hideSensitiveData) : this(organization, plan)
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
@@ -142,7 +151,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
-        this(organization)
+        this(organization, (Plan)null)
     {
         if (license != null)
         {

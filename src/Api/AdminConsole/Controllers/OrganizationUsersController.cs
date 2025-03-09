@@ -1,6 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
@@ -9,10 +8,12 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -55,6 +56,7 @@ public class OrganizationUsersController : Controller
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
     private readonly IFeatureService _featureService;
+    private readonly IPricingClient _pricingClient;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -77,7 +79,8 @@ public class OrganizationUsersController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -100,6 +103,7 @@ public class OrganizationUsersController : Controller
         _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
         _featureService = featureService;
+        _pricingClient = pricingClient;
     }
 
     [HttpGet("{id}")]
@@ -311,10 +315,8 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        var useMasterPasswordPolicy = masterPasswordPolicy != null &&
-                                          masterPasswordPolicy.Enabled &&
-                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+        var useMasterPasswordPolicy = await ShouldHandleResetPasswordAsync(orgId);
+
         if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
         {
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
@@ -326,6 +328,23 @@ public class OrganizationUsersController : Controller
         {
             await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
+    }
+
+    private async Task<bool> ShouldHandleResetPasswordAsync(Guid orgId)
+    {
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+
+        if (organizationAbility is not { UsePolicies: true })
+        {
+            return false;
+        }
+
+        var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        var useMasterPasswordPolicy = masterPasswordPolicy != null &&
+                                          masterPasswordPolicy.Enabled &&
+                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+
+        return useMasterPasswordPolicy;
     }
 
     [HttpPost("{id}/confirm")]
@@ -539,13 +558,13 @@ public class OrganizationUsersController : Controller
         var userId = _userService.GetProperUserId(User);
         var result = await _removeOrganizationUserCommand.RemoveUsersAsync(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
-            new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
-    public async Task DeleteAccount(Guid orgId, Guid id, [FromBody] SecretVerificationRequestModel model)
+    public async Task DeleteAccount(Guid orgId, Guid id)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -556,12 +575,6 @@ public class OrganizationUsersController : Controller
         if (currentUser == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
@@ -570,7 +583,7 @@ public class OrganizationUsersController : Controller
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("delete-account")]
     [HttpPost("delete-account")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] SecureOrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeleteAccount(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -581,12 +594,6 @@ public class OrganizationUsersController : Controller
         if (currentUser == null)
         {
             throw new UnauthorizedAccessException();
-        }
-
-        if (!await _userService.VerifySecretAsync(currentUser, model.Secret))
-        {
-            await Task.Delay(2000);
-            throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
         var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
@@ -645,7 +652,9 @@ public class OrganizationUsersController : Controller
         if (additionalSmSeatsRequired > 0)
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            var update = new SecretsManagerSubscriptionUpdate(organization, true)
+            // TODO: https://bitwarden.atlassian.net/browse/PM-17000
+            var plan = await _pricingClient.GetPlanOrThrow(organization!.PlanType);
+            var update = new SecretsManagerSubscriptionUpdate(organization, plan, true)
                 .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }

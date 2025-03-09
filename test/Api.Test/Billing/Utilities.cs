@@ -1,11 +1,9 @@
 ﻿using Bit.Api.Billing.Controllers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Models.Api;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -25,14 +23,14 @@ public static class Utilities
         Assert.Equal("Resource not found.", response.Message);
     }
 
-    public static void AssertUnauthorized(IResult result)
+    public static void AssertUnauthorized(IResult result, string message = "Unauthorized.")
     {
         Assert.IsType<JsonHttpResult<ErrorResponseModel>>(result);
 
         var response = (JsonHttpResult<ErrorResponseModel>)result;
 
         Assert.Equal(StatusCodes.Status401Unauthorized, response.StatusCode);
-        Assert.Equal("Unauthorized.", response.Value.Message);
+        Assert.Equal(message, response.Value.Message);
     }
 
     public static void ConfigureStableProviderAdminInputs<T>(
@@ -59,9 +57,6 @@ public static class Utilities
         Provider provider,
         SutProvider<T> sutProvider) where T : BaseProviderController
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling)
-            .Returns(true);
-
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 

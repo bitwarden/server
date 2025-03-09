@@ -1,9 +1,5 @@
-@using Bit.Core.AdminConsole.Enums.Provider
-@using Bit.Core
-
+@using Bit.Core.Billing.Constants
 @model CreateMspProviderModel
-
-@inject Bit.Core.Services.IFeatureService FeatureService
 
 @{
     ViewData["Title"] = "Create Managed Service Provider";
@@ -11,29 +7,39 @@
 
 <h1>Create Managed Service Provider</h1>
 <div>
-    <form class="form-group" method="post" asp-action="CreateMsp">
+    <form method="post" asp-action="CreateMsp">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
-        <div class="form-group">
-            <label asp-for="OwnerEmail"></label>
+        <div class="mb-3">
+            <label asp-for="OwnerEmail" class="form-label"></label>
             <input type="text" class="form-control" asp-for="OwnerEmail">
         </div>
-        @if (FeatureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling))
-        {
+        <div class="mb-3">
+            @{
+                var selectList = new List<SelectListItem>
+                {
+                    new ("No discount", string.Empty, true),
+                    new ("20% - Open", StripeConstants.CouponIDs.MSPDiscounts.Open),
+                    new ("35% - Silver", StripeConstants.CouponIDs.MSPDiscounts.Silver),
+                    new ("50% - Gold", StripeConstants.CouponIDs.MSPDiscounts.Gold)
+                };
+            }
+            <label asp-for="DiscountId" class="form-label"></label>
+            <select class="form-select" asp-for="DiscountId" asp-items="selectList"></select>
+        </div>
         <div class="row">
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="TeamsMonthlySeatMinimum"></label>
+                <div class="mb-3">
+                    <label asp-for="TeamsMonthlySeatMinimum" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="TeamsMonthlySeatMinimum">
                 </div>
             </div>
             <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="EnterpriseMonthlySeatMinimum"></label>
+                <div class="mb-3">
+                    <label asp-for="EnterpriseMonthlySeatMinimum" class="form-label"></label>
                     <input type="number" class="form-control" asp-for="EnterpriseMonthlySeatMinimum">
                 </div>
             </div>
         </div>
-        }
         <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
     </form>
 </div>

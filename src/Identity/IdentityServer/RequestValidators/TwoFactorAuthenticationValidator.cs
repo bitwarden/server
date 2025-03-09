@@ -1,9 +1,8 @@
-﻿
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
@@ -46,14 +45,13 @@ public interface ITwoFactorAuthenticationValidator
     /// <param name="twoFactorProviderType">Two Factor Provider to use to verify the token</param>
     /// <param name="token">secret passed from the user and consumed by the two-factor provider's verify method</param>
     /// <returns>boolean</returns>
-    Task<bool> VerifyTwoFactor(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
+    Task<bool> VerifyTwoFactorAsync(User user, Organization organization, TwoFactorProviderType twoFactorProviderType, string token);
 }
 
 public class TwoFactorAuthenticationValidator(
     IUserService userService,
     UserManager<User> userManager,
-    IOrganizationDuoWebTokenProvider organizationDuoWebTokenProvider,
-    ITemporaryDuoWebV4SDKService duoWebV4SDKService,
+    IOrganizationDuoUniversalTokenProvider organizationDuoWebTokenProvider,
     IFeatureService featureService,
     IApplicationCacheService applicationCacheService,
     IOrganizationUserRepository organizationUserRepository,
@@ -63,8 +61,7 @@ public class TwoFactorAuthenticationValidator(
 {
     private readonly IUserService _userService = userService;
     private readonly UserManager<User> _userManager = userManager;
-    private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider = organizationDuoWebTokenProvider;
-    private readonly ITemporaryDuoWebV4SDKService _duoWebV4SDKService = duoWebV4SDKService;
+    private readonly IOrganizationDuoUniversalTokenProvider _organizationDuoUniversalTokenProvider = organizationDuoWebTokenProvider;
     private readonly IFeatureService _featureService = featureService;
     private readonly IApplicationCacheService _applicationCacheService = applicationCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository = organizationUserRepository;
@@ -121,8 +118,8 @@ public class TwoFactorAuthenticationValidator(
 
         var twoFactorResultDict = new Dictionary<string, object>
         {
-            { "TwoFactorProviders", null },
-            { "TwoFactorProviders2", providers }, // backwards compatibility
+            { "TwoFactorProviders", providers.Keys }, // backwards compatibility
+            { "TwoFactorProviders2", providers },
         };
 
         // If we have email as a 2FA provider, we might need an SsoEmail2fa Session Token
@@ -143,7 +140,7 @@ public class TwoFactorAuthenticationValidator(
         return twoFactorResultDict;
     }
 
-    public async Task<bool> VerifyTwoFactor(
+    public async Task<bool> VerifyTwoFactorAsync(
         User user,
         Organization organization,
         TwoFactorProviderType type,
@@ -153,52 +150,44 @@ public class TwoFactorAuthenticationValidator(
         {
             if (organization.TwoFactorProviderIsEnabled(type))
             {
-                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                {
-                    if (!token.Contains(':'))
-                    {
-                        // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
-                        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-                        return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
-                    }
-                }
-                return await _organizationDuoWebTokenProvider.ValidateAsync(token, organization, user);
+                return await _organizationDuoUniversalTokenProvider.ValidateAsync(token, organization, user);
             }
             return false;
         }
 
-        switch (type)
+        if (_featureService.IsEnabled(FeatureFlagKeys.RecoveryCodeLogin))
         {
-            case TwoFactorProviderType.Authenticator:
-            case TwoFactorProviderType.Email:
-            case TwoFactorProviderType.Duo:
-            case TwoFactorProviderType.YubiKey:
-            case TwoFactorProviderType.WebAuthn:
-            case TwoFactorProviderType.Remember:
-                if (type != TwoFactorProviderType.Remember &&
-                    !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
-                {
-                    return false;
-                }
-                // DUO SDK v4 Update: try to validate the token - PM-5156 addresses tech debt
-                if (_featureService.IsEnabled(FeatureFlagKeys.DuoRedirect))
-                {
-                    if (type == TwoFactorProviderType.Duo)
-                    {
-                        if (!token.Contains(':'))
-                        {
-                            // We have to send the provider to the DuoWebV4SDKService to create the DuoClient
-                            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-                            return await _duoWebV4SDKService.ValidateAsync(token, provider, user);
-                        }
-                    }
-                }
-                return await _userManager.VerifyTwoFactorTokenAsync(user,
-                    CoreHelpers.CustomProviderName(type), token);
-            default:
-                return false;
+            if (type is TwoFactorProviderType.RecoveryCode)
+            {
+                return await _userService.RecoverTwoFactorAsync(user, token);
+            }
         }
+
+        // These cases we want to always return false, U2f is deprecated and OrganizationDuo
+        // uses a different flow than the other two factor providers, it follows the same
+        // structure of a UserTokenProvider but has it's logic ran outside the usual token
+        // provider flow. See IOrganizationDuoUniversalTokenProvider.cs
+        if (type is TwoFactorProviderType.U2f or TwoFactorProviderType.OrganizationDuo)
+        {
+            return false;
+        }
+
+        // Now we are concerning the rest of the Two Factor Provider Types
+
+        // The intent of this check is to make sure that the user is using a 2FA provider that
+        // is enabled and allowed by their premium status. The exception for Remember
+        // is because it is a "special" 2FA type that isn't ever explicitly
+        // enabled by a user, so we can't check the user's 2FA providers to see if they're
+        // enabled. We just have to check if the token is valid.
+        if (type != TwoFactorProviderType.Remember &&
+            !await _userService.TwoFactorProviderIsEnabledAsync(type, user))
+        {
+            return false;
+        }
+
+        // Finally, verify the token based on the provider type.
+        return await _userManager.VerifyTwoFactorTokenAsync(
+            user, CoreHelpers.CustomProviderName(type), token);
     }
 
     private async Task<List<KeyValuePair<TwoFactorProviderType, TwoFactorProvider>>> GetEnabledTwoFactorProvidersAsync(
@@ -248,10 +237,11 @@ public class TwoFactorAuthenticationValidator(
             in the future the `AuthUrl` will be the generated "token" - PM-8107
         */
         if (type == TwoFactorProviderType.OrganizationDuo &&
-            await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
+            await _organizationDuoUniversalTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
         {
             twoFactorParams.Add("Host", provider.MetaData["Host"]);
-            twoFactorParams.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+            twoFactorParams.Add("AuthUrl",
+                await _organizationDuoUniversalTokenProvider.GenerateAsync(organization, user));
 
             return twoFactorParams;
         }
@@ -261,13 +251,9 @@ public class TwoFactorAuthenticationValidator(
             CoreHelpers.CustomProviderName(type));
         switch (type)
         {
-            /*
-                Note: Duo is in the midst of being updated to use the UserManager built-in TwoFactor class
-                in the future the `AuthUrl` will be the generated "token" - PM-8107
-            */
             case TwoFactorProviderType.Duo:
                 twoFactorParams.Add("Host", provider.MetaData["Host"]);
-                twoFactorParams.Add("AuthUrl", await _duoWebV4SDKService.GenerateAsync(provider, user));
+                twoFactorParams.Add("AuthUrl", token);
                 break;
             case TwoFactorProviderType.WebAuthn:
                 if (token != null)
