@@ -50,8 +50,6 @@ Proceed? [y/N] " response
     fi
 }
 
-printenv
-
 # main
 if [[ -z "${CODESPACES}" ]]; then
   one_time_setup
