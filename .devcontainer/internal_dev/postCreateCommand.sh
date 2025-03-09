@@ -3,8 +3,6 @@ export DEV_DIR=/workspace/dev
 export CONTAINER_CONFIG=/workspace/.devcontainer/internal_dev
 git config --global --add safe.directory /workspace
 
-
-
 get_installation_id_and_key() {
     pushd ./dev >/dev/null || exit
     echo "Please enter your installation id and key from https://bitwarden.com/host:"
