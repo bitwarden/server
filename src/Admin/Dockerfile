@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ARG NODE_VERSION=16.20.2
 ENV NVM_DIR=/usr/local/nvm
 RUN mkdir -p $NVM_DIR
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
     && nvm install $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
@@ -77,6 +77,7 @@ COPY .git/. ./.git/
 
 # Build project
 WORKDIR /source/src/Admin
+RUN npm ci
 RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Admin --no-restore --no-self-contained -r $RID
 
