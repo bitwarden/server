@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadByClaimedUserEmailDomain]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadByClaimedUserEmailDomain]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -20,3 +20,12 @@ BEGIN
       AND CU.EmailDomain = OD.[DomainName]
       AND O.[Enabled] = 1
 END
+GO
+
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OrganizationDomain_DomainNameVerifiedDateOrganizationId')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_OrganizationDomain_DomainNameVerifiedDateOrganizationId]
+            ON [dbo].[OrganizationDomain] ([DomainName],[VerifiedDate])
+            INCLUDE ([OrganizationId])
+    END
+GO
