@@ -6,7 +6,7 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
 ENV NODE_VERSION=16.20.2
-ENV NVM_DIR /usr/local/nvm
+ENV NVM_DIR=/usr/local/nvm
 
 # Determine proper runtime value for .NET
 # We put the value in a file to be read by later layers.
@@ -31,8 +31,8 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | b
     && nvm install $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
     && nvm use default
-ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
-ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+ENV NODE_PATH=$NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
+ENV PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 # Copy csproj files as distinct layers
 WORKDIR /source
@@ -72,7 +72,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS http://+:5000
+ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
 
 RUN apt-get update \

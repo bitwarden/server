@@ -53,7 +53,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS http://+:5000
+ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
 
 RUN apt-get update \

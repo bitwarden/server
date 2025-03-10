@@ -25,15 +25,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Set up Node
 ARG NODE_VERSION=16.20.2
-ENV NVM_DIR /usr/local/nvm
+ENV NVM_DIR=/usr/local/nvm
 RUN mkdir -p $NVM_DIR
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
     && nvm install $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
     && nvm use default
-ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
-ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+ENV NODE_PATH=$NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
+ENV PATH=$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 # Copying package.json, package-lock.json, and packages.lock.json
 WORKDIR /source/src/Admin
@@ -90,7 +90,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS http://+:5000
+ENV ASPNETCORE_URLS=http://+:5000
 EXPOSE 5000
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
