@@ -41,6 +41,12 @@ public class CommandResultTests
 
         var result = BulkAction(listOfRecords);
 
-        Assert.IsType<Partial<TestItem>>(listOfRecords);
+        Assert.IsType<Partial<TestItem>>(result);
+
+        var failures = (result as Partial<TestItem>).Failures.ToArray();
+        var success = (result as Partial<TestItem>).Successes.First();
+
+        Assert.Equal(listOfRecords.First(), success);
+        Assert.Equal(2, failures.Length);
     }
 }

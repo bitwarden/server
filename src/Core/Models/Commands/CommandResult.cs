@@ -51,7 +51,8 @@ public class Partial<T> : CommandResult<T>
 
     public Partial(IEnumerable<T> successfulItems, IEnumerable<Error<T>> failedItems)
     {
-
+        Successes = successfulItems.ToArray();
+        Failures = failedItems.ToArray();
     }
 }
 
