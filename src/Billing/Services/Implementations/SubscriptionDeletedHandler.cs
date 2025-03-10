@@ -41,10 +41,15 @@ public class SubscriptionDeletedHandler : ISubscriptionDeletedHandler
             return;
         }
 
-        if (organizationId.HasValue &&
-            subscription.CancellationDetails.Comment != providerMigrationCancellationComment &&
-            !subscription.CancellationDetails.Comment.Contains(addedToProviderCancellationComment))
+        if (organizationId.HasValue)
         {
+            if (!string.IsNullOrEmpty(subscription.CancellationDetails?.Comment) &&
+                (subscription.CancellationDetails.Comment == providerMigrationCancellationComment ||
+                 subscription.CancellationDetails.Comment.Contains(addedToProviderCancellationComment)))
+            {
+                return;
+            }
+
             await _organizationDisableCommand.DisableAsync(organizationId.Value, subscription.CurrentPeriodEnd);
         }
         else if (userId.HasValue)
