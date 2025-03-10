@@ -149,7 +149,7 @@ jobs:
 
       - name: Report test results
         uses: dorny/test-reporter@31a54ee7ebcacc03a09ea97a7e5465a47b84aea5 # v1.9.1
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository &&  && !cancelled() }}
+        if: ${{ github.event.pull_request.head.repo.full_name == github.repository && !cancelled() }}
         with:
           name: Test Results
           path: "**/*-test-results.trx"
