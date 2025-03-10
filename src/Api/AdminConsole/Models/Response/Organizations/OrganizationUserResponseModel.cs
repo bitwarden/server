@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
@@ -202,6 +203,17 @@ public class OrganizationUserBulkResponseModel : ResponseModel
     {
         Id = id;
         Error = error;
+    }
+
+    public OrganizationUserBulkResponseModel(Guid id, CommandResult result,
+        string obj = "OrganizationBulkConfirmResponseModel") : base(obj)
+    {
+        Id = id;
+        if (result is Failure)
+        {
+            Error = result.ErrorMessages.ToString();
+        }
+
     }
     public Guid Id { get; set; }
     public string Error { get; set; }
