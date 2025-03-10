@@ -123,10 +123,12 @@ public class SendServiceTests
 
     // Disable Send policy check - vNext
     private void SaveSendAsync_Setup_vNext(SutProvider<SendService> sutProvider, Send send,
-        SendPolicyRequirement sendPolicyRequirement)
+        DisableSendPolicyRequirement disableSendPolicyRequirement, SendOptionsPolicyRequirement sendOptionsPolicyRequirement)
     {
-        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendPolicyRequirement>(send.UserId!.Value)
-            .Returns(sendPolicyRequirement);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<DisableSendPolicyRequirement>(send.UserId!.Value)
+            .Returns(disableSendPolicyRequirement);
+        sutProvider.GetDependency<IPolicyRequirementQuery>().GetAsync<SendOptionsPolicyRequirement>(send.UserId!.Value)
+            .Returns(sendOptionsPolicyRequirement);
         sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.PolicyRequirements).Returns(true);
 
         // Should not be called in these tests
@@ -141,7 +143,7 @@ public class SendServiceTests
         SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
     {
         send.Type = sendType;
-        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement { DisableSend = true });
+        SaveSendAsync_Setup_vNext(sutProvider, send, new DisableSendPolicyRequirement { DisableSend = true }, new SendOptionsPolicyRequirement());
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
         Assert.Contains("Due to an Enterprise Policy, you are only able to delete an existing Send.",
@@ -155,7 +157,7 @@ public class SendServiceTests
         SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
     {
         send.Type = sendType;
-        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement());
+        SaveSendAsync_Setup_vNext(sutProvider, send, new DisableSendPolicyRequirement(), new SendOptionsPolicyRequirement());
 
         await sutProvider.Sut.SaveSendAsync(send);
 
@@ -171,7 +173,7 @@ public class SendServiceTests
         SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
     {
         send.Type = sendType;
-        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement { DisableHideEmail = true });
+        SaveSendAsync_Setup_vNext(sutProvider, send, new DisableSendPolicyRequirement(), new SendOptionsPolicyRequirement { DisableHideEmail = true });
         send.HideEmail = true;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveSendAsync(send));
@@ -185,7 +187,7 @@ public class SendServiceTests
         SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
     {
         send.Type = sendType;
-        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement { DisableHideEmail = true });
+        SaveSendAsync_Setup_vNext(sutProvider, send, new DisableSendPolicyRequirement(), new SendOptionsPolicyRequirement { DisableHideEmail = true });
         send.HideEmail = false;
 
         await sutProvider.Sut.SaveSendAsync(send);
@@ -200,7 +202,7 @@ public class SendServiceTests
         SutProvider<SendService> sutProvider, [NewUserSendCustomize] Send send)
     {
         send.Type = sendType;
-        SaveSendAsync_Setup_vNext(sutProvider, send, new SendPolicyRequirement());
+        SaveSendAsync_Setup_vNext(sutProvider, send, new DisableSendPolicyRequirement(), new SendOptionsPolicyRequirement());
         send.HideEmail = true;
 
         await sutProvider.Sut.SaveSendAsync(send);
