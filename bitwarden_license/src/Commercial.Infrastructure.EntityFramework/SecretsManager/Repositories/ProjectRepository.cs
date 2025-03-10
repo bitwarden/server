@@ -16,7 +16,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         : base(serviceScopeFactory, mapper, db => db.Project)
     { }
 
-    public override async Task<Core.SecretsManager.Entities.Project> GetByIdAsync(Guid id)
+    public override async Task<Core.SecretsManager.Entities.Project?> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -167,6 +167,58 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var accessQuery = BuildProjectAccessQuery(projectsQuery, userId, accessType);
 
         return await accessQuery.ToDictionaryAsync(pa => pa.Id, pa => (pa.Read, pa.Write));
+    }
+
+    public async Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId, Guid userId,
+        AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        return await query.CountAsync();
+    }
+
+    public async Task<ProjectCounts> GetProjectCountsByIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project.Where(p => p.Id == projectId && p.DeletedDate == null);
+
+        var queryReadAccess = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var queryWriteAccess = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasWriteAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var secretsQuery = queryReadAccess.Select(project => project.Secrets.Count(s => s.DeletedDate == null));
+
+        var projectCountsQuery = queryWriteAccess.Select(project => new ProjectCounts
+        {
+            People = project.UserAccessPolicies.Count + project.GroupAccessPolicies.Count,
+            ServiceAccounts = project.ServiceAccountAccessPolicies.Count
+        });
+
+        var secrets = await secretsQuery.FirstOrDefaultAsync();
+        var projectCounts = await projectCountsQuery.FirstOrDefaultAsync() ?? new ProjectCounts { Secrets = 0, People = 0, ServiceAccounts = 0 };
+        projectCounts.Secrets = secrets;
+
+        return projectCounts;
     }
 
     private record ProjectAccess(Guid Id, bool Read, bool Write);

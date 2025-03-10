@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
@@ -9,6 +9,8 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
@@ -35,7 +37,7 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
         await base.DeleteAsync(emergencyAccess);
     }
 
-    public async Task<EmergencyAccessDetails> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
+    public async Task<EmergencyAccessDetails?> GetDetailsByIdGrantorIdAsync(Guid id, Guid grantorId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

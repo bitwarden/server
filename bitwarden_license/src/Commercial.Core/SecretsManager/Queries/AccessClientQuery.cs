@@ -21,7 +21,7 @@ public class AccessClientQuery : IAccessClientQuery
         ClaimsPrincipal claimsPrincipal, Guid organizationId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
         var userId = _userService.GetProperUserId(claimsPrincipal).Value;
         return (accessClient, userId);
     }

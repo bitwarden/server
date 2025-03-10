@@ -167,7 +167,7 @@ public class StripeEventService : IStripeEventService
             HandledStripeWebhook.UpcomingInvoice =>
                 await GetCustomerMetadataFromUpcomingInvoiceEvent(stripeEvent),
 
-            HandledStripeWebhook.PaymentSucceeded or HandledStripeWebhook.PaymentFailed or HandledStripeWebhook.InvoiceCreated =>
+            HandledStripeWebhook.PaymentSucceeded or HandledStripeWebhook.PaymentFailed or HandledStripeWebhook.InvoiceCreated or HandledStripeWebhook.InvoiceFinalized =>
                 (await GetInvoice(stripeEvent, true, customerExpansion))?.Customer?.Metadata,
 
             HandledStripeWebhook.PaymentMethodAttached =>

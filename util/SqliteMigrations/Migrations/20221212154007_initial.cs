@@ -4,7 +4,9 @@
 
 namespace Bit.SqliteMigrations.Migrations;
 
+#pragma warning disable CS8981 // We unfortunately can't rename migrations
 public partial class initial : Migration
+#pragma warning restore CS8981
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_Create]
+CREATE PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
     @Name NVARCHAR(50),
@@ -51,9 +51,11 @@
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCreationDeletion BIT = 1,
-    @AllowAdminAccessToAllCollectionItems BIT = 1,
-    @FlexibleCollections BIT = 0
+    @LimitCollectionCreation BIT = NULL,
+    @LimitCollectionDeletion BIT = NULL,
+    @AllowAdminAccessToAllCollectionItems BIT = 0,
+    @UseRiskInsights BIT = 0,
+    @LimitItemDeletion BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -112,9 +114,11 @@ BEGIN
         [MaxAutoscaleSmSeats],
         [MaxAutoscaleSmServiceAccounts],
         [SecretsManagerBeta],
-        [LimitCollectionCreationDeletion],
+        [LimitCollectionCreation],
+        [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
-        [FlexibleCollections]
+        [UseRiskInsights],
+        [LimitItemDeletion]
     )
     VALUES
     (
@@ -170,8 +174,10 @@ BEGIN
         @MaxAutoscaleSmSeats,
         @MaxAutoscaleSmServiceAccounts,
         @SecretsManagerBeta,
-        @LimitCollectionCreationDeletion,
+        @LimitCollectionCreation,
+        @LimitCollectionDeletion,
         @AllowAdminAccessToAllCollectionItems,
-        @FlexibleCollections
+        @UseRiskInsights,
+        @LimitItemDeletion
     )
 END

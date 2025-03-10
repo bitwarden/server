@@ -1,7 +1,7 @@
 ﻿using System.Data;
 using System.Text.Json;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -24,16 +24,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[CipherDetails_ReadByIdUserId_V2]"
-            : $"[{Schema}].[CipherDetails_ReadByIdUserId]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CipherDetails>(
-                sprocName,
+                $"[{Schema}].[CipherDetails_ReadByIdUserId]",
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -81,14 +77,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
     {
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = useFlexibleCollections
-                ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
-                : $"[{Schema}].[CipherDetails_ReadByUserId]";
+            sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
         else
         {
@@ -104,7 +98,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
             return results
                 .GroupBy(c => c.Id)
-                .Select(g => g.OrderByDescending(og => og.Edit).First())
+                .Select(g => g.OrderByDescending(og => og.Edit).ThenByDescending(og => og.ViewPassword).First())
                 .ToList();
         }
     }
@@ -249,16 +243,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Delete_V2]"
-            : $"[{Schema}].[Cipher_Delete]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_Delete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -286,16 +276,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections)
+    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Move_V2]"
-            : $"[{Schema}].[Cipher_Move]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_Move]",
                 new { Ids = ids.ToGuidIdArrayTVP(), FolderId = folderId, UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -320,6 +306,42 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 $"[{Schema}].[Cipher_DeleteByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
+        }
+    }
+
+    public async Task<ICollection<OrganizationCipherPermission>> GetCipherPermissionsForOrganizationAsync(
+        Guid organizationId, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationCipherPermission>(
+                $"[{Schema}].[CipherOrganizationPermissions_GetManyByOrganizationId]",
+                new { OrganizationId = organizationId, UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(
+        Guid organizationId, IEnumerable<SecurityTask> tasks)
+    {
+        var cipherIds = tasks.Where(t => t.CipherId.HasValue).Select(t => t.CipherId.Value).Distinct().ToList();
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+
+            var results = await connection.QueryAsync<UserCipherForTask>(
+                $"[{Schema}].[UserSecurityTasks_GetManyByCipherIds]",
+                new { OrganizationId = organizationId, CipherIds = cipherIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.Select(r => new UserSecurityTaskCipher
+            {
+                UserId = r.UserId,
+                Email = r.Email,
+                CipherId = r.CipherId,
+                TaskId = tasks.First(t => t.CipherId == r.CipherId).Id
+            }).ToList();
         }
     }
 
@@ -579,31 +601,23 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_SoftDelete_V2]"
-            : $"[{Schema}].[Cipher_SoftDelete]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                sprocName,
+                $"[{Schema}].[Cipher_SoftDelete]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = useFlexibleCollections
-            ? $"[{Schema}].[Cipher_Restore_V2]"
-            : $"[{Schema}].[Cipher_Restore]";
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteScalarAsync<DateTime>(
-                sprocName,
+                $"[{Schema}].[Cipher_Restore]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -772,6 +786,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         collectionsTable.Columns.Add(creationDateColumn);
         var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
         collectionsTable.Columns.Add(revisionDateColumn);
+        var externalIdColumn = new DataColumn(nameof(c.ExternalId), typeof(string));
+        collectionsTable.Columns.Add(externalIdColumn);
 
         foreach (DataColumn col in collectionsTable.Columns)
         {
@@ -791,6 +807,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[nameColumn] = collection.Name;
             row[creationDateColumn] = collection.CreationDate;
             row[revisionDateColumn] = collection.RevisionDate;
+            row[externalIdColumn] = collection.ExternalId;
 
             collectionsTable.Rows.Add(row);
         }

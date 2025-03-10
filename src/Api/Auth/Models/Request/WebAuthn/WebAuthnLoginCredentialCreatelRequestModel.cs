@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Fido2NetLib;
 
-namespace Bit.Api.Auth.Models.Request.Webauthn;
+namespace Bit.Api.Auth.Models.Request.WebAuthn;
 
 public class WebAuthnLoginCredentialCreateRequestModel
 {

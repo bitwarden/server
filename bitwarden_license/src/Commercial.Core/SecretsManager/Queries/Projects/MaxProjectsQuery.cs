@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
@@ -28,6 +28,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
             throw new NotFoundException();
         }
 
+        // TODO: PRICING -> https://bitwarden.atlassian.net/browse/PM-17122
         var plan = StaticStore.GetPlan(org.PlanType);
         if (plan?.SecretsManager == null)
         {

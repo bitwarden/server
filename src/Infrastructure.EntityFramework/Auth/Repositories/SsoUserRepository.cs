@@ -4,6 +4,8 @@ using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class SsoUserRepository : Repository<Core.Auth.Entities.SsoUser, SsoUser, long>, ISsoUserRepository
@@ -17,13 +19,13 @@ public class SsoUserRepository : Repository<Core.Auth.Entities.SsoUser, SsoUser,
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entity = await GetDbSet(dbContext).SingleOrDefaultAsync(su => su.UserId == userId && su.OrganizationId == organizationId);
-            dbContext.Entry(entity).State = EntityState.Deleted;
-            await dbContext.SaveChangesAsync();
+            await dbContext.SsoUsers
+                .Where(su => su.UserId == userId && su.OrganizationId == organizationId)
+                .ExecuteDeleteAsync();
         }
     }
 
-    public async Task<Core.Auth.Entities.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
+    public async Task<Core.Auth.Entities.SsoUser?> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

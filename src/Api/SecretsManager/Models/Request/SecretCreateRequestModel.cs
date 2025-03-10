@@ -23,6 +23,8 @@ public class SecretCreateRequestModel : IValidatableObject
 
     public Guid[] ProjectIds { get; set; }
 
+    public SecretAccessPoliciesRequestsModel AccessPoliciesRequests { get; set; }
+
     public Secret ToSecret(Guid organizationId)
     {
         return new Secret()

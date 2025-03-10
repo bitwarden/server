@@ -23,6 +23,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                     {
                         UserId = ou.UserId,
                         OrganizationId = ou.OrganizationId,
+                        OrganizationUserId = ou.Id,
                         Name = o.Name,
                         Enabled = o.Enabled,
                         PlanType = o.PlanType,
@@ -65,9 +66,11 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         UsePasswordManager = o.UsePasswordManager,
                         SmSeats = o.SmSeats,
                         SmServiceAccounts = o.SmServiceAccounts,
-                        LimitCollectionCreationDeletion = o.LimitCollectionCreationDeletion,
+                        LimitCollectionCreation = o.LimitCollectionCreation,
+                        LimitCollectionDeletion = o.LimitCollectionDeletion,
+                        LimitItemDeletion = o.LimitItemDeletion,
                         AllowAdminAccessToAllCollectionItems = o.AllowAdminAccessToAllCollectionItems,
-                        FlexibleCollections = o.FlexibleCollections
+                        UseRiskInsights = o.UseRiskInsights,
                     };
         return query;
     }

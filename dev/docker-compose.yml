@@ -2,13 +2,14 @@ version: "3.9"
 
 services:
   mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: ${MSSQL_PASSWORD}
       MSSQL_PID: Developer
     volumes:
-      - edgesql_dev_data:/var/opt/mssql
+      - mssql_dev_data:/var/opt/mssql
       - ../util/Migrator:/mnt/migrator/
       - ./helpers/mssql:/mnt/helpers
       - ./.data/mssql:/mnt/data
@@ -58,7 +59,9 @@ services:
     container_name: bw-mysql
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb-print-all-deadlocks=ON
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: vault_dev
@@ -81,19 +84,19 @@ services:
     profiles:
       - idp
 
-  open-ldap:
-    image: osixia/openldap:1.5.0
-    command: --copy-service
-    environment:
-      LDAP_ORGANISATION: "Bitwarden"
-      LDAP_DOMAIN: "bitwarden.com"
-    volumes:
-      - ./directory.ldif:/container/service/slapd/assets/config/bootstrap/ldif/output.ldif
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
     ports:
-      - "389:389"
-      - "636:636"
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq_data
     profiles:
-      - ldap
+      - rabbitmq
 
   reverse-proxy:
     image: nginx:alpine
@@ -106,7 +109,23 @@ services:
     profiles:
       - proxy
 
+  service-bus:
+    container_name: service-bus
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:latest
+    pull_policy: always
+    volumes:
+      - "./servicebusemulator_config.json:/ServiceBus_Emulator/ConfigFiles/Config.json"
+    ports:
+      - "5672:5672"
+    environment:
+      SQL_SERVER: mssql
+      MSSQL_SA_PASSWORD: "${MSSQL_PASSWORD}"
+      ACCEPT_EULA: "Y"
+    profiles:
+      - servicebus
+
 volumes:
-  edgesql_dev_data:
+  mssql_dev_data:
   postgres_dev_data:
   mysql_dev_data:
+  rabbitmq_data:

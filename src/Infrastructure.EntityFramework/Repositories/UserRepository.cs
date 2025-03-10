@@ -1,10 +1,12 @@
 ﻿using AutoMapper;
-using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
+
+#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -14,7 +16,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     { }
 
-    public async Task<Core.Entities.User> GetByEmailAsync(string email)
+    public async Task<Core.Entities.User?> GetByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -36,7 +38,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<DataModel.UserKdfInformation> GetKdfInformationByEmailAsync(string email)
+    public async Task<DataModel.UserKdfInformation?> GetKdfInformationByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -89,7 +91,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<string> GetPublicKeyAsync(Guid id)
+    public async Task<string?> GetPublicKeyAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -130,7 +132,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
-    public async Task<Core.Entities.User> GetBySsoUserAsync(string externalId, Guid? organizationId)
+    public async Task<Core.Entities.User?> GetBySsoUserAsync(string externalId, Guid? organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -202,6 +204,24 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
+    public async Task<IEnumerable<DataModel.UserWithCalculatedPremium>> GetManyWithCalculatedPremiumAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var users = dbContext.Users.Where(x => ids.Contains(x.Id));
+            return await users.Select(e => new DataModel.UserWithCalculatedPremium(e)
+            {
+                HasPremiumAccess = e.Premium || dbContext.OrganizationUsers
+                    .Any(ou => ou.UserId == e.Id &&
+                               dbContext.Organizations
+                                   .Any(o => o.Id == ou.OrganizationId &&
+                                             o.UsersGetPremium == true &&
+                                             o.Enabled == true))
+            }).ToListAsync();
+        }
+    }
+
     public override async Task DeleteAsync(Core.Entities.User user)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -235,9 +255,58 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             dbContext.EmergencyAccesses.RemoveRange(
                 dbContext.EmergencyAccesses.Where(ea => ea.GrantorId == user.Id || ea.GranteeId == user.Id));
             dbContext.Sends.RemoveRange(dbContext.Sends.Where(s => s.UserId == user.Id));
+            dbContext.NotificationStatuses.RemoveRange(dbContext.NotificationStatuses.Where(ns => ns.UserId == user.Id));
+            dbContext.Notifications.RemoveRange(dbContext.Notifications.Where(n => n.UserId == user.Id));
 
             var mappedUser = Mapper.Map<User>(user);
             dbContext.Users.Remove(mappedUser);
+
+            await transaction.CommitAsync();
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteManyAsync(IEnumerable<Core.Entities.User> users)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            var targetIds = users.Select(u => u.Id).ToList();
+
+            await dbContext.WebAuthnCredentials.Where(wa => targetIds.Contains(wa.UserId)).ExecuteDeleteAsync();
+            await dbContext.Ciphers.Where(c => targetIds.Contains(c.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.Folders.Where(f => targetIds.Contains(f.UserId)).ExecuteDeleteAsync();
+            await dbContext.AuthRequests.Where(a => targetIds.Contains(a.UserId)).ExecuteDeleteAsync();
+            await dbContext.Devices.Where(d => targetIds.Contains(d.UserId)).ExecuteDeleteAsync();
+            var collectionUsers = from cu in dbContext.CollectionUsers
+                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
+                                  where targetIds.Contains(ou.UserId ?? default)
+                                  select cu;
+            dbContext.CollectionUsers.RemoveRange(collectionUsers);
+            var groupUsers = from gu in dbContext.GroupUsers
+                             join ou in dbContext.OrganizationUsers on gu.OrganizationUserId equals ou.Id
+                             where targetIds.Contains(ou.UserId ?? default)
+                             select gu;
+            dbContext.GroupUsers.RemoveRange(groupUsers);
+            await dbContext.UserProjectAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.UserServiceAccountAccessPolicy.Where(ap => targetIds.Contains(ap.OrganizationUser.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.OrganizationUsers.Where(ou => targetIds.Contains(ou.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.ProviderUsers.Where(pu => targetIds.Contains(pu.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.SsoUsers.Where(su => targetIds.Contains(su.UserId)).ExecuteDeleteAsync();
+            await dbContext.EmergencyAccesses.Where(ea => targetIds.Contains(ea.GrantorId) || targetIds.Contains(ea.GranteeId ?? default)).ExecuteDeleteAsync();
+            await dbContext.Sends.Where(s => targetIds.Contains(s.UserId ?? default)).ExecuteDeleteAsync();
+            await dbContext.NotificationStatuses.Where(ns => targetIds.Contains(ns.UserId)).ExecuteDeleteAsync();
+            await dbContext.Notifications.Where(n => targetIds.Contains(n.UserId ?? default)).ExecuteDeleteAsync();
+
+            foreach (var u in users)
+            {
+                var mappedUser = Mapper.Map<User>(u);
+                dbContext.Users.Remove(mappedUser);
+            }
+
 
             await transaction.CommitAsync();
             await dbContext.SaveChangesAsync();

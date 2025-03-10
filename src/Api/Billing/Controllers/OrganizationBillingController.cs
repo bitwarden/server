@@ -1,8 +1,12 @@
-﻿using Bit.Api.Billing.Models.Responses;
-using Bit.Api.Models.Response;
-using Bit.Core.Billing.Queries;
+﻿#nullable enable
+using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Billing.Models.Requests;
+using Bit.Api.Billing.Models.Responses;
+using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -14,19 +18,28 @@ namespace Bit.Api.Billing.Controllers;
 [Route("organizations/{organizationId:guid}/billing")]
 [Authorize("Application")]
 public class OrganizationBillingController(
-    IOrganizationBillingQueries organizationBillingQueries,
     ICurrentContext currentContext,
+    IOrganizationBillingService organizationBillingService,
     IOrganizationRepository organizationRepository,
-    IPaymentService paymentService) : Controller
+    IPaymentService paymentService,
+    IPricingClient pricingClient,
+    ISubscriberService subscriberService,
+    IPaymentHistoryService paymentHistoryService,
+    IUserService userService) : BaseBillingController
 {
     [HttpGet("metadata")]
     public async Task<IResult> GetMetadataAsync([FromRoute] Guid organizationId)
     {
-        var metadata = await organizationBillingQueries.GetMetadata(organizationId);
+        if (!await currentContext.OrganizationUser(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var metadata = await organizationBillingService.GetMetadata(organizationId);
 
         if (metadata == null)
         {
-            return TypedResults.NotFound();
+            return Error.NotFound();
         }
 
         var response = OrganizationMetadataResponse.From(metadata);
@@ -34,22 +47,253 @@ public class OrganizationBillingController(
         return TypedResults.Ok(response);
     }
 
-    [HttpGet]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<BillingResponseModel> GetBilling(Guid organizationId)
+    [HttpGet("history")]
+    public async Task<IResult> GetHistoryAsync([FromRoute] Guid organizationId)
     {
         if (!await currentContext.ViewBillingHistory(organizationId))
         {
-            throw new NotFoundException();
+            return Error.Unauthorized();
         }
 
         var organization = await organizationRepository.GetByIdAsync(organizationId);
+
         if (organization == null)
         {
-            throw new NotFoundException();
+            return Error.NotFound();
+        }
+
+        var billingInfo = await paymentService.GetBillingHistoryAsync(organization);
+
+        return TypedResults.Ok(billingInfo);
+    }
+
+    [HttpGet("invoices")]
+    public async Task<IResult> GetInvoicesAsync([FromRoute] Guid organizationId, [FromQuery] string? status = null, [FromQuery] string? startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var invoices = await paymentHistoryService.GetInvoiceHistoryAsync(
+            organization,
+            5,
+            status,
+            startAfter);
+
+        return TypedResults.Ok(invoices);
+    }
+
+    [HttpGet("transactions")]
+    public async Task<IResult> GetTransactionsAsync([FromRoute] Guid organizationId, [FromQuery] DateTime? startAfter = null)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return TypedResults.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var transactions = await paymentHistoryService.GetTransactionHistoryAsync(
+            organization,
+            5,
+            startAfter);
+
+        return TypedResults.Ok(transactions);
+    }
+
+    [HttpGet]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IResult> GetBillingAsync(Guid organizationId)
+    {
+        if (!await currentContext.ViewBillingHistory(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
         }
 
         var billingInfo = await paymentService.GetBillingAsync(organization);
-        return new BillingResponseModel(billingInfo);
+
+        var response = new BillingResponseModel(billingInfo);
+
+        return TypedResults.Ok(response);
+    }
+
+    [HttpGet("payment-method")]
+    public async Task<IResult> GetPaymentMethodAsync([FromRoute] Guid organizationId)
+    {
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        var paymentMethod = await subscriberService.GetPaymentMethod(organization);
+
+        var response = PaymentMethodResponse.From(paymentMethod);
+
+        return TypedResults.Ok(response);
+    }
+
+    [HttpPut("payment-method")]
+    public async Task<IResult> UpdatePaymentMethodAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] UpdatePaymentMethodRequestBody requestBody)
+    {
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
+
+        var taxInformation = requestBody.TaxInformation.ToDomain();
+
+        await organizationBillingService.UpdatePaymentMethod(organization, tokenizedPaymentSource, taxInformation);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpPost("payment-method/verify-bank-account")]
+    public async Task<IResult> VerifyBankAccountAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] VerifyBankAccountRequestBody requestBody)
+    {
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
+        {
+            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        await subscriberService.VerifyBankAccount(organization, requestBody.DescriptorCode);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpGet("tax-information")]
+    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid organizationId)
+    {
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        var taxInformation = await subscriberService.GetTaxInformation(organization);
+
+        var response = TaxInformationResponse.From(taxInformation);
+
+        return TypedResults.Ok(response);
+    }
+
+    [HttpPut("tax-information")]
+    public async Task<IResult> UpdateTaxInformationAsync(
+        [FromRoute] Guid organizationId,
+        [FromBody] TaxInformationRequestBody requestBody)
+    {
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+
+        var taxInformation = requestBody.ToDomain();
+
+        await subscriberService.UpdateTaxInformation(organization, taxInformation);
+
+        return TypedResults.Ok();
+    }
+
+    [HttpPost("restart-subscription")]
+    public async Task<IResult> RestartSubscriptionAsync([FromRoute] Guid organizationId,
+        [FromBody] OrganizationCreateRequestModel model)
+    {
+        var user = await userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await currentContext.EditPaymentMethods(organizationId))
+        {
+            return Error.Unauthorized();
+        }
+
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            return Error.NotFound();
+        }
+        var organizationSignup = model.ToOrganizationSignup(user);
+        var sale = OrganizationSale.From(organization, organizationSignup);
+        var plan = await pricingClient.GetPlanOrThrow(model.PlanType);
+        sale.Organization.PlanType = plan.Type;
+        sale.Organization.Plan = plan.Name;
+        sale.SubscriptionSetup.SkipTrial = true;
+        await organizationBillingService.Finalize(sale);
+        var org = await organizationRepository.GetByIdAsync(organizationId);
+        if (organizationSignup.PaymentMethodType != null)
+        {
+            var paymentSource = new TokenizedPaymentSource(organizationSignup.PaymentMethodType.Value, organizationSignup.PaymentToken);
+            var taxInformation = TaxInformation.From(organizationSignup.TaxInfo);
+            await organizationBillingService.UpdatePaymentMethod(org, paymentSource, taxInformation);
+        }
+
+        return TypedResults.Ok();
     }
 }

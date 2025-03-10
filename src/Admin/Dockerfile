@@ -20,6 +20,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 # Add packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    krb5-user \    
     && rm -rf /var/lib/apt/lists/*
 
 # Set up Node

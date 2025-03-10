@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Web;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
@@ -17,7 +19,6 @@ public class FreshdeskController : Controller
     private readonly BillingSettings _billingSettings;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ILogger<FreshdeskController> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -25,7 +26,6 @@ public class FreshdeskController : Controller
     public FreshdeskController(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         IOptions<BillingSettings> billingSettings,
         ILogger<FreshdeskController> logger,
         GlobalSettings globalSettings,
@@ -34,7 +34,6 @@ public class FreshdeskController : Controller
         _billingSettings = billingSettings?.Value;
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _logger = logger;
         _globalSettings = globalSettings;
         _httpClientFactory = httpClientFactory;
@@ -145,6 +144,121 @@ public class FreshdeskController : Controller
         }
     }
 
+    [HttpPost("webhook-onyx-ai")]
+    public async Task<IActionResult> PostWebhookOnyxAi([FromQuery, Required] string key,
+        [FromBody, Required] FreshdeskWebhookModel model)
+    {
+        // ensure that the key is from Freshdesk
+        if (!IsValidRequestFromFreshdesk(key))
+        {
+            return new BadRequestResult();
+        }
+
+        // get ticket info from Freshdesk
+        var getTicketRequest = new HttpRequestMessage(HttpMethod.Get,
+            string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}", model.TicketId));
+        var getTicketResponse = await CallFreshdeskApiAsync(getTicketRequest);
+
+        // check if we have a valid response from freshdesk
+        if (getTicketResponse.StatusCode != System.Net.HttpStatusCode.OK)
+        {
+            _logger.LogError("Error getting ticket info from Freshdesk. Ticket Id: {0}. Status code: {1}",
+                            model.TicketId, getTicketResponse.StatusCode);
+            return BadRequest("Failed to retrieve ticket info from Freshdesk");
+        }
+
+        // extract info from the response
+        var ticketInfo = await ExtractTicketInfoFromResponse(getTicketResponse);
+        if (ticketInfo == null)
+        {
+            return BadRequest("Failed to extract ticket info from Freshdesk response");
+        }
+
+        // create the onyx `answer-with-citation` request
+        var onyxRequestModel = new OnyxAnswerWithCitationRequestModel(ticketInfo.DescriptionText);
+        var onyxRequest = new HttpRequestMessage(HttpMethod.Post,
+                            string.Format("{0}/query/answer-with-citation", _billingSettings.Onyx.BaseUrl))
+        {
+            Content = JsonContent.Create(onyxRequestModel, mediaType: new MediaTypeHeaderValue("application/json")),
+        };
+        var (_, onyxJsonResponse) = await CallOnyxApi<OnyxAnswerWithCitationResponseModel>(onyxRequest);
+
+        // the CallOnyxApi will return a null if we have an error response
+        if (onyxJsonResponse?.Answer == null || !string.IsNullOrEmpty(onyxJsonResponse?.ErrorMsg))
+        {
+            return BadRequest(
+                string.Format("Failed to get a valid response from Onyx API. Response: {0}",
+                            JsonSerializer.Serialize(onyxJsonResponse ?? new OnyxAnswerWithCitationResponseModel())));
+        }
+
+        // add the answer as a note to the ticket
+        await AddAnswerNoteToTicketAsync(onyxJsonResponse.Answer, model.TicketId);
+
+        return Ok();
+    }
+
+    private bool IsValidRequestFromFreshdesk(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key)
+                || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshDesk.WebhookKey))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task AddAnswerNoteToTicketAsync(string note, string ticketId)
+    {
+        // if there is no content, then we don't need to add a note
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            return;
+        }
+
+        var noteBody = new Dictionary<string, object>
+                {
+                    { "body", $"<b>Onyx AI:</b><ul>{note}</ul>" },
+                    { "private", true }
+                };
+
+        var noteRequest = new HttpRequestMessage(HttpMethod.Post,
+                    string.Format("https://bitwarden.freshdesk.com/api/v2/tickets/{0}/notes", ticketId))
+        {
+            Content = JsonContent.Create(noteBody),
+        };
+
+        var addNoteResponse = await CallFreshdeskApiAsync(noteRequest);
+        if (addNoteResponse.StatusCode != System.Net.HttpStatusCode.Created)
+        {
+            _logger.LogError("Error adding note to Freshdesk ticket. Ticket Id: {0}. Status: {1}",
+                            ticketId, addNoteResponse.ToString());
+        }
+    }
+
+    private async Task<FreshdeskViewTicketModel> ExtractTicketInfoFromResponse(HttpResponseMessage getTicketResponse)
+    {
+        var responseString = string.Empty;
+        try
+        {
+            responseString = await getTicketResponse.Content.ReadAsStringAsync();
+            var ticketInfo = JsonSerializer.Deserialize<FreshdeskViewTicketModel>(responseString,
+                options: new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                });
+
+            return ticketInfo;
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError("Error deserializing ticket info from Freshdesk response. Response: {0}. Exception {1}",
+                            responseString, ex.ToString());
+        }
+
+        return null;
+    }
+
     private async Task<HttpResponseMessage> CallFreshdeskApiAsync(HttpRequestMessage request, int retriedCount = 0)
     {
         try
@@ -167,6 +281,26 @@ public class FreshdeskController : Controller
         }
         await Task.Delay(30000 * (retriedCount + 1));
         return await CallFreshdeskApiAsync(request, retriedCount++);
+    }
+
+    private async Task<(HttpResponseMessage, T)> CallOnyxApi<T>(HttpRequestMessage request)
+    {
+        var httpClient = _httpClientFactory.CreateClient("OnyxApi");
+        var response = await httpClient.SendAsync(request);
+
+        if (response.StatusCode != System.Net.HttpStatusCode.OK)
+        {
+            _logger.LogError("Error calling Onyx AI API. Status code: {0}. Response {1}",
+                response.StatusCode, JsonSerializer.Serialize(response));
+            return (null, default);
+        }
+        var responseStr = await response.Content.ReadAsStringAsync();
+        var responseJson = JsonSerializer.Deserialize<T>(responseStr, options: new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+        });
+
+        return (response, responseJson);
     }
 
     private TAttribute GetAttribute<TAttribute>(Enum enumValue) where TAttribute : Attribute

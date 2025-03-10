@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Enums;
+using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -46,6 +46,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
+        organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
             return new List<Guid>();
@@ -161,8 +162,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 from ou in dbContext.OrganizationUsers
                 join cu in dbContext.CollectionUsers
                     on ou.Id equals cu.OrganizationUserId
-                where !ou.AccessAll &&
-                    ou.Id == id
+                where ou.Id == id
                 select cu).ToListAsync();
             var collections = query.Select(cu => new CollectionAccessSelection
             {
@@ -249,7 +249,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>> GetDetailsByIdWithCollectionsAsync(Guid id)
+#nullable enable
+    public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -257,7 +258,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var dbContext = GetDatabaseContext(scope);
             var query = from ou in dbContext.OrganizationUsers
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
-                        where !ou.AccessAll && ou.Id == id
+                        where ou.Id == id
                         select cu;
             var collections = await query.Select(cu => new CollectionAccessSelection
             {
@@ -266,9 +267,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 HidePasswords = cu.HidePasswords,
                 Manage = cu.Manage
             }).ToListAsync();
-            return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(organizationUserUserDetails, collections);
+            return (organizationUserUserDetails, collections);
         }
     }
+#nullable disable
 
     public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null)
     {
@@ -661,6 +663,26 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return await GetCountFromQuery(query);
     }
 
+    public async Task<IEnumerable<OrganizationUserResetPasswordDetails>>
+        GetManyAccountRecoveryDetailsByOrganizationUserAsync(Guid organizationId, IEnumerable<Guid> organizationUserIds)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        where organizationUserIds.Contains(ou.Id)
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        join o in dbContext.Organizations
+                            on ou.OrganizationId equals o.Id
+                        where ou.OrganizationId == organizationId
+                        select new { ou, u, o };
+            var data = await query
+                .Select(x => new OrganizationUserResetPasswordDetails(x.ou, x.u, x.o)).ToListAsync();
+            return data;
+        }
+    }
+
     /// <inheritdoc />
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Entities.OrganizationUser> resetPasswordKeys)
@@ -692,4 +714,47 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         };
     }
 
+    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationWithClaimedDomainsAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery(organizationId);
+            var data = await query.Run(dbContext).ToListAsync();
+            return data;
+        }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
+    }
+
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        where ou.OrganizationId == organizationId &&
+                            ou.Type == role &&
+                            ou.Status == OrganizationUserStatusType.Confirmed
+                        select new OrganizationUserUserDetails
+                        {
+                            Id = ou.Id,
+                            Email = ou.Email ?? u.Email,
+                            Permissions = ou.Permissions
+                        };
+            return await query.ToListAsync();
+        }
+    }
 }

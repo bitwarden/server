@@ -7,6 +7,8 @@ using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class ProviderRepository : Repository<Provider, Guid>, IProviderRepository
@@ -19,7 +21,7 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Provider> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<Provider?> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

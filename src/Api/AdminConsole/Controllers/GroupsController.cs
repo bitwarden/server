@@ -1,11 +1,10 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
-using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
-using Bit.Api.Vault.AuthorizationHandlers.Groups;
-using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -90,21 +89,25 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
+    public async Task<ListResponseModel<GroupResponseModel>> GetOrganizationGroups(Guid orgId)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId))
+        var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAll);
+        if (!authResult.Succeeded)
         {
-            // New flexible collections logic
-            return await Get_vNext(orgId);
+            throw new NotFoundException();
         }
 
-        // Old pre-flexible collections logic follows
-        var canAccess = await _currentContext.ManageGroups(orgId) ||
-                        await _currentContext.ViewAssignedCollections(orgId) ||
-                        await _currentContext.ViewAllCollections(orgId) ||
-                        await _currentContext.ManageUsers(orgId);
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(orgId);
+        var responses = groups.Select(g => new GroupResponseModel(g));
+        return new ListResponseModel<GroupResponseModel>(responses);
+    }
 
-        if (!canAccess)
+    [HttpGet("details")]
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> GetOrganizationGroupDetails(Guid orgId)
+    {
+        var authResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId), GroupOperations.ReadAllDetails);
+
+        if (!authResult.Succeeded)
         {
             throw new NotFoundException();
         }
@@ -136,10 +139,8 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        // Flexible Collections - check the user has permission to grant access to the collections for the new group
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) &&
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1) &&
-            model.Collections?.Any() == true)
+        // Check the user has permission to grant access to the collections for the new group
+        if (model.Collections?.Any() == true)
         {
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Collections.Select(a => a.Id));
             var authorized =
@@ -147,7 +148,7 @@ public class GroupsController : Controller
                 .Succeeded;
             if (!authorized)
             {
-                throw new NotFoundException("You are not authorized to grant access to these collections.");
+                throw new NotFoundException();
             }
         }
 
@@ -162,38 +163,20 @@ public class GroupsController : Controller
     [HttpPost("{id}")]
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        if (await FlexibleCollectionsIsEnabledAsync(orgId) && _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1))
-        {
-            // Use new Flexible Collections v1 logic
-            return await Put_vNext(orgId, id, model);
-        }
-
-        // Pre-Flexible Collections v1 logic follows
-        var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        if (!await _currentContext.ManageGroups(orgId))
         {
             throw new NotFoundException();
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
-
-        await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization,
-            model.Collections.Select(c => c.ToSelectionReadOnly()).ToList(), model.Users);
-        return new GroupResponseModel(group);
-    }
-
-    /// <summary>
-    /// Put logic for Flexible Collections v1
-    /// </summary>
-    private async Task<GroupResponseModel> Put_vNext(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
-    {
         var (group, currentAccess) = await _groupRepository.GetByIdWithCollectionsAsync(id);
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        if (group == null || group.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        // Check whether the user is permitted to add themselves to the group
+        // Authorization check:
+        // If admins are not allowed access to all collections, you cannot add yourself to a group.
+        // No error is thrown for this, we just don't update groups.
         var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
         if (!orgAbility.AllowAdminAccessToAllCollectionItems)
         {
@@ -207,9 +190,23 @@ public class GroupsController : Controller
             }
         }
 
+        // Authorization check:
+        // You must have authorization to ModifyUserAccess for all collections being saved
+        var postedCollections = await _collectionRepository
+            .GetManyByManyIdsAsync(model.Collections.Select(c => c.Id));
+        foreach (var collection in postedCollections)
+        {
+            if (!(await _authorizationService.AuthorizeAsync(User, collection,
+                    BulkCollectionOperations.ModifyGroupAccess))
+                .Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
         // The client only sends collections that the saving user has permissions to edit.
-        // On the server side, we need to (1) confirm this and (2) concat these with the collections that the user
-        // can't edit before saving to the database.
+        // We need to combine these with collections that the user doesn't have permissions for, so that we don't
+        // accidentally overwrite those
         var currentCollections = await _collectionRepository
             .GetManyByManyIdsAsync(currentAccess.Select(cas => cas.Id));
 
@@ -221,11 +218,6 @@ public class GroupsController : Controller
             {
                 readonlyCollectionIds.Add(collection.Id);
             }
-        }
-
-        if (model.Collections.Any(c => readonlyCollectionIds.Contains(c.Id)))
-        {
-            throw new BadRequestException("You must have Can Manage permissions to edit a collection's membership");
         }
 
         var editedCollectionAccess = model.Collections
@@ -283,25 +275,5 @@ public class GroupsController : Controller
         }
 
         await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
-    }
-
-    private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_vNext(Guid orgId)
-    {
-        var authorized =
-            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
-
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
-        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
-        return new ListResponseModel<GroupDetailsResponseModel>(responses);
-    }
-
-    private async Task<bool> FlexibleCollectionsIsEnabledAsync(Guid organizationId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(organizationId);
-        return organizationAbility?.FlexibleCollections ?? false;
     }
 }

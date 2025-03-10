@@ -1,18 +1,16 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
-using Microsoft.Extensions.Logging;
 using Stripe;
 
 namespace Bit.Commercial.Core.AdminConsole.Providers;
@@ -20,35 +18,41 @@ namespace Bit.Commercial.Core.AdminConsole.Providers;
 public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProviderCommand
 {
     private readonly IEventService _eventService;
-    private readonly ILogger<RemoveOrganizationFromProviderCommand> _logger;
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IStripeAdapter _stripeAdapter;
-    private readonly IScaleSeatsCommand _scaleSeatsCommand;
     private readonly IFeatureService _featureService;
+    private readonly IProviderBillingService _providerBillingService;
+    private readonly ISubscriberService _subscriberService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
+    private readonly IPricingClient _pricingClient;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
-        ILogger<RemoveOrganizationFromProviderCommand> logger,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IProviderOrganizationRepository providerOrganizationRepository,
         IStripeAdapter stripeAdapter,
-        IScaleSeatsCommand scaleSeatsCommand,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IProviderBillingService providerBillingService,
+        ISubscriberService subscriberService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+        IPricingClient pricingClient)
     {
         _eventService = eventService;
-        _logger = logger;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
         _providerOrganizationRepository = providerOrganizationRepository;
         _stripeAdapter = stripeAdapter;
-        _scaleSeatsCommand = scaleSeatsCommand;
         _featureService = featureService;
+        _providerBillingService = providerBillingService;
+        _subscriberService = subscriberService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
+        _pricingClient = pricingClient;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -64,7 +68,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             throw new BadRequestException("Failed to remove organization. Please contact support.");
         }
 
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(
+        if (!await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
                 providerOrganization.OrganizationId,
                 Array.Empty<Guid>(),
                 includeProvider: false))
@@ -99,24 +103,17 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         Provider provider,
         IEnumerable<string> organizationOwnerEmails)
     {
-        if (!organization.IsStripeEnabled())
+        if (provider.IsBillable() &&
+            organization.IsValidClient() &&
+            !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            return;
-        }
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            {
+                Description = string.Empty,
+                Email = organization.BillingEmail
+            });
 
-        var isConsolidatedBillingEnabled = _featureService.IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling);
-
-        var customerUpdateOptions = new CustomerUpdateOptions
-        {
-            Coupon = string.Empty,
-            Email = organization.BillingEmail
-        };
-
-        await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, customerUpdateOptions);
-
-        if (isConsolidatedBillingEnabled && provider.Status == ProviderStatusType.Billable)
-        {
-            var plan = StaticStore.GetPlan(organization.PlanType).PasswordManager;
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
@@ -130,25 +127,37 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 },
                 OffSession = true,
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
-                Items = [new SubscriptionItemOptions { Price = plan.StripeSeatPlanId, Quantity = organization.Seats }]
+                Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 
             organization.GatewaySubscriptionId = subscription.Id;
+            organization.Status = OrganizationStatusType.Created;
 
-            await _scaleSeatsCommand.ScalePasswordManagerSeats(provider, organization.PlanType,
-                -(organization.Seats ?? 0));
+            await _providerBillingService.ScaleSeats(provider, organization.PlanType, -organization.Seats ?? 0);
         }
-        else
+        else if (organization.IsStripeEnabled())
         {
-            var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+            var subscription = await _stripeAdapter.SubscriptionGetAsync(organization.GatewaySubscriptionId);
+            if (subscription.Status is StripeConstants.SubscriptionStatus.Canceled or StripeConstants.SubscriptionStatus.IncompleteExpired)
             {
-                CollectionMethod = "send_invoice",
-                DaysUntilDue = 30
-            };
+                return;
+            }
 
-            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, subscriptionUpdateOptions);
+            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            {
+                Coupon = string.Empty,
+                Email = organization.BillingEmail
+            });
+
+            await _stripeAdapter.SubscriptionUpdateAsync(organization.GatewaySubscriptionId, new SubscriptionUpdateOptions
+            {
+                CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
+                DaysUntilDue = 30
+            });
+
+            await _subscriberService.RemovePaymentSource(organization);
         }
 
         await _mailService.SendProviderUpdatePaymentMethod(

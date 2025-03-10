@@ -2,12 +2,13 @@
 using Bit.Billing.Controllers;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Divergic.Logging.Xunit;
-using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -32,6 +33,8 @@ public class PayPalControllerTests
     private readonly IPaymentService _paymentService = Substitute.For<IPaymentService>();
     private readonly ITransactionRepository _transactionRepository = Substitute.For<ITransactionRepository>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
+    private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
+    private readonly IPremiumUserBillingService _premiumUserBillingService = Substitute.For<IPremiumUserBillingService>();
 
     private const string _defaultWebhookKey = "webhook-key";
 
@@ -110,7 +113,7 @@ public class PayPalControllerTests
 
         HasStatusCode(result, 400);
 
-        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID");
+        LoggedError(logger, "PayPal IPN (2PK15573S8089712Y): 'custom' did not contain a User ID or Organization ID or provider ID");
     }
 
     [Fact]
@@ -384,8 +387,6 @@ public class PayPalControllerTests
 
         _userRepository.GetByIdAsync(userId).Returns(user);
 
-        _paymentService.CreditAccountAsync(user, 48M).Returns(true);
-
         var controller = ConfigureControllerContextWith(logger, _defaultWebhookKey, ipnBody);
 
         var result = await controller.PostIpn();
@@ -397,9 +398,7 @@ public class PayPalControllerTests
             transaction.UserId == userId &&
             transaction.Amount == 48M));
 
-        await _paymentService.Received(1).CreditAccountAsync(user, 48M);
-
-        await _userRepository.Received(1).ReplaceAsync(user);
+        await _premiumUserBillingService.Received(1).Credit(user, 48M);
 
         await _mailService.Received(1).SendAddedCreditAsync(billingEmail, 48M);
     }
@@ -542,7 +541,9 @@ public class PayPalControllerTests
             _organizationRepository,
             _paymentService,
             _transactionRepository,
-            _userRepository);
+            _userRepository,
+            _providerRepository,
+            _premiumUserBillingService);
 
         var httpContext = new DefaultHttpContext();
 
@@ -574,14 +575,14 @@ public class PayPalControllerTests
     {
         var statusCodeActionResult = (IStatusCodeActionResult)result;
 
-        statusCodeActionResult.StatusCode.Should().Be(statusCode);
+        Assert.Equal(statusCode, statusCodeActionResult.StatusCode);
     }
 
     private static void Logged(ICacheLogger logger, LogLevel logLevel, string message)
     {
-        logger.Last.Should().NotBeNull();
-        logger.Last!.LogLevel.Should().Be(logLevel);
-        logger.Last!.Message.Should().Be(message);
+        Assert.NotNull(logger.Last);
+        Assert.Equal(logLevel, logger.Last!.LogLevel);
+        Assert.Equal(message, logger.Last!.Message);
     }
 
     private static void LoggedError(ICacheLogger logger, string message)

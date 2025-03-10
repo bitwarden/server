@@ -7,8 +7,8 @@ namespace Bit.Core.Models.Data;
 /// </summary>
 public class CollectionAdminDetails : CollectionDetails
 {
-    public IEnumerable<CollectionAccessSelection>? Groups { get; set; } = new List<CollectionAccessSelection>();
-    public IEnumerable<CollectionAccessSelection>? Users { get; set; } = new List<CollectionAccessSelection>();
+    public IEnumerable<CollectionAccessSelection> Groups { get; set; } = [];
+    public IEnumerable<CollectionAccessSelection> Users { get; set; } = [];
 
     /// <summary>
     /// Flag for whether the user has been explicitly assigned to the collection either directly or through a group.

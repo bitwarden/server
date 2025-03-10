@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Data.Provider;
@@ -38,8 +39,11 @@ public class ProviderUserOrganizationDetails
     public Guid? ProviderUserId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
-    public Core.Enums.PlanType PlanType { get; set; }
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public PlanType PlanType { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
-    public bool FlexibleCollections { get; set; }
+    public bool UseRiskInsights { get; set; }
+    public ProviderType ProviderType { get; set; }
 }

@@ -1,6 +1,8 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
+
+#nullable enable
 
 namespace Bit.Core.Billing.Entities;
 

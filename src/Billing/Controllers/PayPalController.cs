@@ -1,5 +1,7 @@
 ﻿using System.Text;
 using Bit.Billing.Models;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -21,6 +23,8 @@ public class PayPalController : Controller
     private readonly IPaymentService _paymentService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IProviderRepository _providerRepository;
+    private readonly IPremiumUserBillingService _premiumUserBillingService;
 
     public PayPalController(
         IOptions<BillingSettings> billingSettings,
@@ -29,7 +33,9 @@ public class PayPalController : Controller
         IOrganizationRepository organizationRepository,
         IPaymentService paymentService,
         ITransactionRepository transactionRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IProviderRepository providerRepository,
+        IPremiumUserBillingService premiumUserBillingService)
     {
         _billingSettings = billingSettings?.Value;
         _logger = logger;
@@ -38,6 +44,8 @@ public class PayPalController : Controller
         _paymentService = paymentService;
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
+        _providerRepository = providerRepository;
+        _premiumUserBillingService = premiumUserBillingService;
     }
 
     [HttpPost("ipn")]
@@ -79,11 +87,11 @@ public class PayPalController : Controller
             return Ok();
         }
 
-        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId;
+        var entityId = transactionModel.UserId ?? transactionModel.OrganizationId ?? transactionModel.ProviderId;
 
         if (!entityId.HasValue)
         {
-            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID", transactionModel.TransactionId);
+            _logger.LogError("PayPal IPN ({Id}): 'custom' did not contain a User ID or Organization ID or provider ID", transactionModel.TransactionId);
             return BadRequest();
         }
 
@@ -152,6 +160,7 @@ public class PayPalController : Controller
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
+                            ProviderId = transactionModel.ProviderId,
                             Type = transactionModel.IsAccountCredit ? TransactionType.Credit : TransactionType.Charge,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,
@@ -217,6 +226,7 @@ public class PayPalController : Controller
                             CreationDate = transactionModel.PaymentDate,
                             OrganizationId = transactionModel.OrganizationId,
                             UserId = transactionModel.UserId,
+                            ProviderId = transactionModel.ProviderId,
                             Type = TransactionType.Refund,
                             Gateway = GatewayType.PayPal,
                             GatewayId = transactionModel.TransactionId,
@@ -251,11 +261,21 @@ public class PayPalController : Controller
         {
             var user = await _userRepository.GetByIdAsync(transaction.UserId.Value);
 
-            if (await _paymentService.CreditAccountAsync(user, transaction.Amount))
+            if (user != null)
             {
-                await _userRepository.ReplaceAsync(user);
-
+                await _premiumUserBillingService.Credit(user, transaction.Amount);
                 billingEmail = user.BillingEmailAddress();
+            }
+        }
+        else if (transaction.ProviderId.HasValue)
+        {
+            var provider = await _providerRepository.GetByIdAsync(transaction.ProviderId.Value);
+
+            if (await _paymentService.CreditAccountAsync(provider, transaction.Amount))
+            {
+                await _providerRepository.ReplaceAsync(provider);
+
+                billingEmail = provider.BillingEmailAddress();
             }
         }
 

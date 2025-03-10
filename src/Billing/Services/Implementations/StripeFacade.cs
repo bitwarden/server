@@ -6,10 +6,10 @@ public class StripeFacade : IStripeFacade
 {
     private readonly ChargeService _chargeService = new();
     private readonly CustomerService _customerService = new();
+    private readonly EventService _eventService = new();
     private readonly InvoiceService _invoiceService = new();
     private readonly PaymentMethodService _paymentMethodService = new();
     private readonly SubscriptionService _subscriptionService = new();
-    private readonly TaxRateService _taxRateService = new();
     private readonly DiscountService _discountService = new();
 
     public async Task<Charge> GetCharge(
@@ -18,6 +18,13 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _chargeService.GetAsync(chargeId, chargeGetOptions, requestOptions, cancellationToken);
+
+    public async Task<Event> GetEvent(
+        string eventId,
+        EventGetOptions eventGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default) =>
+        await _eventService.GetAsync(eventId, eventGetOptions, requestOptions, cancellationToken);
 
     public async Task<Customer> GetCustomer(
         string customerId,
@@ -90,13 +97,6 @@ public class StripeFacade : IStripeFacade
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default) =>
         await _subscriptionService.CancelAsync(subscriptionId, options, requestOptions, cancellationToken);
-
-    public async Task<TaxRate> GetTaxRate(
-        string taxRateId,
-        TaxRateGetOptions options = null,
-        RequestOptions requestOptions = null,
-        CancellationToken cancellationToken = default) =>
-        await _taxRateService.GetAsync(taxRateId, options, requestOptions, cancellationToken);
 
     public async Task<Discount> DeleteCustomerDiscount(
         string customerId,

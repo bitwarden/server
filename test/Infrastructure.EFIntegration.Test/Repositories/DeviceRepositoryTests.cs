@@ -11,9 +11,13 @@ namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 public class DeviceRepositoryTests
 {
     [CiSkippedTheory, EfDeviceAutoData]
-    public async Task CreateAsync_Works_DataMatches(Device device, User user,
-        DeviceCompare equalityComparer, List<EfRepo.DeviceRepository> suts,
-        List<EfRepo.UserRepository> efUserRepos, SqlRepo.DeviceRepository sqlDeviceRepo,
+    public async Task CreateAsync_Works_DataMatches(
+        Device device,
+        User user,
+        DeviceCompare equalityComparer,
+        List<EfRepo.DeviceRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos,
+        SqlRepo.DeviceRepository sqlDeviceRepo,
         SqlRepo.UserRepository sqlUserRepo)
     {
         var savedDevices = new List<Device>();
@@ -40,7 +44,6 @@ public class DeviceRepositoryTests
         savedDevices.Add(savedSqlDevice);
 
         var distinctItems = savedDevices.Distinct(equalityComparer);
-        Assert.True(!distinctItems.Skip(1).Any());
+        Assert.False(distinctItems.Skip(1).Any());
     }
-
 }

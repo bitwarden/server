@@ -15,10 +15,10 @@ public class ProjectPeopleAccessPoliciesResponseModel : ResponseModel
             switch (baseAccessPolicy)
             {
                 case UserProjectAccessPolicy accessPolicy:
-                    UserAccessPolicies.Add(new UserProjectAccessPolicyResponseModel(accessPolicy, userId));
+                    UserAccessPolicies.Add(new UserAccessPolicyResponseModel(accessPolicy, userId));
                     break;
                 case GroupProjectAccessPolicy accessPolicy:
-                    GroupAccessPolicies.Add(new GroupProjectAccessPolicyResponseModel(accessPolicy));
+                    GroupAccessPolicies.Add(new GroupAccessPolicyResponseModel(accessPolicy));
                     break;
             }
         }
@@ -28,7 +28,7 @@ public class ProjectPeopleAccessPoliciesResponseModel : ResponseModel
     {
     }
 
-    public List<UserProjectAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
+    public List<UserAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
 
-    public List<GroupProjectAccessPolicyResponseModel> GroupAccessPolicies { get; set; } = new();
+    public List<GroupAccessPolicyResponseModel> GroupAccessPolicies { get; set; } = new();
 }

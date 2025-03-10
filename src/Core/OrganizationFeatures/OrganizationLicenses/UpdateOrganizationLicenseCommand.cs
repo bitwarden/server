@@ -17,15 +17,18 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     private readonly ILicensingService _licensingService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
+    private readonly IFeatureService _featureService;
 
     public UpdateOrganizationLicenseCommand(
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IFeatureService featureService)
     {
         _licensingService = licensingService;
         _globalSettings = globalSettings;
         _organizationService = organizationService;
+        _featureService = featureService;
     }
 
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
@@ -36,7 +39,8 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             throw new BadRequestException("License is already in use by another organization.");
         }
 
-        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) &&
+        var claimsPrincipal = _licensingService.GetClaimsPrincipalFromLicense(license);
+        var canUse = license.CanUse(_globalSettings, _licensingService, claimsPrincipal, out var exception) &&
             selfHostedOrganization.CanUseLicense(license, out exception);
 
         if (!canUse)
@@ -59,7 +63,8 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
     {
         var organization = selfHostedOrganizationDetails.ToOrganization();
-        organization.UpdateFromLicense(license);
+
+        organization.UpdateFromLicense(license, _featureService);
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }

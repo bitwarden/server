@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   bitwarden_server:
     image: mcr.microsoft.com/devcontainers/dotnet:8.0
@@ -9,15 +7,17 @@ services:
     command: sleep infinity
 
   bitwarden_mssql:
-    image: mcr.microsoft.com/azure-sql-edge:latest
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
     restart: unless-stopped
     env_file:
-      ../../dev/.env
+      - path: ../../dev/.env
+        required: false
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
     volumes:
-      - edgesql_dev_data:/var/opt/mssql
+      - mssql_dev_data:/var/opt/mssql
       - ../../util/Migrator:/mnt/migrator/
       - ../../dev/helpers/mssql:/mnt/helpers
       - ../../dev/.data/mssql:/mnt/data
@@ -29,4 +29,4 @@ services:
     network_mode: service:bitwarden_server
     
 volumes:
-  edgesql_dev_data:
+  mssql_dev_data:

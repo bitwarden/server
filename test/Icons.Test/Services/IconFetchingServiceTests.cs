@@ -5,13 +5,13 @@ namespace Bit.Icons.Test.Services;
 
 public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
 {
-    [Theory]
+    [Theory(Skip = "Run ad-hoc")]
     [InlineData("www.twitter.com")] // https site
     [InlineData("www.google.com")] // https site
     [InlineData("neverssl.com")] // http site
     [InlineData("neopets.com")] // uses favicon.ico
     [InlineData("hopin.com")] // uses svg+xml format
-    [InlineData("ameritrade.com")] // redirects to tdameritrade.com
+    [InlineData("tdameritrade.com")]
     [InlineData("icloud.com")]
     public async Task GetIconAsync_Success(string domain)
     {

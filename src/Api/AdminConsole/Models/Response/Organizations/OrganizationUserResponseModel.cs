@@ -23,14 +23,14 @@ public class OrganizationUserResponseModel : ResponseModel
         UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
-        AccessAll = organizationUser.AccessAll;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
 
-    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser, string obj = "organizationUser")
+    public OrganizationUserResponseModel(OrganizationUserUserDetails organizationUser,
+        string obj = "organizationUser")
         : base(obj)
     {
         if (organizationUser == null)
@@ -42,7 +42,6 @@ public class OrganizationUserResponseModel : ResponseModel
         UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
-        AccessAll = organizationUser.AccessAll;
         ExternalId = organizationUser.ExternalId;
         AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
@@ -55,7 +54,6 @@ public class OrganizationUserResponseModel : ResponseModel
     public Guid? UserId { get; set; }
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
-    public bool AccessAll { get; set; }
     public string ExternalId { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
@@ -66,19 +64,26 @@ public class OrganizationUserResponseModel : ResponseModel
 
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
-    public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
+    public OrganizationUserDetailsResponseModel(
+        OrganizationUser organizationUser,
+        bool managedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
+        ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
+        bool managedByOrganization,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
+        ManagedByOrganization = managedByOrganization;
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
+
+    public bool ManagedByOrganization { get; set; }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
 
@@ -86,10 +91,33 @@ public class OrganizationUserDetailsResponseModel : OrganizationUserResponseMode
     public IEnumerable<Guid> Groups { get; set; }
 }
 
+#nullable enable
+public class OrganizationUserUserMiniDetailsResponseModel : ResponseModel
+{
+    public OrganizationUserUserMiniDetailsResponseModel(OrganizationUserUserDetails organizationUser)
+        : base("organizationUserUserMiniDetails")
+    {
+        Id = organizationUser.Id;
+        UserId = organizationUser.UserId;
+        Type = organizationUser.Type;
+        Status = organizationUser.Status;
+        Name = organizationUser.Name;
+        Email = organizationUser.Email;
+    }
+
+    public Guid Id { get; }
+    public Guid? UserId { get; }
+    public OrganizationUserType Type { get; }
+    public OrganizationUserStatusType Status { get; }
+    public string? Name { get; }
+    public string Email { get; }
+}
+#nullable disable
+
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
-        bool twoFactorEnabled, string obj = "organizationUserUserDetails")
+        bool twoFactorEnabled, bool managedByOrganization, string obj = "organizationUserUserDetails")
         : base(organizationUser, obj)
     {
         if (organizationUser == null)
@@ -106,14 +134,19 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
+        ManagedByOrganization = managedByOrganization;
     }
-
 
     public string Name { get; set; }
     public string Email { get; set; }
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    /// <summary>
+    /// Indicates if the organization manages the user. If a user is "managed" by an organization,
+    /// the organization has greater control over their account, and some user actions are restricted.
+    /// </summary>
+    public bool ManagedByOrganization { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }
@@ -128,6 +161,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(orgUser));
         }
 
+        OrganizationUserId = orgUser.OrganizationUserId;
         Kdf = orgUser.Kdf;
         KdfIterations = orgUser.KdfIterations;
         KdfMemory = orgUser.KdfMemory;
@@ -136,6 +170,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
 
+    public Guid OrganizationUserId { get; set; }
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }

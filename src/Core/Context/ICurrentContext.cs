@@ -20,42 +20,39 @@ public interface ICurrentContext
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
+    string CountryName { get; set; }
     List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
-    ClientType ClientType { get; set; }
+    IdentityClientType IdentityClientType { get; set; }
     bool IsBot { get; set; }
     bool MaybeBot { get; set; }
     int? BotScore { get; set; }
     string ClientId { get; set; }
     Version ClientVersion { get; set; }
+    bool ClientVersionIsPrerelease { get; set; }
+
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 
     Task SetContextAsync(ClaimsPrincipal user);
 
-
     Task<bool> OrganizationUser(Guid orgId);
-    [Obsolete("Manager role is deprecated after Flexible Collections.")]
-    Task<bool> OrganizationManager(Guid orgId);
     Task<bool> OrganizationAdmin(Guid orgId);
     Task<bool> OrganizationOwner(Guid orgId);
     Task<bool> OrganizationCustom(Guid orgId);
     Task<bool> AccessEventLogs(Guid orgId);
     Task<bool> AccessImportExport(Guid orgId);
     Task<bool> AccessReports(Guid orgId);
+    [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> EditAnyCollection(Guid orgId);
+    [Obsolete("Deprecated. Use an authorization handler checking the specific permissions required instead.")]
     Task<bool> ViewAllCollections(Guid orgId);
-    [Obsolete("Pre-Flexible Collections logic.")]
-    Task<bool> EditAssignedCollections(Guid orgId);
-    [Obsolete("Pre-Flexible Collections logic.")]
-    Task<bool> DeleteAssignedCollections(Guid orgId);
-    [Obsolete("Pre-Flexible Collections logic.")]
-    Task<bool> ViewAssignedCollections(Guid orgId);
     Task<bool> ManageGroups(Guid orgId);
     Task<bool> ManagePolicies(Guid orgId);
     Task<bool> ManageSso(Guid orgId);
     Task<bool> ManageUsers(Guid orgId);
+    Task<bool> AccessMembersTab(Guid orgId);
     Task<bool> ManageScim(Guid orgId);
     Task<bool> ManageResetPassword(Guid orgId);
     Task<bool> ViewSubscription(Guid orgId);

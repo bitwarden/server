@@ -1,4 +1,5 @@
-﻿using Bit.Api.IntegrationTest.Factories;
+﻿using System.Diagnostics;
+using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
@@ -35,7 +36,8 @@ public class SecretsManagerOrganizationHelper
 
     public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets, bool organizationEnabled)
     {
-        (_organization, _owner) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: _ownerEmail, billingEmail: _ownerEmail);
+        (_organization, _owner!) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: _ownerEmail, billingEmail: _ownerEmail);
+        Debug.Assert(_owner is not null);
 
         if (useSecrets || !organizationEnabled)
         {

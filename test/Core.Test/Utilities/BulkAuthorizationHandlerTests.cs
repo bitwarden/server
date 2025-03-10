@@ -62,11 +62,12 @@ public class BulkAuthorizationHandlerTests
 
     private class TestBulkAuthorizationHandler : BulkAuthorizationHandler<TestOperationRequirement, TestResource>
     {
-        protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
             TestOperationRequirement requirement,
             ICollection<TestResource> resources)
         {
             context.Succeed(requirement);
+            return Task.CompletedTask;
         }
     }
 }

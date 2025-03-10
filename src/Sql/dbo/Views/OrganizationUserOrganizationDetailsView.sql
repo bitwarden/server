@@ -1,8 +1,9 @@
-﻿CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
+CREATE VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
     OU.[UserId],
     OU.[OrganizationId],
+    OU.[Id] OrganizationUserId,
     O.[Name],
     O.[Enabled],
     O.[PlanType],
@@ -45,9 +46,11 @@ SELECT
     O.[UsePasswordManager],
     O.[SmSeats],
     O.[SmServiceAccounts],
-    O.[LimitCollectionCreationDeletion],
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
-    O.[FlexibleCollections]
+    O.[UseRiskInsights],
+    O.[LimitItemDeletion]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

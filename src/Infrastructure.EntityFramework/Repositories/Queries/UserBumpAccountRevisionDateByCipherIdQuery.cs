@@ -26,13 +26,13 @@ public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
                     from cc in cc_g.DefaultIfEmpty()
 
                     join collectionUser in dbContext.CollectionUsers
-                        on new { ou.AccessAll, OrganizationUserId = ou.Id, cc.CollectionId } equals
-                           new { AccessAll = false, collectionUser.OrganizationUserId, collectionUser.CollectionId } into cu_g
+                        on new { OrganizationUserId = ou.Id, cc.CollectionId } equals
+                           new { collectionUser.OrganizationUserId, collectionUser.CollectionId } into cu_g
                     from cu in cu_g.DefaultIfEmpty()
 
                     join groupUser in dbContext.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { CollectionId = (Guid?)null, AccessAll = false, groupUser.OrganizationUserId } into gu_g
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                           new { CollectionId = (Guid?)null, groupUser.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
 
                     join grp in dbContext.Groups
@@ -40,16 +40,14 @@ public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
                     from g in g_g.DefaultIfEmpty()
 
                     join collectionGroup in dbContext.CollectionGroups
-                        on new { g.AccessAll, gu.GroupId, cc.CollectionId } equals
-                           new { AccessAll = false, collectionGroup.GroupId, collectionGroup.CollectionId } into cg_g
+                        on new { gu.GroupId, cc.CollectionId } equals
+                           new { collectionGroup.GroupId, collectionGroup.CollectionId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
 
                     where ou.OrganizationId == _organizationId &&
                             ou.Status == OrganizationUserStatusType.Confirmed &&
-                            (cu.CollectionId != null ||
-                            cg.CollectionId != null ||
-                            ou.AccessAll ||
-                            g.AccessAll)
+                            ((cu == null ? (Guid?)null : cu.CollectionId) != null ||
+                            (cg == null ? (Guid?)null : cg.CollectionId) != null)
                     select u;
         return query;
     }

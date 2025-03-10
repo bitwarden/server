@@ -1,5 +1,5 @@
 ﻿using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Auth.Models.Request.Webauthn;
+using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;

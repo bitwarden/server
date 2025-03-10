@@ -57,7 +57,7 @@ public class ProjectsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
 
@@ -84,7 +84,7 @@ public class ProjectsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.ClientType);
+        var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.IdentityClientType);
 
         // Creating a project means you have read & write permission.
         return new ProjectResponseModel(result, true, true);
@@ -124,7 +124,7 @@ public class ProjectsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.IdentityClientType, orgAdmin);
 
         var access = await _projectRepository.AccessToProjectAsync(id, userId, accessClient);
 

@@ -1,12 +1,14 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -53,9 +55,9 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key,
-        [ProviderUser(ProviderUserStatusType.Confirmed, ProviderUserType.ProviderAdmin)] ProviderUser providerUser,
-        SutProvider<ProviderService> sutProvider)
+    public async Task CompleteSetupAsync_Success(User user, Provider provider, string key, TaxInfo taxInfo,
+            [ProviderUser] ProviderUser providerUser,
+            SutProvider<ProviderService> sutProvider)
     {
         providerUser.ProviderId = provider.Id;
         providerUser.UserId = user.Id;
@@ -69,13 +71,27 @@ public class ProviderServiceTests
         var protector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         sutProvider.GetDependency<IDataProtectionProvider>().CreateProtector("ProviderServiceDataProtector")
             .Returns(protector);
+
+        var providerBillingService = sutProvider.GetDependency<IProviderBillingService>();
+
+        var customer = new Customer { Id = "customer_id" };
+        providerBillingService.SetupCustomer(provider, taxInfo).Returns(customer);
+
+        var subscription = new Subscription { Id = "subscription_id" };
+        providerBillingService.SetupSubscription(provider).Returns(subscription);
+
         sutProvider.Create();
 
         var token = protector.Protect($"ProviderSetupInvite {provider.Id} {user.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
-        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key);
+        await sutProvider.Sut.CompleteSetupAsync(provider, user.Id, token, key, taxInfo);
 
-        await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(provider);
+        await sutProvider.GetDependency<IProviderRepository>().Received().UpsertAsync(Arg.Is<Provider>(
+            p =>
+                p.GatewayCustomerId == customer.Id &&
+                p.GatewaySubscriptionId == subscription.Id &&
+                p.Status == ProviderStatusType.Billable));
+
         await sutProvider.GetDependency<IProviderUserRepository>().Received()
             .ReplaceAsync(Arg.Is<ProviderUser>(pu => pu.UserId == user.Id && pu.ProviderId == provider.Id && pu.Key == key));
     }
@@ -442,7 +458,7 @@ public class ProviderServiceTests
     public async Task AddOrganization_OrganizationHasSecretsManager_Throws(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
-        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.PlanType = PlanType.EnterpriseMonthly;
         organization.UseSecretsManager = true;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
@@ -459,7 +475,7 @@ public class ProviderServiceTests
     public async Task AddOrganization_Success(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
-        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.PlanType = PlanType.EnterpriseMonthly;
 
         var providerRepository = sutProvider.GetDependency<IProviderRepository>();
         providerRepository.GetByIdAsync(provider.Id).Returns(provider);
@@ -502,8 +518,8 @@ public class ProviderServiceTests
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        var expectedPlanType = PlanType.EnterpriseAnnually;
-        organization.PlanType = PlanType.EnterpriseAnnually;
+        var expectedPlanType = PlanType.EnterpriseMonthly;
+        organization.PlanType = PlanType.EnterpriseMonthly;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
         await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
@@ -532,12 +548,18 @@ public class ProviderServiceTests
         BackdateProviderCreationDate(provider, newCreationDate);
         provider.Type = ProviderType.Msp;
 
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.Plan = "Enterprise (Annually)";
+        organization.PlanType = PlanType.EnterpriseMonthly;
+        organization.Plan = "Enterprise (Monthly)";
 
-        var expectedPlanType = PlanType.EnterpriseAnnually2020;
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(organization.PlanType)
+            .Returns(StaticStore.GetPlan(organization.PlanType));
 
-        var expectedPlanId = "2020-enterprise-org-seat-annually";
+        var expectedPlanType = PlanType.EnterpriseMonthly2020;
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(expectedPlanType)
+            .Returns(StaticStore.GetPlan(expectedPlanType));
+
+        var expectedPlanId = "2020-enterprise-org-seat-monthly";
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
@@ -612,15 +634,15 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
+    [Theory, OrganizationCustomize, BitAutoData]
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
-        organizationSignup.Plan = PlanType.EnterpriseAnnually;
+        organizationSignup.Plan = PlanType.EnterpriseMonthly;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
             .Returns((organization, null as OrganizationUser, new Collection()));
 
         var providerOrganization =
@@ -631,18 +653,17 @@ public class ProviderServiceTests
             .Received().LogProviderOrganizationEventAsync(providerOrganization,
                 EventType.ProviderOrganization_Created);
         await sutProvider.GetDependency<IOrganizationService>()
-            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+            .Received().InviteUsersAsync(organization.Id, user.Id, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                 t => t.Count() == 1 &&
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
-                t.First().Item1.AccessAll &&
-                !t.First().Item1.Collections.Any() &&
+                t.First().Item1.Collections.Count() == 1 &&
                 t.First().Item2 == null));
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvalidPlanType_ThrowsBadRequestException(
+    [Theory, OrganizationCustomize, BitAutoData]
+    public async Task CreateOrganizationAsync_InvalidPlanType_ThrowsBadRequestException(
         Provider provider,
         OrganizationSignup organizationSignup,
         Organization organization,
@@ -650,8 +671,6 @@ public class ProviderServiceTests
         User user,
         SutProvider<ProviderService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
-
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 
@@ -670,8 +689,8 @@ public class ProviderServiceTests
         await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateAsync(default);
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = false), BitAutoData]
-    public async Task CreateOrganizationAsync_ConsolidatedBillingEnabled_InvokeSignupClientAsync(
+    [Theory, OrganizationCustomize, BitAutoData]
+    public async Task CreateOrganizationAsync_InvokeSignupClientAsync(
         Provider provider,
         OrganizationSignup organizationSignup,
         Organization organization,
@@ -679,8 +698,6 @@ public class ProviderServiceTests
         User user,
         SutProvider<ProviderService> sutProvider)
     {
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.EnableConsolidatedBilling).Returns(true);
-
         provider.Type = ProviderType.Msp;
         provider.Status = ProviderStatusType.Billable;
 
@@ -709,27 +726,27 @@ public class ProviderServiceTests
             .InviteUsersAsync(
                 organization.Id,
                 user.Id,
+                systemUser: null,
                 Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                     t =>
                         t.Count() == 1 &&
                         t.First().Item1.Emails.Count() == 1 &&
                         t.First().Item1.Emails.First() == clientOwnerEmail &&
                         t.First().Item1.Type == OrganizationUserType.Owner &&
-                        t.First().Item1.AccessAll &&
-                        !t.First().Item1.Collections.Any() &&
+                        t.First().Item1.Collections.Count() == 1 &&
                         t.First().Item2 == null));
     }
 
-    [Theory, OrganizationCustomize(FlexibleCollections = true), BitAutoData]
-    public async Task CreateOrganizationAsync_WithFlexibleCollections_SetsAccessAllToFalse
+    [Theory, OrganizationCustomize, BitAutoData]
+    public async Task CreateOrganizationAsync_SetsAccessAllToFalse
         (Provider provider, OrganizationSignup organizationSignup, Organization organization, string clientOwnerEmail,
             User user, SutProvider<ProviderService> sutProvider, Collection defaultCollection)
     {
-        organizationSignup.Plan = PlanType.EnterpriseAnnually;
+        organizationSignup.Plan = PlanType.EnterpriseMonthly;
 
         sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
-        sutProvider.GetDependency<IOrganizationService>().SignUpAsync(organizationSignup, true)
+        sutProvider.GetDependency<IOrganizationService>().SignupClientAsync(organizationSignup)
             .Returns((organization, null as OrganizationUser, defaultCollection));
 
         var providerOrganization =
@@ -740,12 +757,11 @@ public class ProviderServiceTests
             .Received().LogProviderOrganizationEventAsync(providerOrganization,
                 EventType.ProviderOrganization_Created);
         await sutProvider.GetDependency<IOrganizationService>()
-            .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
+            .Received().InviteUsersAsync(organization.Id, user.Id, systemUser: null, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                 t => t.Count() == 1 &&
                 t.First().Item1.Emails.Count() == 1 &&
                 t.First().Item1.Emails.First() == clientOwnerEmail &&
                 t.First().Item1.Type == OrganizationUserType.Owner &&
-                t.First().Item1.AccessAll == false &&
                 t.First().Item1.Collections.Single().Id == defaultCollection.Id &&
                 !t.First().Item1.Collections.Single().HidePasswords &&
                 !t.First().Item1.Collections.Single().ReadOnly &&

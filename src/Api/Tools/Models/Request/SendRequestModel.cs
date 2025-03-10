@@ -110,6 +110,19 @@ public class SendRequestModel
                     "and try again.");
             }
         }
+        if (ExpirationDate.HasValue)
+        {
+            if (ExpirationDate.Value <= nowPlus1Minute)
+            {
+                throw new BadRequestException("You cannot have a Send with an expiration date in the past. " +
+                    "Adjust the expiration date and try again.");
+            }
+            if (ExpirationDate.Value > DeletionDate.Value)
+            {
+                throw new BadRequestException("You cannot have a Send with an expiration date greater than the deletion date. " +
+                    "Adjust the expiration date and try again.");
+            }
+        }
     }
 
     private Send ToSendBase(Send existingSend, ISendService sendService)

@@ -44,7 +44,7 @@ _These dependencies are free to use._
 
 ### Linux & macOS
 
-```
+```sh
 curl -s -L -o bitwarden.sh \
     "https://func.bitwarden.com/api/dl/?app=self-host&platform=linux" \
     && chmod +x bitwarden.sh
@@ -54,7 +54,7 @@ curl -s -L -o bitwarden.sh \
 
 ### Windows
 
-```
+```cmd
 Invoke-RestMethod -OutFile bitwarden.ps1 `
     -Uri "https://func.bitwarden.com/api/dl/?app=self-host&platform=windows"
 .\bitwarden.ps1 -install

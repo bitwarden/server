@@ -20,4 +20,5 @@ public interface IBaseServiceUriSettings
     public string InternalVault { get; set; }
     public string InternalSso { get; set; }
     public string InternalScim { get; set; }
+    public string InternalBilling { get; set; }
 }

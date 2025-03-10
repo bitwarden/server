@@ -1,5 +1,7 @@
 ﻿namespace Bit.Core.Entities;
 
+#nullable enable
+
 public interface IStorable
 {
     long? Storage { get; set; }

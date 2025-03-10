@@ -1,8 +1,10 @@
 ﻿using System.Collections.Immutable;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Models.StaticStore.Plans;
 
 namespace Bit.Core.Utilities;
 
@@ -136,38 +138,24 @@ public static class StaticStore
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
+    [Obsolete("Use PricingClient.ListPlans to retrieve all plans.")]
     public static IEnumerable<Plan> Plans { get; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
             new SponsoredPlan
             {
                 PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
-                SponsoredProductType = ProductType.Families,
-                SponsoringProductType = ProductType.Enterprise,
+                SponsoredProductTierType = ProductTierType.Families,
+                SponsoringProductTierType = ProductTierType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).Product == ProductType.Enterprise,
+                    org.PlanType.GetProductTier() == ProductTierType.Enterprise,
             }
         };
 
+    [Obsolete("Use PricingClient.GetPlan to retrieve a plan.")]
     public static Plan GetPlan(PlanType planType) => Plans.SingleOrDefault(p => p.Type == planType);
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
-
-    /// <summary>
-    /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
-    /// matches either the <see cref="Plan.PasswordManagerPlanFeatures.StripeStoragePlanId"/> or <see cref="Plan.SecretsManagerPlanFeatures.StripeServiceAccountPlanId"/>
-    /// in any <see cref="Plans"/>.
-    /// </summary>
-    /// <param name="stripePlanId"></param>
-    /// <returns>
-    /// True if the stripePlanId is a addon product, false otherwise
-    /// </returns>
-    public static bool IsAddonSubscriptionItem(string stripePlanId)
-    {
-        return Plans.Any(p =>
-                p.PasswordManager.StripeStoragePlanId == stripePlanId ||
-                (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId));
-    }
 }

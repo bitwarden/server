@@ -1,5 +1,7 @@
 ﻿using Dapper;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public abstract class BaseRepository

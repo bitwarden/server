@@ -20,7 +20,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     {
     }
 
-    public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
+    public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(
+        List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
     {
         await using var scope = ServiceScopeFactory.CreateAsyncScope();
         var dbContext = GetDatabaseContext(scope);
@@ -39,6 +40,13 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                         await dbContext.AddAsync(entity);
                         break;
                     }
+                case Core.SecretsManager.Entities.UserSecretAccessPolicy accessPolicy:
+                    {
+                        var entity =
+                            Mapper.Map<UserSecretAccessPolicy>(accessPolicy);
+                        await dbContext.AddAsync(entity);
+                        break;
+                    }
                 case Core.SecretsManager.Entities.UserServiceAccountAccessPolicy accessPolicy:
                     {
                         var entity =
@@ -52,6 +60,12 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                         await dbContext.AddAsync(entity);
                         break;
                     }
+                case Core.SecretsManager.Entities.GroupSecretAccessPolicy accessPolicy:
+                    {
+                        var entity = Mapper.Map<GroupSecretAccessPolicy>(accessPolicy);
+                        await dbContext.AddAsync(entity);
+                        break;
+                    }
                 case Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy accessPolicy:
                     {
                         var entity = Mapper.Map<GroupServiceAccountAccessPolicy>(accessPolicy);
@@ -61,6 +75,13 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 case Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy accessPolicy:
                     {
                         var entity = Mapper.Map<ServiceAccountProjectAccessPolicy>(accessPolicy);
+                        await dbContext.AddAsync(entity);
+                        serviceAccountIds.Add(entity.ServiceAccountId!.Value);
+                        break;
+                    }
+                case Core.SecretsManager.Entities.ServiceAccountSecretAccessPolicy accessPolicy:
+                    {
+                        var entity = Mapper.Map<ServiceAccountSecretAccessPolicy>(accessPolicy);
                         await dbContext.AddAsync(entity);
                         serviceAccountIds.Add(entity.ServiceAccountId!.Value);
                         break;
@@ -395,6 +416,42 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         await transaction.CommitAsync();
     }
 
+    public async Task<SecretAccessPolicies?> GetSecretAccessPoliciesAsync(
+        Guid secretId,
+        Guid userId)
+    {
+        await using var scope = ServiceScopeFactory.CreateAsyncScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entities = await dbContext.AccessPolicies.Where(ap =>
+                ((UserSecretAccessPolicy)ap).GrantedSecretId == secretId ||
+                ((GroupSecretAccessPolicy)ap).GrantedSecretId == secretId ||
+                ((ServiceAccountSecretAccessPolicy)ap).GrantedSecretId == secretId)
+            .Include(ap => ((UserSecretAccessPolicy)ap).OrganizationUser.User)
+            .Include(ap => ((GroupSecretAccessPolicy)ap).Group)
+            .Include(ap => ((ServiceAccountSecretAccessPolicy)ap).ServiceAccount)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupSecretAccessPolicy &&
+                                     ((GroupSecretAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.UserId == userId)
+            })
+            .ToListAsync();
+
+        if (entities.Count == 0)
+        {
+            return null;
+        }
+
+        var organizationId = await dbContext.Secret.Where(s => s.Id == secretId)
+            .Select(s => s.OrganizationId)
+            .SingleAsync();
+
+        return new SecretAccessPolicies(secretId, organizationId,
+            entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup)).ToList());
+    }
+
     private static async Task UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
         List<BaseAccessPolicy> policies, IReadOnlyCollection<AccessPolicy> userPolicyEntities,
         IReadOnlyCollection<AccessPolicy> groupPolicyEntities)
@@ -466,13 +523,17 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         baseAccessPolicyEntity switch
         {
             UserProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserProjectAccessPolicy>(ap),
-            GroupProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap),
-            ServiceAccountProjectAccessPolicy ap => Mapper
-                .Map<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy>(ap),
+            UserSecretAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserSecretAccessPolicy>(ap),
             UserServiceAccountAccessPolicy ap =>
                 Mapper.Map<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy>(ap),
+            GroupProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap),
+            GroupSecretAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupSecretAccessPolicy>(ap),
             GroupServiceAccountAccessPolicy ap => Mapper
                 .Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap),
+            ServiceAccountProjectAccessPolicy ap => Mapper
+                .Map<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy>(ap),
+            ServiceAccountSecretAccessPolicy ap => Mapper
+                .Map<Core.SecretsManager.Entities.ServiceAccountSecretAccessPolicy>(ap),
             _ => throw new ArgumentException("Unsupported access policy type")
         };
 
@@ -482,26 +543,38 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         {
             Core.SecretsManager.Entities.UserProjectAccessPolicy accessPolicy => Mapper.Map<UserProjectAccessPolicy>(
                 accessPolicy),
+            Core.SecretsManager.Entities.UserSecretAccessPolicy accessPolicy => Mapper.Map<UserSecretAccessPolicy>(
+                accessPolicy),
             Core.SecretsManager.Entities.UserServiceAccountAccessPolicy accessPolicy => Mapper
                 .Map<UserServiceAccountAccessPolicy>(accessPolicy),
             Core.SecretsManager.Entities.GroupProjectAccessPolicy accessPolicy => Mapper.Map<GroupProjectAccessPolicy>(
+                accessPolicy),
+            Core.SecretsManager.Entities.GroupSecretAccessPolicy accessPolicy => Mapper.Map<GroupSecretAccessPolicy>(
                 accessPolicy),
             Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy accessPolicy => Mapper
                 .Map<GroupServiceAccountAccessPolicy>(accessPolicy),
             Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy accessPolicy => Mapper
                 .Map<ServiceAccountProjectAccessPolicy>(accessPolicy),
+            Core.SecretsManager.Entities.ServiceAccountSecretAccessPolicy accessPolicy => Mapper
+                .Map<ServiceAccountSecretAccessPolicy>(accessPolicy),
             _ => throw new ArgumentException("Unsupported access policy type")
         };
     }
 
     private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(
-      BaseAccessPolicy baseAccessPolicyEntity, bool currentUserInGroup)
+        BaseAccessPolicy baseAccessPolicyEntity, bool currentUserInGroup)
     {
         switch (baseAccessPolicyEntity)
         {
             case GroupProjectAccessPolicy ap:
                 {
                     var mapped = Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap);
+                    mapped.CurrentUserInGroup = currentUserInGroup;
+                    return mapped;
+                }
+            case GroupSecretAccessPolicy ap:
+                {
+                    var mapped = Mapper.Map<Core.SecretsManager.Entities.GroupSecretAccessPolicy>(ap);
                     mapped.CurrentUserInGroup = currentUserInGroup;
                     return mapped;
                 }

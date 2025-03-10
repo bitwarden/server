@@ -18,12 +18,12 @@ public class ProjectServiceAccountsAccessPoliciesResponseModel : ResponseModel
         }
 
         ServiceAccountAccessPolicies = projectServiceAccountsAccessPolicies.ServiceAccountAccessPolicies
-            .Select(x => new ServiceAccountProjectAccessPolicyResponseModel(x)).ToList();
+            .Select(x => new ServiceAccountAccessPolicyResponseModel(x)).ToList();
     }
 
     public ProjectServiceAccountsAccessPoliciesResponseModel() : base(_objectName)
     {
     }
 
-    public List<ServiceAccountProjectAccessPolicyResponseModel> ServiceAccountAccessPolicies { get; set; } = [];
+    public List<ServiceAccountAccessPolicyResponseModel> ServiceAccountAccessPolicies { get; set; } = [];
 }

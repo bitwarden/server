@@ -17,30 +17,27 @@ namespace Bit.Scim.Controllers.v2;
 [ExceptionHandlerFilter]
 public class UsersController : Controller
 {
-    private readonly IUserService _userService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IGetUsersListQuery _getUsersListQuery;
-    private readonly IDeleteOrganizationUserCommand _deleteOrganizationUserCommand;
+    private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
     private readonly IPostUserCommand _postUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
-        IUserService userService,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IGetUsersListQuery getUsersListQuery,
-        IDeleteOrganizationUserCommand deleteOrganizationUserCommand,
+        IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
         ILogger<UsersController> logger)
     {
-        _userService = userService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
         _getUsersListQuery = getUsersListQuery;
-        _deleteOrganizationUserCommand = deleteOrganizationUserCommand;
+        _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
         _postUserCommand = postUserCommand;
         _logger = logger;
@@ -60,17 +57,15 @@ public class UsersController : Controller
     [HttpGet("")]
     public async Task<IActionResult> Get(
         Guid organizationId,
-        [FromQuery] string filter,
-        [FromQuery] int? count,
-        [FromQuery] int? startIndex)
+        [FromQuery] GetUsersQueryParamModel model)
     {
-        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, filter, count, startIndex);
+        var usersListQueryResult = await _getUsersListQuery.GetUsersListAsync(organizationId, model);
         var scimListResponseModel = new ScimListResponseModel<ScimUserResponseModel>
         {
             Resources = usersListQueryResult.userList.Select(u => new ScimUserResponseModel(u)).ToList(),
-            ItemsPerPage = count.GetValueOrDefault(usersListQueryResult.userList.Count()),
+            ItemsPerPage = model.Count,
             TotalResults = usersListQueryResult.totalResults,
-            StartIndex = startIndex.GetValueOrDefault(1),
+            StartIndex = model.StartIndex,
         };
         return Ok(scimListResponseModel);
     }
@@ -98,7 +93,7 @@ public class UsersController : Controller
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
@@ -120,7 +115,7 @@ public class UsersController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _deleteOrganizationUserCommand.DeleteUserAsync(organizationId, id, EventSystemUser.SCIM);
+        await _removeOrganizationUserCommand.RemoveUserAsync(organizationId, id, EventSystemUser.SCIM);
         return new NoContentResult();
     }
 }

@@ -11,12 +11,14 @@
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
+    var canPromoteProviderServiceUser = AccessControlService.UserHasPermission(Permission.Tools_PromoteProviderServiceUser);
     var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
-    var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
     var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
+    var canProcessStripeEvents = AccessControlService.UserHasPermission(Permission.Tools_ProcessStripeEvents);
+    var canMigrateProviders = AccessControlService.UserHasPermission(Permission.Tools_MigrateProviders);
 
-    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
-                        canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
+    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin || canPromoteProviderServiceUser ||
+                        canGenerateLicense || canManageStripeSubscriptions;
 }
 
 <!DOCTYPE html>
@@ -27,17 +29,7 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>@ViewData["Title"] - Bitwarden Admin Portal</title>
 
-    <link rel="stylesheet" href="~/css/webfonts.css" />
-    <environment include="Development">
-        <link rel="stylesheet" href="~/lib/font-awesome/css/font-awesome.css" />
-        <link rel="stylesheet" href="~/css/site.css" />
-        <link rel="stylesheet" href="~/lib/toastr/toastr.css" />
-    </environment>
-    <environment exclude="Development">
-        <link rel="stylesheet" href="~/lib/font-awesome/css/font-awesome.min.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-        <link rel="stylesheet" href="~/lib/toastr/toastr.min.css" />
-    </environment>
+    <link rel="stylesheet" href="~/assets/site.css" asp-append-version="true" />
 </head>
 <body>
     <nav class="navbar navbar-expand-md navbar-dark bg-dark mb-4">
@@ -45,12 +37,12 @@
             <a class="navbar-brand" asp-controller="Home" asp-action="Index">
                 <i class="fa fa-lg fa-fw fa-shield"></i> Admin
             </a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse"
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
                     aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarCollapse">
-                <ul class="navbar-nav mr-auto">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
                     @if (SignInManager.IsSignedIn(User))
                     {
                         @if (canViewUsers)
@@ -77,10 +69,10 @@
                             {
                                 <li class="nav-item dropdown" active-controller="tools">
                                     <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
-                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                         Tools
                                     </a>
-                                    <div class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                    <ul class="dropdown-menu" aria-labelledby="toolsDropdown">
                                         @if (canChargeBraintree)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
@@ -96,7 +88,13 @@
                                         @if (canPromoteAdmin)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
-                                                Promote Admin
+                                                Promote Organization Admin
+                                            </a>
+                                        }
+                                        @if (canPromoteProviderServiceUser)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteProviderServiceUser">
+                                                Promote Provider Service User
                                             </a>
                                         }
                                         @if (canGenerateLicense)
@@ -105,19 +103,25 @@
                                                 Generate License
                                             </a>
                                         }
-                                        @if (canManageTaxRates)
-                                        {
-                                            <a class="dropdown-item" asp-controller="Tools" asp-action="TaxRate">
-                                                Manage Tax Rates
-                                            </a>
-                                        }
                                         @if (canManageStripeSubscriptions)
                                         {
                                             <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
                                                 Manage Stripe Subscriptions
                                             </a>
                                         }
-                                    </div>
+                                         @if (canProcessStripeEvents)
+                                        {
+                                            <a class="dropdown-item" asp-controller="ProcessStripeEvents" asp-action="Index">
+                                                Process Stripe Events
+                                            </a>
+                                        }
+                                        @if (canMigrateProviders)
+                                        {
+                                            <a class="dropdown-item" asp-controller="MigrateProviders" asp-action="index">
+                                                Migrate Providers
+                                            </a>
+                                        }
+                                    </ul>
                                 </li>
                             }
                         }
@@ -153,18 +157,7 @@
         &copy; @DateTime.Now.Year, Bitwarden Inc.
     </footer>
 
-    <environment include="Development">
-        <script src="~/lib/jquery/jquery.js"></script>
-        <script src="~/lib/popper/popper.js"></script>
-        <script src="~/lib/bootstrap/js/bootstrap.js"></script>
-        <script src="~/lib/toastr/toastr.min.js"></script>
-    </environment>
-    <environment exclude="Development">
-        <script src="~/lib/jquery/jquery.min.js" asp-append-version="true"></script>
-        <script src="~/lib/popper/popper.min.js" asp-append-version="true"></script>
-        <script src="~/lib/bootstrap/js/bootstrap.min.js" asp-append-version="true"></script>
-        <script src="~/lib/toastr/toastr.min.js" asp-append-version="true"></script>
-    </environment>
+    <script src="~/assets/site.js" asp-append-version="true"></script>
 
     @if (TempData["Error"] != null)
     {

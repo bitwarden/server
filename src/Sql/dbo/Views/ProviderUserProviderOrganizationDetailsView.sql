@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -32,9 +32,12 @@ SELECT
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
     O.[PlanType],
-    O.[LimitCollectionCreationDeletion],
+    O.[LimitCollectionCreation],
+    O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
-    O.[FlexibleCollections]
+    O.[UseRiskInsights],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

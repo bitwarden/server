@@ -2,6 +2,8 @@
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 
+#nullable enable
+
 namespace Bit.Core.Repositories.TableStorage;
 
 public class InstallationDeviceRepository : IInstallationDeviceRepository
@@ -23,9 +25,9 @@ public class InstallationDeviceRepository : IInstallationDeviceRepository
         await _tableClient.UpsertEntityAsync(entity);
     }
 
-    public async Task UpsertManyAsync(IList<InstallationDeviceEntity> entities)
+    public async Task UpsertManyAsync(IList<InstallationDeviceEntity>? entities)
     {
-        if (!entities?.Any() ?? true)
+        if (entities is null || !entities.Any())
         {
             return;
         }

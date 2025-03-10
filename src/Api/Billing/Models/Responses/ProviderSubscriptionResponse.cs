@@ -1,5 +1,7 @@
-﻿using Bit.Core.Billing.Models;
-using Bit.Core.Utilities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models;
 using Stripe;
 
 namespace Bit.Api.Billing.Models.Responses;
@@ -8,23 +10,34 @@ public record ProviderSubscriptionResponse(
     string Status,
     DateTime CurrentPeriodEndDate,
     decimal? DiscountPercentage,
-    IEnumerable<ProviderPlanDTO> Plans)
+    string CollectionMethod,
+    IEnumerable<ProviderPlanResponse> Plans,
+    decimal AccountCredit,
+    TaxInformation TaxInformation,
+    DateTime? CancelAt,
+    SubscriptionSuspension Suspension,
+    ProviderType ProviderType)
 {
     private const string _annualCadence = "Annual";
     private const string _monthlyCadence = "Monthly";
 
     public static ProviderSubscriptionResponse From(
-        IEnumerable<ConfiguredProviderPlanDTO> providerPlans,
-        Subscription subscription)
+        Subscription subscription,
+        ICollection<ConfiguredProviderPlan> providerPlans,
+        TaxInformation taxInformation,
+        SubscriptionSuspension subscriptionSuspension,
+        Provider provider)
     {
-        var providerPlansDTO = providerPlans
+        var providerPlanResponses = providerPlans
             .Select(providerPlan =>
             {
-                var plan = StaticStore.GetPlan(providerPlan.PlanType);
-                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.SeatPrice;
+                var plan = providerPlan.Plan;
+                var cost = (providerPlan.SeatMinimum + providerPlan.PurchasedSeats) * plan.PasswordManager.ProviderPortalSeatPrice;
                 var cadence = plan.IsAnnual ? _annualCadence : _monthlyCadence;
-                return new ProviderPlanDTO(
+                return new ProviderPlanResponse(
                     plan.Name,
+                    plan.Type,
+                    plan.ProductTier,
                     providerPlan.SeatMinimum,
                     providerPlan.PurchasedSeats,
                     providerPlan.AssignedSeats,
@@ -32,16 +45,26 @@ public record ProviderSubscriptionResponse(
                     cadence);
             });
 
+        var accountCredit = Convert.ToDecimal(subscription.Customer?.Balance) * -1 / 100;
+
         return new ProviderSubscriptionResponse(
             subscription.Status,
             subscription.CurrentPeriodEnd,
             subscription.Customer?.Discount?.Coupon?.PercentOff,
-            providerPlansDTO);
+            subscription.CollectionMethod,
+            providerPlanResponses,
+            accountCredit,
+            taxInformation,
+            subscription.CancelAt,
+            subscriptionSuspension,
+            provider.Type);
     }
 }
 
-public record ProviderPlanDTO(
+public record ProviderPlanResponse(
     string PlanName,
+    PlanType Type,
+    ProductTierType ProductTier,
     int SeatMinimum,
     int PurchasedSeats,
     int AssignedSeats,

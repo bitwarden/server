@@ -34,14 +34,13 @@ BEGIN
 	    END) AS [Assigned],
 	    CASE
 	        WHEN
-	            -- No active user or group has manage rights
+	            -- No user or group has manage rights
 	            NOT EXISTS(
 	                SELECT 1
 	                FROM [dbo].[CollectionUser] CU2
 	                JOIN [dbo].[OrganizationUser] OU2 ON CU2.[OrganizationUserId] = OU2.[Id]
                     WHERE
                         CU2.[CollectionId] = C.[Id] AND
-                        OU2.[Status] = 2 AND
                         CU2.[Manage] = 1
 	            )
 	            AND NOT EXISTS (

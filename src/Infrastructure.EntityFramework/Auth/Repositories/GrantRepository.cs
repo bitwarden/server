@@ -6,6 +6,8 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
@@ -36,7 +38,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
-    public async Task<IGrant> GetByKeyAsync(string key)
+    public async Task<IGrant?> GetByKeyAsync(string key)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -92,4 +94,3 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 }
-

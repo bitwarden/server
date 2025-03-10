@@ -7,10 +7,12 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Microsoft.Extensions.Logging;
 
 #nullable enable
 
@@ -26,6 +28,9 @@ public class AuthRequestService : IAuthRequestService
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IMailService _mailService;
+    private readonly IFeatureService _featureService;
+    private readonly ILogger<AuthRequestService> _logger;
 
     public AuthRequestService(
         IAuthRequestRepository authRequestRepository,
@@ -35,7 +40,10 @@ public class AuthRequestService : IAuthRequestService
         ICurrentContext currentContext,
         IPushNotificationService pushNotificationService,
         IEventService eventService,
-        IOrganizationUserRepository organizationRepository)
+        IOrganizationUserRepository organizationRepository,
+        IMailService mailService,
+        IFeatureService featureService,
+        ILogger<AuthRequestService> logger)
     {
         _authRequestRepository = authRequestRepository;
         _userRepository = userRepository;
@@ -45,6 +53,9 @@ public class AuthRequestService : IAuthRequestService
         _pushNotificationService = pushNotificationService;
         _eventService = eventService;
         _organizationUserRepository = organizationRepository;
+        _mailService = mailService;
+        _featureService = featureService;
+        _logger = logger;
     }
 
     public async Task<AuthRequest?> GetAuthRequestAsync(Guid id, Guid userId)
@@ -122,6 +133,7 @@ public class AuthRequestService : IAuthRequestService
                 throw new BadRequestException("User does not belong to any organizations.");
             }
 
+            Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
             // A user event will automatically create logs for each organization/provider this user belongs to.
             await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
 
@@ -130,12 +142,15 @@ public class AuthRequestService : IAuthRequestService
             {
                 var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
                 firstAuthRequest ??= createdAuthRequest;
+
+                await NotifyAdminsOfDeviceApprovalRequestAsync(organizationUser, user);
             }
 
             // I know this won't be null because I have already validated that at least one organization exists
             return firstAuthRequest!;
         }
 
+        Debug.Assert(user is not null, "user should have been validated to be non-null and thrown if it's not.");
         var authRequest = await CreateAuthRequestAsync(model, user, organizationId: null);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
         return authRequest;
@@ -149,6 +164,7 @@ public class AuthRequestService : IAuthRequestService
             RequestDeviceIdentifier = model.DeviceIdentifier,
             RequestDeviceType = _currentContext.DeviceType.Value,
             RequestIpAddress = _currentContext.IpAddress,
+            RequestCountryName = _currentContext.CountryName,
             AccessCode = model.AccessCode,
             PublicKey = model.PublicKey,
             UserId = user.Id,
@@ -161,12 +177,7 @@ public class AuthRequestService : IAuthRequestService
 
     public async Task<AuthRequest> UpdateAuthRequestAsync(Guid authRequestId, Guid currentUserId, AuthRequestUpdateRequestModel model)
     {
-        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId);
-
-        if (authRequest == null)
-        {
-            throw new NotFoundException();
-        }
+        var authRequest = await _authRequestRepository.GetByIdAsync(authRequestId) ?? throw new NotFoundException();
 
         // Once Approval/Disapproval has been set, this AuthRequest should not be updated again.
         if (authRequest.Approved is not null)
@@ -272,5 +283,44 @@ public class AuthRequestService : IAuthRequestService
     private static bool IsDateExpired(DateTime savedDate, TimeSpan allowedLifetime)
     {
         return DateTime.UtcNow > savedDate.Add(allowedLifetime);
+    }
+
+    private async Task NotifyAdminsOfDeviceApprovalRequestAsync(OrganizationUser organizationUser, User user)
+    {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.DeviceApprovalRequestAdminNotifications))
+        {
+            _logger.LogWarning("Skipped sending device approval notification to admins - feature flag disabled");
+            return;
+        }
+
+        var adminEmails = await GetAdminAndAccountRecoveryEmailsAsync(organizationUser.OrganizationId);
+
+        await _mailService.SendDeviceApprovalRequestedNotificationEmailAsync(
+            adminEmails,
+            organizationUser.OrganizationId,
+            user.Email,
+            user.Name);
+    }
+
+    /// <summary>
+    /// Returns a list of emails for admins and custom users with the ManageResetPassword permission.
+    /// </summary>
+    /// <param name="organizationId">The organization to search within</param>
+    private async Task<List<string>> GetAdminAndAccountRecoveryEmailsAsync(Guid organizationId)
+    {
+        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(
+            organizationId,
+            OrganizationUserType.Admin);
+
+        var customUsers = await _organizationUserRepository.GetManyDetailsByRoleAsync(
+            organizationId,
+            OrganizationUserType.Custom);
+
+        return admins.Select(a => a.Email)
+            .Concat(customUsers
+                .Where(a => a.GetPermissions().ManageResetPassword)
+                .Select(a => a.Email))
+            .Distinct()
+            .ToList();
     }
 }

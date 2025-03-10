@@ -6,6 +6,8 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class OrganizationConnectionRepository : Repository<OrganizationConnection, Guid>, IOrganizationConnectionRepository
@@ -14,7 +16,7 @@ public class OrganizationConnectionRepository : Repository<OrganizationConnectio
         : base(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
 
-    public async Task<OrganizationConnection> GetByIdOrganizationIdAsync(Guid id, Guid organizationId)
+    public async Task<OrganizationConnection?> GetByIdOrganizationIdAsync(Guid id, Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {

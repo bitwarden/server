@@ -19,7 +19,6 @@ public class GroupResponseModel : GroupBaseModel, IResponseModel
 
         Id = group.Id;
         Name = group.Name;
-        AccessAll = group.AccessAll;
         ExternalId = group.ExternalId;
         Collections = collections?.Select(c => new AssociationWithPermissionsResponseModel(c));
     }

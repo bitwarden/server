@@ -2,6 +2,8 @@
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -14,7 +16,10 @@ public class ProfileOrganizationResponseModel : ResponseModel
 {
     public ProfileOrganizationResponseModel(string str) : base(str) { }
 
-    public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
+    public ProfileOrganizationResponseModel(
+        OrganizationUserOrganizationDetails organization,
+        IEnumerable<Guid> organizationIdsManagingUser)
+        : this("profileOrganization")
     {
         Id = organization.OrganizationId;
         Name = organization.Name;
@@ -33,7 +38,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = StaticStore.GetPlan(organization.PlanType).Product == ProductType.Enterprise;
+        UseActivateAutofillPolicy = organization.PlanType.GetProductTier() == ProductTierType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -48,6 +53,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
         ResetPasswordEnrolled = organization.ResetPasswordKey != null;
         UserId = organization.UserId;
+        OrganizationUserId = organization.OrganizationUserId;
         ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
@@ -55,54 +61,23 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
-        PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
+        ProductTierType = organization.PlanType.GetProductTier();
         FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
         AccessSecretsManager = organization.AccessSecretsManager;
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitCollectionCreation = organization.LimitCollectionCreation;
+        LimitCollectionDeletion = organization.LimitCollectionDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
-        FlexibleCollections = organization.FlexibleCollections;
+        UserIsManagedByOrganization = organizationIdsManagingUser.Contains(organization.OrganizationId);
+        UseRiskInsights = organization.UseRiskInsights;
 
         if (organization.SsoConfig != null)
         {
             var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
             KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
-        }
-
-        if (FlexibleCollections)
-        {
-            // Downgrade Custom users with no other permissions than 'Edit/Delete Assigned Collections' to User
-            if (Type == OrganizationUserType.Custom && Permissions is not null)
-            {
-                if ((Permissions.EditAssignedCollections || Permissions.DeleteAssignedCollections) &&
-                    Permissions is
-                    {
-                        AccessEventLogs: false,
-                        AccessImportExport: false,
-                        AccessReports: false,
-                        CreateNewCollections: false,
-                        EditAnyCollection: false,
-                        DeleteAnyCollection: false,
-                        ManageGroups: false,
-                        ManagePolicies: false,
-                        ManageSso: false,
-                        ManageUsers: false,
-                        ManageResetPassword: false,
-                        ManageScim: false
-                    })
-                {
-                    organization.Type = OrganizationUserType.User;
-                }
-            }
-
-            // Set 'Edit/Delete Assigned Collections' custom permissions to false
-            if (Permissions is not null)
-            {
-                Permissions.EditAssignedCollections = false;
-                Permissions.DeleteAssignedCollections = false;
-            }
         }
     }
 
@@ -138,6 +113,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public Guid? UserId { get; set; }
+    public Guid OrganizationUserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
@@ -145,14 +121,27 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public bool FamilySponsorshipAvailable { get; set; }
-    public ProductType PlanProductType { get; set; }
+    public ProductTierType ProductTierType { get; set; }
     public bool KeyConnectorEnabled { get; set; }
     public string KeyConnectorUrl { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreation { get; set; }
+    public bool LimitCollectionDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
-    public bool FlexibleCollections { get; set; }
+    /// <summary>
+    /// Indicates if the organization manages the user.
+    /// </summary>
+    /// <remarks>
+    /// An organization manages a user if the user's email domain is verified by the organization and the user is a member of it.
+    /// The organization must be enabled and able to have verified domains.
+    /// </remarks>
+    /// <returns>
+    /// False if the Account Deprovisioning feature flag is disabled.
+    /// </returns>
+    public bool UserIsManagedByOrganization { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

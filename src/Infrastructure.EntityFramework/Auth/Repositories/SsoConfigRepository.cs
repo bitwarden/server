@@ -4,6 +4,8 @@ using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class SsoConfigRepository : Repository<Core.Auth.Entities.SsoConfig, SsoConfig, long>, ISsoConfigRepository
@@ -12,7 +14,7 @@ public class SsoConfigRepository : Repository<Core.Auth.Entities.SsoConfig, SsoC
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.SsoConfigs)
     { }
 
-    public async Task<Core.Auth.Entities.SsoConfig> GetByOrganizationIdAsync(Guid organizationId)
+    public async Task<Core.Auth.Entities.SsoConfig?> GetByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -22,7 +24,7 @@ public class SsoConfigRepository : Repository<Core.Auth.Entities.SsoConfig, SsoC
         }
     }
 
-    public async Task<Core.Auth.Entities.SsoConfig> GetByIdentifierAsync(string identifier)
+    public async Task<Core.Auth.Entities.SsoConfig?> GetByIdentifierAsync(string identifier)
     {
 
         using (var scope = ServiceScopeFactory.CreateScope())

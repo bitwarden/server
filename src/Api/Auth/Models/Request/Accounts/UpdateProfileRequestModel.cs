@@ -8,13 +8,12 @@ public class UpdateProfileRequestModel
     [StringLength(50)]
     public string Name { get; set; }
     [StringLength(50)]
-    [Obsolete("Changes will be made via the 'password' endpoint going forward.")]
+    [Obsolete("This field is ignored. Changes are made via the 'password' endpoint.")]
     public string MasterPasswordHint { get; set; }
 
     public User ToUser(User existingUser)
     {
         existingUser.Name = Name;
-        existingUser.MasterPasswordHint = string.IsNullOrWhiteSpace(MasterPasswordHint) ? null : MasterPasswordHint;
         return existingUser;
     }
 }

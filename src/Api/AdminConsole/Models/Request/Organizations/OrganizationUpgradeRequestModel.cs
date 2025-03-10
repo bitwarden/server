@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Enums;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Api.AdminConsole.Models.Request.Organizations;

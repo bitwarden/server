@@ -1,0 +1,28 @@
+@model Bit.Core.Billing.Migration.Models.ProviderMigrationResult[]
+@{
+    ViewData["Title"] = "Results";
+}
+
+<h1>Migrate Providers</h1>
+<h2>Results</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var result in Model)
+            {
+                <tr>
+                    <td><a href="@Url.Action("Details", "MigrateProviders", new { providerId = result.ProviderId })">@result.ProviderId</a></td>
+                    <td>@result.ProviderName</td>
+                    <td>@result.Result</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

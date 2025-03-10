@@ -1,8 +1,12 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using LinqToDB.Tools;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -98,9 +102,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                 UseScim = e.UseScim,
                 UseCustomPermissions = e.UseCustomPermissions,
                 UsePolicies = e.UsePolicies,
-                LimitCollectionCreationDeletion = e.LimitCollectionCreationDeletion,
+                LimitCollectionCreation = e.LimitCollectionCreation,
+                LimitCollectionDeletion = e.LimitCollectionDeletion,
+                LimitItemDeletion = e.LimitItemDeletion,
                 AllowAdminAccessToAllCollectionItems = e.AllowAdminAccessToAllCollectionItems,
-                FlexibleCollections = e.FlexibleCollections
+                UseRiskInsights = e.UseRiskInsights
             }).ToListAsync();
         }
     }
@@ -111,13 +117,19 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
 
         var dbContext = GetDatabaseContext(scope);
 
+        var disallowedPlanTypes = new List<PlanType>
+        {
+            PlanType.Free,
+            PlanType.Custom,
+            PlanType.FamiliesAnnually2019,
+            PlanType.FamiliesAnnually
+        };
+
         var query =
             from o in dbContext.Organizations
-            where
-                ((o.PlanType >= PlanType.TeamsMonthly2019 && o.PlanType <= PlanType.EnterpriseAnnually2019) ||
-                 (o.PlanType >= PlanType.TeamsMonthly2020 && o.PlanType <= PlanType.EnterpriseAnnually)) &&
-                !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
-                (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+            where o.PlanType.NotIn(disallowedPlanTypes) &&
+                  !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                  (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
             select o;
 
         if (string.IsNullOrWhiteSpace(ownerEmail))
@@ -149,7 +161,7 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
                     select o;
         }
 
-        return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        return await query.OrderByDescending(o => o.CreationDate).ThenByDescending(o => o.Id).Skip(skip).Take(take).ToArrayAsync();
     }
 
     public async Task UpdateStorageAsync(Guid id)
@@ -197,6 +209,11 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             await dbContext.ApiKeys.Where(ak => ak.ServiceAccount.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
             await dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.NotificationStatuses.Where(ns => ns.Notification.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.Notifications.Where(n => n.OrganizationId == organization.Id)
                 .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here
@@ -269,6 +286,72 @@ public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Orga
             select grouped.Key;
 
         return await query.ToListAsync();
+    }
+
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetByVerifiedUserEmailDomainAsync(Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var userQuery = from u in dbContext.Users
+                        where u.Id == userId
+                        select u;
+
+        var user = await userQuery.FirstOrDefaultAsync();
+
+        if (user is null)
+        {
+            return new List<Core.AdminConsole.Entities.Organization>();
+        }
+
+        var userWithDomain = new { UserId = user.Id, EmailDomain = user.Email.Split('@').Last() };
+
+        var query = from o in dbContext.Organizations
+                    join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
+                    join od in dbContext.OrganizationDomains on ou.OrganizationId equals od.OrganizationId
+                    where ou.UserId == userWithDomain.UserId &&
+                          od.DomainName == userWithDomain.EmailDomain &&
+                          od.VerifiedDate != null &&
+                          o.Enabled == true
+                    select o;
+
+        return await query.ToArrayAsync();
+    }
+
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetAddableToProviderByUserIdAsync(
+        Guid userId,
+        ProviderType providerType)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var planTypes = providerType switch
+            {
+                ProviderType.Msp => PlanConstants.EnterprisePlanTypes.Concat(PlanConstants.TeamsPlanTypes),
+                ProviderType.MultiOrganizationEnterprise => PlanConstants.EnterprisePlanTypes,
+                _ => []
+            };
+
+            var query =
+                from organizationUser in dbContext.OrganizationUsers
+                join organization in dbContext.Organizations on organizationUser.OrganizationId equals organization.Id
+                where
+                    organizationUser.UserId == userId &&
+                    organizationUser.Type == OrganizationUserType.Owner &&
+                    organizationUser.Status == OrganizationUserStatusType.Confirmed &&
+                    organization.Enabled &&
+                    organization.GatewayCustomerId != null &&
+                    organization.GatewaySubscriptionId != null &&
+                    organization.Seats > 0 &&
+                    organization.Status == OrganizationStatusType.Created &&
+                    !organization.UseSecretsManager &&
+                    organization.PlanType.In(planTypes)
+                select organization;
+
+            return await query.ToArrayAsync();
+        }
     }
 
     public Task EnableCollectionEnhancements(Guid organizationId)

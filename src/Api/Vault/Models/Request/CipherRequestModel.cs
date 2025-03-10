@@ -37,6 +37,7 @@ public class CipherRequestModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherSSHKeyModel SSHKey { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
@@ -81,6 +82,9 @@ public class CipherRequestModel
                 break;
             case CipherType.SecureNote:
                 existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                break;
+            case CipherType.SSHKey:
+                existingCipher.Data = JsonSerializer.Serialize(ToCipherSSHKeyData(), JsonHelpers.IgnoreWritingNull);
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -228,6 +232,21 @@ public class CipherRequestModel
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
             Type = SecureNote.Type,
+        };
+    }
+
+    private CipherSSHKeyData ToCipherSSHKeyData()
+    {
+        return new CipherSSHKeyData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+
+            PrivateKey = SSHKey.PrivateKey,
+            PublicKey = SSHKey.PublicKey,
+            KeyFingerprint = SSHKey.KeyFingerprint,
         };
     }
 }

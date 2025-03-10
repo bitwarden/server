@@ -6,7 +6,7 @@ public class CollectionCipherReadByUserIdCipherIdQuery : CollectionCipherReadByU
 {
     private readonly Guid _cipherId;
 
-    public CollectionCipherReadByUserIdCipherIdQuery(Guid userId, Guid cipherId, bool useFlexibleCollections) : base(userId, useFlexibleCollections)
+    public CollectionCipherReadByUserIdCipherIdQuery(Guid userId, Guid cipherId) : base(userId)
     {
         _cipherId = cipherId;
     }

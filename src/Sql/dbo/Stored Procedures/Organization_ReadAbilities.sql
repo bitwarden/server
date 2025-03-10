@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -21,9 +21,11 @@ BEGIN
         [UseResetPassword],
         [UsePolicies],
         [Enabled],
-        [LimitCollectionCreationDeletion],
+        [LimitCollectionCreation],
+        [LimitCollectionDeletion],
         [AllowAdminAccessToAllCollectionItems],
-        [FlexibleCollections]
+        [UseRiskInsights],
+        [LimitItemDeletion]
     FROM
         [dbo].[Organization]
 END

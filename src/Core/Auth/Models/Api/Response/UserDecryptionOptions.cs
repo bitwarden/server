@@ -54,18 +54,21 @@ public class TrustedDeviceUserDecryptionOption
     public bool HasAdminApproval { get; }
     public bool HasLoginApprovingDevice { get; }
     public bool HasManageResetPasswordPermission { get; }
+    public bool IsTdeOffboarding { get; }
     public string? EncryptedPrivateKey { get; }
     public string? EncryptedUserKey { get; }
 
     public TrustedDeviceUserDecryptionOption(bool hasAdminApproval,
         bool hasLoginApprovingDevice,
         bool hasManageResetPasswordPermission,
+        bool isTdeOffboarding,
         string? encryptedPrivateKey,
         string? encryptedUserKey)
     {
         HasAdminApproval = hasAdminApproval;
         HasLoginApprovingDevice = hasLoginApprovingDevice;
         HasManageResetPasswordPermission = hasManageResetPasswordPermission;
+        IsTdeOffboarding = isTdeOffboarding;
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
     }

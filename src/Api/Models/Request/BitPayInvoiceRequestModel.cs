@@ -7,6 +7,7 @@ public class BitPayInvoiceRequestModel : IValidatableObject
 {
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
+    public Guid? ProviderId { get; set; }
     public bool Credit { get; set; }
     [Required]
     public decimal? Amount { get; set; }
@@ -40,6 +41,10 @@ public class BitPayInvoiceRequestModel : IValidatableObject
         {
             posData = "organizationId:" + OrganizationId.Value;
         }
+        else if (ProviderId.HasValue)
+        {
+            posData = "providerId:" + ProviderId.Value;
+        }
 
         if (Credit)
         {
@@ -57,9 +62,9 @@ public class BitPayInvoiceRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!UserId.HasValue && !OrganizationId.HasValue)
+        if (!UserId.HasValue && !OrganizationId.HasValue && !ProviderId.HasValue)
         {
-            yield return new ValidationResult("User or Organization is required.");
+            yield return new ValidationResult("User, Organization or Provider is required.");
         }
     }
 }

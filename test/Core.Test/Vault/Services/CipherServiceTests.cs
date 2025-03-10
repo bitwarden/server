@@ -1,13 +1,12 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -24,121 +23,6 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class CipherServiceTests
 {
-    [Theory, BitAutoData]
-    public async Task ImportCiphersAsync_IntoOrganization_WithFlexibleCollectionsDisabled_Success(
-        Organization organization,
-        Guid importingUserId,
-        OrganizationUser importingOrganizationUser,
-        List<Collection> collections,
-        List<CipherDetails> ciphers,
-        SutProvider<CipherService> sutProvider)
-    {
-        organization.MaxCollections = null;
-        organization.FlexibleCollections = false;
-        importingOrganizationUser.OrganizationId = organization.Id;
-
-        foreach (var collection in collections)
-        {
-            collection.OrganizationId = organization.Id;
-        }
-
-        foreach (var cipher in ciphers)
-        {
-            cipher.OrganizationId = organization.Id;
-        }
-
-        KeyValuePair<int, int>[] collectionRelationships = {
-            new(0, 0),
-            new(1, 1),
-            new(2, 2)
-        };
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, importingUserId)
-            .Returns(importingOrganizationUser);
-
-        // Set up a collection that already exists in the organization
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
-            .Returns(new List<Collection> { collections[0] });
-
-        await sutProvider.Sut.ImportCiphersAsync(collections, ciphers, collectionRelationships, importingUserId);
-
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
-            ciphers,
-            Arg.Is<IEnumerable<Collection>>(cols => cols.Count() == collections.Count - 1 &&
-                        !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
-                        cols.All(c => collections.Any(x => c.Name == x.Name))),
-            Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
-            Arg.Is<IEnumerable<CollectionUser>>(i => !i.Any()));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-            Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
-    }
-
-    [Theory, BitAutoData]
-    public async Task ImportCiphersAsync_IntoOrganization_WithFlexibleCollectionsEnabled_Success(
-        Organization organization,
-        Guid importingUserId,
-        OrganizationUser importingOrganizationUser,
-        List<Collection> collections,
-        List<CipherDetails> ciphers,
-        SutProvider<CipherService> sutProvider)
-    {
-        organization.MaxCollections = null;
-        organization.FlexibleCollections = true;
-        importingOrganizationUser.OrganizationId = organization.Id;
-
-        foreach (var collection in collections)
-        {
-            collection.OrganizationId = organization.Id;
-        }
-
-        foreach (var cipher in ciphers)
-        {
-            cipher.OrganizationId = organization.Id;
-        }
-
-        KeyValuePair<int, int>[] collectionRelationships = {
-            new(0, 0),
-            new(1, 1),
-            new(2, 2)
-        };
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByOrganizationAsync(organization.Id, importingUserId)
-            .Returns(importingOrganizationUser);
-
-        // Set up a collection that already exists in the organization
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByOrganizationIdAsync(organization.Id)
-            .Returns(new List<Collection> { collections[0] });
-
-        await sutProvider.Sut.ImportCiphersAsync(collections, ciphers, collectionRelationships, importingUserId);
-
-        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
-            ciphers,
-            Arg.Is<IEnumerable<Collection>>(cols => cols.Count() == collections.Count - 1 &&
-                        !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
-                        cols.All(c => collections.Any(x => c.Name == x.Name))),
-            Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
-            Arg.Is<IEnumerable<CollectionUser>>(cus =>
-                cus.Count() == collections.Count - 1 &&
-                !cus.Any(cu => cu.CollectionId == collections[0].Id) && // Check that access was not added for the collection that already existed in the organization
-                cus.All(cu => cu.OrganizationUserId == importingOrganizationUser.Id && cu.Manage == true)));
-        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-            Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
-    }
-
     [Theory, BitAutoData]
     public async Task SaveAsync_WrongRevisionDate_Throws(SutProvider<CipherService> sutProvider, Cipher cipher)
     {
@@ -185,7 +69,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
             {
-                PlanType = Enums.PlanType.EnterpriseAnnually,
+                PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
 
@@ -424,7 +308,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -504,7 +388,7 @@ public class CipherServiceTests
         Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
 
         await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
-            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]), Arg.Any<bool>());
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
 
         await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
                 c.GetAttachments()[v0AttachmentId].Key == null
@@ -529,7 +413,7 @@ public class CipherServiceTests
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -636,7 +520,7 @@ public class CipherServiceTests
         Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
 
         await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
-            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]), Arg.Any<bool>());
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
 
         await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
                 c.GetAttachments()[v0AttachmentId1].Key == null
@@ -672,7 +556,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id)
             .Returns(new Organization
             {
-                PlanType = Enums.PlanType.EnterpriseAnnually,
+                PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
 
@@ -732,9 +616,9 @@ public class CipherServiceTests
             cipher.RevisionDate = previousRevisionDate;
         }
 
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId).Returns(ciphers);
         var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId, Arg.Any<bool>()).Returns(revisionDate);
+        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId).Returns(revisionDate);
 
         await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
 
@@ -803,7 +687,7 @@ public class CipherServiceTests
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(new Organization
         {
-            PlanType = Enums.PlanType.Free
+            PlanType = PlanType.Free
         });
         ciphers.FirstOrDefault().Attachments =
             "{\"attachment1\":{\"Size\":\"250\",\"FileName\":\"superCoolFile\","
@@ -825,7 +709,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(new Organization
             {
-                PlanType = Enums.PlanType.EnterpriseAnnually,
+                PlanType = PlanType.EnterpriseAnnually,
                 MaxStorageGb = 100
             });
         ciphers.FirstOrDefault().Attachments =
@@ -846,8 +730,8 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyOrganizationDetailsByOrganizationIdAsync(default);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreByIdsOrganizationIdAsync(default, default);
         await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreByIdsOrganizationIdAsync(default, default);
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default, useFlexibleCollections: default);
-        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default, default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
         await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
     }

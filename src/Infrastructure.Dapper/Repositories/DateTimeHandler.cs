@@ -1,6 +1,8 @@
 ﻿using System.Data;
 using Dapper;
 
+#nullable enable
+
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class DateTimeHandler : SqlMapper.TypeHandler<DateTime>

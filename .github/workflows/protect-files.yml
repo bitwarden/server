@@ -1,7 +1,6 @@
 # Runs if there are changes to the paths: list.
 # Starts a matrix job to check for modified files, then sets output based on the results.
 # The input decides if the label job is ran, adding a label to the PR.
----
 name: Protect files
 
 on:
@@ -29,7 +28,7 @@ jobs:
             label: "DB-migrations-changed"
     steps:
       - name: Check out repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 2
 

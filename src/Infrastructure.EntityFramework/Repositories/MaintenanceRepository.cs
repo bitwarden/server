@@ -2,6 +2,8 @@
 using Bit.Core.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
+#nullable enable
+
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class MaintenanceRepository : BaseEntityFrameworkRepository, IMaintenanceRepository
