@@ -355,6 +355,7 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
+    [Obsolete("Replaced by the safer rotate-user-account-keys endpoint.")]
     [HttpPost("key")]
     public async Task PostKey([FromBody] UpdateKeyRequestModel model)
     {
