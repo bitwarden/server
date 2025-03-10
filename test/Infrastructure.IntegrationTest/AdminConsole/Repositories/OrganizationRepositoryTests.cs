@@ -253,4 +253,37 @@ public class OrganizationRepositoryTests
 
         Assert.Empty(result);
     }
+
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByIdsAsync_ExistingOrganizations_ReturnsOrganizations(IOrganizationRepository organizationRepository)
+    {
+        var email = "test@email.com";
+
+        var organization1 = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org 1",
+            BillingEmail = email,
+            Plan = "Test",
+            PrivateKey = "privatekey1"
+        });
+
+        var organization2 = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = $"Test Org 2",
+            BillingEmail = email,
+            Plan = "Test",
+            PrivateKey = "privatekey2"
+        });
+
+        var result = await organizationRepository.GetManyByIdsAsync([organization1.Id, organization2.Id]);
+
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result, org => org.Id == organization1.Id);
+        Assert.Contains(result, org => org.Id == organization2.Id);
+
+        // Clean up
+        await organizationRepository.DeleteAsync(organization1);
+        await organizationRepository.DeleteAsync(organization2);
+    }
 }
