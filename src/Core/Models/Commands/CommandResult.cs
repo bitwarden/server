@@ -56,7 +56,7 @@ public class Partial<T> : CommandResult<T>
     }
 }
 
-public record Error<T>(string Message, T ErroredValue);
+public abstract record Error<T>(string Message, T ErroredValue);
 
 public record RecordNotFoundError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
 {
@@ -73,6 +73,16 @@ public record InsufficientPermissionsError<T>(string Message, T ErroredValue) : 
     public const string Code = "Insufficient Permissions";
 
     public InsufficientPermissionsError(T ErroredValue) : this(Code, ErroredValue)
+    {
+
+    }
+}
+
+public record InvalidRequestError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
+{
+    public const string Code = "Invalid Request";
+
+    public InvalidRequestError(T ErroredValue) : this(Code, ErroredValue)
     {
 
     }
