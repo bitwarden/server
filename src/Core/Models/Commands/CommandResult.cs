@@ -9,7 +9,6 @@ public class CommandResult(IEnumerable<string> errors)
     public bool Success => ErrorMessages.Count == 0;
     public bool HasErrors => ErrorMessages.Count > 0;
     public List<string> ErrorMessages { get; } = errors.ToList();
-
     public CommandResult() : this(Array.Empty<string>()) { }
 }
 
@@ -29,22 +28,51 @@ public class Success : CommandResult
 {
 }
 
-public abstract class CommandResult<T>
-{
+public abstract class CommandResult<T>;
 
+public class Success<T>(T value) : CommandResult<T>
+{
+    public T Value { get; } = value;
 }
 
-public class Success<T>(T data) : CommandResult<T>
+public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
 {
-    public T? Data { get; init; } = data;
+    public List<string> ErrorMessages { get; } = errorMessages.ToList();
+
+    public string ErrorMessage => string.Join(" ", ErrorMessages);
+
+    public Failure(string error) : this([error]) { }
 }
 
-public class Failure<T>(IEnumerable<string> errorMessage) : CommandResult<T>
+public class Partial<T> : CommandResult<T>
 {
-    public IEnumerable<string> ErrorMessages { get; init; } = errorMessage;
+    public T[] Successes { get; set; } = [];
+    public Error<T>[] Failures { get; set; } = [];
 
-    public Failure(string errorMessage) : this(new[] { errorMessage })
+    public Partial(IEnumerable<T> successfulItems, IEnumerable<Error<T>> failedItems)
     {
+
     }
 }
 
+public record Error<T>(string Message, T ErroredValue);
+
+public record RecordNotFoundError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
+{
+    public const string Code = "Record Not Found";
+
+    public RecordNotFoundError(T ErroredValue) : this(Code, ErroredValue)
+    {
+
+    }
+}
+
+public record InsufficientPermissionsError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
+{
+    public const string Code = "Insufficient Permissions";
+
+    public InsufficientPermissionsError(T ErroredValue) : this(Code, ErroredValue)
+    {
+
+    }
+}
