@@ -155,7 +155,6 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
-    public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
