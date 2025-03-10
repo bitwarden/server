@@ -1,6 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Xunit;
@@ -423,5 +426,75 @@ public class OrganizationUserRepositoryTests
         var readOrgUserIds = readOrgUsers.Select(ou => ou.Id);
 
         Assert.Equal(createdOrgUserIds.ToHashSet(), readOrgUserIds.ToHashSet());
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task CreateManyAsync_WithCollectionAndGroup_SaveSuccessfully(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        IGroupRepository groupRepository)
+    {
+        var requestTime = DateTime.UtcNow;
+
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            BillingEmail = "billing@test.com", // TODO: EF does not enfore this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl,
+            CreationDate = requestTime
+        });
+
+        var collection = await collectionRepository.CreateAsync(new Collection
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "Test Collection",
+            ExternalId = "external-collection-1",
+            CreationDate = requestTime,
+            RevisionDate = requestTime
+        });
+
+        var group = await groupRepository.CreateAsync(new Group
+        {
+            Id = CoreHelpers.GenerateComb(),
+            OrganizationId = organization.Id,
+            Name = "Test Group",
+            ExternalId = "external-group-1"
+        });
+
+        var orgUserCollection = new List<CreateOrganizationUser>
+        {
+            new()
+            {
+                OrganizationUser = new OrganizationUser
+                {
+                    Id = CoreHelpers.GenerateComb(),
+                    OrganizationId = organization.Id,
+                    Email = "test-user@test.com",
+                    Status = OrganizationUserStatusType.Invited,
+                    Type = OrganizationUserType.Owner,
+                    ExternalId = "externalid-1",
+                    Permissions = CoreHelpers.ClassToJsonData(new Permissions()),
+                    AccessSecretsManager = false
+                },
+                Collections =
+                [
+                    new CollectionAccessSelection
+                    {
+                        Id = collection.Id,
+                        ReadOnly = true,
+                        HidePasswords = false,
+                        Manage = false
+                    }
+                ],
+                Groups = [group.Id]
+            }
+        };
+
+        await organizationUserRepository.CreateManyAsync(orgUserCollection);
+
+        var orgUser = await organizationUserRepository.GetDetailsByIdAsync(orgUserCollection.First().OrganizationUser.Id);
+        Assert.Equal(orgUserCollection.First().OrganizationUser.Id, orgUser.Id);
     }
 }

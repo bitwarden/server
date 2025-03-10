@@ -1,5 +1,15 @@
-﻿using Bit.Core.Enums;
+﻿#nullable enable
+
+using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Commands;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -9,31 +19,22 @@ using Bit.Scim.Users.Interfaces;
 
 namespace Bit.Scim.Users;
 
-public class PostUserCommand : IPostUserCommand
+public class PostUserCommand(
+    IOrganizationRepository organizationRepository,
+    IOrganizationUserRepository organizationUserRepository,
+    IOrganizationService organizationService,
+    IPaymentService paymentService,
+    IScimContext scimContext,
+    IFeatureService featureService,
+    IInviteOrganizationUsersCommand inviteOrganizationUsersCommand,
+    TimeProvider timeProvider,
+    IPricingClient pricingClient,
+    ILogger<PostUserCommand> logger)
+    : IPostUserCommand
 {
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationService _organizationService;
-    private readonly IPaymentService _paymentService;
-    private readonly IScimContext _scimContext;
-
-    public PostUserCommand(
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService,
-        IPaymentService paymentService,
-        IScimContext scimContext)
+    public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
     {
-        _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
-        _organizationService = organizationService;
-        _paymentService = paymentService;
-        _scimContext = scimContext;
-    }
-
-    public async Task<OrganizationUserUserDetails> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
-    {
-        var scimProvider = _scimContext.RequestScimProvider;
+        var scimProvider = scimContext.RequestScimProvider;
         var invite = model.ToOrganizationUserInvite(scimProvider);
 
         var email = invite.Emails.Single();
@@ -44,7 +45,7 @@ public class PostUserCommand : IPostUserCommand
             throw new BadRequestException();
         }
 
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
         var orgUserByEmail = orgUsers.FirstOrDefault(ou => ou.Email?.ToLowerInvariant() == email);
         if (orgUserByEmail != null)
         {
@@ -57,14 +58,54 @@ public class PostUserCommand : IPostUserCommand
             throw new ConflictException();
         }
 
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var hasStandaloneSecretsManager = await _paymentService.HasSecretsManagerStandalone(organization);
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var hasStandaloneSecretsManager = await paymentService.HasSecretsManagerStandalone(organization);
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
+        if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
+        {
+            return await InviteScimOrganizationUserAsync(model, organization, scimProvider, hasStandaloneSecretsManager);
+        }
+
+        var invitedOrgUser = await organizationService.InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
             invite, externalId);
-        var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
+        var orgUser = await organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;
+    }
+
+    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(ScimUserRequestModel model, Organization organization, ScimProviderType scimProvider, bool hasStandaloneSecretsManager)
+    {
+        var plan = await pricingClient.GetPlan(organization.PlanType);
+
+        if (plan == null)
+        {
+            logger.LogError("Plan {planType} not found for organization {organizationId}", organization.PlanType, organization.Id);
+            return null;
+        }
+
+        var request = model.ToRequest(
+            scimProvider: scimProvider,
+            hasSecretsManager: hasStandaloneSecretsManager,
+            inviteOrganization: new InviteOrganization(organization, plan),
+            performedAt: timeProvider.GetUtcNow());
+
+        var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
+
+        if (result is not Success<ScimInviteOrganizationUsersResponse> successfulResponse)
+        {
+            return null;
+        }
+
+        var invitedUser = await organizationUserRepository.GetDetailsByIdAsync(successfulResponse.Value.InvitedUser.Id);
+
+        return invitedUser;
+
     }
 }
