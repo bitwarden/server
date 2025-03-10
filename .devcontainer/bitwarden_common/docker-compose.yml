@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   bitwarden_server:
     image: mcr.microsoft.com/devcontainers/dotnet:8.0
@@ -13,7 +11,8 @@ services:
     platform: linux/amd64
     restart: unless-stopped
     env_file:
-      ../../dev/.env
+      - path: ../../dev/.env
+        required: false
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_PID: Developer
