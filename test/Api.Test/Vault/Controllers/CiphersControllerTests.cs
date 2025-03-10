@@ -891,7 +891,6 @@ public class CiphersControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(new User { Id = userId });
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherDetails.Id, userId).Returns(cipherDetails);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(new List<CipherDetails>
@@ -908,7 +907,9 @@ public class CiphersControllerTests
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PutDeleteAdmin(cipherDetails.Id));
 
-        await sutProvider.GetDependency<ICipherService>().DidNotReceive().SoftDeleteAsync(Arg.Any<CipherDetails>(), Arg.Any<Guid>(), Arg.Any<bool>());
+        await sutProvider.GetDependency<ICipherService>()
+            .DidNotReceiveWithAnyArgs()
+            .SoftDeleteManyAsync(default, default, default, default);
     }
 
     [Theory]
@@ -1339,7 +1340,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.NotNull(result);
         Assert.IsType<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(cipherDetails, userId, true);
     }
@@ -1353,8 +1353,6 @@ public class CiphersControllerTests
     {
         cipherDetails.UserId = null;
         cipherDetails.OrganizationId = organization.Id;
-        cipherDetails.Type = CipherType.Login;
-        cipherDetails.Data = JsonSerializer.Serialize(new CipherLoginData());
         cipherDetails.Edit = false;
         cipherDetails.Manage = false;
 
@@ -1410,7 +1408,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.NotNull(result);
         Assert.IsType<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(cipherDetails, userId, true);
     }
@@ -1424,8 +1421,6 @@ public class CiphersControllerTests
     {
         cipherDetails.UserId = null;
         cipherDetails.OrganizationId = organization.Id;
-        cipherDetails.Type = CipherType.Login;
-        cipherDetails.Data = JsonSerializer.Serialize(new CipherLoginData());
         cipherDetails.Edit = true;
         cipherDetails.Manage = false;
 
@@ -1474,7 +1469,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.NotNull(result);
         Assert.IsType<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(cipherDetails, userId, true);
     }
@@ -1503,7 +1497,7 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.NotNull(result);
+        Assert.IsType<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(cipherDetails, userId, true);
     }
 
@@ -1526,7 +1520,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.NotNull(result);
         Assert.IsType<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(cipherDetails, userId, true);
     }
@@ -1567,7 +1560,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreAdmin(cipherDetails.Id);
 
-        Assert.NotNull(result);
         Assert.IsType<CipherMiniResponseModel>(result);
         await sutProvider.GetDependency<ICipherService>().Received(1).RestoreAsync(cipherDetails, userId, true);
     }
@@ -1600,7 +1592,6 @@ public class CiphersControllerTests
 
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByOrganizationIdAsync(organization.Id).Returns(ciphers);
         sutProvider.GetDependency<ICipherRepository>()
             .GetManyByUserIdAsync(userId)
             .Returns(ciphers.Select(c => new CipherDetails
@@ -1624,7 +1615,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreManyAdmin(model);
 
-        Assert.NotNull(result);
         await sutProvider.GetDependency<ICipherService>().Received(1)
             .RestoreManyAsync(
                 Arg.Is<HashSet<Guid>>(ids =>
@@ -1682,9 +1672,7 @@ public class CiphersControllerTests
                 Id = c.Id,
                 OrganizationId = organization.Id,
                 Edit = true,
-                Manage = true,
-                Type = CipherType.Login,
-                Data = JsonSerializer.Serialize(new CipherLoginData())
+                Manage = true
             }).ToList());
 
         sutProvider.GetDependency<IApplicationCacheService>()
@@ -1712,7 +1700,6 @@ public class CiphersControllerTests
 
         var result = await sutProvider.Sut.PutRestoreManyAdmin(model);
 
-        Assert.NotNull(result);
         Assert.Equal(ciphers.Count, result.Data.Count());
         await sutProvider.GetDependency<ICipherService>()
             .Received(1)
