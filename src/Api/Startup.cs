@@ -177,6 +177,7 @@ public class Startup
         services.AddBillingOperations();
         services.AddReportingServices();
         services.AddImportServices();
+        services.AddPhishingDomainService();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
