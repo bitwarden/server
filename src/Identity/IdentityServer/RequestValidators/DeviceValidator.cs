@@ -256,7 +256,7 @@ public class DeviceValidator(
                 break;
             case DeviceValidationResultType.InvalidNewDeviceOtp:
                 result.ErrorDescription = "Invalid New Device OTP";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid new device otp"));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid new device otp. try again."));
                 break;
             case DeviceValidationResultType.NewDeviceVerificationRequired:
                 result.ErrorDescription = "New device verification required";
