@@ -10,4 +10,7 @@ if [[ -z "${CODESPACES}" ]]; then
 else
   # Add docker compose profile to codespace
   echo "In Codespaces"
+  source_dir="$( dirname "${BASH_SOURCE[0]}")"
+  echo $source_dir
+  docker compose -p bitwarden_common --profile "$1" -f "${source_dir}/docker-compose.yml" up -d
 fi
