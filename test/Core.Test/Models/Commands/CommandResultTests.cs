@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Commands;
+﻿using Bit.Core.AdminConsole.Errors;
+using Bit.Core.Models.Commands;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
