@@ -150,6 +150,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             FriendlyName = friendlyName,
             OfferedToEmail = sponsoredEmail,
             PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = false
         };
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
@@ -252,5 +253,55 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
                 PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName));
 
         Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CreateSponsorship_CreatesAdminInitiatedSponsorship(
+        OrganizationUserType organizationUserType,
+        Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
+        string friendlyName, Guid sponsorshipId, Guid currentUserId, SutProvider<CreateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId.Value).Returns(user);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(default)).Do(callInfo =>
+        {
+            var sponsorship = callInfo.Arg<OrganizationSponsorship>();
+            sponsorship.Id = sponsorshipId;
+        });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Permissions = new Permissions
+                {
+                    ManageUsers = true,
+                },
+                Type = organizationUserType
+            }
+        ]);
+
+        await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+            PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName);
+
+
+        var expectedSponsorship = new OrganizationSponsorship
+        {
+            Id = sponsorshipId,
+            SponsoringOrganizationId = sponsoringOrg.Id,
+            SponsoringOrganizationUserId = sponsoringOrgUser.Id,
+            FriendlyName = friendlyName,
+            OfferedToEmail = sponsoredEmail,
+            PlanSponsorshipType = PlanSponsorshipType.FamiliesForEnterprise,
+            IsAdminInitiated = true
+        };
+
+        await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
+            .UpsertAsync(Arg.Is<OrganizationSponsorship>(s => SponsorshipValidator(s, expectedSponsorship)));
     }
 }
