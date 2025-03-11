@@ -102,12 +102,15 @@ public class ProviderBillingController(
 
         var subscriptionSuspension = await GetSubscriptionSuspensionAsync(stripeAdapter, subscription);
 
+        var paymentSource = await subscriberService.GetPaymentSource(provider);
+
         var response = ProviderSubscriptionResponse.From(
             subscription,
             configuredProviderPlans,
             taxInformation,
             subscriptionSuspension,
-            provider);
+            provider,
+            paymentSource);
 
         return TypedResults.Ok(response);
     }
