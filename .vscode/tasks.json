@@ -251,6 +251,24 @@
             "type": "shell",
             "command": "dotnet tool install -g dotnet-certificate-tool -g && certificate-tool add --file ${workspaceFolder}/dev/dev.pfx --password '${input:certPassword}'",
             "problemMatcher": []
+        },
+        {
+            "label": "Add Docker Compose Profile",
+            "detail": "Adds a docker compose profile to give your local development setup more abilities.",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "${workspaceFolder}/dev/add-dc-profile.sh",
+                "${input:dockerComposeProfile}"
+            ],
+            // If they are on windows, they can't be in a codespace or dev container so we can just run the command directly.
+            "windows": {
+                "command": "Write-Output",
+                "args": [
+                    "Work in progress ${input:dockerComposeProfile}"
+                ]
+            },
+            "problemMatcher": []
         }
     ],
     "inputs": [
@@ -275,6 +293,29 @@
             "type": "promptString",
             "description": "Password for your dev certificate.",
             "password": true
+        },
+        {
+            "id": "dockerComposeProfile",
+            "type": "pickString",
+            "description": "The name of the profile to add.",
+            "options": [
+                {
+                    "label": "Containers focused towards testing SSO.",
+                    "value": "idp",
+                },
+                {
+                    "label": "MySQL",
+                    "value": "mysql"
+                },
+                {
+                    "label": "PostgreSQL",
+                    "value": "postgres"
+                },
+                {
+                    "label": "Containers focused towards testing Azure",
+                    "value": "storage"
+                }
+            ]
         }
     ]
 }

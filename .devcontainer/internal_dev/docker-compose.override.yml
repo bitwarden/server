@@ -1,4 +1,21 @@
 services:
+  bitwarden_mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    restart: unless-stopped
+    env_file:
+      - path: ../../dev/.env
+        required: false
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+    volumes:
+      - mssql_dev_data:/var/opt/mssql
+      - ../../util/Migrator:/mnt/migrator/
+      - ../../dev/helpers/mssql:/mnt/helpers
+      - ../../dev/.data/mssql:/mnt/data
+    network_mode: service:bitwarden_server
+
   bitwarden_storage:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     restart: unless-stopped
