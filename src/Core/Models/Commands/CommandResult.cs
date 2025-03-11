@@ -1,5 +1,7 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Errors;
+
 namespace Bit.Core.Models.Commands;
 
 public class CommandResult(IEnumerable<string> errors)
@@ -53,27 +55,5 @@ public class Partial<T> : CommandResult<T>
     {
         Successes = successfulItems.ToArray();
         Failures = failedItems.ToArray();
-    }
-}
-
-public record Error<T>(string Message, T ErroredValue);
-
-public record RecordNotFoundError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
-{
-    public const string Code = "Record Not Found";
-
-    public RecordNotFoundError(T ErroredValue) : this(Code, ErroredValue)
-    {
-
-    }
-}
-
-public record InsufficientPermissionsError<T>(string Message, T ErroredValue) : Error<T>(Message, ErroredValue)
-{
-    public const string Code = "Insufficient Permissions";
-
-    public InsufficientPermissionsError(T ErroredValue) : this(Code, ErroredValue)
-    {
-
     }
 }
