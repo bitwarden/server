@@ -5,6 +5,10 @@ using Bit.Core.Exceptions;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SponsorshipCreation;
 
+/// <summary>
+/// Responsible for validating a request and building the <see cref="OrganizationSponsorship" /> entity to create a
+/// sponsorship initiated by organization members with specific permissions to manage members/users.
+/// </summary>
 public class CreateAdminInitiatedSponsorshipHandler(
     ICurrentContext currentContext) : BaseCreateSponsorshipHandler
 {

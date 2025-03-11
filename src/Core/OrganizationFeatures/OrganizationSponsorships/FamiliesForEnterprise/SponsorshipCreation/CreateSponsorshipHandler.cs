@@ -8,6 +8,10 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SponsorshipCreation;
 
+/// <summary>
+/// Responsible for validating a request and building the <see cref="OrganizationSponsorship" /> entity to create a
+/// sponsorship.
+/// </summary>
 public class CreateSponsorshipHandler(
     IUserService userService,
     IOrganizationSponsorshipRepository organizationSponsorshipRepository) : BaseCreateSponsorshipHandler
