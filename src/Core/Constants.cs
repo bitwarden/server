@@ -102,7 +102,6 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
@@ -120,10 +119,8 @@ public static class FeatureFlagKeys
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
-    public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
@@ -157,7 +154,6 @@ public static class FeatureFlagKeys
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
-    public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
@@ -172,6 +168,7 @@ public static class FeatureFlagKeys
     public const string AndroidMutualTls = "mutual-tls";
     public const string RecoveryCodeLogin = "pm-17128-recovery-code-login";
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
+    public const string WebPush = "web-push";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
 

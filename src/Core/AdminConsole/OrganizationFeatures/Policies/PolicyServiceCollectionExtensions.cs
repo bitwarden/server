@@ -31,33 +31,7 @@ public static class PolicyServiceCollectionExtensions
 
     private static void AddPolicyRequirements(this IServiceCollection services)
     {
-        // Register policy requirement factories here
-        services.AddPolicyRequirement(SendPolicyRequirement.Create);
-        services.AddPolicyRequirement(PersonalOwnershipPolicyRequirement.Create);
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, DisableSendPolicyRequirementFactory>();
+        services.AddScoped<IPolicyRequirementFactory<IPolicyRequirement>, SendOptionsPolicyRequirementFactory>();
     }
-
-    /// <summary>
-    /// Used to register simple policy requirements where its factory method implements CreateRequirement.
-    /// This MUST be used rather than calling AddScoped directly, because it will ensure the factory method has
-    /// the correct type to be injected and then identified by <see cref="PolicyRequirementQuery"/> at runtime.
-    /// </summary>
-    /// <typeparam name="T">The specific PolicyRequirement being registered.</typeparam>
-    private static void AddPolicyRequirement<T>(this IServiceCollection serviceCollection, RequirementFactory<T> factory)
-        where T : class, IPolicyRequirement
-        => serviceCollection.AddPolicyRequirement(_ => factory);
-
-    /// <summary>
-    /// Used to register policy requirements where you need to access additional dependencies (usually to return a
-    /// curried factory method).
-    /// This MUST be used rather than calling AddScoped directly, because it will ensure the factory method has
-    /// the correct type to be injected and then identified by <see cref="PolicyRequirementQuery"/> at runtime.
-    /// </summary>
-    /// <typeparam name="T">
-    /// A callback that takes IServiceProvider and returns a RequirementFactory for
-    /// your policy requirement.
-    /// </typeparam>
-    private static void AddPolicyRequirement<T>(this IServiceCollection serviceCollection,
-        Func<IServiceProvider, RequirementFactory<T>> factory)
-        where T : class, IPolicyRequirement
-        => serviceCollection.AddScoped<RequirementFactory<IPolicyRequirement>>(factory);
 }

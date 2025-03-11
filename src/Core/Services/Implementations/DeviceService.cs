@@ -3,6 +3,7 @@ using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.NotificationHub;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -28,9 +29,19 @@ public class DeviceService : IDeviceService
         _globalSettings = globalSettings;
     }
 
+    public async Task SaveAsync(WebPushRegistrationData webPush, Device device)
+    {
+        await SaveAsync(new PushRegistrationData(webPush.Endpoint, webPush.P256dh, webPush.Auth), device);
+    }
+
     public async Task SaveAsync(Device device)
     {
-        if (device.Id == default(Guid))
+        await SaveAsync(new PushRegistrationData(device.PushToken), device);
+    }
+
+    private async Task SaveAsync(PushRegistrationData data, Device device)
+    {
+        if (device.Id == default)
         {
             await _deviceRepository.CreateAsync(device);
         }
@@ -45,9 +56,9 @@ public class DeviceService : IDeviceService
                 OrganizationUserStatusType.Confirmed))
             .Select(ou => ou.OrganizationId.ToString());
 
-        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(device.PushToken, device.Id.ToString(),
-            device.UserId.ToString(), device.Identifier, device.Type, organizationIdsString,
-            _globalSettings.Installation.Id);
+        await _pushRegistrationService.CreateOrUpdateRegistrationAsync(data, device.Id.ToString(),
+            device.UserId.ToString(), device.Identifier, device.Type, organizationIdsString, _globalSettings.Installation.Id);
+
     }
 
     public async Task ClearTokenAsync(Device device)

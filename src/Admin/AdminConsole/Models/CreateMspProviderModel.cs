@@ -10,6 +10,9 @@ public class CreateMspProviderModel : IValidatableObject
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
 
+    [Display(Name = "Subscription Discount")]
+    public string DiscountId { get; set; }
+
     [Display(Name = "Teams (Monthly) Seat Minimum")]
     public int TeamsMonthlySeatMinimum { get; set; }
 
@@ -20,7 +23,8 @@ public class CreateMspProviderModel : IValidatableObject
     {
         return new Provider
         {
-            Type = ProviderType.Msp
+            Type = ProviderType.Msp,
+            DiscountId = DiscountId
         };
     }
 

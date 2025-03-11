@@ -22,19 +22,22 @@ public class SecurityTaskController : Controller
     private readonly IMarkTaskAsCompleteCommand _markTaskAsCompleteCommand;
     private readonly IGetTasksForOrganizationQuery _getTasksForOrganizationQuery;
     private readonly ICreateManyTasksCommand _createManyTasksCommand;
+    private readonly ICreateManyTaskNotificationsCommand _createManyTaskNotificationsCommand;
 
     public SecurityTaskController(
         IUserService userService,
         IGetTaskDetailsForUserQuery getTaskDetailsForUserQuery,
         IMarkTaskAsCompleteCommand markTaskAsCompleteCommand,
         IGetTasksForOrganizationQuery getTasksForOrganizationQuery,
-        ICreateManyTasksCommand createManyTasksCommand)
+        ICreateManyTasksCommand createManyTasksCommand,
+        ICreateManyTaskNotificationsCommand createManyTaskNotificationsCommand)
     {
         _userService = userService;
         _getTaskDetailsForUserQuery = getTaskDetailsForUserQuery;
         _markTaskAsCompleteCommand = markTaskAsCompleteCommand;
         _getTasksForOrganizationQuery = getTasksForOrganizationQuery;
         _createManyTasksCommand = createManyTasksCommand;
+        _createManyTaskNotificationsCommand = createManyTaskNotificationsCommand;
     }
 
     /// <summary>
@@ -87,6 +90,9 @@ public class SecurityTaskController : Controller
         [FromBody] BulkCreateSecurityTasksRequestModel model)
     {
         var securityTasks = await _createManyTasksCommand.CreateAsync(orgId, model.Tasks);
+
+        await _createManyTaskNotificationsCommand.CreateAsync(orgId, securityTasks);
+
         var response = securityTasks.Select(x => new SecurityTasksResponseModel(x)).ToList();
         return new ListResponseModel<SecurityTasksResponseModel>(response);
     }

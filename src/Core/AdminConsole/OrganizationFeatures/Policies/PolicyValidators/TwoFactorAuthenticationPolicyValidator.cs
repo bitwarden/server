@@ -73,6 +73,11 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
 
+        if (organization is null)
+        {
+            return;
+        }
+
         var currentActiveRevocableOrganizationUsers =
             (await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId))
             .Where(ou => ou.Status != OrganizationUserStatusType.Invited &&
@@ -90,9 +95,11 @@ public class TwoFactorAuthenticationPolicyValidator : IPolicyValidator
         var revocableUsersWithTwoFactorStatus =
             await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(currentActiveRevocableOrganizationUsers);
 
-        var nonCompliantUsers = revocableUsersWithTwoFactorStatus.Where(x => !x.twoFactorIsEnabled);
+        var nonCompliantUsers = revocableUsersWithTwoFactorStatus
+            .Where(x => !x.twoFactorIsEnabled)
+            .ToArray();
 
-        if (!nonCompliantUsers.Any())
+        if (nonCompliantUsers.Length == 0)
         {
             return;
         }

@@ -8,6 +8,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -330,6 +331,11 @@ public class ProviderBillingControllerTests
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
+
+        foreach (var providerPlan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+        }
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 

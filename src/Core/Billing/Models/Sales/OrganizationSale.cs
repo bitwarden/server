@@ -46,7 +46,8 @@ public class OrganizationSale
         var customerSetup = new CustomerSetup
         {
             Coupon = signup.IsFromProvider
-            ? StripeConstants.CouponIDs.MSPDiscount35
+            // TODO: Remove when last of the legacy providers has been migrated.
+            ? StripeConstants.CouponIDs.LegacyMSPDiscount
             : signup.IsFromSecretsManagerTrial
                 ? StripeConstants.CouponIDs.SecretsManagerStandalone
                 : null
@@ -76,8 +77,6 @@ public class OrganizationSale
 
     private static SubscriptionSetup GetSubscriptionSetup(OrganizationUpgrade upgrade)
     {
-        var plan = Core.Utilities.StaticStore.GetPlan(upgrade.Plan);
-
         var passwordManagerOptions = new SubscriptionSetup.PasswordManager
         {
             Seats = upgrade.AdditionalSeats,
@@ -95,7 +94,7 @@ public class OrganizationSale
 
         return new SubscriptionSetup
         {
-            Plan = plan,
+            PlanType = upgrade.Plan,
             PasswordManagerOptions = passwordManagerOptions,
             SecretsManagerOptions = secretsManagerOptions
         };
