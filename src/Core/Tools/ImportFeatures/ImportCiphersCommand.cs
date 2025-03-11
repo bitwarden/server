@@ -66,8 +66,8 @@ public class ImportCiphersCommand : IImportCiphersCommand
     {
         // Make sure the user can save new ciphers to their personal vault
         var isPersonalVaultRestricted = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
-            ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(userId.Value)).DisablePersonalOwnership
-            : await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value, PolicyType.PersonalOwnership);
+            ? (await _policyRequirementQuery.GetAsync<PersonalOwnershipPolicyRequirement>(importingUserId)).DisablePersonalOwnership
+            : await _policyService.AnyPoliciesApplicableToUserAsync(importingUserId, PolicyType.PersonalOwnership);
 
         if (isPersonalVaultRestricted)
         {

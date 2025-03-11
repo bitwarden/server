@@ -75,7 +75,7 @@ public class ImportCiphersAsyncCommandTests
 
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
-        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships);
+        await sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, importingUserId);
 
         await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(ciphers, Arg.Any<List<Folder>>());
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
@@ -124,7 +124,7 @@ public class ImportCiphersAsyncCommandTests
         var folderRelationships = new List<KeyValuePair<int, int>>();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships));
+            sutProvider.Sut.ImportIntoIndividualVaultAsync(folders, ciphers, folderRelationships, userId));
 
         Assert.Equal("You cannot import items into your personal vault because you are a member of an organization which forbids it.", exception.Message);
     }
