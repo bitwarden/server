@@ -77,9 +77,10 @@ public class OrganizationSponsorshipsController : Controller
     {
         var sponsoringOrg = await _organizationRepository.GetByIdAsync(sponsoringOrgId);
 
+        var targetUser = model.SponsoringUserId ?? _currentContext.UserId!.Value;
         var sponsorship = await _createSponsorshipCommand.CreateSponsorshipAsync(
             sponsoringOrg,
-            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, _currentContext.UserId ?? default),
+            await _organizationUserRepository.GetByOrganizationAsync(sponsoringOrgId, targetUser),
             model.PlanSponsorshipType, model.SponsoredEmail, model.FriendlyName);
         await _sendSponsorshipOfferCommand.SendSponsorshipOfferAsync(sponsorship, sponsoringOrg.Name);
     }

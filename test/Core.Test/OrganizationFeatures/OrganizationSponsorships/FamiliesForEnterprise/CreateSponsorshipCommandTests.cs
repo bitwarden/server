@@ -1,8 +1,10 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -110,6 +112,8 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
         sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .GetBySponsoringOrganizationUserIdAsync(orgUser.Id).Returns(sponsorship);
 
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(orgUser.UserId.Value);
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.CreateSponsorshipAsync(org, orgUser, sponsorship.PlanSponsorshipType.Value, default, default));
 
@@ -132,6 +136,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             var sponsorship = callInfo.Arg<OrganizationSponsorship>();
             sponsorship.Id = sponsorshipId;
         });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
 
 
         await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
@@ -168,6 +173,7 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
             createdSponsorship.Id = Guid.NewGuid();
             return expectedException;
         });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(sponsoringOrgUser.UserId.Value);
 
         var actualException = await Assert.ThrowsAsync<Exception>(() =>
             sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
@@ -176,5 +182,75 @@ public class CreateSponsorshipCommandTests : FamiliesForEnterpriseTestsBase
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>().Received(1)
             .DeleteAsync(createdSponsorship);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateSponsorship_MissingManageUsersPermission_ThrowsUnauthorizedException(
+        Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
+        string friendlyName, Guid sponsorshipId, Guid currentUserId, SutProvider<CreateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId.Value).Returns(user);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(default)).Do(callInfo =>
+        {
+            var sponsorship = callInfo.Arg<OrganizationSponsorship>();
+            sponsorship.Id = sponsorshipId;
+        });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Permissions = new Permissions(),
+                Type = OrganizationUserType.Admin
+            }
+        ]);
+
+
+        var actual = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+            await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName));
+
+        Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task CreateSponsorship_InvalidUserType_ThrowsUnauthorizedException(
+        OrganizationUserType organizationUserType,
+        Organization sponsoringOrg, OrganizationUser sponsoringOrgUser, User user, string sponsoredEmail,
+        string friendlyName, Guid sponsorshipId, Guid currentUserId, SutProvider<CreateSponsorshipCommand> sutProvider)
+    {
+        sponsoringOrg.PlanType = PlanType.EnterpriseAnnually;
+        sponsoringOrgUser.Status = OrganizationUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IUserService>().GetUserByIdAsync(sponsoringOrgUser.UserId.Value).Returns(user);
+        sutProvider.GetDependency<IOrganizationSponsorshipRepository>().WhenForAnyArgs(x => x.UpsertAsync(default)).Do(callInfo =>
+        {
+            var sponsorship = callInfo.Arg<OrganizationSponsorship>();
+            sponsorship.Id = sponsorshipId;
+        });
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(currentUserId);
+        sutProvider.GetDependency<ICurrentContext>().Organizations.Returns([
+            new()
+            {
+                Id = sponsoringOrg.Id,
+                Permissions = new Permissions
+                {
+                    ManageUsers = true,
+                },
+                Type = organizationUserType
+            }
+        ]);
+
+
+        var actual = await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
+            await sutProvider.Sut.CreateSponsorshipAsync(sponsoringOrg, sponsoringOrgUser,
+                PlanSponsorshipType.FamiliesForEnterprise, sponsoredEmail, friendlyName));
+
+        Assert.Equal("You do not have permissions to send sponsorships on behalf of the organization.", actual.Message);
     }
 }

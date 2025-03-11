@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -10,22 +11,16 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
-public class CreateSponsorshipCommand : ICreateSponsorshipCommand
+public class CreateSponsorshipCommand(
+    IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+    IUserService userService,
+    ICurrentContext currentContext)
+    : ICreateSponsorshipCommand
 {
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-    private readonly IUserService _userService;
-
-    public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IUserService userService)
-    {
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
-        _userService = userService;
-    }
-
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
         PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
     {
-        var sponsoringUser = await _userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
+        var sponsoringUser = await userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
         if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, System.StringComparison.InvariantCultureIgnoreCase))
         {
             throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
@@ -45,7 +40,24 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
             throw new BadRequestException("Only confirmed users can sponsor other organizations.");
         }
 
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
+        var isAdminInitiated = false;
+        if (currentContext.UserId != sponsoringOrgUser.UserId)
+        {
+            var organization = currentContext.Organizations.First(x => x.Id == sponsoringOrg.Id);
+            OrganizationUserType[] allowedUserTypes =
+            [
+                OrganizationUserType.Admin,
+                OrganizationUserType.Owner,
+                OrganizationUserType.Custom
+            ];
+            if (!organization.Permissions.ManageUsers || allowedUserTypes.All(x => x != organization.Type))
+            {
+                throw new UnauthorizedAccessException("You do not have permissions to send sponsorships on behalf of the organization.");
+            }
+            isAdminInitiated = true;
+        }
+
+        var existingOrgSponsorship = await organizationSponsorshipRepository
             .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
         if (existingOrgSponsorship?.SponsoredOrganizationId != null)
         {
@@ -59,6 +71,7 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
             FriendlyName = friendlyName,
             OfferedToEmail = sponsoredEmail,
             PlanSponsorshipType = sponsorshipType,
+            IsAdminInitiated = isAdminInitiated
         };
 
         if (existingOrgSponsorship != null)
@@ -69,14 +82,14 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
 
         try
         {
-            await _organizationSponsorshipRepository.UpsertAsync(sponsorship);
+            await organizationSponsorshipRepository.UpsertAsync(sponsorship);
             return sponsorship;
         }
         catch
         {
             if (sponsorship.Id != default)
             {
-                await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
+                await organizationSponsorshipRepository.DeleteAsync(sponsorship);
             }
             throw;
         }
