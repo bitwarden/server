@@ -27,6 +27,7 @@ COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY Directory.Build.props .
+COPY .editorconfig .
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Api

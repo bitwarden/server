@@ -24,6 +24,7 @@ COPY src/Core/*.csproj ./src/Core/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MsSqlMigratorUtility/*.csproj ./util/MsSqlMigratorUtility/
 COPY Directory.Build.props .
+COPY .editorconfig .
 
 # Restore project dependencies and tools
 WORKDIR /source/util/MsSqlMigratorUtility

@@ -25,6 +25,7 @@ COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY Directory.Build.props .
+COPY .editorconfig .
 
 # Restore project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Scim

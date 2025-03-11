@@ -21,6 +21,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 WORKDIR /source
 COPY util/Server/*.csproj ./util/Server/
 COPY Directory.Build.props .
+COPY .editorconfig .
 
 # Restore project dependencies and tools
 WORKDIR /source/util/Server
