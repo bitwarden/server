@@ -60,6 +60,15 @@ FROM
     [dbo].[Cipher] C
 GO
 
+
+-- Manually refresh UserCipherDetails
+IF OBJECT_ID('[dbo].[UserCipherDetails]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[UserCipherDetails]';
+END
+GO
+
+
 -- Update sprocs
 CREATE OR ALTER PROCEDURE [dbo].[Cipher_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
