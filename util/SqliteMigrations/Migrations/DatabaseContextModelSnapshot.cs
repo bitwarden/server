@@ -402,10 +402,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("RequestCountryName")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
@@ -419,6 +415,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestCountryName")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RequestDeviceIdentifier")
@@ -1959,6 +1959,9 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ArchivedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Attachments")

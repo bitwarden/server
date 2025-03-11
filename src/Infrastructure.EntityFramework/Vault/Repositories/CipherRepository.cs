@@ -479,7 +479,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         ViewPassword = true,
                                         Manage = true,
                                         OrganizationUseTotp = false,
-                                        Key = c.Key
+                                        Key = c.Key,
+                                        ArchivedDate = c.ArchivedDate,
                                     };
             }
             var ciphers = await cipherDetailsView.ToListAsync();
