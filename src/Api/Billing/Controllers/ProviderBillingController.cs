@@ -71,6 +71,29 @@ public class ProviderBillingController(
             "text/csv");
     }
 
+    [HttpPut("payment-method")]
+    public async Task<IResult> UpdatePaymentMethodAsync(
+        [FromRoute] Guid providerId,
+        [FromBody] UpdatePaymentMethodRequestBody requestBody)
+    {
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var tokenizedPaymentSource = requestBody.PaymentSource.ToDomain();
+        var taxInformation = requestBody.TaxInformation.ToDomain();
+
+        await providerBillingService.UpdatePaymentMethod(
+            provider,
+            tokenizedPaymentSource,
+            taxInformation);
+
+        return TypedResults.Ok();
+    }
+
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
