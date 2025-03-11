@@ -114,6 +114,7 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
+    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
@@ -121,7 +122,6 @@ public static class FeatureFlagKeys
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string ExtensionRefresh = "extension-refresh";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
