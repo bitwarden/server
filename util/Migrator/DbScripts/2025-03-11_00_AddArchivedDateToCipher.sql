@@ -7,7 +7,7 @@ END
 GO
 
 IF NOT EXISTS (SELECT *
-               FROM sys.indexes)
+               FROM sys.indexes
                WHERE name = 'IX_Cipher_ArchivedDate')
     BEGIN
         CREATE NONCLUSTERED INDEX [IX_Cipher_ArchivedDate]
