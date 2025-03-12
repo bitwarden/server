@@ -153,6 +153,7 @@ public static class FeatureFlagKeys
     public const string SecurityTasks = "security-tasks";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
+    public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
