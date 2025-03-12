@@ -758,7 +758,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        await _cipherService.ArchiveAsync(cipher, userId);
+        await _cipherService.ArchiveAsync(cipher);
     }
 
     [HttpPut("archive")]
@@ -909,7 +909,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/unarchive")]
     [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
-    public async Task<CipherResponseModel> PutUnachive(Guid id)
+    public async Task<CipherResponseModel> PutUnarchive(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var cipher = await GetByIdAsync(id, user.Id);
@@ -918,7 +918,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        await _cipherService.UnarchiveAsync(cipher, user.Id);
+        await _cipherService.UnarchiveAsync(cipher);
         return new CipherResponseModel(
             cipher,
             user,
@@ -946,7 +946,7 @@ public class CiphersController : Controller
 
     [HttpPut("unarchive")]
     [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
-    public async Task<ListResponseModel<CipherMiniResponseModel>> PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
+    public async Task PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -956,9 +956,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
-        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
-        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
-        return new ListResponseModel<CipherMiniResponseModel>(responses);
+        await _cipherService.UnarchiveManyAsync(cipherIdsToRestore, userId);
     }
 
     [HttpPut("{id}/restore-admin")]

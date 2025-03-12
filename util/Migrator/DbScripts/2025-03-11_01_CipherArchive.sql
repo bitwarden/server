@@ -24,14 +24,14 @@ BEGIN
         [dbo].[UserCipherDetails](@UserId)
     WHERE
         [Edit] = 1
+      AND [ArchivedDate] IS NULL
       AND [Id] IN (SELECT * FROM @Ids)
 
-    -- Delete ciphers
     DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();
     UPDATE
         [dbo].[Cipher]
     SET
-        [DeletedDate] = @UtcNow,
+        [ArchivedDate] = @UtcNow,
         [RevisionDate] = @UtcNow
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)

@@ -714,6 +714,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        return await ToggleCipherStates(ids, userId, CipherStateAction.Unarchive);
+    }
+
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
         return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
@@ -744,6 +749,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        await ToggleCipherStates(ids, userId, CipherStateAction.Archive);
+    }
+
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
         await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete);
@@ -755,9 +765,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             return action switch
             {
-                CipherStateAction.Restore => ucd.DeletedDate != null,
+                CipherStateAction.Archive => ucd.ArchivedDate != null,
                 CipherStateAction.SoftDelete => ucd.DeletedDate == null,
-                _ => true,
+                CipherStateAction.Unarchive => ucd.ArchivedDate != null,
+                CipherStateAction.Restore => ucd.DeletedDate != null,
+                _ => true
             };
         }
 

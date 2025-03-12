@@ -8,7 +8,7 @@ BEGIN
     CREATE TABLE #Temp
     (
         [Id] UNIQUEIDENTIFIER NOT NULL,
-        [UserId] UNIQUEIDENTIFIER NULL,
+        [UserId] UNIQUEIDENTIFIER NULL
     )
 
     INSERT INTO #Temp
@@ -19,6 +19,7 @@ BEGIN
         [dbo].[UserCipherDetails](@UserId)
     WHERE
         [Edit] = 1
+      AND [ArchivedDate] IS NOT NULL
       AND [Id] IN (SELECT * FROM @Ids)
 
     DECLARE @UtcNow DATETIME2(7) = GETUTCDATE();

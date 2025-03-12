@@ -37,8 +37,8 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
         IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-    Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId);
+    Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
 
