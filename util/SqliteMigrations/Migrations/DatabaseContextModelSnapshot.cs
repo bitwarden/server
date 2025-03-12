@@ -159,6 +159,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("INTEGER");
 
@@ -402,10 +405,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("RequestCountryName")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
@@ -419,6 +418,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestCountryName")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RequestDeviceIdentifier")
@@ -1237,6 +1240,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("TEXT");
