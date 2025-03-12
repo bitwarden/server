@@ -172,7 +172,7 @@ public class DeviceValidatorTests
 
         Assert.False(result);
         Assert.NotNull(context.CustomResponse["ErrorModel"]);
-        var expectedErrorModel = new ErrorResponseModel("no device information provided");
+        var expectedErrorModel = new ErrorResponseModel("No device information provided.");
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorModel.Message, actualResponse.Message);
     }
@@ -418,7 +418,7 @@ public class DeviceValidatorTests
         Assert.False(result);
         Assert.NotNull(context.CustomResponse["ErrorModel"]);
         // PM-13340: The error message should be "invalid user" instead of "no device information provided"
-        var expectedErrorMessage = "no device information provided";
+        var expectedErrorMessage = "No device information provided.";
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorMessage, actualResponse.Message);
     }
@@ -552,7 +552,7 @@ public class DeviceValidatorTests
 
         Assert.False(result);
         Assert.NotNull(context.CustomResponse["ErrorModel"]);
-        var expectedErrorMessage = "invalid new device otp";
+        var expectedErrorMessage = "Invalid new device OTP. Try again.";
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorMessage, actualResponse.Message);
     }
@@ -604,7 +604,7 @@ public class DeviceValidatorTests
 
         Assert.False(result);
         Assert.NotNull(context.CustomResponse["ErrorModel"]);
-        var expectedErrorMessage = "new device verification required";
+        var expectedErrorMessage = "New device verification required.";
         var actualResponse = (ErrorResponseModel)context.CustomResponse["ErrorModel"];
         Assert.Equal(expectedErrorMessage, actualResponse.Message);
     }

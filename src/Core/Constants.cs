@@ -114,6 +114,7 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
+    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
