@@ -1,32 +1,58 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class PhishingDomainRepository : IPhishingDomainRepository
 {
     private readonly string _connectionString;
+    private readonly IDistributedCache _cache;
+    private const string CacheKey = "PhishingDomains";
+    private static readonly DistributedCacheEntryOptions _cacheOptions = new DistributedCacheEntryOptions
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) // Cache for 24 hours
+    };
 
-    public PhishingDomainRepository(GlobalSettings globalSettings)
-        : this(globalSettings.SqlServer.ConnectionString)
+    public PhishingDomainRepository(GlobalSettings globalSettings, IDistributedCache cache)
+        : this(globalSettings.SqlServer.ConnectionString, cache)
     { }
 
-    public PhishingDomainRepository(string connectionString)
+    public PhishingDomainRepository(string connectionString, IDistributedCache cache)
     {
         _connectionString = connectionString;
+        _cache = cache;
     }
 
     public async Task<ICollection<string>> GetActivePhishingDomainsAsync()
     {
+        // Try to get from cache first
+        var cachedDomains = await _cache.GetStringAsync(CacheKey);
+        if (!string.IsNullOrEmpty(cachedDomains))
+        {
+            return JsonSerializer.Deserialize<ICollection<string>>(cachedDomains) ?? new List<string>();
+        }
+
+        // If not in cache, get from database
         using (var connection = new SqlConnection(_connectionString))
         {
             var results = await connection.QueryAsync<string>(
                 "[dbo].[PhishingDomain_ReadAll]",
                 commandType: CommandType.StoredProcedure);
-            return results.AsList();
+
+            var domains = results.AsList();
+
+            // Store in cache
+            await _cache.SetStringAsync(
+                CacheKey,
+                JsonSerializer.Serialize(domains),
+                _cacheOptions);
+
+            return domains;
         }
     }
 
@@ -52,5 +78,11 @@ public class PhishingDomainRepository : IPhishingDomainRepository
                     commandType: CommandType.StoredProcedure);
             }
         }
+
+        // Update cache with new domains
+        await _cache.SetStringAsync(
+            CacheKey,
+            JsonSerializer.Serialize(domains),
+            _cacheOptions);
     }
 }
