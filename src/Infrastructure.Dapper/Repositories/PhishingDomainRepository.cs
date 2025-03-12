@@ -12,7 +12,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
 {
     private readonly string _connectionString;
     private readonly IDistributedCache _cache;
-    private const string CacheKey = "PhishingDomains";
+    private const string _cacheKey = "PhishingDomains";
     private static readonly DistributedCacheEntryOptions _cacheOptions = new DistributedCacheEntryOptions
     {
         AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) // Cache for 24 hours
@@ -31,7 +31,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
     public async Task<ICollection<string>> GetActivePhishingDomainsAsync()
     {
         // Try to get from cache first
-        var cachedDomains = await _cache.GetStringAsync(CacheKey);
+        var cachedDomains = await _cache.GetStringAsync(_cacheKey);
         if (!string.IsNullOrEmpty(cachedDomains))
         {
             return JsonSerializer.Deserialize<ICollection<string>>(cachedDomains) ?? new List<string>();
@@ -48,7 +48,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
 
             // Store in cache
             await _cache.SetStringAsync(
-                CacheKey,
+                _cacheKey,
                 JsonSerializer.Serialize(domains),
                 _cacheOptions);
 
@@ -81,7 +81,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
 
         // Update cache with new domains
         await _cache.SetStringAsync(
-            CacheKey,
+            _cacheKey,
             JsonSerializer.Serialize(domains),
             _cacheOptions);
     }
