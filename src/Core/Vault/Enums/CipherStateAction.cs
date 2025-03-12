@@ -5,5 +5,4 @@ public enum CipherStateAction
     Restore,
     SoftDelete,
     HardDelete,
-    Archive
 }
