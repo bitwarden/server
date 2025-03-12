@@ -623,6 +623,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<DateTime> UnarchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<DateTime>(
+                $"[{Schema}].[Cipher_Unarchive]",
+                new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
+        }
+    }
+
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))

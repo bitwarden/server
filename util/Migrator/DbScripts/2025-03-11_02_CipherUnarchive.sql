@@ -1,4 +1,9 @@
-﻿CREATE PROCEDURE [dbo].[Cipher_Archive]
+﻿IF OBJECT_ID('[dbo].[Cipher_Unarchive]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[Cipher_Unarchive];
+    END
+GO
+CREATE PROCEDURE [dbo].[Cipher_Unarchive]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -8,7 +13,7 @@ BEGIN
     CREATE TABLE #Temp
     (
         [Id] UNIQUEIDENTIFIER NOT NULL,
-        [UserId] UNIQUEIDENTIFIER NULL
+        [UserId] UNIQUEIDENTIFIER NULL,
     )
 
     INSERT INTO #Temp
@@ -25,7 +30,7 @@ BEGIN
     UPDATE
         [dbo].[Cipher]
     SET
-        [DeletedDate] = @UtcNow,
+        [ArchivedDate] = NULL,
         [RevisionDate] = @UtcNow
     WHERE
         [Id] IN (SELECT [Id] FROM #Temp)
@@ -33,4 +38,7 @@ BEGIN
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
     DROP TABLE #Temp
+
+    SELECT @UtcNow
 END
+GO

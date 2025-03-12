@@ -437,7 +437,7 @@ public class CipherService : ICipherService
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
         archivingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
-        await _cipherRepository.SoftDeleteAsync(archivingCiphers.Select(c => c.Id), deletingUserId);
+        await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), deletingUserId);
 
         var events = archivingCiphers.Select(c =>
             new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Archived, null));
@@ -858,7 +858,7 @@ public class CipherService : ICipherService
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
         var restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
 
-        DateTime? revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
+        DateTime? revisionDate = await _cipherRepository.UnarchiveAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
 
         var events = restoringCiphers.Select(c =>
         {
