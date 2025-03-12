@@ -2,11 +2,13 @@
 using Bit.Api.Auth.Models.Response.Opaque;
 using Bit.Core.Services;
 using Bitwarden.OPAQUE;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
 [Route("opaque")]
+[Authorize("Web")]
 public class OpaqueKeyExchangeController : Controller
 {
     private readonly IUserService _userService;
@@ -25,8 +27,8 @@ public class OpaqueKeyExchangeController : Controller
         _cipherConfiguration.KSF = new Argon2id(3, 256 * 1024, 4);
     }
 
-    [HttpGet("~/opaque/start-registration")]
-    public async Task<RegisterStartResponse> StartRegistration(RegisterStartRequest request)
+    [HttpPost("~/opaque/start-registration")]
+    public async Task<RegisterStartResponse> StartRegistration([FromBody] RegisterStartRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var registrationRequest = _bitwardenOpaque.StartServerRegistration(_cipherConfiguration, System.Convert.FromBase64String(request.ClientRegistrationStartResult), user.Id.ToString());
@@ -39,11 +41,14 @@ public class OpaqueKeyExchangeController : Controller
     }
 
 
-    [HttpGet("~/opaque/finish-registration")]
-    public async Task<String> FinishRegistration(RegisterFinishRequest request)
+    [HttpPost("~/opaque/finish-registration")]
+    public async Task<String> FinishRegistration([FromBody] RegisterFinishRequest request)
     {
-        var registrationFinish = _bitwardenOpaque.FinishServerRegistration(_cipherConfiguration, System.Convert.FromBase64String(request.ClientRegisterFinishResult));
-        Console.WriteLine("Registration Finish: " + registrationFinish);
+        await Task.Run(() =>
+        {
+            var registrationFinish = _bitwardenOpaque.FinishServerRegistration(_cipherConfiguration, System.Convert.FromBase64String(request.ClientRegistrationFinishResult));
+            Console.WriteLine("Registration Finish: " + registrationFinish);
+        });
         return "Registration Finish";
     }
 

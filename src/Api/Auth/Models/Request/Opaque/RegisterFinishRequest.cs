@@ -2,7 +2,7 @@
 
 public class RegisterFinishRequest
 {
-    public String ClientRegisterFinishResult { get; set; }
+    public String ClientRegistrationFinishResult { get; set; }
     public Guid SessionId { get; set; }
 }
 
