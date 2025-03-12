@@ -18,8 +18,15 @@ public static class StripeConstants
 
     public static class CouponIDs
     {
-        public const string MSPDiscount35 = "msp-discount-35";
+        public const string LegacyMSPDiscount = "msp-discount-35";
         public const string SecretsManagerStandalone = "sm-standalone";
+
+        public static class MSPDiscounts
+        {
+            public const string Open = "msp-open-discount";
+            public const string Silver = "msp-silver-discount";
+            public const string Gold = "msp-gold-discount";
+        }
     }
 
     public static class ErrorCodes
@@ -29,6 +36,17 @@ public static class StripeConstants
         public const string PaymentMethodMicroDepositVerificationDescriptorCodeMismatch = "payment_method_microdeposit_verification_descriptor_code_mismatch";
         public const string PaymentMethodMicroDepositVerificationTimeout = "payment_method_microdeposit_verification_timeout";
         public const string TaxIdInvalid = "tax_id_invalid";
+    }
+
+    public static class InvoiceStatus
+    {
+        public const string Draft = "draft";
+        public const string Open = "open";
+    }
+
+    public static class MetadataKeys
+    {
+        public const string OrganizationId = "organizationId";
     }
 
     public static class PaymentBehavior

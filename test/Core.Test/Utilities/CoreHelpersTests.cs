@@ -9,7 +9,7 @@ using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using IdentityModel;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
@@ -271,7 +271,7 @@ public class CoreHelpersTests
     [InlineData("ascii.com", "ascii.com")]
     [InlineData("", "")]
     [InlineData(null, null)]
-    public void PunyEncode_Success(string text, string expected)
+    public void PunyEncode_Success(string? text, string? expected)
     {
         var actual = CoreHelpers.PunyEncode(text);
         Assert.Equal(expected, actual);
@@ -435,7 +435,7 @@ public class CoreHelpersTests
     [InlineData("name@", "name@")] // @ symbol but no domain
     [InlineData("", "")] // Empty string
     [InlineData(null, null)] // null
-    public void ObfuscateEmail_Success(string input, string expected)
+    public void ObfuscateEmail_Success(string? input, string? expected)
     {
         Assert.Equal(expected, CoreHelpers.ObfuscateEmail(input));
     }
@@ -456,7 +456,7 @@ public class CoreHelpersTests
     [InlineData("user@")]
     [InlineData("@example.com")]
     [InlineData("user@ex@ample.com")]
-    public void GetEmailDomain_ReturnsNull(string wrongEmail)
+    public void GetEmailDomain_ReturnsNull(string? wrongEmail)
     {
         Assert.Null(CoreHelpers.GetEmailDomain(wrongEmail));
     }

@@ -5,7 +5,7 @@ using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
 using Bit.Core.Utilities;
-using IdentityModel;
+using Duende.IdentityModel;
 using System.Globalization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
@@ -29,6 +29,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 
 
@@ -175,6 +176,7 @@ public class Startup
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
         services.AddReportingServices();
+        services.AddImportServices();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

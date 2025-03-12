@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Services;
 
@@ -14,6 +15,7 @@ public interface IMailService
     Task SendVerifyEmailEmailAsync(string email, Guid userId, string token);
     Task SendRegistrationVerificationEmailAsync(string email, string token);
     Task SendTrialInitiationSignupEmailAsync(
+        bool isExistingUser,
         string email,
         string token,
         ProductTierType productTier,
@@ -22,7 +24,7 @@ public interface IMailService
     Task SendCannotDeleteManagedAccountEmailAsync(string email);
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
-    Task SendTwoFactorEmailAsync(string email, string token);
+    Task SendTwoFactorEmailAsync(string email, string accountEmail, string token, string deviceIp, string deviceType, bool authentication = true);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
 
@@ -36,7 +38,7 @@ public interface IMailService
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails, bool hasAccessSecretsManager = false);
     Task SendOrganizationConfirmedEmailAsync(string organizationName, string email, bool hasAccessSecretsManager = false);
     Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
-    Task SendOrganizationUserRevokedForTwoFactoryPolicyEmailAsync(string organizationName, string email);
+    Task SendOrganizationUserRevokedForTwoFactorPolicyEmailAsync(string organizationName, string email);
     Task SendOrganizationUserRevokedForPolicySingleOrgEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
     Task SendInvoiceUpcoming(
@@ -96,5 +98,6 @@ public interface IMailService
     Task SendFamiliesForEnterpriseRemoveSponsorshipsEmailAsync(string email, string offerAcceptanceDate, string organizationId,
         string organizationName);
     Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
+    Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
+    Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons);
 }
-

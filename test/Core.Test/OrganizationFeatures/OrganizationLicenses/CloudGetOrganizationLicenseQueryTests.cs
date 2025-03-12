@@ -63,6 +63,26 @@ public class CloudGetOrganizationLicenseQueryTests
         Assert.Equal(organization.Id, result.Id);
         Assert.Equal(installationId, result.InstallationId);
         Assert.Equal(licenseSignature, result.SignatureBytes);
+        Assert.Equal(string.Empty, result.Token);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetLicenseAsync_WhenFeatureFlagEnabled_CreatesToken(SutProvider<CloudGetOrganizationLicenseQuery> sutProvider,
+        Organization organization, Guid installationId, Installation installation, SubscriptionInfo subInfo,
+        byte[] licenseSignature, string token)
+    {
+        installation.Enabled = true;
+        sutProvider.GetDependency<IInstallationRepository>().GetByIdAsync(installationId).Returns(installation);
+        sutProvider.GetDependency<IPaymentService>().GetSubscriptionAsync(organization).Returns(subInfo);
+        sutProvider.GetDependency<ILicensingService>().SignLicense(Arg.Any<ILicense>()).Returns(licenseSignature);
+        sutProvider.GetDependency<ILicensingService>()
+            .CreateOrganizationTokenAsync(organization, installationId, subInfo)
+            .Returns(token);
+
+        var result = await sutProvider.Sut.GetLicenseAsync(organization, installationId);
+
+        Assert.Equal(token, result.Token);
     }
 
     [Theory]

@@ -79,34 +79,23 @@ public class DeviceValidator(
                     BuildDeviceErrorResult(validationResult);
                 if (validationResult == DeviceValidationResultType.NewDeviceVerificationRequired)
                 {
-                    await _userService.SendOTPAsync(context.User);
+                    await _userService.SendNewDeviceVerificationEmailAsync(context.User);
                 }
                 return false;
             }
         }
 
-        // At this point we have established either new device verification is not required or the NewDeviceOtp is valid
+        // At this point we have established either new device verification is not required or the NewDeviceOtp is valid,
+        // so we save the device to the database and proceed with authentication
         requestDevice.UserId = context.User.Id;
         await _deviceService.SaveAsync(requestDevice);
         context.Device = requestDevice;
 
-        // backwards compatibility -- If NewDeviceVerification not enabled send the new login emails
-        // PM-13340: removal Task; remove entire if block emails should no longer be sent
-        if (!_featureService.IsEnabled(FeatureFlagKeys.NewDeviceVerification))
+        if (!_globalSettings.DisableEmailNewDevice)
         {
-            // This ensures the user doesn't receive a "new device" email on the first login
-            var now = DateTime.UtcNow;
-            if (now - context.User.CreationDate > TimeSpan.FromMinutes(10))
-            {
-                var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
-                    .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
-                if (!_globalSettings.DisableEmailNewDevice)
-                {
-                    await _mailService.SendNewDeviceLoggedInEmail(context.User.Email, deviceType, now,
-                        _currentContext.IpAddress);
-                }
-            }
+            await SendNewDeviceLoginEmail(context.User, requestDevice);
         }
+
         return true;
     }
 
@@ -127,6 +116,13 @@ public class DeviceValidator(
 
         // Has the User opted out of new device verification
         if (!user.VerifyDevices)
+        {
+            return DeviceValidationResultType.Success;
+        }
+
+        // User is newly registered, so don't require new device verification
+        var createdSpan = DateTime.UtcNow - user.CreationDate;
+        if (createdSpan < TimeSpan.FromHours(24))
         {
             return DeviceValidationResultType.Success;
         }
@@ -172,6 +168,27 @@ public class DeviceValidator(
 
         // if we get to here then we need to send a new device verification email
         return DeviceValidationResultType.NewDeviceVerificationRequired;
+    }
+
+    /// <summary>
+    /// Sends an email whenever the user logs in from a new device. Will not send to a user who's account
+    /// is less than 10 minutes old. We assume an account that is less than 10 minutes old is new and does
+    /// not need an email stating they just logged in.
+    /// </summary>
+    /// <param name="user">user logging in</param>
+    /// <param name="requestDevice">current device being approved to login</param>
+    /// <returns>void</returns>
+    private async Task SendNewDeviceLoginEmail(User user, Device requestDevice)
+    {
+        // Ensure that the user doesn't receive a "new device" email on the first login
+        var now = DateTime.UtcNow;
+        if (now - user.CreationDate > TimeSpan.FromMinutes(10))
+        {
+            var deviceType = requestDevice.Type.GetType().GetMember(requestDevice.Type.ToString())
+                .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
+            await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
+                _currentContext.IpAddress);
+        }
     }
 
     public async Task<Device> GetKnownDeviceAsync(User user, Device device)
@@ -235,19 +252,19 @@ public class DeviceValidator(
         {
             case DeviceValidationResultType.InvalidUser:
                 result.ErrorDescription = "Invalid user";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid user"));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("Invalid user."));
                 break;
             case DeviceValidationResultType.InvalidNewDeviceOtp:
                 result.ErrorDescription = "Invalid New Device OTP";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid new device otp"));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("Invalid new device OTP. Try again."));
                 break;
             case DeviceValidationResultType.NewDeviceVerificationRequired:
                 result.ErrorDescription = "New device verification required";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("new device verification required"));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("New device verification required."));
                 break;
             case DeviceValidationResultType.NoDeviceInformationProvided:
                 result.ErrorDescription = "No device information provided";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("no device information provided"));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("No device information provided."));
                 break;
         }
         return (result, customResponse);
