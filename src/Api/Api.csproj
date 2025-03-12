@@ -39,4 +39,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../../dotnet-extensions/extensions/Bitwarden.OPAQUE/src/Bitwarden.OPAQUE.csproj" />
+  </ItemGroup>
+
 </Project>
