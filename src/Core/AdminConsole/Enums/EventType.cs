@@ -37,8 +37,6 @@ public enum EventType : int
     Cipher_Archived = 1118,
     Cipher_Unarchived = 1119,
 
-
-
     Collection_Created = 1300,
     Collection_Updated = 1301,
     Collection_Deleted = 1302,

@@ -423,7 +423,7 @@ public class CipherService : ICipherService
         {
             await _cipherRepository.UpsertAsync(cipher);
         }
-        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
+        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Archived);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
@@ -440,7 +440,7 @@ public class CipherService : ICipherService
         await _cipherRepository.SoftDeleteAsync(archivingCiphers.Select(c => c.Id), deletingUserId);
 
         var events = archivingCiphers.Select(c =>
-            new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_SoftDeleted, null));
+            new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Archived, null));
         foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
@@ -726,7 +726,7 @@ public class CipherService : ICipherService
             await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
         }
 
-        await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_UpdatedCollections);
+        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
