@@ -116,15 +116,21 @@ public static class FeatureFlagKeys
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
 
+    /* Vault Team */
+    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
+    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
+    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
+    public const string VaultBulkManagementAction = "vault-bulk-management-action";
+    public const string RestrictProviderAccess = "restrict-provider-access";
+    public const string SecurityTasks = "security-tasks";
+
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
-    public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
@@ -149,11 +155,7 @@ public static class FeatureFlagKeys
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
-    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
-    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
-    public const string SecurityTasks = "security-tasks";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
-    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
