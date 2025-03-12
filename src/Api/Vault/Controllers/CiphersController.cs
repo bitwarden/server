@@ -748,7 +748,8 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/archive")]
-    public async Task Archive(Guid id)
+    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    public async Task PutArchive(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
@@ -761,7 +762,8 @@ public class CiphersController : Controller
     }
 
     [HttpPut("archive")]
-    public async Task ArchiveMany([FromBody] CipherBulkDeleteRequestModel model)
+    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    public async Task PutArchiveMany([FromBody] CipherBulkArchiveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -905,6 +907,25 @@ public class CiphersController : Controller
         await _cipherService.SoftDeleteManyAsync(cipherIds, userId, new Guid(model.OrganizationId), true);
     }
 
+    [HttpPut("{id}/unarchive")]
+    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    public async Task<CipherResponseModel> PutUnachive(Guid id)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.UnarchiveAsync(cipher, user.Id);
+        return new CipherResponseModel(
+            cipher,
+            user,
+            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
+            _globalSettings);
+    }
+
     [HttpPut("{id}/restore")]
     public async Task<CipherResponseModel> PutRestore(Guid id)
     {
@@ -921,6 +942,23 @@ public class CiphersController : Controller
             user,
             await _applicationCacheService.GetOrganizationAbilitiesAsync(),
             _globalSettings);
+    }
+
+    [HttpPut("unarchive")]
+    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only restore up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
     [HttpPut("{id}/restore-admin")]

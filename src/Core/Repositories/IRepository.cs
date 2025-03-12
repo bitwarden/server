@@ -10,6 +10,5 @@ public interface IRepository<T, TId> where TId : IEquatable<TId> where T : class
     Task<T> CreateAsync(T obj);
     Task ReplaceAsync(T obj);
     Task UpsertAsync(T obj);
-    Task ArchiveAsync(T obj);
     Task DeleteAsync(T obj);
 }
