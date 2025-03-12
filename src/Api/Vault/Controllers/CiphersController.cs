@@ -747,6 +747,31 @@ public class CiphersController : Controller
         }
     }
 
+    [HttpPut("{id}/archive")]
+    public async Task Archive(Guid id)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.ArchiveAsync(cipher, userId);
+    }
+
+    [HttpPut("archive")]
+    public async Task ArchiveMany([FromBody] CipherBulkDeleteRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only archive up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        await _cipherService.ArchiveManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+    }
+
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)

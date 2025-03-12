@@ -232,11 +232,22 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                $"[{Schema}].[Cipher_Archive]",
+                new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.ExecuteAsync(
+            await connection.ExecuteAsync(
                 $"[{Schema}].[Cipher_DeleteAttachment]",
                 new { Id = cipherId, AttachmentId = attachmentId },
                 commandType: CommandType.StoredProcedure);

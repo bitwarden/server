@@ -405,6 +405,51 @@ public class CipherService : ICipherService
         return response;
     }
 
+    public async Task ArchiveAsync(Cipher cipher, Guid archivingUserId, bool orgAdmin = false)
+    {
+        if (cipher.ArchivedDate.HasValue)
+        {
+            // Already soft-archived, we can safely ignore this
+            return;
+        }
+
+        cipher.ArchivedDate = cipher.RevisionDate = DateTime.UtcNow;
+
+        if (cipher is CipherDetails details)
+        {
+            await _cipherRepository.UpsertAsync(details);
+        }
+        else
+        {
+            await _cipherRepository.UpsertAsync(cipher);
+        }
+        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_SoftDeleted);
+
+        // push
+        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
+    }
+
+    public async Task ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId)
+    {
+        var cipherIdsSet = new HashSet<Guid>(cipherIds);
+        var archivingCiphers = new List<Cipher>();
+
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
+        archivingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
+
+        await _cipherRepository.SoftDeleteAsync(archivingCiphers.Select(c => c.Id), deletingUserId);
+
+        var events = archivingCiphers.Select(c =>
+            new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_SoftDeleted, null));
+        foreach (var eventsBatch in events.Chunk(100))
+        {
+            await _eventService.LogCipherEventsAsync(eventsBatch);
+        }
+
+        // push
+        await _pushService.PushSyncCiphersAsync(deletingUserId);
+    }
+
     public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))

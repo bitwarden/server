@@ -46,6 +46,11 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         return cipher;
     }
 
+    public async Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    {
+        await ToggleCipherStates(ids, userId, CipherStateAction.Archive);
+    }
+
     public override async Task DeleteAsync(Core.Vault.Entities.Cipher cipher)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

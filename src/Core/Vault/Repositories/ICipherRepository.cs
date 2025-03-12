@@ -24,6 +24,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
     Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
+    Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
     Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
