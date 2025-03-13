@@ -235,6 +235,38 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
     }
 
+    [Theory, BitAutoData]
+    public async Task PutArchive_ShouldArchiveCipher(
+        Guid cipherId, User user, SutProvider<CiphersController> sutProvider)
+    {
+        // Arrange
+        var cipherDetails = new CipherDetails { Id = cipherId, UserId = user.Id };
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(user.Id);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).Returns(cipherDetails);
+
+        // Act
+        await sutProvider.Sut.PutArchive(cipherId);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherService>().Received(1).ArchiveAsync(cipherDetails);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PutUnarchive_ShouldUnarchiveCipher(
+        Guid cipherId, User user, SutProvider<CiphersController> sutProvider)
+    {
+        // Arrange
+        var cipherDetails = new CipherDetails { Id = cipherId, UserId = user.Id };
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).Returns(cipherDetails);
+
+        // Act
+        await sutProvider.Sut.PutUnarchive(cipherId);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherService>().Received(1).UnarchiveAsync(cipherDetails);
+    }
+
     [Theory]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.Admin)]

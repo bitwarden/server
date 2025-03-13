@@ -909,7 +909,7 @@ public class CiphersController : Controller
 
     [HttpPut("{id}/unarchive")]
     [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
-    public async Task<CipherResponseModel> PutUnarchive(Guid id)
+    public async Task PutUnarchive(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         var cipher = await GetByIdAsync(id, user.Id);
@@ -919,11 +919,21 @@ public class CiphersController : Controller
         }
 
         await _cipherService.UnarchiveAsync(cipher);
-        return new CipherResponseModel(
-            cipher,
-            user,
-            await _applicationCacheService.GetOrganizationAbilitiesAsync(),
-            _globalSettings);
+    }
+
+    [HttpPut("unarchive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only restore up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        await _cipherService.UnarchiveManyAsync(cipherIdsToRestore, userId);
     }
 
     [HttpPut("{id}/restore")]
@@ -942,21 +952,6 @@ public class CiphersController : Controller
             user,
             await _applicationCacheService.GetOrganizationAbilitiesAsync(),
             _globalSettings);
-    }
-
-    [HttpPut("unarchive")]
-    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
-    public async Task PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
-    {
-        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
-        {
-            throw new BadRequestException("You can only restore up to 500 items at a time.");
-        }
-
-        var userId = _userService.GetProperUserId(User).Value;
-        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
-
-        await _cipherService.UnarchiveManyAsync(cipherIdsToRestore, userId);
     }
 
     [HttpPut("{id}/restore-admin")]
