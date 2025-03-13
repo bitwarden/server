@@ -7,6 +7,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
@@ -107,10 +108,18 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(Guid id, bool includeGroups = false)
+    public async Task<OrganizationUserDetailsResponseModel> Get([FromRoute] Guid orgId, Guid id, bool includeGroups = false)
     {
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
+            OrganizationUserDetailsOperations.Read);
+
+        if (authorizationResult.Succeeded is false)
+        {
+            throw new NotFoundException();
+        }
+
         var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.OrganizationId))
+        if (organizationUser == null)
         {
             throw new NotFoundException();
         }
@@ -707,7 +716,7 @@ public class OrganizationUsersController : Controller
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            return userIds.ToDictionary(kvp => kvp, kvp => false);
+            return userIds.ToDictionary(kvp => kvp, _ => false);
         }
 
         var usersOrganizationManagementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
