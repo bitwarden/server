@@ -1,98 +1,130 @@
 # Bitwarden Database Seeder
 
-The Bitwarden Database Seeder utility is a tool for generating and loading test data for Bitwarden databases.
+A class library for generating, loading, and extracting test data for Bitwarden databases.
 
-## Features
+## Overview
 
-- Generate random user accounts with associated ciphers (passwords, secure notes, etc.)
-- Load generated seeds into the database
-- Configure database connections using the same configuration approach as the Bitwarden Migrator
+The Seeder library provides functionality to:
+
+1. **Generate** realistic test data for Bitwarden, including users and ciphers
+2. **Load** previously generated test data into the database
+3. **Extract** existing data from a database into seed files
+4. **Generate and load** data in a single operation
+
+## Project Structure
+
+The project is organized into these main components:
+
+### Commands
+
+- **ExtractCommand** - Extracts existing data from the database into seed files
+- **GenerateCommand** - Generates new test data as seed files or directly loads it
+- **LoadCommand** - Loads previously generated seed files into the database
+
+### Services
+
+- **DatabaseContext** - EF Core DbContext connecting to the configured database
+- **DatabaseService** - Provides database operations (save, retrieve, clear data)
+- **EncryptionService** - Handles security operations (password hashing, encryption)
+- **SeederService** - Core service that generates realistic test data using Bogus
+
+### Settings
+
+- **GlobalSettings** - Configuration model for database connections
+- **GlobalSettingsFactory** - Loads and caches settings from config sources
 
 ## Usage
 
-The seeder utility can be run in two ways:
+The Seeder library is designed to be used by the DbSeederUtility executable. For direct usage in code:
 
-1. Using `dotnet run` from the source:
-   ```
-   cd util/DbSeederUtility
-   dotnet run -- generate-seeds --users 10 --ciphers 5 --output ./seeds
-   dotnet run -- load-seeds --path ./seeds
-   ```
+```csharp
+// Get seeder service from dependency injection
+var seederService = serviceProvider.GetRequiredService<ISeederService>();
 
-2. As a standalone executable:
-   ```
-   DbSeeder.exe generate-seeds --users 10 --ciphers 5 --output ./seeds
-   DbSeeder.exe load-seeds --path ./seeds
-   ```
+// Generate seed data
+await seederService.GenerateSeedsAsync(
+    userCount: 10, 
+    ciphersPerUser: 5, 
+    seedName: "test_data"
+);
 
-## Commands
+// Load seed data
+await seederService.LoadSeedsAsync(
+    seedName: "test_data",
+    timestamp: null // Use most recent if null
+);
 
-### Generate Seeds
+// Extract data
+await seederService.ExtractSeedsAsync(
+    seedName: "extracted_data"
+);
 
-Generates random seed data for users and ciphers.
-
-```
-DbSeeder.exe generate-seeds [options]
-
-Options:
-  -u, --users <NUMBER>     Number of users to generate (default: 10)
-  -c, --ciphers <NUMBER>   Number of ciphers per user (default: 5)
-  -o, --output <DIRECTORY> Output directory for seed files (default: seeds)
-```
-
-### Load Seeds
-
-Loads generated seed data into the database.
-
-```
-DbSeeder.exe load-seeds [options]
-
-Options:
-  -p, --path <DIRECTORY>   Path to the directory containing seed data
-  --dry-run                Preview the operation without making changes
+// Generate and load in one step
+await seederService.GenerateAndLoadSeedsAsync(
+    userCount: 10,
+    ciphersPerUser: 5,
+    seedName: "direct_load"
+);
 ```
 
 ## Configuration
 
-The utility uses the same configuration approach as other Bitwarden utilities:
+The library uses the following configuration sources (in order of precedence):
 
-1. **User Secrets** - For local development
-2. **appsettings.json** - For general settings
-3. **Environment variables** - For deployment environments
+1. Environment variables
+2. User secrets (with ID "Bit.Seeder")
+3. appsettings.{Environment}.json
+4. appsettings.json
 
-### Database Configuration
-
-Configure the database connection in user secrets or appsettings.json:
+The expected configuration structure is:
 
 ```json
 {
   "globalSettings": {
-    "databaseProvider": "postgresql", // or "sqlserver", "mysql", "sqlite"
-    "postgreSql": {
-      "connectionString": "Host=localhost;Port=5432;Database=vault_dev;Username=postgres;Password=YOURPASSWORD;Include Error Detail=true"
-    },
+    "selfHosted": true,
+    "databaseProvider": "postgres",
     "sqlServer": {
-      "connectionString": "Data Source=localhost;Initial Catalog=vault_dev;Integrated Security=SSPI;MultipleActiveResultSets=true"
+      "connectionString": "..."
+    },
+    "postgreSql": {
+      "connectionString": "..."
+    },
+    "mySql": {
+      "connectionString": "..."
+    },
+    "sqlite": {
+      "connectionString": "..."
     }
   }
 }
 ```
 
-## Building the Executable
+## Seed File Structure
 
-To build the standalone executable:
-
-```
-cd util
-.\publish-seeder.ps1
-```
-
-This will create the executable in the `util/Seeder/publish/win-x64` directory. You can also specify a different runtime:
+Seed files are organized as follows:
 
 ```
-.\publish-seeder.ps1 -runtime linux-x64
+seeds/
+├── {seed_name}/
+│   └── {timestamp}/
+│       ├── users/
+│       │   └── users.json
+│       └── ciphers/
+│           ├── {user_id1}.json
+│           ├── {user_id2}.json
+│           └── ...
 ```
 
-## Integration with Bitwarden Server
+## Dependencies
 
-The seeder utility is designed to work seamlessly with Bitwarden Server. It uses the same database models and configuration approach as the server, ensuring compatibility with the core repository. 
+- **EntityFrameworkCore** - Database access
+- **Bogus** - Realistic test data generation
+- **CommandDotNet** - Used by DbSeederUtility for CLI commands
+- **DataProtection** - Used for secure data handling
+
+## Best Practices
+
+- Clear the database before loading new seed data
+- Use consistent seed names for related operations
+- Store sensitive connection strings in user secrets or environment variables
+- Use the DbSeederUtility executable for command-line operations 
