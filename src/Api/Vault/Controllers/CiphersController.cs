@@ -747,6 +747,33 @@ public class CiphersController : Controller
         }
     }
 
+    [HttpPut("{id}/archive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task PutArchive(Guid id)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipher = await GetByIdAsync(id, userId);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.ArchiveAsync(cipher);
+    }
+
+    [HttpPut("archive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task PutArchiveMany([FromBody] CipherBulkArchiveRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only archive up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        await _cipherService.ArchiveManyAsync(model.Ids.Select(i => new Guid(i)), userId);
+    }
+
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid id)
@@ -878,6 +905,35 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         await _cipherService.SoftDeleteManyAsync(cipherIds, userId, new Guid(model.OrganizationId), true);
+    }
+
+    [HttpPut("{id}/unarchive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task PutUnarchive(Guid id)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var cipher = await GetByIdAsync(id, user.Id);
+        if (cipher == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _cipherService.UnarchiveAsync(cipher);
+    }
+
+    [HttpPut("unarchive")]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
+    public async Task PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only restore up to 500 items at a time.");
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        await _cipherService.UnarchiveManyAsync(cipherIdsToRestore, userId);
     }
 
     [HttpPut("{id}/restore")]

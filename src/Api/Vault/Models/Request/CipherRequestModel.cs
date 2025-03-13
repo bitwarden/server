@@ -302,11 +302,23 @@ public class CipherCollectionsRequestModel
     public IEnumerable<string> CollectionIds { get; set; }
 }
 
+public class CipherBulkArchiveRequestModel
+{
+    [Required]
+    public IEnumerable<string> Ids { get; set; }
+}
+
 public class CipherBulkDeleteRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
     public string OrganizationId { get; set; }
+}
+
+public class CipherBulkUnarchiveRequestModel
+{
+    [Required]
+    public IEnumerable<string> Ids { get; set; }
 }
 
 public class CipherBulkRestoreRequestModel
