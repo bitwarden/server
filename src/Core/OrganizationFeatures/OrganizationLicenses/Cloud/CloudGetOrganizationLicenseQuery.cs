@@ -42,10 +42,7 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
 
         var subscriptionInfo = await GetSubscriptionAsync(organization);
         var license = new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
-        if (_featureService.IsEnabled(FeatureFlagKeys.SelfHostLicenseRefactor))
-        {
-            license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
-        }
+        license.Token = await _licensingService.CreateOrganizationTokenAsync(organization, installationId, subscriptionInfo);
 
         return license;
     }

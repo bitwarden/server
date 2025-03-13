@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -37,6 +38,7 @@ public class ServiceAccountsController : Controller
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
     private readonly IDeleteServiceAccountsCommand _deleteServiceAccountsCommand;
     private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
+    private readonly IPricingClient _pricingClient;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -52,7 +54,8 @@ public class ServiceAccountsController : Controller
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
         IDeleteServiceAccountsCommand deleteServiceAccountsCommand,
-        IRevokeAccessTokensCommand revokeAccessTokensCommand)
+        IRevokeAccessTokensCommand revokeAccessTokensCommand,
+        IPricingClient pricingClient)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -66,6 +69,7 @@ public class ServiceAccountsController : Controller
         _updateServiceAccountCommand = updateServiceAccountCommand;
         _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
         _revokeAccessTokensCommand = revokeAccessTokensCommand;
+        _pricingClient = pricingClient;
         _createAccessTokenCommand = createAccessTokenCommand;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
@@ -124,7 +128,9 @@ public class ServiceAccountsController : Controller
         if (newServiceAccountSlotsRequired > 0)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            var update = new SecretsManagerSubscriptionUpdate(org, true)
+            // TODO: https://bitwarden.atlassian.net/browse/PM-17002
+            var plan = await _pricingClient.GetPlanOrThrow(org!.PlanType);
+            var update = new SecretsManagerSubscriptionUpdate(org, plan, true)
                 .AdjustServiceAccounts(newServiceAccountSlotsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }

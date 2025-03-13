@@ -43,7 +43,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedPasswordManagerSeats = 20
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsStarterPlan, updatedSubscriptionData);
 
         var upgradeItemOptions = subscriptionUpdate.UpgradeItemsOptions(subscription);
 
@@ -114,7 +114,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var upgradeItemOptions = subscriptionUpdate.UpgradeItemsOptions(subscription);
 
@@ -221,7 +221,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var upgradeItemOptions = subscriptionUpdate.UpgradeItemsOptions(subscription);
 
@@ -302,7 +302,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedPasswordManagerSeats = 20
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsStarterPlan, updatedSubscriptionData);
 
         var revertItemOptions = subscriptionUpdate.RevertItemsOptions(subscription);
 
@@ -372,7 +372,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var revertItemOptions = subscriptionUpdate.RevertItemsOptions(subscription);
 
@@ -478,7 +478,7 @@ public class CompleteSubscriptionUpdateTests
             PurchasedAdditionalStorage = 10
         };
 
-        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, updatedSubscriptionData);
+        var subscriptionUpdate = new CompleteSubscriptionUpdate(organization, teamsMonthlyPlan, updatedSubscriptionData);
 
         var revertItemOptions = subscriptionUpdate.RevertItemsOptions(subscription);
 

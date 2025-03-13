@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
@@ -128,6 +129,9 @@ public class ProviderBillingServiceTests
             .GetByIdAsync(Arg.Is<Guid>(p => p == providerPlanId))
             .Returns(existingPlan);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(existingPlan.PlanType)
+            .Returns(StaticStore.GetPlan(existingPlan.PlanType));
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.ProviderSubscriptionGetAsync(
                 Arg.Is(provider.GatewaySubscriptionId),
@@ -155,6 +159,9 @@ public class ProviderBillingServiceTests
 
         var command =
             new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
+            .Returns(StaticStore.GetPlan(command.NewPlan));
 
         // Act
         await sutProvider.Sut.ChangePlan(command);
@@ -390,6 +397,12 @@ public class ProviderBillingServiceTests
             }
         };
 
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
+
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
 
         // 50 seats currently assigned with a seat minimum of 100
@@ -450,6 +463,12 @@ public class ProviderBillingServiceTests
                 AllocatedSeats = 0
             }
         };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
 
         var providerPlan = providerPlans.First();
 
@@ -515,6 +534,12 @@ public class ProviderBillingServiceTests
             }
         };
 
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
+
         var providerPlan = providerPlans.First();
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
@@ -579,6 +604,12 @@ public class ProviderBillingServiceTests
             }
         };
 
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
+
         var providerPlan = providerPlans.First();
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
@@ -636,6 +667,8 @@ public class ProviderBillingServiceTests
             }
         ]);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(StaticStore.GetPlan(planType));
+
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
             new ProviderOrganizationOrganizationDetails
@@ -672,6 +705,8 @@ public class ProviderBillingServiceTests
             }
         ]);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(planType).Returns(StaticStore.GetPlan(planType));
+
         sutProvider.GetDependency<IProviderOrganizationRepository>().GetManyDetailsByProviderAsync(provider.Id).Returns(
         [
             new ProviderOrganizationOrganizationDetails
@@ -695,18 +730,6 @@ public class ProviderBillingServiceTests
     #endregion
 
     #region SetupCustomer
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_NullProvider_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        TaxInfo taxInfo) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(null, taxInfo));
-
-    [Theory, BitAutoData]
-    public async Task SetupCustomer_NullTaxInfo_ThrowsArgumentNullException(
-        SutProvider<ProviderBillingService> sutProvider,
-        Provider provider) =>
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.SetupCustomer(provider, null));
 
     [Theory, BitAutoData]
     public async Task SetupCustomer_MissingCountry_ContactSupport(
@@ -856,6 +879,9 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.EnterpriseMonthly)
+            .Returns(StaticStore.GetPlan(PlanType.EnterpriseMonthly));
+
         await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
         await sutProvider.GetDependency<IStripeAdapter>()
@@ -880,6 +906,9 @@ public class ProviderBillingServiceTests
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
+
+        sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(PlanType.TeamsMonthly)
+            .Returns(StaticStore.GetPlan(PlanType.TeamsMonthly));
 
         await ThrowsBillingExceptionAsync(() => sutProvider.Sut.SetupSubscription(provider));
 
@@ -922,6 +951,12 @@ public class ProviderBillingServiceTests
                 AllocatedSeats = 0
             }
         };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
@@ -967,6 +1002,12 @@ public class ProviderBillingServiceTests
                 AllocatedSeats = 0
             }
         };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
@@ -1066,6 +1107,12 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 25 }
         };
 
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
+
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
@@ -1138,6 +1185,12 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0, AllocatedSeats = 40 },
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0, AllocatedSeats = 15 }
         };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
@@ -1212,6 +1265,12 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 50, PurchasedSeats = 20 }
         };
 
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
+
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
@@ -1278,6 +1337,12 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 20 },
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 50, PurchasedSeats = 20 }
         };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
@@ -1351,6 +1416,12 @@ public class ProviderBillingServiceTests
             new() { PlanType = PlanType.EnterpriseMonthly, SeatMinimum = 50, PurchasedSeats = 0 },
             new() { PlanType = PlanType.TeamsMonthly, SeatMinimum = 30, PurchasedSeats = 0 }
         };
+
+        foreach (var plan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(plan.PlanType)
+                .Returns(StaticStore.GetPlan(plan.PlanType));
+        }
 
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 

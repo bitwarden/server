@@ -29,6 +29,16 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, GetUserGroup(currentContext.UserId.Value, clientType));
         }
 
+        if (_globalSettings.Installation.Id != Guid.Empty)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, GetInstallationGroup(_globalSettings.Installation.Id));
+            if (clientType != ClientType.All)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId,
+                    GetInstallationGroup(_globalSettings.Installation.Id, clientType));
+            }
+        }
+
         if (currentContext.Organizations != null)
         {
             foreach (var org in currentContext.Organizations)
@@ -57,6 +67,17 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
                 GetUserGroup(currentContext.UserId.Value, clientType));
         }
 
+        if (_globalSettings.Installation.Id != Guid.Empty)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId,
+                GetInstallationGroup(_globalSettings.Installation.Id));
+            if (clientType != ClientType.All)
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId,
+                    GetInstallationGroup(_globalSettings.Installation.Id, clientType));
+            }
+        }
+
         if (currentContext.Organizations != null)
         {
             foreach (var org in currentContext.Organizations)
@@ -71,6 +92,13 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
 
         _connectionCounter.Decrement();
         await base.OnDisconnectedAsync(exception);
+    }
+
+    public static string GetInstallationGroup(Guid installationId, ClientType? clientType = null)
+    {
+        return clientType is null or ClientType.All
+            ? $"Installation_{installationId}"
+            : $"Installation_ClientType_{installationId}_{clientType}";
     }
 
     public static string GetUserGroup(Guid userId, ClientType clientType)
