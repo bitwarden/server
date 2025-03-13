@@ -9,9 +9,7 @@ namespace Bit.Core.Auth.Repositories;
 
 public interface IOpaqueKeyExchangeCredentialRepository : IRepository<OpaqueKeyExchangeCredential, Guid>
 {
-    Task<OpaqueKeyExchangeCredential?> GetByIdAsync(Guid id, Guid userId);
-    Task<ICollection<OpaqueKeyExchangeCredential>> GetManyByUserIdAsync(Guid userId);
-    Task<bool> UpdateAsync(OpaqueKeyExchangeCredential credential);
+    Task<OpaqueKeyExchangeCredential?> GetByUserIdAsync(Guid userId);
     //TODO implement rotation
     UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<OpaqueKeyExchangeRotateKeyData> credentials);
 }
