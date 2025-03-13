@@ -23,6 +23,7 @@ public class AuthRequestResponseModel : ResponseModel
         RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
         RequestIpAddress = authRequest.RequestIpAddress;
+        RequestCountryName = authRequest.RequestCountryName;
         Key = authRequest.Key;
         MasterPasswordHash = authRequest.MasterPasswordHash;
         CreationDate = authRequest.CreationDate;
@@ -37,6 +38,7 @@ public class AuthRequestResponseModel : ResponseModel
     public DeviceType RequestDeviceTypeValue { get; set; }
     public string RequestDeviceType { get; set; }
     public string RequestIpAddress { get; set; }
+    public string RequestCountryName { get; set; }
     public string Key { get; set; }
     public string MasterPasswordHash { get; set; }
     public DateTime CreationDate { get; set; }

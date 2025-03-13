@@ -102,7 +102,6 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     /* Admin Console Team */
-    public const string ProviderClientVaultPrivacyBanner = "ac-2833-provider-client-vault-privacy-banner";
     public const string AccountDeprovisioning = "pm-10308-account-deprovisioning";
     public const string VerifiedSsoDomainEndpoint = "pm-12337-refactor-sso-details-endpoint";
     public const string DeviceApprovalRequestAdminNotifications = "pm-15637-device-approval-request-admin-notifications";
@@ -115,18 +114,24 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
+    public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
+    public const string ExportAttachments = "export-attachments";
+
+    /* Vault Team */
+    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
+    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
+    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
+    public const string VaultBulkManagementAction = "vault-bulk-management-action";
+    public const string RestrictProviderAccess = "restrict-provider-access";
+    public const string SecurityTasks = "security-tasks";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
     public const string AC2101UpdateTrialInitiationEmail = "AC-2101-update-trial-initiation-email";
-    public const string AC1795_UpdatedSubscriptionStatusSection = "AC-1795_updated-subscription-status-section";
     public const string EmailVerification = "email-verification";
     public const string EmailVerificationDisableTimingDelays = "email-verification-disable-timing-delays";
-    public const string ExtensionRefresh = "extension-refresh";
-    public const string RestrictProviderAccess = "restrict-provider-access";
     public const string PM4154BulkEncryptionService = "PM-4154-bulk-encryption-service";
-    public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string InlineMenuFieldQualification = "inline-menu-field-qualification";
     public const string InlineMenuPositioningImprovements = "inline-menu-positioning-improvements";
     public const string DeviceTrustLogging = "pm-8285-device-trust-logging";
@@ -151,13 +156,8 @@ public static class FeatureFlagKeys
     public const string RemoveServerVersionHeader = "remove-server-version-header";
     public const string GeneratorToolsModernization = "generator-tools-modernization";
     public const string NewDeviceVerification = "new-device-verification";
-    public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
-    public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
-    public const string SecurityTasks = "security-tasks";
     public const string MacOsNativeCredentialSync = "macos-native-credential-sync";
-    public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string InlineMenuTotp = "inline-menu-totp";
-    public const string SelfHostLicenseRefactor = "pm-11516-self-host-license-refactor";
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";
     public const string AppReviewPrompt = "app-review-prompt";
     public const string ResellerManagedOrgAlert = "PM-15814-alert-owners-of-reseller-managed-orgs";
