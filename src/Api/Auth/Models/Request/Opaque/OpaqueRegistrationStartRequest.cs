@@ -3,10 +3,10 @@ using Bitwarden.OPAQUE;
 
 namespace Bit.Api.Auth.Models.Request.Opaque;
 
-public class RegisterStartRequest
+public class OpaqueRegistrationStartRequest
 {
     [Required]
-    public String ClientRegistrationStartResult { get; set; }
+    public String RegistrationRequest { get; set; }
     [Required]
     public CipherConfiguration CipherConfiguration { get; set; }
 }

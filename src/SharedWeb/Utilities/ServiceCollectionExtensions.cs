@@ -118,6 +118,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
+        services.AddScoped<IOpaqueKeyExchangeService, OpaqueKeyExchangeService>();
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();
