@@ -1,6 +1,6 @@
-using CommandDotNet;
-using Bit.Seeder.Commands;
+﻿using Bit.Seeder.Commands;
 using Bit.Seeder.Settings;
+using CommandDotNet;
 
 namespace Bit.DbSeederUtility;
 
@@ -10,11 +10,11 @@ public class Program
     {
         // Ensure global settings are loaded
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
-        
+
         // Set the current directory to the seeder directory for consistent seed paths
         var seederDirectory = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "seeder"));
         Directory.SetCurrentDirectory(seederDirectory);
-        
+
         return new AppRunner<Program>()
             .Run(args);
     }
@@ -23,10 +23,10 @@ public class Program
     public int Generate(
         [Option('u', "users", Description = "Number of users to generate")]
         int users,
-        
+
         [Option('c', "ciphers-per-user", Description = "Number of ciphers per user to generate")]
         int ciphersPerUser,
-        
+
         [Option('n', "seed-name", Description = "Name for the seed data files")]
         string seedName
     )
@@ -40,10 +40,10 @@ public class Program
     public int Load(
         [Option('n', "seed-name", Description = "Name of the seed data to load")]
         string seedName,
-        
+
         [Option('t', "timestamp", Description = "Specific timestamp of the seed data to load (defaults to most recent)")]
         string? timestamp = null,
-        
+
         [Option('d', "dry-run", Description = "Validate the seed data without actually loading it")]
         bool dryRun = false
     )
@@ -52,15 +52,15 @@ public class Program
         var loadCommand = new LoadCommand();
         return loadCommand.Execute(seedName, timestamp, dryRun) ? 0 : 1;
     }
-    
+
     [Command("generate-direct-load", Description = "Generate seed data and load it directly into the database without creating JSON files")]
     public int GenerateDirectLoad(
         [Option('u', "users", Description = "Number of users to generate")]
         int users,
-        
+
         [Option('c', "ciphers-per-user", Description = "Number of ciphers per user to generate")]
         int ciphersPerUser,
-        
+
         [Option('n', "seed-name", Description = "Name identifier for this seed operation")]
         string seedName
     )
@@ -69,7 +69,7 @@ public class Program
         var generateCommand = new GenerateCommand();
         return generateCommand.Execute(users, ciphersPerUser, seedName, true) ? 0 : 1;
     }
-    
+
     [Command("extract", Description = "Extract data from the database into seed files")]
     public int Extract(
         [Option('n', "seed-name", Description = "Name for the extracted seed")]
@@ -80,4 +80,4 @@ public class Program
         var extractCommand = new ExtractCommand();
         return extractCommand.Execute(seedName) ? 0 : 1;
     }
-} 
+}
