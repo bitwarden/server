@@ -13,15 +13,6 @@ using Bit.Core.Services;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 
-public interface IRestoreOrganizationUserCommand
-{
-    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId);
-    Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
-
-    Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
-}
-
 public class RestoreOrganizationUserCommand(
     ICurrentContext currentContext,
     IEventService eventService,
@@ -139,13 +130,15 @@ public class RestoreOrganizationUserCommand(
     private static void CheckForOtherFreeOrganizationOwnership(OrganizationUser organizationUser,
         Dictionary<OrganizationUser, Organization> otherOrgUsersAndOrgs)
     {
+        var ownerOrAdminList = new[] { OrganizationUserType.Owner, OrganizationUserType.Admin };
         if (otherOrgUsersAndOrgs.Any(x =>
                 x.Key.UserId == organizationUser.UserId &&
-                x.Key.Type == OrganizationUserType.Owner &&
+                ownerOrAdminList.Any(userType => userType == x.Key.Type) &&
+                x.Key.Status == OrganizationUserStatusType.Confirmed &&
                 x.Value.PlanType == PlanType.Free))
         {
             throw new BadRequestException(
-                "User is an owner of another free organization. Please have them upgrade to a paid plan to restore their account.");
+                "User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.");
         }
     }
 

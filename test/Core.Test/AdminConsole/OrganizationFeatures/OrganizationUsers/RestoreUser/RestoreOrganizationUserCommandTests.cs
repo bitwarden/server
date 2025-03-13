@@ -503,7 +503,7 @@ public class RestoreOrganizationUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.RestoreUserAsync(organizationUser, owner.Id));
 
-        Assert.Equal("User is an owner of another free organization. Please have them upgrade to a paid plan to restore their account.", exception.Message);
+        Assert.Equal("User is an owner/admin of another free organization. Please have them upgrade to a paid plan to restore their account.", exception.Message);
     }
 
     [Theory, BitAutoData]
@@ -615,7 +615,7 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser3,
-        [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser orgUserFromOtherOrg,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser orgUserFromOtherOrg,
         Organization otherOrganization,
         SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
