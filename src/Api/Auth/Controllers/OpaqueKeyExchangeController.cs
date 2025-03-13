@@ -12,7 +12,7 @@ namespace Bit.Api.Auth.Controllers;
 public class OpaqueKeyExchangeController : Controller
 {
     private readonly IUserService _userService;
-    private readonly BitwardenOpaque _bitwardenOpaque;
+    private readonly BitwardenOpaqueServer _bitwardenOpaque;
     private CipherConfiguration _cipherConfiguration = new CipherConfiguration();
 
     public OpaqueKeyExchangeController(
@@ -20,7 +20,7 @@ public class OpaqueKeyExchangeController : Controller
     )
     {
         _userService = userService;
-        _bitwardenOpaque = new BitwardenOpaque();
+        _bitwardenOpaque = new BitwardenOpaqueServer();
         _cipherConfiguration.KeGroup = KeGroup.Ristretto255;
         _cipherConfiguration.OprfCS = OprfCS.Ristretto255;
         _cipherConfiguration.KeyExchange = KeyExchange.TripleDH;
@@ -31,9 +31,9 @@ public class OpaqueKeyExchangeController : Controller
     public async Task<RegisterStartResponse> StartRegistration([FromBody] RegisterStartRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var registrationRequest = _bitwardenOpaque.StartServerRegistration(_cipherConfiguration, System.Convert.FromBase64String(request.ClientRegistrationStartResult), user.Id.ToString());
-        var message = registrationRequest.Item1;
-        var serverSetup = registrationRequest.Item2;
+        var registrationRequest = _bitwardenOpaque.StartRegistration(_cipherConfiguration, null, System.Convert.FromBase64String(request.ClientRegistrationStartResult), user.Id.ToString());
+        var message = registrationRequest.registrationResponse;
+        var serverSetup = registrationRequest.serverSetup;
         // persist server setup
         var sessionId = Guid.NewGuid();
         SessionStore.RegisterSessions.Add(sessionId, new RegisterSession() { SessionId = sessionId, ServerSetup = serverSetup, cipherConfiguration = _cipherConfiguration });
@@ -46,7 +46,7 @@ public class OpaqueKeyExchangeController : Controller
     {
         await Task.Run(() =>
         {
-            var registrationFinish = _bitwardenOpaque.FinishServerRegistration(_cipherConfiguration, System.Convert.FromBase64String(request.ClientRegistrationFinishResult));
+            var registrationFinish = _bitwardenOpaque.FinishRegistration(_cipherConfiguration, System.Convert.FromBase64String(request.ClientRegistrationFinishResult));
             Console.WriteLine("Registration Finish: " + registrationFinish);
         });
         return "Registration Finish";
