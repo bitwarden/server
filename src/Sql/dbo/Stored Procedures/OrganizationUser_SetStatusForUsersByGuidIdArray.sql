@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]
+CREATE PROCEDURE [dbo].[OrganizationUser_SetStatusForUsersByGuidIdArray]
     @OrganizationUserIds AS [dbo].[GuidIdArray] READONLY,
     @Status SMALLINT
 AS
@@ -12,4 +12,3 @@ BEGIN
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserIds] @OrganizationUserIds
 END
-GO
