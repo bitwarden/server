@@ -77,4 +77,8 @@
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../dotnet-extensions/extensions/Bitwarden.OPAQUE/src/Bitwarden.OPAQUE.csproj" />
+  </ItemGroup>
 </Project>
