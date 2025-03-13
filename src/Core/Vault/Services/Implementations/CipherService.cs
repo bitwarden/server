@@ -167,22 +167,7 @@ public class CipherService : ICipherService
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
             if (cipher.Type == CipherType.Login && cipher.Data != null && cipher.OrganizationId.HasValue)
-            {
-                var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-                if (existingCipher != null)
-                {
-                    // Check if user has permission to change passwords
-                    var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-                    if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
-                    {
-                        // replace the new cipher's password with the existing cipher's password to prevent password changes
-                        var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
-                        var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-                        newCipherData.Password = existingCipherPassword;
-                        cipher.Data = JsonSerializer.Serialize(newCipherData);
-                    }
-                }
-            }
+                await ValidatePasswordChangeAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -987,5 +972,23 @@ public class CipherService : ICipherService
         }
 
         ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
+    }
+
+    private async Task ValidatePasswordChangeAsync(Cipher cipher)
+    {
+        var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
+        if (existingCipher != null)
+        {
+            // Check if user has permission to change passwords
+            var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
+            if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
+            {
+                // replace the new cipher's password with the existing cipher's password to prevent password changes
+                var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
+                var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+                newCipherData.Password = existingCipherPassword;
+                cipher.Data = JsonSerializer.Serialize(newCipherData);
+            }
+        }
     }
 }
