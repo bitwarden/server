@@ -185,9 +185,10 @@ public static class FeatureFlagKeys
     public static Dictionary<string, string> GetLocalOverrideFlagValues()
     {
         // place overriding values when needed locally (offline), or return null
-        return new Dictionary<string, string>()
+        return new Dictionary<string, string>
         {
             { DuoRedirect, "true" },
+            { PM19148_InnovationUnarchive, "true" }
         };
     }
 }

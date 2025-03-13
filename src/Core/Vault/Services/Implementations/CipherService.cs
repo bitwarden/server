@@ -409,7 +409,7 @@ public class CipherService : ICipherService
     {
         if (cipher.ArchivedDate.HasValue)
         {
-            // Already soft-archived, we can safely ignore this
+            // Already archived, we can safely ignore this
             return;
         }
 
@@ -795,7 +795,7 @@ public class CipherService : ICipherService
     {
         if (!cipher.ArchivedDate.HasValue)
         {
-            // Already restored, we can safely ignore this
+            // Already unarchived, we can safely ignore this
             return;
         }
 
