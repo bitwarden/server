@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Billing.Models.Requests;
 using Bit.Api.Billing.Models.Responses;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Pricing;
@@ -20,6 +21,7 @@ namespace Bit.Api.Billing.Controllers;
 [Authorize("Application")]
 public class ProviderBillingController(
     ICurrentContext currentContext,
+    IFeatureService featureService,
     ILogger<BaseProviderController> logger,
     IPricingClient pricingClient,
     IProviderBillingService providerBillingService,
@@ -76,6 +78,13 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] UpdatePaymentMethodRequestBody requestBody)
     {
+        var allowProviderPaymentMethod = featureService.IsEnabled(FeatureFlagKeys.PM18794_ProviderPaymentMethod);
+
+        if (!allowProviderPaymentMethod)
+        {
+            return TypedResults.NotFound();
+        }
+
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
@@ -99,6 +108,13 @@ public class ProviderBillingController(
         [FromRoute] Guid providerId,
         [FromBody] VerifyBankAccountRequestBody requestBody)
     {
+        var allowProviderPaymentMethod = featureService.IsEnabled(FeatureFlagKeys.PM18794_ProviderPaymentMethod);
+
+        if (!allowProviderPaymentMethod)
+        {
+            return TypedResults.NotFound();
+        }
+
         var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
 
         if (provider == null)
