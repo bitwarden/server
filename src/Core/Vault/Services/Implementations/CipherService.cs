@@ -166,7 +166,7 @@ public class CipherService : ICipherService
         {
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
-            if (cipher.Type == CipherType.Login && cipher.Data != null)
+            if (cipher.Type == CipherType.Login && cipher.Data != null && cipher.OrganizationId.HasValue)
             {
                 var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
                 if (existingCipher != null)
