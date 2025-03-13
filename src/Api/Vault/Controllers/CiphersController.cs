@@ -748,7 +748,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/archive")]
-    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
     public async Task PutArchive(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -762,7 +762,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("archive")]
-    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
     public async Task PutArchiveMany([FromBody] CipherBulkArchiveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
@@ -908,7 +908,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("{id}/unarchive")]
-    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
     public async Task<CipherResponseModel> PutUnarchive(Guid id)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -945,7 +945,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("unarchive")]
-    [RequireFeature(FeatureFlagKeys.PM19148_InnovationUnarchive)]
+    [RequireFeature(FeatureFlagKeys.ArchiveVaultItems)]
     public async Task PutUnarchiveMany([FromBody] CipherBulkUnarchiveRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
