@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserGroups;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
@@ -186,11 +187,18 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}/groups")]
-    public async Task<IEnumerable<string>> GetGroups(string orgId, string id)
+    public async Task<IEnumerable<string>> GetGroups([FromRoute] Guid orgId, [FromRoute] Guid id)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || (!await _currentContext.ManageGroups(organizationUser.OrganizationId) &&
-                                         !await _currentContext.ManageUsers(organizationUser.OrganizationId)))
+        var authorized = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
+            [OrganizationUserGroupOperations.ReadAllIds]);
+
+        if (authorized.Succeeded is false)
+        {
+            throw new NotFoundException();
+        }
+
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null)
         {
             throw new NotFoundException();
         }
