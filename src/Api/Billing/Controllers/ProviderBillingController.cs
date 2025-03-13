@@ -138,6 +138,23 @@ public class ProviderBillingController(
         return TypedResults.Ok(response);
     }
 
+    [HttpGet("tax-information")]
+    public async Task<IResult> GetTaxInformationAsync([FromRoute] Guid providerId)
+    {
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        var taxInformation = await subscriberService.GetTaxInformation(provider);
+
+        var response = TaxInformationResponse.From(taxInformation);
+
+        return TypedResults.Ok(response);
+    }
+
     [HttpPut("tax-information")]
     public async Task<IResult> UpdateTaxInformationAsync(
         [FromRoute] Guid providerId,
