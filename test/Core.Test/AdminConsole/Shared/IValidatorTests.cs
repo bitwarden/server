@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Shared.Validation;
+﻿using Bit.Core.AdminConsole.Errors;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.Shared;
@@ -8,6 +9,11 @@ public class IValidatorTests
     public class TestClass
     {
         public string Name { get; set; } = string.Empty;
+    }
+
+    public record InvalidRequestError<T>(T ErroredValue) : Error<T>(Code, ErroredValue)
+    {
+        public const string Code = "InvalidRequest";
     }
 
     public class TestClassValidator : IValidator<TestClass>
