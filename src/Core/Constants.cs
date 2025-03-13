@@ -173,6 +173,7 @@ public static class FeatureFlagKeys
     public const string PM19148_InnovationUnarchive = "pm-19148-innovation-archive";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
+    public const string ArchiveVaultItems = "pm-19148-innovation-archive";
 
     public static List<string> GetAllKeys()
     {
