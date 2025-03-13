@@ -1,7 +1,7 @@
+﻿using Bit.Core.Entities;
+using Bit.Core.Vault.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Bit.Core.Entities;
-using Bit.Core.Vault.Entities;
 
 namespace Bit.Seeder.Services;
 

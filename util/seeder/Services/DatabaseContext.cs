@@ -1,8 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
-using Bit.Core.Enums;
 using Bit.Seeder.Settings;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Seeder.Services;
 
@@ -22,13 +21,13 @@ public class DatabaseContext : DbContext
     {
         var provider = _globalSettings.DatabaseProvider ?? string.Empty;
         Console.WriteLine($"Database Provider: '{provider}'");
-        
+
         // Output all available connection strings for debugging
         Console.WriteLine($"SqlServer ConnectionString available: {!string.IsNullOrEmpty(_globalSettings.SqlServer?.ConnectionString)}");
         Console.WriteLine($"PostgreSql ConnectionString available: {!string.IsNullOrEmpty(_globalSettings.PostgreSql?.ConnectionString)}");
         Console.WriteLine($"MySql ConnectionString available: {!string.IsNullOrEmpty(_globalSettings.MySql?.ConnectionString)}");
         Console.WriteLine($"Sqlite ConnectionString available: {!string.IsNullOrEmpty(_globalSettings.Sqlite?.ConnectionString)}");
-        
+
         var connectionString = _globalSettings.DatabaseProvider switch
         {
             "postgres" => _globalSettings.PostgreSql?.ConnectionString,
@@ -73,4 +72,4 @@ public class DatabaseContext : DbContext
             entity.Property(e => e.Kdf).HasConversion<int>();
         });
     }
-} 
+}

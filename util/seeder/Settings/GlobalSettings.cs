@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Settings;
+﻿namespace Bit.Seeder.Settings;
 
 public class GlobalSettings
 {
@@ -13,4 +13,4 @@ public class GlobalSettings
     {
         public string ConnectionString { get; set; } = string.Empty;
     }
-} 
+}

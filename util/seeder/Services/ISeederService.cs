@@ -1,4 +1,4 @@
-namespace Bit.Seeder.Services;
+﻿namespace Bit.Seeder.Services;
 
 public interface ISeederService
 {

@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Seeder.Services;

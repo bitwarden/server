@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Vault.Entities;
@@ -25,7 +25,7 @@ public class SeederService : ISeederService
         _databaseService = databaseService;
         _logger = logger;
         _faker = new Faker();
-        
+
         // Set the random seed to ensure reproducible data
         Randomizer.Seed = new Random(42);
     }
@@ -33,34 +33,34 @@ public class SeederService : ISeederService
     public async Task GenerateSeedsAsync(int userCount, int ciphersPerUser, string outputName)
     {
         _logger.LogInformation("Generating seeds: {UserCount} users with {CiphersPerUser} ciphers each", userCount, ciphersPerUser);
-        
+
         // Create timestamped folder under a named folder in seeds directory
         var seedsBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "seeds");
         Directory.CreateDirectory(seedsBaseDir);
-        
+
         var namedDir = Path.Combine(seedsBaseDir, outputName);
         Directory.CreateDirectory(namedDir);
-        
+
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var outputDir = Path.Combine(namedDir, timestamp);
         Directory.CreateDirectory(outputDir);
-        
+
         // Create users and ciphers subdirectories
         Directory.CreateDirectory(Path.Combine(outputDir, "users"));
         Directory.CreateDirectory(Path.Combine(outputDir, "ciphers"));
-        
+
         _logger.LogInformation("Seed output directory: {OutputDir}", outputDir);
-        
+
         // Generate users
         var users = GenerateUsers(userCount);
-        
+
         // Generate ciphers for each user
         var allCiphers = new List<Cipher>();
         foreach (var user in users)
         {
             var ciphers = GenerateCiphers(user, ciphersPerUser);
             allCiphers.AddRange(ciphers);
-            
+
             // Save each user's ciphers to a file
             var cipherFilePath = Path.Combine(outputDir, "ciphers", $"{user.Id}.json");
             await File.WriteAllTextAsync(cipherFilePath, JsonSerializer.Serialize(ciphers, new JsonSerializerOptions
@@ -68,33 +68,33 @@ public class SeederService : ISeederService
                 WriteIndented = true
             }));
         }
-        
+
         // Save users to a file
         var userFilePath = Path.Combine(outputDir, "users", "users.json");
         await File.WriteAllTextAsync(userFilePath, JsonSerializer.Serialize(users, new JsonSerializerOptions
         {
             WriteIndented = true
         }));
-        
+
         _logger.LogInformation("Successfully generated {UserCount} users and {CipherCount} ciphers", users.Count, allCiphers.Count);
         _logger.LogInformation("Seed data saved to directory: {OutputDir}", outputDir);
     }
 
     public async Task GenerateAndLoadSeedsAsync(int userCount, int ciphersPerUser, string seedName)
     {
-        _logger.LogInformation("Generating and loading seeds directly: {UserCount} users with {CiphersPerUser} ciphers each", 
+        _logger.LogInformation("Generating and loading seeds directly: {UserCount} users with {CiphersPerUser} ciphers each",
             userCount, ciphersPerUser);
-        
+
         // Generate users directly without saving to files
         var users = GenerateUsers(userCount);
-        
+
         // Clear the database first
         await _databaseService.ClearDatabaseAsync();
-        
+
         // Save users to database
         await _databaseService.SaveUsersAsync(users);
         _logger.LogInformation("Saved {UserCount} users directly to database", users.Count);
-        
+
         // Generate and save ciphers for each user
         int totalCiphers = 0;
         foreach (var user in users)
@@ -102,11 +102,11 @@ public class SeederService : ISeederService
             var ciphers = GenerateCiphers(user, ciphersPerUser);
             await _databaseService.SaveCiphersAsync(ciphers);
             totalCiphers += ciphers.Count;
-            _logger.LogInformation("Saved {CipherCount} ciphers for user {UserId} directly to database", 
+            _logger.LogInformation("Saved {CipherCount} ciphers for user {UserId} directly to database",
                 ciphers.Count, user.Id);
         }
-        
-        _logger.LogInformation("Successfully generated and loaded {UserCount} users and {CipherCount} ciphers directly to database", 
+
+        _logger.LogInformation("Successfully generated and loaded {UserCount} users and {CipherCount} ciphers directly to database",
             users.Count, totalCiphers);
     }
 
@@ -115,15 +115,15 @@ public class SeederService : ISeederService
         // Construct path to seeds directory
         var seedsBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "seeds");
         var namedDir = Path.Combine(seedsBaseDir, seedName);
-        
+
         if (!Directory.Exists(namedDir))
         {
             _logger.LogError("Seed directory not found: {SeedDir}", namedDir);
             return;
         }
-        
+
         string seedDir;
-        
+
         // If timestamp is specified, use that exact directory
         if (!string.IsNullOrEmpty(timestamp))
         {
@@ -143,21 +143,21 @@ public class SeederService : ISeederService
                 _logger.LogError("No seed data found in directory: {SeedDir}", namedDir);
                 return;
             }
-            
+
             // Sort by directory name (which is a timestamp) in descending order
             Array.Sort(timestampDirs);
             Array.Reverse(timestampDirs);
-            
+
             // Use the most recent one
             seedDir = timestampDirs[0];
             _logger.LogInformation("Using most recent seed data from: {SeedDir}", seedDir);
         }
-        
+
         _logger.LogInformation("Loading seeds from directory: {SeedDir}", seedDir);
-        
+
         // Clear database first
         await _databaseService.ClearDatabaseAsync();
-        
+
         // Load users
         var userFilePath = Path.Combine(seedDir, "users", "users.json");
         if (!File.Exists(userFilePath))
@@ -165,22 +165,22 @@ public class SeederService : ISeederService
             _logger.LogError("User file not found: {UserFilePath}", userFilePath);
             return;
         }
-        
+
         var userJson = await File.ReadAllTextAsync(userFilePath);
         var users = JsonSerializer.Deserialize<List<User>>(userJson, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         }) ?? new List<User>();
-        
+
         if (users.Count == 0)
         {
             _logger.LogError("No users found in user file");
             return;
         }
-        
+
         // Save users to database
         await _databaseService.SaveUsersAsync(users);
-        
+
         // Load and save ciphers for each user
         var cipherDir = Path.Combine(seedDir, "ciphers");
         if (!Directory.Exists(cipherDir))
@@ -188,7 +188,7 @@ public class SeederService : ISeederService
             _logger.LogError("Cipher directory not found: {CipherDir}", cipherDir);
             return;
         }
-        
+
         var cipherFiles = Directory.GetFiles(cipherDir, "*.json");
         foreach (var cipherFile in cipherFiles)
         {
@@ -197,37 +197,37 @@ public class SeederService : ISeederService
             {
                 PropertyNameCaseInsensitive = true
             }) ?? new List<Cipher>();
-            
+
             if (ciphers.Count > 0)
             {
                 await _databaseService.SaveCiphersAsync(ciphers);
             }
         }
-        
+
         _logger.LogInformation("Successfully loaded seed data into database");
     }
-    
+
     public async Task ExtractSeedsAsync(string seedName)
     {
         _logger.LogInformation("Extracting seed data from database for seed name: {SeedName}", seedName);
-        
+
         // Create timestamped folder under a named folder in seeds directory
         var seedsBaseDir = Path.Combine(Directory.GetCurrentDirectory(), "seeds");
         Directory.CreateDirectory(seedsBaseDir);
-        
+
         var namedDir = Path.Combine(seedsBaseDir, seedName);
         Directory.CreateDirectory(namedDir);
-        
+
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var outputDir = Path.Combine(namedDir, timestamp);
         Directory.CreateDirectory(outputDir);
-        
+
         // Create users and ciphers subdirectories
         Directory.CreateDirectory(Path.Combine(outputDir, "users"));
         Directory.CreateDirectory(Path.Combine(outputDir, "ciphers"));
 
         _logger.LogInformation("Seed output directory: {OutputDir}", outputDir);
-        
+
         try
         {
             // Get all users from the database
@@ -237,16 +237,16 @@ public class SeederService : ISeederService
                 _logger.LogWarning("No users found in the database");
                 return;
             }
-            
+
             _logger.LogInformation("Extracted {Count} users from database", users.Count);
-            
+
             // Save users to a file
             var userFilePath = Path.Combine(outputDir, "users", "users.json");
             await File.WriteAllTextAsync(userFilePath, JsonSerializer.Serialize(users, new JsonSerializerOptions
             {
                 WriteIndented = true
             }));
-            
+
             int totalCiphers = 0;
             // Get ciphers for each user
             foreach (var user in users)
@@ -263,7 +263,7 @@ public class SeederService : ISeederService
                     totalCiphers += ciphers.Count;
                 }
             }
-            
+
             _logger.LogInformation("Successfully extracted {UserCount} users and {CipherCount} ciphers", users.Count, totalCiphers);
             _logger.LogInformation("Seed data saved to directory: {OutputDir}", outputDir);
         }
@@ -273,13 +273,13 @@ public class SeederService : ISeederService
             throw;
         }
     }
-    
+
     private List<User> GenerateUsers(int count)
     {
         _logger.LogInformation("Generating {Count} users", count);
-        
+
         var users = new List<User>();
-        
+
         for (int i = 0; i < count; i++)
         {
             var userId = Guid.NewGuid();
@@ -288,7 +288,7 @@ public class SeederService : ISeederService
             var masterPassword = _encryptionService.HashPassword(_defaultPassword);
             var masterPasswordHint = "It's the word 'password'";
             var key = _encryptionService.DeriveKey(_defaultPassword, email);
-            
+
             var user = new User
             {
                 Id = userId,
@@ -305,35 +305,35 @@ public class SeederService : ISeederService
                 RevisionDate = DateTime.UtcNow,
                 Key = _encryptionService.EncryptString(Convert.ToBase64String(key), key)
             };
-            
+
             users.Add(user);
         }
-        
+
         return users;
     }
-    
+
     private List<Cipher> GenerateCiphers(User user, int count)
     {
         _logger.LogInformation("Generating {Count} ciphers for user {UserId}", count, user.Id);
-        
+
         var ciphers = new List<Cipher>();
         var key = _encryptionService.DeriveKey(_defaultPassword, user.Email);
-        
+
         for (int i = 0; i < count; i++)
         {
             var cipherId = Guid.NewGuid();
             CipherType type;
             string name;
             string? notes = null;
-            
+
             var typeRandom = _faker.Random.Int(1, 4);
             type = (CipherType)typeRandom;
-            
+
             switch (type)
             {
                 case CipherType.Login:
                     name = $"Login - {_faker.Internet.DomainName()}";
-                    var loginData = new 
+                    var loginData = new
                     {
                         Name = name,
                         Notes = notes,
@@ -344,9 +344,9 @@ public class SeederService : ISeederService
                             new { Uri = $"https://{_faker.Internet.DomainName()}" }
                         }
                     };
-                    
+
                     var loginDataJson = JsonSerializer.Serialize(loginData);
-                    
+
                     ciphers.Add(new Cipher
                     {
                         Id = cipherId,
@@ -358,19 +358,19 @@ public class SeederService : ISeederService
                         Reprompt = CipherRepromptType.None
                     });
                     break;
-                    
+
                 case CipherType.SecureNote:
                     name = $"Note - {_faker.Lorem.Word()}";
                     notes = _faker.Lorem.Paragraph();
-                    var secureNoteData = new 
+                    var secureNoteData = new
                     {
                         Name = name,
                         Notes = notes,
                         Type = 0 // Text
                     };
-                    
+
                     var secureNoteDataJson = JsonSerializer.Serialize(secureNoteData);
-                    
+
                     ciphers.Add(new Cipher
                     {
                         Id = cipherId,
@@ -382,10 +382,10 @@ public class SeederService : ISeederService
                         Reprompt = CipherRepromptType.None
                     });
                     break;
-                    
+
                 case CipherType.Card:
                     name = $"Card - {_faker.Finance.CreditCardNumber().Substring(0, 4)}";
-                    var cardData = new 
+                    var cardData = new
                     {
                         Name = name,
                         Notes = notes,
@@ -395,9 +395,9 @@ public class SeederService : ISeederService
                         ExpYear = _faker.Random.Int(DateTime.UtcNow.Year, DateTime.UtcNow.Year + 10).ToString(),
                         Code = _faker.Random.Int(100, 999).ToString()
                     };
-                    
+
                     var cardDataJson = JsonSerializer.Serialize(cardData);
-                    
+
                     ciphers.Add(new Cipher
                     {
                         Id = cipherId,
@@ -409,10 +409,10 @@ public class SeederService : ISeederService
                         Reprompt = CipherRepromptType.None
                     });
                     break;
-                    
+
                 case CipherType.Identity:
                     name = $"Identity - {_faker.Name.FullName()}";
-                    var identityData = new 
+                    var identityData = new
                     {
                         Name = name,
                         Notes = notes,
@@ -428,9 +428,9 @@ public class SeederService : ISeederService
                         PostalCode = _faker.Address.ZipCode(),
                         Country = _faker.Address.CountryCode()
                     };
-                    
+
                     var identityDataJson = JsonSerializer.Serialize(identityData);
-                    
+
                     ciphers.Add(new Cipher
                     {
                         Id = cipherId,
@@ -444,7 +444,7 @@ public class SeederService : ISeederService
                     break;
             }
         }
-        
+
         return ciphers;
     }
-} 
+}
