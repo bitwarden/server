@@ -115,6 +115,7 @@ public static class FeatureFlagKeys
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
+    public const string ExportAttachments = "export-attachments";
 
     /* Vault Team */
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
