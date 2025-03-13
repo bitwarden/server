@@ -94,6 +94,28 @@ public class ProviderBillingController(
         return TypedResults.Ok();
     }
 
+    [HttpPost("payment-method/verify-bank-account")]
+    public async Task<IResult> VerifyBankAccountAsync(
+        [FromRoute] Guid providerId,
+        [FromBody] VerifyBankAccountRequestBody requestBody)
+    {
+        var (provider, result) = await TryGetBillableProviderForAdminOperation(providerId);
+
+        if (provider == null)
+        {
+            return result;
+        }
+
+        if (requestBody.DescriptorCode.Length != 6 || !requestBody.DescriptorCode.StartsWith("SM"))
+        {
+            return Error.BadRequest("Statement descriptor should be a 6-character value that starts with 'SM'");
+        }
+
+        await subscriberService.VerifyBankAccount(provider, requestBody.DescriptorCode);
+
+        return TypedResults.Ok();
+    }
+
     [HttpGet("subscription")]
     public async Task<IResult> GetSubscriptionAsync([FromRoute] Guid providerId)
     {
