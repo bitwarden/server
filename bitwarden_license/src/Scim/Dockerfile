@@ -1,19 +1,70 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG TARGETPLATFORM
-ARG BUILDPLATFORM
+###############################################
+#                 Build stage                 #
+###############################################
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ENV PROJECT_NAME=Scim
 
-WORKDIR /build
-COPY ../../ ./
+# Docker buildx supplies the value for this arg
+ARG TARGETPLATFORM
 
-WORKDIR /build/bitwarden_license/src/${PROJECT_NAME}
+# Determine proper runtime value for .NET
+# We put the value in a file to be read by later layers.
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+      RID=linux-x64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      RID=linux-arm64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+      RID=linux-arm ; \
+    fi \
+    && echo "RID=$RID" > /tmp/rid.txt
 
-RUN dotnet publish --self-contained /p:PublishSingleFile=true -o out
+WORKDIR /source
 
+# Copy csproj files as distinct layers
+COPY bitwarden_license/src/Scim/*.csproj ./bitwarden_license/src/Scim/
+COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/*.csproj ./src/SharedWeb/
+COPY Directory.Build.props .
+
+# Restore project dependencies and tools
+WORKDIR /source/bitwarden_license/src/Scim
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
+WORKDIR /source/bitwarden_license/src/${PROJECT_NAME}
+
+# Copy required project files
+WORKDIR /source
+COPY .editorconfig /source
+COPY bitwarden_license/src/Scim/. ./bitwarden_license/src/Scim/
+COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
+COPY src/SharedWeb/. ./src/SharedWeb/
+COPY .git/. ./.git/
+
+# Build project
+WORKDIR /source/bitwarden_license/src/Scim
+RUN . /tmp/rid.txt && dotnet publish \
+  -c release \
+  --no-restore \
+  --self-contained \
+  /p:PublishSingleFile=true \
+  /p:SourceRevisionId="$GIT_COMMIT" \
+  -r $RID \
+  -o out
+
+WORKDIR /app
+
+###############################################
+#                  App stage                  #
+###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
-
 LABEL com.bitwarden.product="bitwarden"
+EXPOSE 5000
 
+ENV ASPNETCORE_URLS=http://+:5000
 ENV PROJECT_NAME=Scim
 
 RUN apt-get update \
@@ -23,11 +74,9 @@ RUN apt-get update \
     krb5-user \
     && rm -rf /var/lib/apt/lists/*
 
-ENV ASPNETCORE_URLS=http://+:5000
-
-EXPOSE 5000
+# Copy app from the build stage
 WORKDIR /app
-COPY --from=build /build/bitwarden_license/src/${PROJECT_NAME}/out /app
+COPY --from=build /source/bitwarden_license/src/${PROJECT_NAME}/out /app
 COPY ./bitwarden_license/src/${PROJECT_NAME}/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
