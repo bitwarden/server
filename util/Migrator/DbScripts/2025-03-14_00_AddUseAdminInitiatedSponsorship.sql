@@ -1,8 +1,8 @@
 ALTER TABLE [dbo].[Organization] ADD [UseAdminSponsoredFamilies] bit NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] default (0)
-    GO
+    GO;
 
 ALTER TABLE [dbo].[OrganizationSponsorship] ADD [IsAdminInitiated] BIT CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0) NOT NULL
-    GO
+    GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
@@ -190,7 +190,7 @@ BEGIN
         @LimitItemDeletion
     )
 END
-GO
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
@@ -224,7 +224,7 @@ END AS [Using2fa],
     FROM
         [dbo].[Organization]
 END
-GO
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
@@ -351,7 +351,7 @@ SET
 WHERE
     [Id] = @Id
 END
-GO
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
     @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
@@ -388,7 +388,7 @@ SELECT
 FROM
     @OrganizationSponsorshipsInput OS
 END
-GO
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @Id UNIQUEIDENTIFIER,
@@ -422,7 +422,7 @@ SET
 WHERE
     [Id] = @Id
 END
-GO
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
@@ -469,7 +469,7 @@ BEGIN
         @IsAdminInitiated
     )
 END
-GO
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_UpdateMany]
     @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
@@ -497,4 +497,4 @@ FROM
     @OrganizationSponsorshipsInput OSI ON OS.Id = OSI.Id
 
 END
-GO
+GO;
