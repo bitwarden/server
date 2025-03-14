@@ -349,3 +349,149 @@ WHERE
     [Id] = @Id
 END
 GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
+    @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationSponsorship]
+    (
+		[Id],
+        [SponsoringOrganizationId],
+        [SponsoringOrganizationUserID],
+        [SponsoredOrganizationId],
+        [FriendlyName],
+        [OfferedToEmail],
+        [PlanSponsorshipType],
+        [ToDelete],
+        [LastSyncDate],
+        [ValidUntil],
+        [IsAdminInitiated]
+    )
+SELECT
+    OS.[Id],
+    OS.[SponsoringOrganizationId],
+    OS.[SponsoringOrganizationUserID],
+    OS.[SponsoredOrganizationId],
+    OS.[FriendlyName],
+    OS.[OfferedToEmail],
+    OS.[PlanSponsorshipType],
+    OS.[ToDelete],
+    OS.[LastSyncDate],
+    OS.[ValidUntil],
+    OS.[IsAdminInitiated]
+FROM
+    @OrganizationSponsorshipsInput OS
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Update]
+    @Id UNIQUEIDENTIFIER,
+    @SponsoringOrganizationId UNIQUEIDENTIFIER,
+    @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
+    @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
+    @OfferedToEmail NVARCHAR(256),
+    @PlanSponsorshipType TINYINT,
+    @ToDelete BIT,
+    @LastSyncDate DATETIME2 (7),
+    @ValidUntil DATETIME2 (7),
+    @IsAdminInitiated BIT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+UPDATE
+    [dbo].[OrganizationSponsorship]
+SET
+    [SponsoringOrganizationId] = @SponsoringOrganizationId,
+    [SponsoringOrganizationUserID] = @SponsoringOrganizationUserID,
+    [SponsoredOrganizationId] = @SponsoredOrganizationId,
+    [FriendlyName] = @FriendlyName,
+    [OfferedToEmail] = @OfferedToEmail,
+    [PlanSponsorshipType] = @PlanSponsorshipType,
+    [ToDelete] = @ToDelete,
+    [LastSyncDate] = @LastSyncDate,
+    [ValidUntil] = @ValidUntil,
+    [IsAdminInitiated] = @IsAdminInitiated
+WHERE
+    [Id] = @Id
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Create]
+    @Id UNIQUEIDENTIFIER OUTPUT,
+    @SponsoringOrganizationId UNIQUEIDENTIFIER,
+    @SponsoringOrganizationUserID UNIQUEIDENTIFIER,
+    @SponsoredOrganizationId UNIQUEIDENTIFIER,
+    @FriendlyName NVARCHAR(256),
+    @OfferedToEmail NVARCHAR(256),
+    @PlanSponsorshipType TINYINT,
+    @ToDelete BIT,
+    @LastSyncDate DATETIME2 (7),
+    @ValidUntil DATETIME2 (7),
+    @IsAdminInitiated BIT
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationSponsorship]
+    (
+        [Id],
+        [SponsoringOrganizationId],
+        [SponsoringOrganizationUserID],
+        [SponsoredOrganizationId],
+        [FriendlyName],
+        [OfferedToEmail],
+        [PlanSponsorshipType],
+        [ToDelete],
+        [LastSyncDate],
+        [ValidUntil],
+        [IsAdminInitiated]
+    )
+    VALUES
+    (
+        @Id,
+        @SponsoringOrganizationId,
+        @SponsoringOrganizationUserID,
+        @SponsoredOrganizationId,
+        @FriendlyName,
+        @OfferedToEmail,
+        @PlanSponsorshipType,
+        @ToDelete,
+        @LastSyncDate,
+        @ValidUntil,
+        @IsAdminInitiated
+    )
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_UpdateMany]
+    @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+UPDATE
+    OS
+SET
+    [Id] = OSI.[Id],
+    [SponsoringOrganizationId] = OSI.[SponsoringOrganizationId],
+    [SponsoringOrganizationUserID] = OSI.[SponsoringOrganizationUserID],
+    [SponsoredOrganizationId] = OSI.[SponsoredOrganizationId],
+    [FriendlyName] = OSI.[FriendlyName],
+    [OfferedToEmail] = OSI.[OfferedToEmail],
+    [PlanSponsorshipType] = OSI.[PlanSponsorshipType],
+    [ToDelete] = OSI.[ToDelete],
+    [LastSyncDate] = OSI.[LastSyncDate],
+    [ValidUntil] = OSI.[ValidUntil],
+    [IsAdminInitiated] = OSI.[IsAdminInitiated]
+FROM
+    [dbo].[OrganizationSponsorship] OS
+    INNER JOIN
+    @OrganizationSponsorshipsInput OSI ON OS.Id = OSI.Id
+
+END
+GO
