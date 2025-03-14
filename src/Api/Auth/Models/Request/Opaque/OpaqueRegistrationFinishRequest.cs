@@ -5,7 +5,7 @@ namespace Bit.Api.Auth.Models.Request.Opaque;
 public class OpaqueRegistrationFinishRequest
 {
     [Required]
-    public String RegistrationUpload { get; set; }
+    public string RegistrationUpload { get; set; }
     [Required]
     public Guid SessionId { get; set; }
 
@@ -15,9 +15,9 @@ public class OpaqueRegistrationFinishRequest
 public class RotateableKeyset
 {
     [Required]
-    public String EncryptedUserKey { get; set; }
+    public string EncryptedUserKey { get; set; }
     [Required]
-    public String EncryptedPublicKey { get; set; }
+    public string EncryptedPublicKey { get; set; }
     [Required]
-    public String EncryptedPrivateKey { get; set; }
+    public string EncryptedPrivateKey { get; set; }
 }
