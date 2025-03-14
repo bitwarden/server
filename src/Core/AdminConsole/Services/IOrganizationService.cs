@@ -51,10 +51,6 @@ public interface IOrganizationService
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? revokingUserId);
-    Task RestoreUserAsync(OrganizationUser organizationUser, Guid? restoringUserId);
-    Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
-    Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
-        IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
     Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted);
     /// <summary>
     /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
