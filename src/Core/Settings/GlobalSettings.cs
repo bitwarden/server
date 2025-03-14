@@ -84,6 +84,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
+    public virtual PhishingDomainSettings PhishingDomain { get; set; } = new PhishingDomainSettings();
 
     public virtual bool EnableEmailVerification { get; set; }
     public virtual string KdfDefaultHashKey { get; set; }
@@ -632,6 +633,11 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
+    }
+
+    public class PhishingDomainSettings
+    {
+        public string UpdateUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings
