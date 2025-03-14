@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Auth.Models.Request.Opaque;
+namespace Bit.Core.Auth.Models.Api.Request.Opaque;
 
 public class OpaqueRegistrationFinishRequest
 {
@@ -9,10 +9,10 @@ public class OpaqueRegistrationFinishRequest
     [Required]
     public Guid SessionId { get; set; }
 
-    public RotateableKeyset KeySet { get; set; }
+    public RotateableOpaqueKeyset KeySet { get; set; }
 }
 
-public class RotateableKeyset
+public class RotateableOpaqueKeyset
 {
     [Required]
     public string EncryptedUserKey { get; set; }

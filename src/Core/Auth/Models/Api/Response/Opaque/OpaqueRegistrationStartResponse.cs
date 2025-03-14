@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Api.Auth.Models.Response.Opaque;
+namespace Bit.Core.Auth.Models.Api.Response.Opaque;
 
 public class OpaqueRegistrationStartResponse : ResponseModel
 {
@@ -11,7 +11,7 @@ public class OpaqueRegistrationStartResponse : ResponseModel
         SessionId = sessionId;
     }
 
-    public String RegistrationResponse { get; set; }
+    public string RegistrationResponse { get; set; }
     public Guid SessionId { get; set; }
 }
 
