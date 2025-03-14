@@ -1,6 +1,5 @@
-/* Alter view to include UseAdminSponsoredFamilies */
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
-    AS
+AS
 SELECT
     OU.[UserId],
     OU.[OrganizationId],
@@ -47,12 +46,12 @@ SELECT
     O.[UsePasswordManager],
     O.[SmSeats],
     O.[SmServiceAccounts],
-    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
-    O.[UseAdminSponsoredFamilies]
+    O.[UseAdminSponsoredFamilies],
+    O.[LimitItemDeletion]
 FROM
     [dbo].[OrganizationUser] OU
     LEFT JOIN
@@ -67,11 +66,10 @@ FROM
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
     LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
-    GO
+GO
 
-/* Alter this view to include UseAdminSponsoredFamilies column to the query */
 CREATE OR ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
-    AS
+AS
 SELECT
     PU.[UserId],
     PO.[OrganizationId],
@@ -104,12 +102,13 @@ SELECT
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
     O.[PlanType],
-    O.[LimitCollectionCreationDeletion], -- Deprecated https://bitwarden.atlassian.net/browse/PM-10863
     O.[LimitCollectionCreation],
     O.[LimitCollectionDeletion],
     O.[AllowAdminAccessToAllCollectionItems],
     O.[UseRiskInsights],
-    O.[UseAdminSponsoredFamilies]
+    O.[UseAdminSponsoredFamilies],
+    P.[Type] ProviderType,
+    O.[LimitItemDeletion]
 FROM
     [dbo].[ProviderUser] PU
     INNER JOIN
@@ -118,25 +117,25 @@ FROM
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
     INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
-    GO
+GO
 
 
-    --Manually refresh [dbo].[OrganizationUserOrganizationDetailsView]
-    IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetailsView]') IS NOT NULL
+--Manually refresh [dbo].[OrganizationUserOrganizationDetailsView]
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetailsView]') IS NOT NULL
 BEGIN
 EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetailsView]';
 END
 GO
 
-    --Manually refresh [dbo].[ProviderUserProviderOrganizationDetailsView]
-    IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetailsView]') IS NOT NULL
+--Manually refresh [dbo].[ProviderUserProviderOrganizationDetailsView]
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetailsView]') IS NOT NULL
 BEGIN
 EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
 END
 GO
 
-    --Manually refresh [dbo].[OrganizationView]
-    IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
+--Manually refresh [dbo].[OrganizationView]
+IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
 BEGIN
 EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationView]';
 END
