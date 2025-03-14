@@ -6,7 +6,9 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
@@ -250,9 +252,13 @@ public class OrganizationUsersControllerTests
             .IsEnabled(FeatureFlagKeys.AccountDeprovisioning)
             .Returns(accountDeprovisioningEnabled);
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .ManageUsers(organizationUser.OrganizationId)
-            .Returns(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                user: Arg.Any<ClaimsPrincipal>(),
+                resource: Arg.Is<OrganizationScope>(x => x == organizationUser.OrganizationId),
+                requirements: Arg.Is<IEnumerable<IAuthorizationRequirement>>(x =>
+                    x.Any(y => y == OrganizationUserDetailsOperations.Read)))
+            .Returns(AuthorizationResult.Success());
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetDetailsByIdWithCollectionsAsync(organizationUser.Id)
@@ -262,7 +268,7 @@ public class OrganizationUsersControllerTests
             .GetUsersOrganizationManagementStatusAsync(organizationUser.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(organizationUser.Id)))
             .Returns(new Dictionary<Guid, bool> { { organizationUser.Id, true } });
 
-        var response = await sutProvider.Sut.Get(organizationUser.Id, false);
+        var response = await sutProvider.Sut.Get(organizationUser.OrganizationId, organizationUser.Id, false);
 
         Assert.Equal(organizationUser.Id, response.Id);
         Assert.Equal(accountDeprovisioningEnabled, response.ManagedByOrganization);
