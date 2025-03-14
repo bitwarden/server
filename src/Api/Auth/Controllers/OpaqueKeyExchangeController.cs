@@ -1,9 +1,10 @@
-﻿using Bit.Api.Auth.Models.Request.Opaque;
-using Bit.Api.Auth.Models.Response.Opaque;
+﻿using Bit.Core.Auth.Models.Api.Request.Opaque;
+using Bit.Core.Auth.Models.Api.Response.Opaque;
 using Bit.Core.Auth.Services;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Api.Auth.Controllers;
 
@@ -12,7 +13,7 @@ namespace Bit.Api.Auth.Controllers;
 public class OpaqueKeyExchangeController : Controller
 {
     private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
-    IUserService _userService;
+    private readonly IUserService _userService;
 
     public OpaqueKeyExchangeController(
         IOpaqueKeyExchangeService opaqueKeyExchangeService,
@@ -23,21 +24,20 @@ public class OpaqueKeyExchangeController : Controller
         _userService = userService;
     }
 
-    [HttpPost("~/opaque/start-registration")]
-    public async Task<OpaqueRegistrationStartResponse> StartRegistration([FromBody] OpaqueRegistrationStartRequest request)
+    [HttpPost("start-registration")]
+    public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync([FromBody] OpaqueRegistrationStartRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var result = await _opaqueKeyExchangeService.StartRegistration(System.Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration);
-        return new OpaqueRegistrationStartResponse(result.Item1, System.Convert.ToBase64String(result.Item2));
+        var result = await _opaqueKeyExchangeService.StartRegistration(Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration);
+        return result;
     }
 
 
-    [HttpPost("~/opaque/finish-registration")]
-    public async Task<String> FinishRegistration([FromBody] OpaqueRegistrationFinishRequest request)
+    [HttpPost("finish-registration")]
+    public async Task<bool> FinishRegistration([FromBody] OpaqueRegistrationFinishRequest request)
     {
-        await Task.Run(() => { });
-        return "";
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        var result = await _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), request.KeySet, user);
+        return result;
     }
-
 }
-
