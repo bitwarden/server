@@ -44,7 +44,7 @@ public interface IUserService
     Task InitiateEmailChangeAsync(User user, string newEmail);
     Task<IdentityResult> ChangeEmailAsync(User user, string masterPassword, string newEmail, string newMasterPassword,
         string token, string key);
-    Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key);
+    Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint, string key, Guid? opaqueSessionId);
     Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier);
     Task<IdentityResult> ConvertToKeyConnectorAsync(User user);
     Task<IdentityResult> AdminResetPasswordAsync(OrganizationUserType type, Guid orgId, Guid id, string newMasterPassword, string key);
