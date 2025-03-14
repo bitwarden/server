@@ -250,21 +250,26 @@ public class DeviceValidator(
         var customResponse = new Dictionary<string, object>();
         switch (errorType)
         {
+            /* 
+             * The ErrorMessage is brittle and is used to control the flow in the clients. Do not change them without updating the client as well.
+             * There is a backwards compatibility issue as well: if you make a change on the clients then ensure that they are backwards
+             * compatible.
+             */
             case DeviceValidationResultType.InvalidUser:
                 result.ErrorDescription = "Invalid user";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("Invalid user."));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid user"));
                 break;
             case DeviceValidationResultType.InvalidNewDeviceOtp:
                 result.ErrorDescription = "Invalid New Device OTP";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("Invalid new device OTP. Try again."));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("invalid new device otp"));
                 break;
             case DeviceValidationResultType.NewDeviceVerificationRequired:
                 result.ErrorDescription = "New device verification required";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("New device verification required."));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("new device verification required"));
                 break;
             case DeviceValidationResultType.NoDeviceInformationProvided:
                 result.ErrorDescription = "No device information provided";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("No device information provided."));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("no device information provided"));
                 break;
         }
         return (result, customResponse);
