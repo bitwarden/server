@@ -353,43 +353,6 @@ WHERE
 END
 GO;
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
-    @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
-AS
-BEGIN
-    SET NOCOUNT ON
-
-    INSERT INTO [dbo].[OrganizationSponsorship]
-    (
-		[Id],
-        [SponsoringOrganizationId],
-        [SponsoringOrganizationUserID],
-        [SponsoredOrganizationId],
-        [FriendlyName],
-        [OfferedToEmail],
-        [PlanSponsorshipType],
-        [ToDelete],
-        [LastSyncDate],
-        [ValidUntil],
-        [IsAdminInitiated]
-    )
-SELECT
-    OS.[Id],
-    OS.[SponsoringOrganizationId],
-    OS.[SponsoringOrganizationUserID],
-    OS.[SponsoredOrganizationId],
-    OS.[FriendlyName],
-    OS.[OfferedToEmail],
-    OS.[PlanSponsorshipType],
-    OS.[ToDelete],
-    OS.[LastSyncDate],
-    OS.[ValidUntil],
-    OS.[IsAdminInitiated]
-FROM
-    @OrganizationSponsorshipsInput OS
-END
-GO;
-
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_Update]
     @Id UNIQUEIDENTIFIER,
     @SponsoringOrganizationId UNIQUEIDENTIFIER,
@@ -486,6 +449,43 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [ToDelete] BIT,
     [IsAdminInitiated] BIT
 );
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
+    @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationSponsorship]
+    (
+		[Id],
+        [SponsoringOrganizationId],
+        [SponsoringOrganizationUserID],
+        [SponsoredOrganizationId],
+        [FriendlyName],
+        [OfferedToEmail],
+        [PlanSponsorshipType],
+        [ToDelete],
+        [LastSyncDate],
+        [ValidUntil],
+        [IsAdminInitiated]
+    )
+SELECT
+    OS.[Id],
+    OS.[SponsoringOrganizationId],
+    OS.[SponsoringOrganizationUserID],
+    OS.[SponsoredOrganizationId],
+    OS.[FriendlyName],
+    OS.[OfferedToEmail],
+    OS.[PlanSponsorshipType],
+    OS.[ToDelete],
+    OS.[LastSyncDate],
+    OS.[ValidUntil],
+    OS.[IsAdminInitiated]
+FROM
+    @OrganizationSponsorshipsInput OS
+END
+GO;
 
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_UpdateMany]
     @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
