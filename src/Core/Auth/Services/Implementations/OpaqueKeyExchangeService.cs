@@ -37,9 +37,6 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             {
                 var registrationFinish = _bitwardenOpaque.FinishRegistration(cipherConfiguration, registrationUpload);
                 SessionStore.RegisterSessions[sessionId].serverRegistration = registrationFinish.serverRegistration;
-
-                // todo move to changepassword
-                SetActive(sessionId, user);
             }
             catch (Exception e)
             {
