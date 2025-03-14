@@ -23,7 +23,7 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 public class ConfirmOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
-    public async Task ConfirmUser_InvalidStatus(OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_WithInvalidStatus_ThrowsBadRequestException(OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser orgUser, string key,
         SutProvider<ConfirmOrganizationUserCommand> sutProvider)
     {
@@ -37,7 +37,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUser_WrongOrganization(OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_WithWrongOrganization_ThrowsBadRequestException(OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, string key,
         SutProvider<ConfirmOrganizationUserCommand> sutProvider)
     {
@@ -53,7 +53,7 @@ public class ConfirmOrganizationUserCommandTests
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task ConfirmUserToFree_AlreadyFreeAdminOrOwner_Throws(OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_ToFree_WithExistingAdminOrOwner_ThrowsBadRequestException(OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
     {
@@ -133,7 +133,7 @@ public class ConfirmOrganizationUserCommandTests
 
 
     [Theory, BitAutoData]
-    public async Task ConfirmUser_AsUser_SingleOrgPolicy_AppliedFromConfirmingOrg_Throws(Organization org, OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_AsUser_WithSingleOrgPolicyAppliedFromConfirmingOrg_ThrowsBadRequestException(Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         OrganizationUser orgUserAnotherOrg, [OrganizationUserPolicyDetails(PolicyType.SingleOrg)] OrganizationUserPolicyDetails singleOrgPolicy,
         string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -160,7 +160,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUser_AsUser_SingleOrgPolicy_AppliedFromOtherOrg_Throws(Organization org, OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_AsUser_WithSingleOrgPolicyAppliedFromOtherOrg_ThrowsBadRequestException(Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         OrganizationUser orgUserAnotherOrg, [OrganizationUserPolicyDetails(PolicyType.SingleOrg)] OrganizationUserPolicyDetails singleOrgPolicy,
         string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -189,7 +189,7 @@ public class ConfirmOrganizationUserCommandTests
     [Theory]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task ConfirmUser_AsOwnerOrAdmin_SingleOrgPolicy_ExcludedViaUserType_Success(
+    public async Task ConfirmUserAsync_AsOwnerOrAdmin_WithSingleOrgPolicy_ExcludedViaUserType_Success(
         OrganizationUserType userType, Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         OrganizationUser orgUserAnotherOrg,
@@ -218,7 +218,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUser_TwoFactorPolicy_NotEnabled_Throws(Organization org, OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_WithTwoFactorPolicyAndTwoFactorDisabled_ThrowsBadRequestException(Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         OrganizationUser orgUserAnotherOrg,
         [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
@@ -248,7 +248,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUser_TwoFactorPolicy_Enabled_Success(Organization org, OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_WithTwoFactorPolicyAndTwoFactorEnabled_Succeeds(Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         [OrganizationUserPolicyDetails(PolicyType.TwoFactorAuthentication)] OrganizationUserPolicyDetails twoFactorPolicy,
         string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
@@ -274,7 +274,7 @@ public class ConfirmOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task ConfirmUsers_Success(Organization org,
+    public async Task ConfirmUsersAsync_WithMultipleUsers_ReturnsExpectedMixedResults(Organization org,
         OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser2,
