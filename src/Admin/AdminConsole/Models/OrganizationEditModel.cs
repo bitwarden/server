@@ -85,6 +85,7 @@ public class OrganizationEditModel : OrganizationViewModel
         UseApi = org.UseApi;
         UseSecretsManager = org.UseSecretsManager;
         UseRiskInsights = org.UseRiskInsights;
+        UseAdminSponsoredFamilies = org.UseAdminSponsoredFamilies;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
@@ -153,6 +154,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public new bool UseSecretsManager { get; set; }
     [Display(Name = "Risk Insights")]
     public new bool UseRiskInsights { get; set; }
+    [Display(Name = "Admin Sponsored Families")]
+    public bool UseAdminSponsoredFamilies { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
@@ -294,6 +297,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UseApi = UseApi;
         existingOrganization.UseSecretsManager = UseSecretsManager;
         existingOrganization.UseRiskInsights = UseRiskInsights;
+        existingOrganization.UseAdminSponsoredFamilies = UseAdminSponsoredFamilies;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;
