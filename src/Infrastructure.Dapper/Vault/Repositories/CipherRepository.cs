@@ -77,6 +77,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<bool> GetCanManageByIdAsync(Guid userId, Guid cipherId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryFirstOrDefaultAsync<bool>(
+                $"[{Schema}].[Cipher_ReadCanManageByIdUserId]",
+                new { UserId = userId, Id = cipherId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
     public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
     {
         string sprocName = null;
