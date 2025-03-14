@@ -106,7 +106,7 @@ public class ConfirmOrganizationUserCommandTests
     [BitAutoData(PlanType.TeamsMonthly2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Owner)]
-    public async Task ConfirmUserToNonFree_AlreadyFreeAdminOrOwner_DoesNotThrow(PlanType planType, OrganizationUserType orgUserType, Organization org, OrganizationUser confirmingUser,
+    public async Task ConfirmUserAsync_ToNonFree_WithExistingFreeAdminOrOwner_Succeeds(PlanType planType, OrganizationUserType orgUserType, Organization org, OrganizationUser confirmingUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser orgUser, User user,
         string key, SutProvider<ConfirmOrganizationUserCommand> sutProvider)
     {
