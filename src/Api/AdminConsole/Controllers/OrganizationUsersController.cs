@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
@@ -564,20 +565,22 @@ public class OrganizationUsersController : Controller
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
     [HttpDelete("{id}/delete-account")]
     [HttpPost("{id}/delete-account")]
-    public async Task DeleteAccount(Guid orgId, Guid id)
+    public async Task<IActionResult> DeleteAccount(Guid orgId, Guid id)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
-            throw new NotFoundException();
+            return NotFound();
         }
 
         var currentUser = await _userService.GetUserByPrincipalAsync(User);
         if (currentUser == null)
         {
-            throw new UnauthorizedAccessException();
+            return Unauthorized();
         }
 
-        await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+        var deletionResult = await _deleteManagedOrganizationUserAccountCommand.DeleteUserAsync(orgId, id, currentUser.Id);
+
+        return deletionResult.result.MapToActionResult();
     }
 
     [RequireFeature(FeatureFlagKeys.AccountDeprovisioning)]
@@ -599,7 +602,7 @@ public class OrganizationUsersController : Controller
         var results = await _deleteManagedOrganizationUserAccountCommand.DeleteManyUsersAsync(orgId, model.Ids, currentUser.Id);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.ErrorMessage)));
+            new OrganizationUserBulkResponseModel(r.OrganizationUserId, r.result)));
     }
 
     [HttpPatch("{id}/revoke")]
