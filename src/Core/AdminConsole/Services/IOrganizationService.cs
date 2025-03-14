@@ -38,9 +38,6 @@ public interface IOrganizationService
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
-    Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key, Guid confirmingUserId);
-    Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
-        Guid confirmingUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task ImportAsync(Guid organizationId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
