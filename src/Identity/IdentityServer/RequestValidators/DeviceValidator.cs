@@ -260,7 +260,7 @@ public class DeviceValidator(
                 break;
             case DeviceValidationResultType.NewDeviceVerificationRequired:
                 result.ErrorDescription = "New device verification required";
-                customResponse.Add("ErrorModel", new ErrorResponseModel("New device verification required."));
+                customResponse.Add("ErrorModel", new ErrorResponseModel("new device verification required"));
                 break;
             case DeviceValidationResultType.NoDeviceInformationProvided:
                 result.ErrorDescription = "No device information provided";
