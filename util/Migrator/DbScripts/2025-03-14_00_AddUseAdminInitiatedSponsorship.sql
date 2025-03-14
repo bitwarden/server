@@ -434,7 +434,9 @@ BEGIN
 END
 GO;
 
-DROP TYPE IF EXISTS [dbo].[OrganizationSponsorshipType];
+DROP TYPE IF EXISTS [dbo].[OrganizationSponsorshipType] GO;
+DROP PROCEDURE IF EXISTS [dbo].[OrganizationSponsorship_CreateMany] GO;
+DROP PROCEDURE IF EXISTS [dbo].[OrganizationSponsorship_UpdateMany] GO;
 
 CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [Id] UNIQUEIDENTIFIER,
@@ -450,7 +452,7 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [IsAdminInitiated] BIT
 );
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
     @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
 AS
 BEGIN
@@ -487,7 +489,7 @@ FROM
 END
 GO;
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationSponsorship_UpdateMany]
+CREATE PROCEDURE [dbo].[OrganizationSponsorship_UpdateMany]
     @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
 AS
 BEGIN
