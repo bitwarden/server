@@ -9,6 +9,7 @@ using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserGroups;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUsersResetPasswordDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
@@ -209,17 +210,19 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}/reset-password-details")]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(string orgId, string id)
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, string id)
     {
-        // Make sure the calling user can reset passwords for this org
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageResetPassword(orgGuidId))
+        var authResult = await _authorizationService.AuthorizeAsync(User,
+            new OrganizationScope(orgId),
+            [OrganizationUsersResetPasswordDetailsOperations.Read]);
+
+        if (authResult.Succeeded is false)
         {
             throw new NotFoundException();
         }
 
         var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || !organizationUser.UserId.HasValue)
+        if (organizationUser is not { UserId: not null })
         {
             throw new NotFoundException();
         }
@@ -233,7 +236,7 @@ public class OrganizationUsersController : Controller
         }
 
         // Retrieve Encrypted Private Key from organization
-        var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+        var org = await _organizationRepository.GetByIdAsync(orgId);
         if (org == null)
         {
             throw new NotFoundException();
