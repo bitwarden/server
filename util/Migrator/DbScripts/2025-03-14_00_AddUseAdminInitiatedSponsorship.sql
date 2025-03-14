@@ -434,9 +434,9 @@ BEGIN
 END
 GO;
 
-DROP PROCEDURE IF EXISTS [dbo].[OrganizationSponsorship_CreateMany] GO;
-DROP PROCEDURE IF EXISTS [dbo].[OrganizationSponsorship_UpdateMany] GO;
-DROP TYPE IF EXISTS [dbo].[OrganizationSponsorshipType] GO;
+DROP PROCEDURE IF EXISTS [dbo].[OrganizationSponsorship_CreateMany];
+DROP PROCEDURE IF EXISTS [dbo].[OrganizationSponsorship_UpdateMany];
+DROP TYPE IF EXISTS [dbo].[OrganizationSponsorshipType];
 
 CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [Id] UNIQUEIDENTIFIER,
