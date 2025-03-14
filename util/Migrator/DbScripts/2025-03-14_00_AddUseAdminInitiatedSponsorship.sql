@@ -1,6 +1,9 @@
 ALTER TABLE [dbo].[Organization] ADD [UseAdminSponsoredFamilies] bit NOT NULL CONSTRAINT [DF_Organization_UseAdminSponsoredFamilies] default (0)
     GO
 
+ALTER TABLE [dbo].[OrganizationSponsorship] ADD [IsAdminInitiated] BIT CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0) NOT NULL
+    GO
+
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
