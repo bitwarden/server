@@ -164,6 +164,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("Use2fa")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("UseAdminSponsoredFamilies")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("UseApi")
                         .HasColumnType("tinyint(1)");
 
@@ -407,10 +410,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("RequestCountryName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -425,6 +424,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("PublicKey")
                         .HasColumnType("longtext");
+
+                    b.Property<string>("RequestCountryName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("RequestDeviceIdentifier")
                         .HasMaxLength(50)
@@ -1248,6 +1251,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("FriendlyName")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
+
+                    b.Property<bool>("IsAdminInitiated")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("LastSyncDate")
                         .HasColumnType("datetime(6)");

@@ -50,5 +50,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         UseRiskInsights = organization.UseRiskInsights;
+        UseAdminSponsoredFamilies = organization.UseAdminSponsoredFamilies;
     }
 }

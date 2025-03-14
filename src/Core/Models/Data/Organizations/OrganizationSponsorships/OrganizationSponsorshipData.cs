@@ -16,6 +16,7 @@ public class OrganizationSponsorshipData
         LastSyncDate = sponsorship.LastSyncDate;
         ValidUntil = sponsorship.ValidUntil;
         ToDelete = sponsorship.ToDelete;
+        IsAdminInitiated = sponsorship.IsAdminInitiated;
     }
     public Guid SponsoringOrganizationUserId { get; set; }
     public Guid? SponsoredOrganizationId { get; set; }
@@ -25,6 +26,7 @@ public class OrganizationSponsorshipData
     public DateTime? LastSyncDate { get; set; }
     public DateTime? ValidUntil { get; set; }
     public bool ToDelete { get; set; }
+    public bool IsAdminInitiated { get; set; }
 
     public bool CloudSponsorshipRemoved { get; set; }
 }
