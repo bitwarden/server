@@ -5,6 +5,7 @@ using Bit.Core.Settings;
 using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -12,48 +13,69 @@ public class PhishingDomainRepository : IPhishingDomainRepository
 {
     private readonly string _connectionString;
     private readonly IDistributedCache _cache;
-    private const string _cacheKey = "PhishingDomains";
-    private static readonly DistributedCacheEntryOptions _cacheOptions = new DistributedCacheEntryOptions
+    private readonly ILogger<PhishingDomainRepository> _logger;
+    private const string _cacheKey = "PhishingDomains_v1";
+    private static readonly DistributedCacheEntryOptions _cacheOptions = new()
     {
-        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24) // Cache for 24 hours
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24),
+        SlidingExpiration = TimeSpan.FromHours(1)
     };
 
-    public PhishingDomainRepository(GlobalSettings globalSettings, IDistributedCache cache)
-        : this(globalSettings.SqlServer.ConnectionString, cache)
+    public PhishingDomainRepository(
+        GlobalSettings globalSettings, 
+        IDistributedCache cache,
+        ILogger<PhishingDomainRepository> logger)
+        : this(globalSettings.SqlServer.ConnectionString, cache, logger)
     { }
 
-    public PhishingDomainRepository(string connectionString, IDistributedCache cache)
+    public PhishingDomainRepository(
+        string connectionString, 
+        IDistributedCache cache,
+        ILogger<PhishingDomainRepository> logger)
     {
         _connectionString = connectionString;
         _cache = cache;
+        _logger = logger;
     }
 
     public async Task<ICollection<string>> GetActivePhishingDomainsAsync()
     {
-        // Try to get from cache first
-        var cachedDomains = await _cache.GetStringAsync(_cacheKey);
-        if (!string.IsNullOrEmpty(cachedDomains))
+        try
         {
-            return JsonSerializer.Deserialize<ICollection<string>>(cachedDomains) ?? new List<string>();
+            var cachedDomains = await _cache.GetStringAsync(_cacheKey);
+            if (!string.IsNullOrEmpty(cachedDomains))
+            {
+                _logger.LogDebug("Retrieved phishing domains from cache");
+                return JsonSerializer.Deserialize<ICollection<string>>(cachedDomains) ?? [];
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve phishing domains from cache");
         }
 
-        // If not in cache, get from database
-        using (var connection = new SqlConnection(_connectionString))
+        using var connection = new SqlConnection(_connectionString);
+
+        var results = await connection.QueryAsync<string>(
+            "[dbo].[PhishingDomain_ReadAll]",
+            commandType: CommandType.StoredProcedure);
+
+        var domains = results.AsList();
+
+        try
         {
-            var results = await connection.QueryAsync<string>(
-                "[dbo].[PhishingDomain_ReadAll]",
-                commandType: CommandType.StoredProcedure);
-
-            var domains = results.AsList();
-
-            // Store in cache
             await _cache.SetStringAsync(
                 _cacheKey,
                 JsonSerializer.Serialize(domains),
                 _cacheOptions);
-
-            return domains;
+            _logger.LogDebug("Stored {Count} phishing domains in cache", domains.Count);
         }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to store phishing domains in cache");
+        }
+
+        return domains;
     }
 
     public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains)
@@ -79,10 +101,17 @@ public class PhishingDomainRepository : IPhishingDomainRepository
             }
         }
 
-        // Update cache with new domains
-        await _cache.SetStringAsync(
-            _cacheKey,
-            JsonSerializer.Serialize(domains),
-            _cacheOptions);
+        try
+        {
+            await _cache.SetStringAsync(
+                _cacheKey,
+                JsonSerializer.Serialize(domains),
+                _cacheOptions);
+            _logger.LogDebug("Updated phishing domains cache after update operation");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update phishing domains in cache");
+        }
     }
 }
