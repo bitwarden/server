@@ -451,6 +451,7 @@ CREATE TYPE [dbo].[OrganizationSponsorshipType] AS TABLE(
     [ToDelete] BIT,
     [IsAdminInitiated] BIT
 );
+GO;
 
 CREATE PROCEDURE [dbo].[OrganizationSponsorship_CreateMany]
     @OrganizationSponsorshipsInput [dbo].[OrganizationSponsorshipType] READONLY
