@@ -1,9 +1,10 @@
-﻿using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.Distributed;
+﻿using System.Data;
 using System.Text.Json;
+using Bit.Core.Repositories;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
@@ -21,7 +22,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
     };
 
     public PhishingDomainRepository(
-        IServiceScopeFactory serviceScopeFactory, 
+        IServiceScopeFactory serviceScopeFactory,
         IDistributedCache cache,
         ILogger<PhishingDomainRepository> logger)
     {
@@ -74,28 +75,71 @@ public class PhishingDomainRepository : IPhishingDomainRepository
 
     public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains)
     {
-        using (var scope = _serviceScopeFactory.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-            await dbContext.PhishingDomains.ExecuteDeleteAsync();
+        var domainsList = domains.ToList();
+        _logger.LogInformation("Beginning bulk update of {Count} phishing domains", domainsList.Count);
 
-            var phishingDomains = domains.Select(d => new PhishingDomain
+        using var scope = _serviceScopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var connection = dbContext.Database.GetDbConnection();
+        var connectionString = connection.ConnectionString;
+
+        using var sqlConnection = new SqlConnection(connectionString);
+        await sqlConnection.OpenAsync();
+
+        using var transaction = sqlConnection.BeginTransaction();
+        try
+        {
+            using var command = sqlConnection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "[dbo].[PhishingDomain_DeleteAll]";
+            command.CommandType = CommandType.StoredProcedure;
+            await command.ExecuteNonQueryAsync();
+
+            var dataTable = new DataTable();
+            dataTable.Columns.Add("Id", typeof(Guid));
+            dataTable.Columns.Add("Domain", typeof(string));
+            dataTable.Columns.Add("CreationDate", typeof(DateTime));
+            dataTable.Columns.Add("RevisionDate", typeof(DateTime));
+
+            dataTable.PrimaryKey = [dataTable.Columns["Id"]];
+
+            var now = DateTime.UtcNow;
+            foreach (var domain in domainsList)
             {
-                Id = Guid.NewGuid(),
-                Domain = d,
-                CreationDate = DateTime.UtcNow,
-                RevisionDate = DateTime.UtcNow
-            });
-            await dbContext.PhishingDomains.AddRangeAsync(phishingDomains);
-            await dbContext.SaveChangesAsync();
+                dataTable.Rows.Add(Guid.NewGuid(), domain, now, now);
+            }
+
+            using var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction)
+            {
+                DestinationTableName = "[dbo].[PhishingDomain]",
+                BatchSize = 10000
+            };
+
+            bulkCopy.ColumnMappings.Add("Id", "Id");
+            bulkCopy.ColumnMappings.Add("Domain", "Domain");
+            bulkCopy.ColumnMappings.Add("CreationDate", "CreationDate");
+            bulkCopy.ColumnMappings.Add("RevisionDate", "RevisionDate");
+
+            await bulkCopy.WriteToServerAsync(dataTable);
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Successfully bulk updated {Count} phishing domains", domainsList.Count);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to bulk update phishing domains");
+            throw;
         }
 
         try
         {
             await _cache.SetStringAsync(
                 _cacheKey,
-                JsonSerializer.Serialize(domains),
+                JsonSerializer.Serialize(domainsList),
                 _cacheOptions);
+
             _logger.LogDebug("Updated phishing domains cache after update operation");
         }
         catch (Exception ex)

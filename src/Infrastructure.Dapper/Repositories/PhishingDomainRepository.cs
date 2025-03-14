@@ -22,14 +22,14 @@ public class PhishingDomainRepository : IPhishingDomainRepository
     };
 
     public PhishingDomainRepository(
-        GlobalSettings globalSettings, 
+        GlobalSettings globalSettings,
         IDistributedCache cache,
         ILogger<PhishingDomainRepository> logger)
         : this(globalSettings.SqlServer.ConnectionString, cache, logger)
     { }
 
     public PhishingDomainRepository(
-        string connectionString, 
+        string connectionString,
         IDistributedCache cache,
         ILogger<PhishingDomainRepository> logger)
     {
@@ -68,6 +68,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
                 _cacheKey,
                 JsonSerializer.Serialize(domains),
                 _cacheOptions);
+
             _logger.LogDebug("Stored {Count} phishing domains in cache", domains.Count);
         }
         catch (Exception ex)
@@ -80,32 +81,62 @@ public class PhishingDomainRepository : IPhishingDomainRepository
 
     public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains)
     {
-        using (var connection = new SqlConnection(_connectionString))
+        var domainsList = domains.ToList();
+        _logger.LogInformation("Beginning bulk update of {Count} phishing domains", domainsList.Count);
+
+        using var connection = new SqlConnection(_connectionString);
+        await connection.OpenAsync();
+
+        using var transaction = connection.BeginTransaction();
+        try
         {
             await connection.ExecuteAsync(
                 "[dbo].[PhishingDomain_DeleteAll]",
+                transaction: transaction,
                 commandType: CommandType.StoredProcedure);
 
-            foreach (var domain in domains)
+            var dataTable = new DataTable();
+            dataTable.Columns.Add("Id", typeof(Guid));
+            dataTable.Columns.Add("Domain", typeof(string));
+            dataTable.Columns.Add("CreationDate", typeof(DateTime));
+            dataTable.Columns.Add("RevisionDate", typeof(DateTime));
+
+            dataTable.PrimaryKey = [dataTable.Columns["Id"]];
+
+            var now = DateTime.UtcNow;
+            foreach (var domain in domainsList)
             {
-                await connection.ExecuteAsync(
-                    "[dbo].[PhishingDomain_Create]",
-                    new
-                    {
-                        Id = Guid.NewGuid(),
-                        Domain = domain,
-                        CreationDate = DateTime.UtcNow,
-                        RevisionDate = DateTime.UtcNow
-                    },
-                    commandType: CommandType.StoredProcedure);
+                dataTable.Rows.Add(Guid.NewGuid(), domain, now, now);
             }
+
+            using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
+            {
+                DestinationTableName = "[dbo].[PhishingDomain]",
+                BatchSize = 10000
+            };
+
+            bulkCopy.ColumnMappings.Add("Id", "Id");
+            bulkCopy.ColumnMappings.Add("Domain", "Domain");
+            bulkCopy.ColumnMappings.Add("CreationDate", "CreationDate");
+            bulkCopy.ColumnMappings.Add("RevisionDate", "RevisionDate");
+
+            await bulkCopy.WriteToServerAsync(dataTable);
+            await transaction.CommitAsync();
+
+            _logger.LogInformation("Successfully bulk updated {Count} phishing domains", domainsList.Count);
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Failed to bulk update phishing domains");
+            throw;
         }
 
         try
         {
             await _cache.SetStringAsync(
                 _cacheKey,
-                JsonSerializer.Serialize(domains),
+                JsonSerializer.Serialize(domainsList),
                 _cacheOptions);
             _logger.LogDebug("Updated phishing domains cache after update operation");
         }
