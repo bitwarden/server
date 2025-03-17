@@ -7,23 +7,23 @@ namespace Bit.Core.Services;
 
 public class SlackEventHandler(
     IOrganizationIntegrationConfigurationRepository configurationRepository,
-    SlackMessageSender slackMessageSender
+    ISlackService slackService
     ) : IEventMessageHandler
 {
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
-        Guid organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
-
-        var configuration = await configurationRepository.GetConfigurationAsync<SlackConfiguration>(
-            organizationId,
+        var organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
+        var configurations = await configurationRepository.GetConfigurationsAsync<SlackConfiguration>(
             IntegrationType.Slack,
-            eventMessage.Type);
-        if (configuration is not null)
+            organizationId, eventMessage.Type
+        );
+
+        foreach (var configuration in configurations)
         {
-            await slackMessageSender.SendDirectMessageByEmailAsync(
+            await slackService.SendSlackMessageByChannelId(
                 configuration.Configuration.Token,
-                configuration.Template,
-                configuration.Configuration.UserEmails.First()
+                TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
+                configuration.Configuration.ChannelId
             );
         }
     }

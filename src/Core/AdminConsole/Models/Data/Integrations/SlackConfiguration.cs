@@ -2,7 +2,16 @@
 
 public class SlackConfiguration
 {
+    public SlackConfiguration()
+    {
+    }
+
+    public SlackConfiguration(string channelId, string token)
+    {
+        ChannelId = channelId;
+        Token = token;
+    }
+
     public string Token { get; set; } = string.Empty;
-    public List<string> Channels { get; set; } = new();
-    public List<string> UserEmails { get; set; } = new();
+    public string ChannelId { get; set; } = string.Empty;
 }

@@ -20,7 +20,16 @@ public class WebhookEventHandlerTests
     private readonly MockedHttpMessageHandler _handler;
     private readonly HttpClient _httpClient;
 
+    private const string _template =
+        """
+        {
+            "Date": "#Date#",
+            "Type": "#Type#",
+            "UserId": "#UserId#"
+        }
+        """;
     private const string _webhookUrl = "http://localhost/test/event";
+    private const string _webhookUrl2 = "http://localhost/another/event";
 
     public WebhookEventHandlerTests()
     {
@@ -31,23 +40,18 @@ public class WebhookEventHandlerTests
         _httpClient = _handler.ToHttpClient();
     }
 
-    private SutProvider<WebhookEventHandler> GetSutProvider()
+    private SutProvider<WebhookEventHandler> GetSutProvider(
+        List<IntegrationConfiguration<WebhookConfiguration>> configurations)
     {
         var clientFactory = Substitute.For<IHttpClientFactory>();
         clientFactory.CreateClient(WebhookEventHandler.HttpClientName).Returns(_httpClient);
 
         var repository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
-        repository.GetConfigurationAsync<WebhookConfiguration>(
-            Arg.Any<Guid>(),
+        repository.GetConfigurationsAsync<WebhookConfiguration>(
             IntegrationType.Webhook,
+            Arg.Any<Guid>(),
             Arg.Any<EventType>()
-        ).Returns(
-            new IntegrationConfiguration<WebhookConfiguration>
-            {
-                Configuration = new WebhookConfiguration { ApiKey = "", Url = _webhookUrl },
-                Template = "{ \"Date\": \"#Date#\", \"Type\": \"#Type#\", \"UserId\": \"#UserId#\" }"
-            }
-        );
+        ).Returns(configurations);
 
         return new SutProvider<WebhookEventHandler>()
             .SetDependency(repository)
@@ -55,10 +59,57 @@ public class WebhookEventHandlerTests
             .Create();
     }
 
+    List<IntegrationConfiguration<WebhookConfiguration>> NoConfigurations()
+    {
+        return new List<IntegrationConfiguration<WebhookConfiguration>>();
+    }
+
+    List<IntegrationConfiguration<WebhookConfiguration>> OneConfiguration()
+    {
+        return new List<IntegrationConfiguration<WebhookConfiguration>>
+        {
+            new IntegrationConfiguration<WebhookConfiguration>
+            {
+                Configuration = new WebhookConfiguration { Url = _webhookUrl },
+                Template = _template
+            }
+        };
+    }
+
+    List<IntegrationConfiguration<WebhookConfiguration>> TwoConfigurations()
+    {
+        return new List<IntegrationConfiguration<WebhookConfiguration>>
+        {
+            new IntegrationConfiguration<WebhookConfiguration>
+            {
+                Configuration = new WebhookConfiguration { Url = _webhookUrl },
+                Template = _template
+            },
+            new IntegrationConfiguration<WebhookConfiguration>
+            {
+                Configuration = new WebhookConfiguration { Url = _webhookUrl2 },
+                Template = _template
+            }
+        };
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleEventAsync_DoesNothingWhenNoConfigurations(EventMessage eventMessage)
+    {
+        var sutProvider = GetSutProvider(NoConfigurations());
+
+        await sutProvider.Sut.HandleEventAsync(eventMessage);
+        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookEventHandler.HttpClientName))
+        );
+
+        Assert.Empty(_handler.CapturedRequests);
+    }
+
     [Theory, BitAutoData]
     public async Task HandleEventAsync_PostsEventToUrl(EventMessage eventMessage)
     {
-        var sutProvider = GetSutProvider();
+        var sutProvider = GetSutProvider(OneConfiguration());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
@@ -77,23 +128,77 @@ public class WebhookEventHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleEventManyAsync_PostsEventsToUrl(List<EventMessage> eventMessages)
+    public async Task HandleManyEventsAsync_DoesNothingWhenNoConfigurations(List<EventMessage> eventMessages)
     {
-        var sutProvider = GetSutProvider();
+        var sutProvider = GetSutProvider(NoConfigurations());
 
         await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
         sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
-            Arg.Is(AssertHelper.AssertPropertyEqual<string>(WebhookEventHandler.HttpClientName))
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookEventHandler.HttpClientName))
         );
 
-        var request = _handler.CapturedRequests[0];
-        Assert.NotNull(request);
-        var returned = await request.Content.ReadFromJsonAsync<MockEvent>();
-        var expected = MockEvent.From(eventMessages.First());
+        Assert.Empty(_handler.CapturedRequests);
+    }
 
-        Assert.Equal(HttpMethod.Post, request.Method);
-        Assert.Equal(_webhookUrl, request.RequestUri.ToString());
-        AssertHelper.AssertPropertyEqual(expected, returned);
+
+    [Theory, BitAutoData]
+    public async Task HandleManyEventsAsync_PostsEventsToUrl(List<EventMessage> eventMessages)
+    {
+        var sutProvider = GetSutProvider(OneConfiguration());
+
+        await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
+        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookEventHandler.HttpClientName))
+        );
+
+        Assert.Equal(eventMessages.Count, _handler.CapturedRequests.Count);
+        var index = 0;
+        foreach (var request in _handler.CapturedRequests)
+        {
+            Assert.NotNull(request);
+            var returned = await request.Content.ReadFromJsonAsync<MockEvent>();
+            var expected = MockEvent.From(eventMessages[index]);
+
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal(_webhookUrl, request.RequestUri.ToString());
+            AssertHelper.AssertPropertyEqual(expected, returned);
+            index++;
+        }
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleManyEventsAsync_PostsEventsToMultipleUrls(List<EventMessage> eventMessages)
+    {
+        var sutProvider = GetSutProvider(TwoConfigurations());
+
+        await sutProvider.Sut.HandleManyEventsAsync(eventMessages);
+        sutProvider.GetDependency<IHttpClientFactory>().Received(1).CreateClient(
+            Arg.Is(AssertHelper.AssertPropertyEqual(WebhookEventHandler.HttpClientName))
+        );
+
+        using var capturedRequests = _handler.CapturedRequests.GetEnumerator();
+        Assert.Equal(eventMessages.Count * 2, _handler.CapturedRequests.Count);
+
+        foreach (var eventMessage in eventMessages)
+        {
+            var expected = MockEvent.From(eventMessage);
+
+            Assert.True(capturedRequests.MoveNext());
+            var request = capturedRequests.Current;
+            Assert.NotNull(request);
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal(_webhookUrl, request.RequestUri.ToString());
+            var returned = await request.Content.ReadFromJsonAsync<MockEvent>();
+            AssertHelper.AssertPropertyEqual(expected, returned);
+
+            Assert.True(capturedRequests.MoveNext());
+            request = capturedRequests.Current;
+            Assert.NotNull(request);
+            Assert.Equal(HttpMethod.Post, request.Method);
+            Assert.Equal(_webhookUrl2, request.RequestUri.ToString());
+            returned = await request.Content.ReadFromJsonAsync<MockEvent>();
+            AssertHelper.AssertPropertyEqual(expected, returned);
+        }
     }
 }
 

@@ -21,11 +21,13 @@ public class WebhookEventHandler(
     {
         Guid organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
 
-        var configuration = await configurationRepository.GetConfigurationAsync<WebhookConfiguration>(
-            organizationId,
+        var configurations = await configurationRepository.GetConfigurationsAsync<WebhookConfiguration>(
             IntegrationType.Webhook,
-            eventMessage.Type);
-        if (configuration is not null)
+            organizationId,
+            eventMessage.Type
+        );
+
+        foreach (var configuration in configurations)
         {
             var content = new StringContent(
                 TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),

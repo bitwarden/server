@@ -120,8 +120,8 @@ public class Startup
 
             services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
 
-            services.AddHttpClient(SlackMessageSender.HttpClientName);
-            services.AddSingleton<SlackMessageSender>();
+            services.AddHttpClient(SlackService.HttpClientName);
+            services.AddSingleton<ISlackService, SlackService>();
             services.AddSingleton<SlackEventHandler>();
 
             services.AddSingleton<IHostedService>(provider =>

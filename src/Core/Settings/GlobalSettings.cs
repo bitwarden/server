@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Settings;
+using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
@@ -283,8 +284,10 @@ public class GlobalSettings : IGlobalSettings
     public class EventLoggingSettings
     {
         public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
+        public virtual List<SlackConfiguration> SlackConfigurations { get; set; } = new List<SlackConfiguration>();
+        public virtual List<WebhookConfiguration> WebhookConfigurations { get; set; } = new List<WebhookConfiguration>();
+        public virtual string SlackChannel { get; set; }
         public virtual string SlackToken { get; set; }
-        public virtual string SlackUserEmail { get; set; }
         public virtual string WebhookUrl { get; set; }
         public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
 
