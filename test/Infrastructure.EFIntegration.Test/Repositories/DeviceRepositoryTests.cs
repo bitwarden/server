@@ -46,4 +46,6 @@ public class DeviceRepositoryTests
         var distinctItems = savedDevices.Distinct(equalityComparer);
         Assert.False(distinctItems.Skip(1).Any());
     }
+
+
 }
