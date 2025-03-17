@@ -1,5 +1,7 @@
 ﻿#nullable enable
 
+using Bit.Core.AdminConsole.Errors;
+
 namespace Bit.Core.Models.Commands;
 
 public class CommandResult(IEnumerable<string> errors)
@@ -28,7 +30,7 @@ public class Success : CommandResult
 {
 }
 
-public abstract class CommandResult<T> { }
+public abstract class CommandResult<T>;
 
 public class Success<T>(T value) : CommandResult<T>
 {
@@ -42,4 +44,16 @@ public class Failure<T>(IEnumerable<string> errorMessages) : CommandResult<T>
     public string ErrorMessage => string.Join(" ", ErrorMessages);
 
     public Failure(string error) : this([error]) { }
+}
+
+public class Partial<T> : CommandResult<T>
+{
+    public T[] Successes { get; set; } = [];
+    public Error<T>[] Failures { get; set; } = [];
+
+    public Partial(IEnumerable<T> successfulItems, IEnumerable<Error<T>> failedItems)
+    {
+        Successes = successfulItems.ToArray();
+        Failures = failedItems.ToArray();
+    }
 }
