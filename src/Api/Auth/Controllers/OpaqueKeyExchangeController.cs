@@ -27,7 +27,7 @@ public class OpaqueKeyExchangeController : Controller
     public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync([FromBody] OpaqueRegistrationStartRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var result = await _opaqueKeyExchangeService.StartRegistration(Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration.ToNativeConfiguration());
+        var result = await _opaqueKeyExchangeService.StartRegistration(Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration);
         return result;
     }
 
@@ -36,7 +36,7 @@ public class OpaqueKeyExchangeController : Controller
     public async void FinishRegistrationAsync([FromBody] OpaqueRegistrationFinishRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet);
+        await _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet);
     }
 
 

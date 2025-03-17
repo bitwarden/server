@@ -22,11 +22,11 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @CipherConfiguration UNIQUEIDENTIFIER = NULL,
-    @CredentialBlob TINYINT,
-    @EncryptedPublicKey NVARCHAR(50),
+    @CipherConfiguration VARCHAR(MAX),
+    @CredentialBlob VARCHAR(MAX),
+    @EncryptedPublicKey VARCHAR(MAX),
     @EncryptedPrivateKey TINYINT,
-    @EncryptedUserKey VARCHAR(50),
+    @EncryptedUserKey VARCHAR(MAX),
     @CreationDate DATETIME2(7)
 AS
 BEGIN
@@ -60,11 +60,11 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @CipherConfiguration UNIQUEIDENTIFIER = NULL,
-    @CredentialBlob TINYINT,
-    @EncryptedPublicKey NVARCHAR(50),
-    @EncryptedPrivateKey TINYINT,
-    @EncryptedUserKey VARCHAR(50),
+    @CipherConfiguration VARCHAR(MAX),
+    @CredentialBlob VARCHAR(MAX),
+    @EncryptedPublicKey VARCHAR(MAX),
+    @EncryptedPrivateKey VARCHAR(MAX),
+    @EncryptedUserKey VARCHAR(MAX),
     @CreationDate DATETIME2(7)
 AS
 BEGIN
@@ -85,18 +85,16 @@ END
 
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Delete]
-    @Id UNIQUEIDENTIFIER,
-    @UserId UNIQUEIDENTIFIER
+CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_DeleteById]
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     DELETE
     FROM
         [dbo].[OpaqueKeyExchangeCredential]
     WHERE
-        [Id] = @Id AND [UserId] = @UserId
+        [Id] = @Id
 END
-
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_ReadByUserId]

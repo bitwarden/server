@@ -2,11 +2,11 @@
 CREATE PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @CipherConfiguration UNIQUEIDENTIFIER = NULL,
-    @CredentialBlob TINYINT,
-    @EncryptedPublicKey NVARCHAR(50),
-    @EncryptedPrivateKey TINYINT,
-    @EncryptedUserKey VARCHAR(50),
+    @CipherConfiguration VARCHAR(MAX),
+    @CredentialBlob VARCHAR(MAX),
+    @EncryptedPublicKey VARCHAR(MAX),
+    @EncryptedPrivateKey VARCHAR(MAX),
+    @EncryptedUserKey VARCHAR(MAX),
     @CreationDate DATETIME2(7)
 AS
 BEGIN

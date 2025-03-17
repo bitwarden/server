@@ -17,6 +17,7 @@ public class CipherConfiguration
 
     [Required]
     public string CipherSuite { get; set; }
+    [Required]
     public Argon2KsfParameters Argon2Parameters { get; set; }
 
     public Bitwarden.OPAQUE.CipherConfiguration ToNativeConfiguration()
@@ -28,7 +29,7 @@ public class CipherConfiguration
                 OprfCS = Bitwarden.OPAQUE.OprfCS.Ristretto255,
                 KeGroup = Bitwarden.OPAQUE.KeGroup.Ristretto255,
                 KeyExchange = Bitwarden.OPAQUE.KeyExchange.TripleDH,
-                KSF = new Bitwarden.OPAQUE.Argon2id(Argon2Parameters.iterations, Argon2Parameters.memory, Argon2Parameters.parallelism)
+                KSF = new Bitwarden.OPAQUE.Argon2id(Argon2Parameters.Iterations, Argon2Parameters.Memory, Argon2Parameters.Parallelism)
             };
         }
         else
@@ -42,9 +43,9 @@ public class Argon2KsfParameters
 {
     // Memory in KiB
     [Required]
-    public int memory;
+    public int Memory { get; set; }
     [Required]
-    public int iterations;
+    public int Iterations { get; set; }
     [Required]
-    public int parallelism;
+    public int Parallelism { get; set; }
 }
