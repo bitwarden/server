@@ -21,6 +21,9 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     private readonly IDistributedCache _distributedCache;
     private readonly IUserRepository _userRepository;
 
+    const string REGISTER_SESSION_KEY = "opaque_register_session_{0}";
+    const string LOGIN_SESSION_KEY = "opaque_login_session_{0}";
+
     public OpaqueKeyExchangeService(
         IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
         IDistributedCache distributedCache,
@@ -35,36 +38,36 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
     public async Task<OpaqueRegistrationStartResponse> StartRegistration(byte[] request, User user, Models.Api.Request.Opaque.CipherConfiguration cipherConfiguration)
     {
-        return await Task.Run(() =>
-        {
-            var registrationRequest = _bitwardenOpaque.StartRegistration(cipherConfiguration.ToNativeConfiguration(), null, request, user.Id.ToString());
-            var registrationReseponse = registrationRequest.registrationResponse;
-            var serverSetup = registrationRequest.serverSetup;
-            // persist server setup
-            var sessionId = Guid.NewGuid();
-            SessionStore.RegisterSessions.Add(sessionId, new RegisterSession() { SessionId = sessionId, ServerSetup = serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id });
-            return new OpaqueRegistrationStartResponse(sessionId, Convert.ToBase64String(registrationReseponse));
-        });
+        var registrationRequest = _bitwardenOpaque.StartRegistration(cipherConfiguration.ToNativeConfiguration(), null, request, user.Id.ToString());
+
+        var sessionId = Guid.NewGuid();
+        var registerSession = new RegisterSession() { SessionId = sessionId, ServerSetup = registrationRequest.serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id };
+        await _distributedCache.SetAsync(string.Format(REGISTER_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registerSession)));
+
+        return new OpaqueRegistrationStartResponse(sessionId, Convert.ToBase64String(registrationRequest.registrationResponse));
     }
 
     public async Task FinishRegistration(Guid sessionId, byte[] registrationUpload, User user, RotateableOpaqueKeyset keyset)
     {
-        await Task.Run(() =>
+        var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
+        if (serializedRegisterSession == null)
         {
-            var cipherConfiguration = SessionStore.RegisterSessions[sessionId].CipherConfiguration;
-            try
-            {
-                var registrationFinish = _bitwardenOpaque.FinishRegistration(cipherConfiguration.ToNativeConfiguration(), registrationUpload);
-                SessionStore.RegisterSessions[sessionId].PasswordFile = registrationFinish.serverRegistration;
+            throw new InvalidOperationException("Session not found");
+        }
 
-                SessionStore.RegisterSessions[sessionId].KeySet = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(keyset));
-            }
-            catch (Exception e)
-            {
-                SessionStore.RegisterSessions.Remove(sessionId);
-                throw new Exception(e.Message);
-            }
-        });
+        try
+        {
+            var registerSession = JsonSerializer.Deserialize<RegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
+            var registrationFinish = _bitwardenOpaque.FinishRegistration(registerSession.CipherConfiguration.ToNativeConfiguration(), registrationUpload);
+            registerSession.PasswordFile = registrationFinish.serverRegistration;
+            registerSession.KeySet = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(keyset));
+            await _distributedCache.SetAsync(string.Format(REGISTER_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registerSession)));
+        }
+        catch (Exception e)
+        {
+            await _distributedCache.RemoveAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
+            throw new Exception(e.Message);
+        }
     }
 
     public async Task<(Guid, byte[])> StartLogin(byte[] request, string email)
@@ -90,48 +93,51 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
         var loginResponse = _bitwardenOpaque.StartLogin(cipherConfiguration.ToNativeConfiguration(), serverSetup, serverRegistration, request, user.Id.ToString());
         var sessionId = Guid.NewGuid();
-        SessionStore.LoginSessions.Add(sessionId, new LoginSession() { UserId = user.Id, LoginState = loginResponse.state, CipherConfiguration = cipherConfiguration });
+        var loginSession = new LoginSession() { UserId = user.Id, LoginState = loginResponse.state, CipherConfiguration = cipherConfiguration };
+        await _distributedCache.SetAsync(string.Format(LOGIN_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)));
         return (sessionId, loginResponse.credentialResponse);
     }
 
     public async Task<bool> FinishLogin(Guid sessionId, byte[] credentialFinalization)
     {
-        return await Task.Run(async () =>
+        var serializedLoginSession = await _distributedCache.GetAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
+        if (serializedLoginSession == null)
         {
-            if (!SessionStore.LoginSessions.ContainsKey(sessionId))
-            {
-                throw new InvalidOperationException("Session not found");
-            }
+            throw new InvalidOperationException("Session not found");
+        }
+        var loginSession = JsonSerializer.Deserialize<LoginSession>(Encoding.ASCII.GetString(serializedLoginSession))!;
 
-            var userId = SessionStore.LoginSessions[sessionId].UserId;
-            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(userId);
-            if (credential == null)
-            {
-                throw new InvalidOperationException("Credential not found");
-            }
+        var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(loginSession.UserId);
+        if (credential == null)
+        {
+            throw new InvalidOperationException("Credential not found");
+        }
 
-            var loginState = SessionStore.LoginSessions[sessionId].LoginState;
-            var cipherConfiguration = SessionStore.LoginSessions[sessionId].CipherConfiguration;
-            SessionStore.LoginSessions.Remove(sessionId);
+        var loginState = loginSession.LoginState;
+        var cipherConfiguration = loginSession.CipherConfiguration;
+        await _distributedCache.RemoveAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
 
-            try
-            {
-                var success = _bitwardenOpaque.FinishLogin(cipherConfiguration.ToNativeConfiguration(), loginState, credentialFinalization);
-                return true;
-            }
-            catch (Exception e)
-            {
-                // print
-                Console.WriteLine(e.Message);
-                return false;
-            }
-        });
+        try
+        {
+            var success = _bitwardenOpaque.FinishLogin(cipherConfiguration.ToNativeConfiguration(), loginState, credentialFinalization);
+            return true;
+        }
+        catch (Exception e)
+        {
+            // print
+            Console.WriteLine(e.Message);
+            return false;
+        }
     }
 
     public async Task SetActive(Guid sessionId, User user)
     {
-        var session = SessionStore.RegisterSessions[sessionId];
-        SessionStore.RegisterSessions.Remove(sessionId);
+        var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
+        if (serializedRegisterSession == null)
+        {
+            throw new InvalidOperationException("Session not found");
+        }
+        var session = JsonSerializer.Deserialize<RegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
 
         if (session.UserId != user.Id)
         {
@@ -193,10 +199,4 @@ public class LoginSession
     public required Guid UserId { get; set; }
     public required byte[] LoginState { get; set; }
     public required Models.Api.Request.Opaque.CipherConfiguration CipherConfiguration { get; set; }
-}
-
-public class SessionStore()
-{
-    public static Dictionary<Guid, RegisterSession> RegisterSessions = new Dictionary<Guid, RegisterSession>();
-    public static Dictionary<Guid, LoginSession> LoginSessions = new Dictionary<Guid, LoginSession>();
 }
