@@ -1,5 +1,5 @@
-﻿using Bit.Api.Auth.Models.Request.Opaque;
-using Bit.Api.Auth.Models.Response.Opaque;
+﻿using Bit.Core.Auth.Models.Api.Request.Opaque;
+using Bit.Core.Auth.Models.Api.Response.Opaque;
 using Bit.Core.Auth.Services;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +12,7 @@ namespace Bit.Api.Auth.Controllers;
 public class OpaqueKeyExchangeController : Controller
 {
     private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
-    IUserService _userService;
+    private readonly IUserService _userService;
 
     public OpaqueKeyExchangeController(
         IOpaqueKeyExchangeService opaqueKeyExchangeService,
@@ -27,8 +27,8 @@ public class OpaqueKeyExchangeController : Controller
     public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync([FromBody] OpaqueRegistrationStartRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var result = await _opaqueKeyExchangeService.StartRegistration(Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration.ToNativeConfiguration());
-        return new OpaqueRegistrationStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
+        var result = await _opaqueKeyExchangeService.StartRegistration(Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration);
+        return result;
     }
 
 
@@ -36,25 +36,23 @@ public class OpaqueKeyExchangeController : Controller
     public async void FinishRegistrationAsync([FromBody] OpaqueRegistrationFinishRequest request)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user);
+        await _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet);
     }
 
 
     // TODO: Remove and move to token endpoint
     [HttpPost("~/opaque/start-login")]
-    public async Task<OpaqueLoginStartResponse> StartLoginAsync([FromBody] OpaqueLoginStartRequest request)
+    public async Task<Models.Response.Opaque.OpaqueLoginStartResponse> StartLoginAsync([FromBody] Models.Request.Opaque.OpaqueLoginStartRequest request)
     {
         var result = await _opaqueKeyExchangeService.StartLogin(Convert.FromBase64String(request.CredentialRequest), request.Email);
-        return new OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
+        return new Models.Response.Opaque.OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
     }
 
     // TODO: Remove and move to token endpoint
     [HttpPost("~/opaque/finish-login")]
-    public async Task<bool> FinishLoginAsync([FromBody] OpaqueLoginFinishRequest request)
+    public async Task<bool> FinishLoginAsync([FromBody] Models.Request.Opaque.OpaqueLoginFinishRequest request)
     {
         var result = await _opaqueKeyExchangeService.FinishLogin(request.SessionId, Convert.FromBase64String(request.CredentialFinalization));
         return result;
     }
-
 }
-

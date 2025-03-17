@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[User_DeleteById]
     @Id UNIQUEIDENTIFIER
-WITH RECOMPILE
+WITH
+    RECOMPILE
 AS
 BEGIN
     SET NOCOUNT ON
@@ -23,6 +24,12 @@ BEGIN
     END
 
     BEGIN TRANSACTION User_DeleteById
+    -- Delete OpaqueKeyExchangeCredentials
+    DELETE
+    FROM
+        [dbo].[OpaqueKeyExchangeCredential]
+    WHERE
+        [UserId] = @UserId
 
     -- Delete WebAuthnCredentials
     DELETE
@@ -42,7 +49,7 @@ BEGIN
     DELETE
     FROM
         [dbo].[AuthRequest]
-    WHERE 
+    WHERE
         [UserId] = @Id
 
     -- Delete devices
@@ -116,7 +123,7 @@ BEGIN
     DELETE
     FROM
         [dbo].[Send]
-    WHERE 
+    WHERE
         [UserId] = @Id
 
     -- Delete Notification Status
@@ -132,7 +139,7 @@ BEGIN
         [dbo].[Notification]
     WHERE
         [UserId] = @Id
-    
+
     -- Finally, delete the user
     DELETE
     FROM
