@@ -797,6 +797,135 @@ public class CipherServiceTests
             Arg.Is<IEnumerable<Cipher>>(arg => !arg.Except(ciphers).Any()));
     }
 
+    [Theory, BitAutoData]
+    public async Task ArchiveAsync_WithGoodData_Works(
+        SutProvider<CipherService> sutProvider, Cipher cipher
+        )
+    {
+        // Arrange
+        cipher.ArchivedDate = null;
+
+        // Act
+        await sutProvider.Sut.ArchiveAsync(cipher);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipher);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipher, EventType.Cipher_Archived);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipher, null);
+        Assert.NotNull(cipher.ArchivedDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ArchiveAsync_HasArchivedDateAlready_Works(
+        SutProvider<CipherService> sutProvider, Cipher cipher
+    )
+    {
+        // Arrange
+        cipher.ArchivedDate = DateTime.UtcNow;
+
+        // Act
+        await sutProvider.Sut.ArchiveAsync(cipher);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(0).UpsertAsync(cipher);
+        await sutProvider.GetDependency<IEventService>().Received(0).LogCipherEventAsync(cipher, EventType.Cipher_Archived);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(0).PushSyncCipherUpdateAsync(cipher, null);
+        Assert.NotNull(cipher.ArchivedDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ArchiveManyAsync_WithGoodData_Works(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher1, CipherDetails cipher2, User user
+    )
+    {
+        // Arrange
+        cipher1.ArchivedDate = null;
+        cipher1.UserId = user.Id;
+        cipher1.Edit = true;
+        cipher2.ArchivedDate = null;
+        cipher2.UserId = user.Id;
+        cipher2.Edit = true;
+
+        CipherDetails[] ciphers = { cipher1, cipher2 };
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id).Returns(ciphers);
+
+        // Act
+        await sutProvider.Sut.ArchiveManyAsync(new List<Guid> { cipher1.Id, cipher2.Id }, user.Id);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).GetManyByUserIdAsync(user.Id);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).ArchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
+        Assert.NotNull(cipher1.ArchivedDate);
+        Assert.NotNull(cipher2.ArchivedDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UnarchiveAsync_WithGoodData_Works(
+        SutProvider<CipherService> sutProvider, Cipher cipher
+    )
+    {
+        // Arrange
+        cipher.ArchivedDate = DateTime.UtcNow;
+
+        // Act
+        await sutProvider.Sut.UnarchiveAsync(cipher);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UpsertAsync(cipher);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventAsync(cipher, EventType.Cipher_Unarchived);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCipherUpdateAsync(cipher, null);
+        Assert.Null(cipher.ArchivedDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UnarchiveAsync_HasArchivedDateAlready_Works(
+        SutProvider<CipherService> sutProvider, Cipher cipher
+    )
+    {
+        // Arrange
+        cipher.ArchivedDate = null;
+        cipher.RevisionDate = DateTime.Now;
+
+        // Act
+        await sutProvider.Sut.UnarchiveAsync(cipher);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(0).UpsertAsync(cipher);
+        await sutProvider.GetDependency<IEventService>().Received(0).LogCipherEventAsync(cipher, EventType.Cipher_Unarchived);
+        await sutProvider.GetDependency<IPushNotificationService>().Received(0).PushSyncCipherUpdateAsync(cipher, null);
+        Assert.Null(cipher.ArchivedDate);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UnarchiveManyAsync_WithGoodData_Works(
+        SutProvider<CipherService> sutProvider,
+        CipherDetails cipher1, CipherDetails cipher2, User user
+    )
+    {
+        // Arrange
+        cipher1.ArchivedDate = DateTime.UtcNow;
+        cipher1.UserId = user.Id;
+        cipher1.Edit = true;
+        cipher2.ArchivedDate = DateTime.UtcNow;
+        cipher2.UserId = user.Id;
+        cipher2.Edit = true;
+
+        CipherDetails[] ciphers = { cipher1, cipher2 };
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id).Returns(ciphers);
+
+        // Act
+        await sutProvider.Sut.UnarchiveManyAsync(new List<Guid> { cipher1.Id, cipher2.Id }, user.Id);
+
+        // Assert
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).GetManyByUserIdAsync(user.Id);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).UnarchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
+        Assert.Null(cipher1.ArchivedDate);
+        Assert.Null(cipher2.ArchivedDate);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task DeleteAsync_WithPersonalCipherOwner_DeletesCipher(
