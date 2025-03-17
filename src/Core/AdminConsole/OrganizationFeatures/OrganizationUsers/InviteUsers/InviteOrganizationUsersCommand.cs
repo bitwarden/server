@@ -105,7 +105,6 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         var organization = await organizationRepository.GetByIdAsync(validatedRequest!.Value.InviteOrganization.OrganizationId);
 
-        // consider separate try catches for adjusting seats
         try
         {
             await organizationUserRepository.CreateManyAsync(organizationUserCollection);
