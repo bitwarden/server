@@ -199,7 +199,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 .Distinct();
 
             await mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization,
-                valid.Value.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats.Value!, ownerEmails);
+                valid.Value.PasswordManagerSubscriptionUpdate.MaxAutoScaleSeats!.Value, ownerEmails);
         }
         catch (Exception ex)
         {
