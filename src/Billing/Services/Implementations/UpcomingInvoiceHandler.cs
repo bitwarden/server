@@ -1,8 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Constants;
-using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,7 +20,9 @@ public class UpcomingInvoiceHandler(
     IStripeEventService stripeEventService,
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
-    IValidateSponsorshipCommand validateSponsorshipCommand)
+    IValidateSponsorshipCommand validateSponsorshipCommand,
+    IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy,
+    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy)
     : IUpcomingInvoiceHandler
 {
     public async Task HandleAsync(Event parsedEvent)
@@ -136,33 +137,15 @@ public class UpcomingInvoiceHandler(
 
     private async Task TryEnableAutomaticTaxAsync(Subscription subscription)
     {
-        if (subscription.AutomaticTax.Enabled ||
-            !subscription.Customer.HasBillingLocation() ||
-            await IsNonTaxableNonUSBusinessUseSubscription(subscription))
+        var updateOptions = subscription.IsOrganization()
+            ? await organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
+            : await individualAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
+
+        if (updateOptions == null)
         {
             return;
         }
 
-        await stripeFacade.UpdateSubscription(subscription.Id,
-            new SubscriptionUpdateOptions
-            {
-                DefaultTaxRates = [],
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-            });
-
-        return;
-
-        async Task<bool> IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
-        {
-            var familyPriceIds = (await Task.WhenAll(
-                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-                .Select(plan => plan.PasswordManager.StripePlanId);
-
-            return localSubscription.Customer.Address.Country != "US" &&
-                   localSubscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
-                   !localSubscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any() &&
-                   !localSubscription.Customer.TaxIds.Any();
-        }
+        await stripeFacade.UpdateSubscription(subscription.Id, updateOptions);
     }
 }
