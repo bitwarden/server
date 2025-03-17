@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Web;
+using Bit.Core.Models.Slack;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Services;
@@ -16,7 +16,7 @@ public class SlackService(
 
     public async Task<string> GetChannelIdAsync(string token, string channelName)
     {
-        return (await GetChannelIdsAsync(token, new List<string> { channelName }))?.FirstOrDefault();
+        return (await GetChannelIdsAsync(token, new List<string> { channelName })).FirstOrDefault();
     }
 
     public async Task<List<string>> GetChannelIdsAsync(string token, List<string> channelNames)
@@ -29,48 +29,32 @@ public class SlackService(
         {
             var uriBuilder = new UriBuilder(baseUrl);
             var queryParameters = HttpUtility.ParseQueryString(uriBuilder.Query);
-
             queryParameters["types"] = "public_channel,private_channel";
             queryParameters["limit"] = "1000";
             if (!string.IsNullOrEmpty(nextCursor))
             {
                 queryParameters["cursor"] = nextCursor;
             }
-
             uriBuilder.Query = queryParameters.ToString();
 
             var request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.Uri);
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
             var response = await _httpClient.SendAsync(request);
-            var jsonResponse = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-            var root = jsonResponse.RootElement;
-            if (root.GetProperty("ok").GetBoolean())
+            var result = await response.Content.ReadFromJsonAsync<SlackChannelListResponse>();
+
+            if (result != null && result.Ok)
             {
-                var channelList = root.GetProperty("channels");
-
-                foreach (var channel in channelList.EnumerateArray())
-                {
-                    if (channelNames.Contains(channel.GetProperty("name").GetString() ?? string.Empty))
-                    {
-                        matchingChannelIds.Add(channel.GetProperty("id").GetString() ?? string.Empty);
-                    }
-                }
-
-                if (root.TryGetProperty("response_metadata", out var metadata))
-                {
-                    nextCursor = metadata.GetProperty("next_cursor").GetString() ?? string.Empty;
-                }
-                else
-                {
-                    nextCursor = string.Empty;
-                }
+                matchingChannelIds.AddRange(result.Channels
+                    .Where(channel => channelNames.Contains(channel.Name))
+                    .Select(channel => channel.Id));
+                nextCursor = result.ResponseMetadata.NextCursor;
             }
             else
             {
-                logger.LogError("Error retrieving slack userId: " + root.GetProperty("error").GetString());
-                break;
+                nextCursor = string.Empty;
             }
+
         } while (!string.IsNullOrEmpty(nextCursor));
 
         return matchingChannelIds;
@@ -92,32 +76,25 @@ public class SlackService(
         await _httpClient.SendAsync(request);
     }
 
-    private async Task SendDirectMessageByEmailAsync(string token, string message, string email)
-    {
-        var channelId = await GetDmChannelByEmailAsync(token, email);
-        if (!string.IsNullOrEmpty(channelId))
-        {
-            await SendSlackMessageByChannelId(token, message, channelId);
-        }
-    }
-
     private async Task<string> GetUserIdByEmailAsync(string token, string email)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, $"https://slack.com/api/users.lookupByEmail?email={email}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         var response = await _httpClient.SendAsync(request);
-        var content = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var root = content.RootElement;
+        var result = await response.Content.ReadFromJsonAsync<SlackUserResponse>();
 
-        if (root.GetProperty("ok").GetBoolean())
+        if (result == null)
         {
-            return root.GetProperty("user").GetProperty("id").GetString() ?? string.Empty;
-        }
-        else
-        {
-            logger.LogError("Error retrieving slack userId: " + root.GetProperty("error").GetString());
+            logger.LogError("Error retrieving Slack user ID: Unknown error");
             return string.Empty;
         }
+        if (!result.Ok)
+        {
+            logger.LogError("Error retrieving Slack user ID: " + result.Error);
+            return string.Empty;
+        }
+
+        return result.User.Id;
     }
 
     private async Task<string> OpenDmChannel(string token, string userId)
@@ -127,17 +104,19 @@ public class SlackService(
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Content = payload;
         var response = await _httpClient.SendAsync(request);
-        var content = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        var root = content.RootElement;
+        var result = await response.Content.ReadFromJsonAsync<SlackDmResponse>();
 
-        if (root.GetProperty("ok").GetBoolean())
+        if (result == null)
         {
-            return content.RootElement.GetProperty("channel").GetProperty("id").GetString() ?? string.Empty;
-        }
-        else
-        {
-            logger.LogError("Error opening DM channel: " + root.GetProperty("error").GetString());
+            logger.LogError("Error opening DM channel: Unknown error");
             return string.Empty;
         }
+        if (!result.Ok)
+        {
+            logger.LogError("Error opening DM channel: " + result.Error);
+            return string.Empty;
+        }
+
+        return result.Channel.Id;
     }
 }
