@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -1201,7 +1201,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications)
     {
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
@@ -1216,7 +1216,7 @@ public class HandlebarsMailService : IMailService
             message.Category = "SecurityTasksNotification";
             return new MailQueueMessage(message, "SecurityTasksNotification", model);
         }
-        var messageModels = securityTaskNotificaitons.Select(CreateMessage);
+        var messageModels = securityTaskNotifications.Select(CreateMessage);
         await EnqueueMailAsync(messageModels.ToList());
     }
 
