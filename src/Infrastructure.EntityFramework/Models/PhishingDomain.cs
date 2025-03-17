@@ -11,7 +11,6 @@ public class PhishingDomain
     [MaxLength(255)]
     public string Domain { get; set; }
 
-    public DateTime CreationDate { get; set; }
-
-    public DateTime RevisionDate { get; set; }
+    [MaxLength(64)]
+    public string Checksum { get; set; }
 }

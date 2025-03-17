@@ -638,6 +638,7 @@ public class GlobalSettings : IGlobalSettings
     public class PhishingDomainSettings : IPhishingDomainSettings
     {
         public string UpdateUrl { get; set; }
+        public string ChecksumUrl { get; set; }
     }
 
     public class DistributedIpRateLimitingSettings

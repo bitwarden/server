@@ -54,7 +54,7 @@ public class PhishingDomainRepository : IPhishingDomainRepository
             _logger.LogWarning(ex, "Failed to retrieve phishing domains from cache");
         }
 
-        using var connection = new SqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
 
         var results = await connection.QueryAsync<string>(
             "[dbo].[PhishingDomain_ReadAll]",
@@ -79,15 +79,35 @@ public class PhishingDomainRepository : IPhishingDomainRepository
         return domains;
     }
 
-    public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains)
+    public async Task<string> GetCurrentChecksumAsync()
+    {
+        try
+        {
+            await using var connection = new SqlConnection(_connectionString);
+
+            var checksum = await connection.QueryFirstOrDefaultAsync<string>(
+                "[dbo].[PhishingDomain_ReadChecksum]",
+                commandType: CommandType.StoredProcedure);
+
+            return checksum ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving phishing domain checksum from database");
+            return string.Empty;
+        }
+    }
+
+    public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains, string checksum)
     {
         var domainsList = domains.ToList();
-        _logger.LogInformation("Beginning bulk update of {Count} phishing domains", domainsList.Count);
+        _logger.LogInformation("Beginning bulk update of {Count} phishing domains with checksum {Checksum}",
+            domainsList.Count, checksum);
 
-        using var connection = new SqlConnection(_connectionString);
+        await using var connection = new SqlConnection(_connectionString);
         await connection.OpenAsync();
 
-        using var transaction = connection.BeginTransaction();
+        await using var transaction = connection.BeginTransaction();
         try
         {
             await connection.ExecuteAsync(
@@ -98,27 +118,23 @@ public class PhishingDomainRepository : IPhishingDomainRepository
             var dataTable = new DataTable();
             dataTable.Columns.Add("Id", typeof(Guid));
             dataTable.Columns.Add("Domain", typeof(string));
-            dataTable.Columns.Add("CreationDate", typeof(DateTime));
-            dataTable.Columns.Add("RevisionDate", typeof(DateTime));
+            dataTable.Columns.Add("Checksum", typeof(string));
 
             dataTable.PrimaryKey = [dataTable.Columns["Id"]];
 
-            var now = DateTime.UtcNow;
             foreach (var domain in domainsList)
             {
-                dataTable.Rows.Add(Guid.NewGuid(), domain, now, now);
+                dataTable.Rows.Add(Guid.NewGuid(), domain, checksum);
             }
 
-            using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction)
-            {
-                DestinationTableName = "[dbo].[PhishingDomain]",
-                BatchSize = 10000
-            };
+            using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction);
+
+            bulkCopy.DestinationTableName = "[dbo].[PhishingDomain]";
+            bulkCopy.BatchSize = 10000;
 
             bulkCopy.ColumnMappings.Add("Id", "Id");
             bulkCopy.ColumnMappings.Add("Domain", "Domain");
-            bulkCopy.ColumnMappings.Add("CreationDate", "CreationDate");
-            bulkCopy.ColumnMappings.Add("RevisionDate", "RevisionDate");
+            bulkCopy.ColumnMappings.Add("Checksum", "Checksum");
 
             await bulkCopy.WriteToServerAsync(dataTable);
             await transaction.CommitAsync();

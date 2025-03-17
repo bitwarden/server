@@ -1,4 +1,4 @@
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Repositories;
@@ -39,17 +39,39 @@ public class UpdatePhishingDomainsJob : BaseJob
             return;
         }
 
-        _logger.LogInformation(Constants.BypassFiltersEventId, "Fetching phishing domains from {Source}.", 
-            _globalSettings.SelfHosted ? "Bitwarden cloud API" : "external source");
-        
+        // Get the remote checksum
+        var remoteChecksum = await _cloudPhishingDomainQuery.GetRemoteChecksumAsync();
+        if (string.IsNullOrWhiteSpace(remoteChecksum))
+        {
+            _logger.LogWarning(Constants.BypassFiltersEventId, "Could not retrieve remote checksum. Skipping update.");
+            return;
+        }
+
+        // Get the current checksum from the database
+        var currentChecksum = await _phishingDomainRepository.GetCurrentChecksumAsync();
+
+        // Compare checksums to determine if update is needed
+        if (string.Equals(currentChecksum, remoteChecksum, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId,
+                "Phishing domains list is up to date (checksum: {Checksum}). Skipping update.",
+                currentChecksum);
+            return;
+        }
+
+        _logger.LogInformation(Constants.BypassFiltersEventId,
+            "Checksums differ (current: {CurrentChecksum}, remote: {RemoteChecksum}). Fetching updated domains from {Source}.",
+            currentChecksum, remoteChecksum, _globalSettings.SelfHosted ? "Bitwarden cloud API" : "external source");
+
         try
         {
             var domains = await _cloudPhishingDomainQuery.GetPhishingDomainsAsync();
-            
+
             if (domains.Count > 0)
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Updating {Count} phishing domains.", domains.Count);
-                await _phishingDomainRepository.UpdatePhishingDomainsAsync(domains);
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Updating {Count} phishing domains with checksum {Checksum}.",
+                    domains.Count, remoteChecksum);
+                await _phishingDomainRepository.UpdatePhishingDomainsAsync(domains, remoteChecksum);
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully updated phishing domains.");
             }
             else
@@ -62,4 +84,4 @@ public class UpdatePhishingDomainsJob : BaseJob
             _logger.LogError(Constants.BypassFiltersEventId, ex, "Error updating phishing domains.");
         }
     }
-} 
+}

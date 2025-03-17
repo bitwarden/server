@@ -14,4 +14,11 @@ public class PhishingDomainsController(IPhishingDomainRepository phishingDomainR
         var domains = await phishingDomainRepository.GetActivePhishingDomainsAsync();
         return Ok(domains);
     }
+
+    [HttpGet("checksum")]
+    public async Task<ActionResult<string>> GetChecksumAsync()
+    {
+        var checksum = await phishingDomainRepository.GetCurrentChecksumAsync();
+        return Ok(checksum);
+    }
 }

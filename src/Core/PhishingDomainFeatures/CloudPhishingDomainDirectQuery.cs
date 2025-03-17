@@ -1,4 +1,4 @@
-using Bit.Core.PhishingDomainFeatures.Interfaces;
+﻿using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
@@ -34,9 +34,58 @@ public class CloudPhishingDomainDirectQuery : ICloudPhishingDomainQuery
         var httpClient = _httpClientFactory.CreateClient("PhishingDomains");
         var response = await httpClient.GetAsync(_globalSettings.PhishingDomain.UpdateUrl);
         response.EnsureSuccessStatusCode();
-        
+
         var content = await response.Content.ReadAsStringAsync();
         return ParseDomains(content);
+    }
+
+    /// <summary>
+    /// Gets the SHA256 checksum of the remote phishing domains list
+    /// </summary>
+    /// <returns>The SHA256 checksum as a lowercase hex string</returns>
+    public async Task<string> GetRemoteChecksumAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_globalSettings.PhishingDomain?.ChecksumUrl))
+        {
+            _logger.LogWarning("Phishing domain checksum URL is not configured.");
+            return string.Empty;
+        }
+
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("PhishingDomains");
+            var response = await httpClient.GetAsync(_globalSettings.PhishingDomain.ChecksumUrl);
+            response.EnsureSuccessStatusCode();
+
+            var content = await response.Content.ReadAsStringAsync();
+            return ParseChecksumResponse(content);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving phishing domain checksum from {Url}",
+                _globalSettings.PhishingDomain.ChecksumUrl);
+            return string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Parses a checksum response in the format "hash *filename"
+    /// </summary>
+    private static string ParseChecksumResponse(string checksumContent)
+    {
+        if (string.IsNullOrWhiteSpace(checksumContent))
+        {
+            return string.Empty;
+        }
+
+        // Format is typically "hash *filename"
+        var parts = checksumContent.Split(' ', 2);
+        if (parts.Length > 0)
+        {
+            return parts[0].Trim();
+        }
+
+        return string.Empty;
     }
 
     private static List<string> ParseDomains(string content)
@@ -52,4 +101,4 @@ public class CloudPhishingDomainDirectQuery : ICloudPhishingDomainQuery
             .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
             .ToList();
     }
-} 
+}

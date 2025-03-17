@@ -48,35 +48,56 @@ public class PhishingDomainRepository : IPhishingDomainRepository
             _logger.LogWarning(ex, "Failed to retrieve phishing domains from cache");
         }
 
-        using (var scope = _serviceScopeFactory.CreateScope())
+        using var scope = _serviceScopeFactory.CreateScope();
+
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        var domains = await dbContext.PhishingDomains
+            .Select(d => d.Domain)
+            .ToListAsync();
+
+        try
         {
+            await _cache.SetStringAsync(
+                _cacheKey,
+                JsonSerializer.Serialize(domains),
+                _cacheOptions);
+
+            _logger.LogDebug("Stored {Count} phishing domains in cache", domains.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to store phishing domains in cache");
+        }
+
+        return domains;
+    }
+
+    public async Task<string> GetCurrentChecksumAsync()
+    {
+        try
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-            var domains = await dbContext.PhishingDomains
-                .Select(d => d.Domain)
-                .ToListAsync();
 
-            try
-            {
-                await _cache.SetStringAsync(
-                    _cacheKey,
-                    JsonSerializer.Serialize(domains),
-                    _cacheOptions);
+            // Get the first checksum in the database (there should only be one set of domains with the same checksum)
+            var checksum = await dbContext.PhishingDomains
+                .Select(d => d.Checksum)
+                .FirstOrDefaultAsync();
 
-                _logger.LogDebug("Stored {Count} phishing domains in cache", domains.Count);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to store phishing domains in cache");
-            }
-
-            return domains;
+            return checksum ?? string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving phishing domain checksum from database");
+            return string.Empty;
         }
     }
 
-    public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains)
+    public async Task UpdatePhishingDomainsAsync(IEnumerable<string> domains, string checksum)
     {
         var domainsList = domains.ToList();
-        _logger.LogInformation("Beginning bulk update of {Count} phishing domains", domainsList.Count);
+        _logger.LogInformation("Beginning bulk update of {Count} phishing domains with checksum {Checksum}",
+            domainsList.Count, checksum);
 
         using var scope = _serviceScopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
@@ -84,13 +105,13 @@ public class PhishingDomainRepository : IPhishingDomainRepository
         var connection = dbContext.Database.GetDbConnection();
         var connectionString = connection.ConnectionString;
 
-        using var sqlConnection = new SqlConnection(connectionString);
+        await using var sqlConnection = new SqlConnection(connectionString);
         await sqlConnection.OpenAsync();
 
-        using var transaction = sqlConnection.BeginTransaction();
+        await using var transaction = sqlConnection.BeginTransaction();
         try
         {
-            using var command = sqlConnection.CreateCommand();
+            await using var command = sqlConnection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = "[dbo].[PhishingDomain_DeleteAll]";
             command.CommandType = CommandType.StoredProcedure;
@@ -99,27 +120,23 @@ public class PhishingDomainRepository : IPhishingDomainRepository
             var dataTable = new DataTable();
             dataTable.Columns.Add("Id", typeof(Guid));
             dataTable.Columns.Add("Domain", typeof(string));
-            dataTable.Columns.Add("CreationDate", typeof(DateTime));
-            dataTable.Columns.Add("RevisionDate", typeof(DateTime));
+            dataTable.Columns.Add("Checksum", typeof(string));
 
             dataTable.PrimaryKey = [dataTable.Columns["Id"]];
 
-            var now = DateTime.UtcNow;
             foreach (var domain in domainsList)
             {
-                dataTable.Rows.Add(Guid.NewGuid(), domain, now, now);
+                dataTable.Rows.Add(Guid.NewGuid(), domain, checksum);
             }
 
-            using var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction)
-            {
-                DestinationTableName = "[dbo].[PhishingDomain]",
-                BatchSize = 10000
-            };
+            using var bulkCopy = new SqlBulkCopy(sqlConnection, SqlBulkCopyOptions.Default, transaction);
+
+            bulkCopy.DestinationTableName = "[dbo].[PhishingDomain]";
+            bulkCopy.BatchSize = 10000;
 
             bulkCopy.ColumnMappings.Add("Id", "Id");
             bulkCopy.ColumnMappings.Add("Domain", "Domain");
-            bulkCopy.ColumnMappings.Add("CreationDate", "CreationDate");
-            bulkCopy.ColumnMappings.Add("RevisionDate", "RevisionDate");
+            bulkCopy.ColumnMappings.Add("Checksum", "Checksum");
 
             await bulkCopy.WriteToServerAsync(dataTable);
             await transaction.CommitAsync();
