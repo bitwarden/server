@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserAccountRecoveryDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
@@ -294,7 +295,13 @@ public class OrganizationUsersControllerTests
         ICollection<OrganizationUserResetPasswordDetails> resetPasswordDetails,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                user: Arg.Any<ClaimsPrincipal>(),
+                resource: Arg.Is<OrganizationScope>(x => x == organizationId),
+                requirements: Arg.Is<IEnumerable<IAuthorizationRequirement>>(x =>
+                    x.Any(y => y == OrganizationUsersAccountRecoveryDetailsOperations.ReadAll)))
+            .Returns(AuthorizationResult.Success());
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId, bulkRequestModel.Ids)
             .Returns(resetPasswordDetails);
@@ -320,7 +327,13 @@ public class OrganizationUsersControllerTests
         OrganizationUserBulkRequestModel bulkRequestModel,
         SutProvider<OrganizationUsersController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageResetPassword(organizationId).Returns(false);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                user: Arg.Any<ClaimsPrincipal>(),
+                resource: Arg.Is<OrganizationScope>(x => x == organizationId),
+                requirements: Arg.Is<IEnumerable<IAuthorizationRequirement>>(x =>
+                    x.Any(y => y == OrganizationUsersAccountRecoveryDetailsOperations.ReadAll)))
+            .Returns(AuthorizationResult.Failed());
 
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel));
     }

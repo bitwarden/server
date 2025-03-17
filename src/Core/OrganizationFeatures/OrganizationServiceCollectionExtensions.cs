@@ -12,9 +12,9 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserAccountRecoveryDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserGroups;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUsersResetPasswordDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
@@ -174,7 +174,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, OrganizationUserUserDetailsAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserDetailsAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrganizationUserGroupsAuthorizationHandler>();
-        services.AddScoped<IAuthorizationHandler, OrganizationUserResetPasswordDetailsAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrganizationUserAccountRecoveryDetailsAuthorizationHandler>();
 
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
     }

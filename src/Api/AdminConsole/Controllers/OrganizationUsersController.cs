@@ -7,9 +7,9 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserAccountRecoveryDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserGroups;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUsersResetPasswordDetails;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
@@ -214,7 +214,7 @@ public class OrganizationUsersController : Controller
     {
         var authResult = await _authorizationService.AuthorizeAsync(User,
             new OrganizationScope(orgId),
-            [OrganizationUsersResetPasswordDetailsOperations.Read]);
+            [OrganizationUsersAccountRecoveryDetailsOperations.Read]);
 
         if (authResult.Succeeded is false)
         {
@@ -248,8 +248,11 @@ public class OrganizationUsersController : Controller
     [HttpPost("account-recovery-details")]
     public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetAccountRecoveryDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        // Make sure the calling user can reset passwords for this org
-        if (!await _currentContext.ManageResetPassword(orgId))
+        var authResult = await _authorizationService.AuthorizeAsync(User,
+            new OrganizationScope(orgId),
+            [OrganizationUsersAccountRecoveryDetailsOperations.ReadAll]);
+
+        if (authResult.Succeeded is false)
         {
             throw new NotFoundException();
         }
