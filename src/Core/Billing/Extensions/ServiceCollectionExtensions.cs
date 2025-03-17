@@ -4,6 +4,7 @@ using Bit.Core.Billing.Licenses.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Implementations;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 
 namespace Bit.Core.Billing.Extensions;
 
@@ -18,6 +19,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IPremiumUserBillingService, PremiumUserBillingService>();
         services.AddTransient<ISetupIntentCache, SetupIntentDistributedCache>();
         services.AddTransient<ISubscriberService, SubscriberService>();
+        services.AddTransient<IIndividualAutomaticTaxStrategy, IndividualAutomaticTaxStrategy>();
+        services.AddTransient<IOrganizationAutomaticTaxStrategy, OrganizationAutomaticTaxStrategy>();
         services.AddLicenseServices();
         services.AddPricingClient();
     }
