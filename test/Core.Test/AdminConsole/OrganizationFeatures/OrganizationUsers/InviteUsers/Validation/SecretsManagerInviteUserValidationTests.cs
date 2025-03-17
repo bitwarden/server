@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -68,7 +69,7 @@ public class SecretsManagerInviteUserValidationTests
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
         Assert.IsType<Invalid<SecretsManagerSubscriptionUpdate>>(result);
-        Assert.Equal(InviteUserValidationErrorMessages.OrganizationNoSecretsManager, result.ErrorMessageString);
+        Assert.Equal(OrganizationNoSecretsManagerError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>).ErrorMessageString);
     }
 
     [Theory]
@@ -127,7 +128,7 @@ public class SecretsManagerInviteUserValidationTests
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
         Assert.IsType<Invalid<SecretsManagerSubscriptionUpdate>>(result);
-        Assert.Equal(InviteUserValidationErrorMessages.SecretsManagerSeatLimitReached, result.ErrorMessageString);
+        Assert.Equal(SecretsManagerSeatLimitReachedError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>).ErrorMessageString);
     }
 
     [Theory]
@@ -158,6 +159,6 @@ public class SecretsManagerInviteUserValidationTests
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
         Assert.IsType<Invalid<SecretsManagerSubscriptionUpdate>>(result);
-        Assert.Equal(InviteUserValidationErrorMessages.SecretsManagerCannotExceedPasswordManager, result.ErrorMessageString);
+        Assert.Equal(SecretsManagerCannotExceedPasswordManagerError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>).ErrorMessageString);
     }
 }

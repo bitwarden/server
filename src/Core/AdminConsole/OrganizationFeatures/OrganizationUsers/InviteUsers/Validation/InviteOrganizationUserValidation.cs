@@ -1,20 +1,21 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.GlobalSettings;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.InviteUserValidationErrorMessages;
-using SecretsManagerSubscriptionUpdate = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models.SecretsManagerSubscriptionUpdate;
+using SecretsManagerSubscriptionUpdate = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager.SecretsManagerSubscriptionUpdate;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
-// TODO move into own file ... and change name to validator
-public interface IInviteUsersValidation
-{
-    Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request);
-}
+public interface IInviteUsersValidation : IValidator<InviteUserOrganizationValidationRequest>;
 
 public class InviteUsersValidation(
     IGlobalSettings globalSettings,
@@ -26,14 +27,14 @@ public class InviteUsersValidation(
     {
         if (ValidateEnvironment(globalSettings) is Invalid<IGlobalSettings> invalidEnvironment)
         {
-            return new Invalid<InviteUserOrganizationValidationRequest>(invalidEnvironment.ErrorMessageString);
+            return invalidEnvironment.Map(request);
         }
 
         var organizationValidationResult = InvitingUserOrganizationValidation.Validate(request.InviteOrganization);
 
         if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
         {
-            return new Invalid<InviteUserOrganizationValidationRequest>(organizationValidation.ErrorMessageString);
+            return organizationValidation.Map(request);
         }
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(request);
@@ -41,7 +42,7 @@ public class InviteUsersValidation(
 
         if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
         {
-            return new Invalid<InviteUserOrganizationValidationRequest>(invalidSubscriptionUpdate.ErrorMessageString);
+            return invalidSubscriptionUpdate.Map(request);
         }
 
         var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
@@ -49,7 +50,7 @@ public class InviteUsersValidation(
 
         if (secretsManagerValidationResult is Invalid<SecretsManagerSubscriptionUpdate> invalidSmSubscriptionUpdate)
         {
-            return new Invalid<InviteUserOrganizationValidationRequest>(invalidSmSubscriptionUpdate.ErrorMessageString);
+            return invalidSmSubscriptionUpdate.Map(request);
         }
 
         var provider = await providerRepository.GetByOrganizationIdAsync(request.InviteOrganization.OrganizationId);
@@ -59,16 +60,19 @@ public class InviteUsersValidation(
 
             if (providerValidationResult is Invalid<ProviderDto> invalidProviderValidation)
             {
-                return new Invalid<InviteUserOrganizationValidationRequest>(invalidProviderValidation.ErrorMessageString);
+                return invalidProviderValidation.Map(request);
             }
         }
 
-        var paymentSubscription = await paymentService.GetSubscriptionAsync(await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId));
-        var paymentValidationResult = InviteUserPaymentValidation.Validate(new PaymentsSubscription(paymentSubscription, request.InviteOrganization));
+        var paymentSubscription = await paymentService.GetSubscriptionAsync(
+            await organizationRepository.GetByIdAsync(request.InviteOrganization.OrganizationId));
+
+        var paymentValidationResult = InviteUserPaymentValidation.Validate(
+            new PaymentsSubscription(paymentSubscription, request.InviteOrganization));
 
         if (paymentValidationResult is Invalid<PaymentsSubscription> invalidPaymentValidation)
         {
-            return new Invalid<InviteUserOrganizationValidationRequest>(invalidPaymentValidation.ErrorMessageString);
+            return invalidPaymentValidation.Map(request);
         }
 
         return new Valid<InviteUserOrganizationValidationRequest>(new InviteUserOrganizationValidationRequest(
@@ -79,6 +83,6 @@ public class InviteUsersValidation(
 
     public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings) =>
         globalSettings.SelfHosted
-            ? new Invalid<IGlobalSettings>(CannotAutoScaleOnSelfHostedError)
+            ? new Invalid<IGlobalSettings>(new CannotAutoScaleOnSelfHostError(globalSettings))
             : new Valid<IGlobalSettings>(globalSettings);
 }

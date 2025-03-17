@@ -1,10 +1,13 @@
 ﻿using System.Net.Mail;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Errors;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Commands;
@@ -158,7 +161,7 @@ public class InviteOrganizationUserCommandTests
 
         sutProvider.GetDependency<IInviteUsersValidation>()
             .ValidateAsync(Arg.Any<InviteUserOrganizationValidationRequest>())
-            .Returns(new Invalid<InviteUserOrganizationValidationRequest>(errorMessage));
+            .Returns(new Invalid<InviteUserOrganizationValidationRequest>(new Error<InviteUserOrganizationValidationRequest>(errorMessage, new InviteUserOrganizationValidationRequest())));
 
         // Act
         var result = await sutProvider.Sut.InviteScimOrganizationUserAsync(request);

@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -61,7 +61,7 @@ public class PasswordManagerInviteUserValidationTests
         var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(InviteUserValidationErrorMessages.SeatLimitHasBeenReachedError, result.ErrorMessageString);
+        Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>).ErrorMessageString);
     }
 
     [Theory]
@@ -80,6 +80,6 @@ public class PasswordManagerInviteUserValidationTests
         var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
-        Assert.Equal(InviteUserValidationErrorMessages.PlanDoesNotAllowAdditionalSeats, result.ErrorMessageString);
+        Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>).ErrorMessageString);
     }
 }

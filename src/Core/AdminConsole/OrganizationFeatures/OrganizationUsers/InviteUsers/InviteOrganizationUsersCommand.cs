@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

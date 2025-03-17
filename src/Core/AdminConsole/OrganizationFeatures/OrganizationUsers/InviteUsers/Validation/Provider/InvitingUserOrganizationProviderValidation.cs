@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Extensions;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 
 public static class InvitingUserOrganizationProviderValidation
 {
@@ -12,12 +12,12 @@ public static class InvitingUserOrganizationProviderValidation
         {
             if (provider.IsBillable())
             {
-                return new Invalid<ProviderDto>(InviteUserValidationErrorMessages.ProviderBillableSeatLimitError);
+                return new Invalid<ProviderDto>(new ProviderBillableSeatLimitError(provider));
             }
 
             if (provider.Type == ProviderType.Reseller)
             {
-                return new Invalid<ProviderDto>(InviteUserValidationErrorMessages.ProviderResellerSeatLimitError);
+                return new Invalid<ProviderDto>(new ProviderResellerSeatLimitError(provider));
             }
         }
 

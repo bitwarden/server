@@ -1,7 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Provider;
 
 public class ProviderDto
 {
@@ -10,7 +9,7 @@ public class ProviderDto
     public ProviderStatusType Status { get; init; }
     public bool Enabled { get; init; }
 
-    public static ProviderDto FromProviderEntity(Provider provider)
+    public static ProviderDto FromProviderEntity(Entities.Provider.Provider provider)
     {
         return new ProviderDto { ProviderId = provider.Id, Type = provider.Type, Status = provider.Status, Enabled = provider.Enabled };
     }

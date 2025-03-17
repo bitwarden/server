@@ -1,4 +1,6 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Models;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Payments;
+using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 
@@ -15,7 +17,7 @@ public static class InviteUserPaymentValidation
 
         if (subscription.SubscriptionStatus == StripeConstants.SubscriptionStatus.Canceled)
         {
-            return new Invalid<PaymentsSubscription>(InviteUserValidationErrorMessages.CancelledSubscriptionError);
+            return new Invalid<PaymentsSubscription>(new PaymentCancelledSubscriptionError(subscription));
         }
 
         return new Valid<PaymentsSubscription>(subscription);
