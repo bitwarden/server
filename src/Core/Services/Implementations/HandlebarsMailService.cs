@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
@@ -1201,14 +1201,15 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
     {
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
-            var message = CreateDefaultMessage($"{orgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
+            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
             var model = new SecurityTaskNotificationViewModel
             {
-                OrgName = orgName,
+                OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
                 TaskCount = notification.TaskCount,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
