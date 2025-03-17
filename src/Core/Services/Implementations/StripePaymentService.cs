@@ -36,6 +36,8 @@ public class StripePaymentService : IPaymentService
     private readonly ITaxService _taxService;
     private readonly ISubscriberService _subscriberService;
     private readonly IPricingClient _pricingClient;
+    private readonly IIndividualAutomaticTaxStrategy _individualAutomaticTaxStrategy;
+    private readonly IOrganizationAutomaticTaxStrategy _organizationAutomaticTaxStrategy;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -46,7 +48,9 @@ public class StripePaymentService : IPaymentService
         IFeatureService featureService,
         ITaxService taxService,
         ISubscriberService subscriberService,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy,
+        IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -57,6 +61,8 @@ public class StripePaymentService : IPaymentService
         _taxService = taxService;
         _subscriberService = subscriberService;
         _pricingClient = pricingClient;
+        _individualAutomaticTaxStrategy = individualAutomaticTaxStrategy;
+        _organizationAutomaticTaxStrategy = organizationAutomaticTaxStrategy;
     }
 
     private async Task ChangeOrganizationSponsorship(
@@ -124,7 +130,7 @@ public class StripePaymentService : IPaymentService
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
-        subUpdateOptions.EnableAutomaticTax(sub.Customer, sub);
+        await _organizationAutomaticTaxStrategy.SetUpdateOptionsAsync(subUpdateOptions, sub);
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
         {
@@ -812,20 +818,20 @@ public class StripePaymentService : IPaymentService
             }
 
             if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId) &&
-                customer.Subscriptions.Any(sub =>
-                    sub.Id == subscriber.GatewaySubscriptionId &&
-                    !sub.AutomaticTax.Enabled) &&
-                customer.HasTaxLocationVerified())
+                customer.Subscriptions.Any(sub => sub.Id == subscriber.GatewaySubscriptionId))
             {
-                var subscriptionUpdateOptions = new SubscriptionUpdateOptions
-                {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
-                    DefaultTaxRates = []
-                };
+                var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
 
-                _ = await _stripeAdapter.SubscriptionUpdateAsync(
-                    subscriber.GatewaySubscriptionId,
-                    subscriptionUpdateOptions);
+                var subscriptionUpdateOptions = subscriber is User
+                    ? await _individualAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
+                    : await _organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
+
+                if (subscriptionUpdateOptions != null)
+                {
+                    _ = await _stripeAdapter.SubscriptionUpdateAsync(
+                        subscriber.GatewaySubscriptionId,
+                        subscriptionUpdateOptions);
+                }
             }
         }
         catch

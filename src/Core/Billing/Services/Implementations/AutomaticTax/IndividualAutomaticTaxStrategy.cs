@@ -1,13 +1,20 @@
-﻿using Stripe;
+﻿using Bit.Core.Billing.Constants;
+using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
 
 public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
 {
-    public Task SetCreateOptionsAsync(SubscriptionCreateOptions options, Customer customer = null)
+    public Task SetCreateOptionsAsync(SubscriptionCreateOptions options, Customer customer)
     {
         ArgumentNullException.ThrowIfNull(options);
-        options.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        ArgumentNullException.ThrowIfNull(customer);
+
+        options.AutomaticTax = new SubscriptionAutomaticTaxOptions
+        {
+            Enabled = ShouldEnable(customer)
+        };
+
         return Task.CompletedTask;
     }
 
@@ -16,18 +23,23 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
 
         ArgumentNullException.ThrowIfNull(options);
 
-        if (subscription.AutomaticTax.Enabled)
+        if (subscription.AutomaticTax.Enabled == ShouldEnable(subscription.Customer))
         {
             return Task.CompletedTask;
         }
 
-        options.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        options.AutomaticTax = new SubscriptionAutomaticTaxOptions
+        {
+            Enabled = ShouldEnable(subscription.Customer)
+        };
+        options.DefaultTaxRates = [];
+
         return Task.CompletedTask;
     }
 
     public Task<SubscriptionUpdateOptions> GetUpdateOptionsAsync(Subscription subscription)
     {
-        if (subscription.AutomaticTax.Enabled)
+        if (subscription.AutomaticTax.Enabled == ShouldEnable(subscription.Customer))
         {
             return null;
         }
@@ -36,10 +48,16 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = true
-            }
+                Enabled = ShouldEnable(subscription.Customer),
+            },
+            DefaultTaxRates = []
         };
 
         return Task.FromResult(options);
+    }
+
+    private static bool ShouldEnable(Customer customer)
+    {
+        return customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
     }
 }

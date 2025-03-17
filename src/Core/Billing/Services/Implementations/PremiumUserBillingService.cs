@@ -25,7 +25,8 @@ public class PremiumUserBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    IUserRepository userRepository) : IPremiumUserBillingService
+    IUserRepository userRepository,
+    IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy) : IPremiumUserBillingService
 {
     public async Task Credit(User user, decimal amount)
     {
@@ -318,10 +319,6 @@ public class PremiumUserBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported,
-            },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,
@@ -334,6 +331,8 @@ public class PremiumUserBillingService(
                 : null,
             OffSession = true
         };
+
+        await individualAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
 
         var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

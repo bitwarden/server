@@ -28,6 +28,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly ISubscriberService _subscriberService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IOrganizationAutomaticTaxStrategy _organizationAutomaticTaxStrategy;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
@@ -40,7 +41,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         IProviderBillingService providerBillingService,
         ISubscriberService subscriberService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy)
     {
         _eventService = eventService;
         _mailService = mailService;
@@ -53,6 +55,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
         _subscriberService = subscriberService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
+        _organizationAutomaticTaxStrategy = organizationAutomaticTaxStrategy;
     }
 
     public async Task RemoveOrganizationFromProvider(
@@ -107,7 +110,7 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             organization.IsValidClient() &&
             !string.IsNullOrEmpty(organization.GatewayCustomerId))
         {
-            await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
+            var customer = await _stripeAdapter.CustomerUpdateAsync(organization.GatewayCustomerId, new CustomerUpdateOptions
             {
                 Description = string.Empty,
                 Email = organization.BillingEmail
@@ -120,7 +123,6 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Customer = organization.GatewayCustomerId,
                 CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
                 DaysUntilDue = 30,
-                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
                 Metadata = new Dictionary<string, string>
                 {
                     { "organizationId", organization.Id.ToString() }
@@ -129,6 +131,8 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
+
+            await _organizationAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

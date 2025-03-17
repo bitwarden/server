@@ -40,7 +40,8 @@ public class ProviderBillingService(
     IProviderUserRepository providerUserRepository,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService) : IProviderBillingService
+    ITaxService taxService,
+    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy) : IProviderBillingService
 {
     [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task AddExistingOrganization(
@@ -589,10 +590,6 @@ public class ProviderBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = true
-            },
             CollectionMethod = StripeConstants.CollectionMethod.SendInvoice,
             Customer = customer.Id,
             DaysUntilDue = 30,
@@ -604,6 +601,8 @@ public class ProviderBillingService(
             OffSession = true,
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
+
+        await organizationAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
 
         try
         {

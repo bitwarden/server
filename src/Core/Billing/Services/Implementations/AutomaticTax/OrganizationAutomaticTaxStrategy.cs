@@ -8,6 +8,15 @@ namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
 public class OrganizationAutomaticTaxStrategy(
     IPricingClient pricingClient) : IOrganizationAutomaticTaxStrategy
 {
+    private readonly Lazy<Task<IEnumerable<string>>> _familyPriceIdsTask = new(async () =>
+    {
+        var plans = await Task.WhenAll(
+            pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
+            pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually));
+
+        return plans.Select(plan => plan.PasswordManager.StripePlanId);
+    });
+
     public async Task<SubscriptionUpdateOptions> GetUpdateOptionsAsync(Subscription subscription)
     {
         ArgumentNullException.ThrowIfNull(subscription);
@@ -23,13 +32,14 @@ public class OrganizationAutomaticTaxStrategy(
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
                 Enabled = isEnabled.Value
-            }
+            },
+            DefaultTaxRates = []
         };
 
         return options;
     }
 
-    public async Task SetCreateOptionsAsync(SubscriptionCreateOptions options, Customer customer = null)
+    public async Task SetCreateOptionsAsync(SubscriptionCreateOptions options, Customer customer)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(customer);
@@ -59,6 +69,7 @@ public class OrganizationAutomaticTaxStrategy(
         {
             Enabled = isEnabled.Value
         };
+        options.DefaultTaxRates = [];
     }
 
     private async Task<bool?> IsEnabledAsync(Subscription subscription)
@@ -75,13 +86,9 @@ public class OrganizationAutomaticTaxStrategy(
 
     private async Task<bool> IsNonTaxableNonUsBusinessUseSubscriptionAsync(Subscription subscription)
     {
-        var familyPriceIds = (await Task.WhenAll(
-                pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-            .Select(plan => plan.PasswordManager.StripePlanId);
+        var familyPriceIds = await _familyPriceIdsTask.Value;
 
         return subscription.Customer.Address.Country != "US" &&
-               subscription.IsOrganization() &&
                !subscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any() &&
                !subscription.Customer.TaxIds.Any();
     }
@@ -99,10 +106,7 @@ public class OrganizationAutomaticTaxStrategy(
 
     private async Task<bool> IsNonTaxableNonUsBusinessUseSubscriptionAsync(SubscriptionCreateOptions options, Customer customer)
     {
-        var familyPriceIds = (await Task.WhenAll(
-                pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
-                pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
-            .Select(plan => plan.PasswordManager.StripePlanId);
+        var familyPriceIds = await _familyPriceIdsTask.Value;
 
         return customer.Address.Country != "US" &&
                !options.Items.Select(item => item.Price).Intersect(familyPriceIds).Any() &&
