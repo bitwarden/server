@@ -166,8 +166,7 @@ public class CipherService : ICipherService
         {
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
-            if (cipher.Type == CipherType.Login && cipher.Data != null && cipher.OrganizationId.HasValue)
-                await ValidatePasswordChangeAsync(cipher);
+            await ValidatePasswordChangeAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -976,6 +975,10 @@ public class CipherService : ICipherService
 
     private async Task ValidatePasswordChangeAsync(Cipher cipher)
     {
+        if (cipher.Type != CipherType.Login || cipher.Data == null || !cipher.OrganizationId.HasValue)
+        {
+            return;
+        }
         var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
         if (existingCipher != null)
         {
