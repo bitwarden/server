@@ -97,6 +97,11 @@ public class AccountsControllerTests : IDisposable
             KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default
         };
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(userKdfInfo);
+        var mockUser = new User
+        {
+            Email = "user@example.com"
+        };
+        _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(mockUser);
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
@@ -109,6 +114,11 @@ public class AccountsControllerTests : IDisposable
     {
         SetDefaultKdfHmacKey(null);
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+        var mockUser = new User
+        {
+            Email = "user@example.com"
+        };
+        _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(mockUser);
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
@@ -125,6 +135,11 @@ public class AccountsControllerTests : IDisposable
         SetDefaultKdfHmacKey(defaultKey);
 
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult<UserKdfInformation?>(null));
+        var mockUser = new User
+        {
+            Email = "user@example.com"
+        };
+        _userRepository.GetByEmailAsync(Arg.Any<string>()).Returns(mockUser);
 
         var fieldInfo = typeof(AccountsController).GetField("_defaultKdfResults", BindingFlags.NonPublic | BindingFlags.Static);
         if (fieldInfo == null)

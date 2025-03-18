@@ -110,6 +110,7 @@ public static class ServiceCollectionExtensions
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<ICipherService, CipherService>();
+        services.AddSingleton<IOpaqueKeyExchangeService, OpaqueKeyExchangeService>();
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);
@@ -118,7 +119,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IEventService, EventService>();
         services.AddScoped<IEmergencyAccessService, EmergencyAccessService>();
-        services.AddScoped<IOpaqueKeyExchangeService, OpaqueKeyExchangeService>();
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<IAuthRequestService, AuthRequestService>();

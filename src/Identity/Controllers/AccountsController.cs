@@ -261,12 +261,12 @@ public class AccountsController : Controller
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (kdfInformation == null || user == null)
         {
             kdfInformation = GetDefaultKdf(model.Email);
         }
 
-        var user = await _userRepository.GetByEmailAsync(model.Email);
         var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
         if (credential != null)
         {

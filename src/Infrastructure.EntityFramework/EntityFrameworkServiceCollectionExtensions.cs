@@ -9,6 +9,7 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Billing.Repositories;
@@ -87,6 +88,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<IProviderUserRepository, ProviderUserRepository>();
         services.AddSingleton<ISendRepository, SendRepository>();
         services.AddSingleton<ISsoConfigRepository, SsoConfigRepository>();
+        services.AddSingleton<IOpaqueKeyExchangeCredentialRepository, OpaqueKeyExchangeCredentialRepository>();
         services.AddSingleton<ISsoUserRepository, SsoUserRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
