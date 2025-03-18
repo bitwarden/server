@@ -80,7 +80,6 @@ public class DatabaseContext : DbContext
     public DbSet<PasswordHealthReportApplication> PasswordHealthReportApplications { get; set; }
     public DbSet<SecurityTask> SecurityTasks { get; set; }
     public DbSet<OrganizationInstallation> OrganizationInstallations { get; set; }
-    public DbSet<PhishingDomain> PhishingDomains { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -111,7 +110,6 @@ public class DatabaseContext : DbContext
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
         var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
-        var ePhishingDomain = builder.Entity<PhishingDomain>();
 
         // Shadow property configurations go here
 
@@ -128,7 +126,6 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
         aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
-        ePhishingDomain.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -169,7 +166,6 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
         aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
-        ePhishingDomain.ToTable(nameof(PhishingDomain));
 
         ConfigureDateTimeUtcQueries(builder);
     }

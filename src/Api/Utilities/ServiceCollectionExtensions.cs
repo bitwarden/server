@@ -4,6 +4,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Authorization;
 using Bit.Core.IdentityServer;
 using Bit.Core.PhishingDomainFeatures;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
+using Bit.Core.Repositories;
+using Bit.Core.Repositories.Implementations;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Authorization.SecurityTasks;
@@ -116,6 +118,9 @@ public static class ServiceCollectionExtensions
             client.DefaultRequestHeaders.Add("User-Agent", globalSettings.SelfHosted ? "Bitwarden Self-Hosted" : "Bitwarden");
             client.Timeout = TimeSpan.FromSeconds(30);
         });
+
+        services.AddSingleton<AzurePhishingDomainStorageService>();
+        services.AddSingleton<IPhishingDomainRepository, AzurePhishingDomainRepository>();
 
         if (globalSettings.SelfHosted)
         {
