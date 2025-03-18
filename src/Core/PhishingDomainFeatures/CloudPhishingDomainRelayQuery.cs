@@ -21,7 +21,7 @@ public class CloudPhishingDomainRelayQuery : BaseIdentityClientService, ICloudPh
             httpFactory,
             globalSettings.Installation.ApiUri,
             globalSettings.Installation.IdentityUri,
-            "api.installation",
+            "api.licensing",
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)

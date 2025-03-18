@@ -143,6 +143,14 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+            config.AddPolicy("PhishingDomains", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx => 
+                    ctx.User.HasClaim(c => c.Type == JwtClaimTypes.Scope && 
+                        (c.Value == ApiScopes.ApiLicensing || c.Value == ApiScopes.Api))
+                );
+            });
         });
 
         services.AddScoped<AuthenticatorTokenProvider>();
