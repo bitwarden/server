@@ -4,6 +4,7 @@ using Bit.Commercial.Core.Billing;
 using Bit.Commercial.Core.Billing.Models;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
@@ -115,6 +116,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.MultiOrganizationEnterprise;
+
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
         var existingPlan = new ProviderPlan
         {
@@ -132,10 +135,7 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(existingPlan.PlanType)
             .Returns(StaticStore.GetPlan(existingPlan.PlanType));
 
-        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        stripeAdapter.ProviderSubscriptionGetAsync(
-                Arg.Is(provider.GatewaySubscriptionId),
-                Arg.Is(provider.Id))
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider)
             .Returns(new Subscription
             {
                 Id = provider.GatewaySubscriptionId,
@@ -158,7 +158,7 @@ public class ProviderBillingServiceTests
             });
 
         var command =
-            new ChangeProviderPlanCommand(providerPlanId, PlanType.EnterpriseMonthly, provider.GatewaySubscriptionId);
+            new ChangeProviderPlanCommand(provider, providerPlanId, PlanType.EnterpriseMonthly);
 
         sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(command.NewPlan)
             .Returns(StaticStore.GetPlan(command.NewPlan));
@@ -169,6 +169,8 @@ public class ProviderBillingServiceTests
         // Assert
         await providerPlanRepository.Received(1)
             .ReplaceAsync(Arg.Is<ProviderPlan>(p => p.PlanType == PlanType.EnterpriseMonthly));
+
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
         await stripeAdapter.Received(1)
             .SubscriptionUpdateAsync(
