@@ -20,19 +20,13 @@ public class OrganizationAutomaticTaxStrategy(
 
     public async Task<SubscriptionUpdateOptions?> GetUpdateOptionsAsync(Subscription subscription)
     {
-        ArgumentNullException.ThrowIfNull(subscription);
-
-        var isEnabled = await IsEnabledAsync(subscription);
-        if (!isEnabled.HasValue)
-        {
-            return null;
-        }
+        var shouldBeEnabled = await ShouldBeEnabledAsync(subscription);
 
         var options = new SubscriptionUpdateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = isEnabled.Value
+                Enabled = shouldBeEnabled
             },
             DefaultTaxRates = []
         };
@@ -44,31 +38,27 @@ public class OrganizationAutomaticTaxStrategy(
     {
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
-            Enabled = await IsEnabledAsync(options, customer)
+            Enabled = await ShouldBeEnabledAsync(options, customer)
         };
     }
 
     public async Task SetUpdateOptionsAsync(SubscriptionUpdateOptions options, Subscription subscription)
     {
-        if (subscription.AutomaticTax.Enabled == options.AutomaticTax?.Enabled)
-        {
-            return;
-        }
+        var shouldBeEnabled = await ShouldBeEnabledAsync(subscription);
 
-        var isEnabled = await IsEnabledAsync(subscription);
-        if (!isEnabled.HasValue)
+        if (subscription.AutomaticTax.Enabled == shouldBeEnabled)
         {
             return;
         }
 
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
-            Enabled = isEnabled.Value
+            Enabled = shouldBeEnabled
         };
         options.DefaultTaxRates = [];
     }
 
-    private async Task<bool?> IsEnabledAsync(Subscription subscription)
+    private async Task<bool> ShouldBeEnabledAsync(Subscription subscription)
     {
         if (!subscription.Customer.HasTaxLocationVerified())
         {
@@ -86,15 +76,10 @@ public class OrganizationAutomaticTaxStrategy(
             shouldBeEnabled = subscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any();
         }
 
-        if (subscription.AutomaticTax.Enabled != shouldBeEnabled)
-        {
-            return shouldBeEnabled;
-        }
-
-        return null;
+        return shouldBeEnabled;
     }
 
-    private async Task<bool?> IsEnabledAsync(SubscriptionCreateOptions options, Customer customer)
+    private async Task<bool> ShouldBeEnabledAsync(SubscriptionCreateOptions options, Customer customer)
     {
         if (!customer.HasTaxLocationVerified())
         {

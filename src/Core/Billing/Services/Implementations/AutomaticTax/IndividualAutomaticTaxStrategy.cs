@@ -10,7 +10,7 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
     {
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
-            Enabled = ShouldEnable(customer)
+            Enabled = ShouldBeEnabled(customer)
         };
     }
 
@@ -18,14 +18,14 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
     {
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
-            Enabled = ShouldEnable(subscription.Customer)
+            Enabled = ShouldBeEnabled(subscription.Customer)
         };
         options.DefaultTaxRates = [];
     }
 
     public SubscriptionUpdateOptions? GetUpdateOptions(Subscription subscription)
     {
-        if (subscription.AutomaticTax.Enabled == ShouldEnable(subscription.Customer))
+        if (subscription.AutomaticTax.Enabled == ShouldBeEnabled(subscription.Customer))
         {
             return null;
         }
@@ -34,7 +34,7 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = ShouldEnable(subscription.Customer),
+                Enabled = ShouldBeEnabled(subscription.Customer),
             },
             DefaultTaxRates = []
         };
@@ -42,7 +42,7 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
         return options;
     }
 
-    private static bool ShouldEnable(Customer customer)
+    private static bool ShouldBeEnabled(Customer customer)
     {
         return customer.HasTaxLocationVerified();
     }
