@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.PhishingDomainFeatures;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;

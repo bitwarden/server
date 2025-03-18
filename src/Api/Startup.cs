@@ -146,8 +146,8 @@ public class Startup
             config.AddPolicy("PhishingDomains", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(ctx => 
-                    ctx.User.HasClaim(c => c.Type == JwtClaimTypes.Scope && 
+                policy.RequireAssertion(ctx =>
+                    ctx.User.HasClaim(c => c.Type == JwtClaimTypes.Scope &&
                         (c.Value == ApiScopes.ApiLicensing || c.Value == ApiScopes.Api))
                 );
             });
