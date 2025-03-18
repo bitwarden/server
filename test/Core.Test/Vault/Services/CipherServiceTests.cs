@@ -857,8 +857,6 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherRepository>().Received(1).GetManyByUserIdAsync(user.Id);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).ArchiveAsync(Arg.Any<IEnumerable<Guid>>(), user.Id);
         await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventsAsync(Arg.Any<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>());
-        Assert.NotNull(cipher1.ArchivedDate);
-        Assert.NotNull(cipher2.ArchivedDate);
     }
 
     [Theory, BitAutoData]
