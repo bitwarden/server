@@ -3,14 +3,12 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.KeyManagement.UserKey;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 #nullable enable
 
-
-namespace Bit.Infrastructure.Dapper.Auth.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OpaqueKeyExchangeCredentialRepository : Repository<OpaqueKeyExchangeCredential, OpaqueKeyExchangeCredential, Guid>, IOpaqueKeyExchangeCredentialRepository
 {
