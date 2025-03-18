@@ -982,20 +982,21 @@ public class CipherService : ICipherService
         var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
         if (existingCipher == null) return;
 
-        // Check if user has permission to change passwords
         var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-        // No permissions means the user can't change passwords
+        // Check if user is a "hidden password" user
         if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
         {
-            // User's without ViewPassword and Edit permission may not add cipher key encryption
+            // "hidden password" users may not add cipher key encryption
             if (existingCipher.Key == null && cipher.Key != null)
             {
                 throw new BadRequestException("You do not have permission to add cipher key encryption.");
             }
-            // User's without ViewPassword permission may not change passwords so we need to restore the existing password
-            var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
+            // "hidden password" users may not change passwords, TOTP codes, or passkeys, so we need to set them back to the original values
+            var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
             var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-            newCipherData.Password = existingCipherPassword;
+            newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
+            newCipherData.Password = existingCipherData.Password;
+            newCipherData.Totp = existingCipherData.Totp;
             cipher.Data = JsonSerializer.Serialize(newCipherData);
         }
     }
