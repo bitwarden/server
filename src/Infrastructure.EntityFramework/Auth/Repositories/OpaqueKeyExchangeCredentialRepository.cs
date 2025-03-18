@@ -3,19 +3,22 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.KeyManagement.UserKey;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-
-#nullable enable
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class OpaqueKeyExchangeCredentialRepository : Repository<OpaqueKeyExchangeCredential, OpaqueKeyExchangeCredential, Guid>, IOpaqueKeyExchangeCredentialRepository
 {
-    public OpaqueKeyExchangeCredentialRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, Func<DatabaseContext, DbSet<OpaqueKeyExchangeCredential>> getDbSet) : base(serviceScopeFactory, mapper, getDbSet)
+    public OpaqueKeyExchangeCredentialRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper) : base(serviceScopeFactory, mapper, (DatabaseContext context) => null)
     {
     }
 
-    public Task<OpaqueKeyExchangeCredential?> GetByUserIdAsync(Guid userId) => throw new NotImplementedException();
-    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<OpaqueKeyExchangeRotateKeyData> credentials) => throw new NotImplementedException();
+    public Task<OpaqueKeyExchangeCredential> GetByUserIdAsync(Guid userId)
+    {
+        return null;
+    }
+    public UpdateEncryptedDataForKeyRotation UpdateKeysForRotationAsync(Guid userId, IEnumerable<OpaqueKeyExchangeRotateKeyData> credentials)
+    {
+        return null;
+    }
 }
