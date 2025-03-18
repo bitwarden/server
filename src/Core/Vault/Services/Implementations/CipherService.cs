@@ -166,7 +166,7 @@ public class CipherService : ICipherService
         {
             ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
             cipher.RevisionDate = DateTime.UtcNow;
-            await ValidatePasswordChangeAsync(cipher);
+            await ValidateViewPasswordUserAsync(cipher);
             await _cipherRepository.ReplaceAsync(cipher);
             await _eventService.LogCipherEventAsync(cipher, Bit.Core.Enums.EventType.Cipher_Updated);
 
@@ -973,25 +973,30 @@ public class CipherService : ICipherService
         ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
     }
 
-    private async Task ValidatePasswordChangeAsync(Cipher cipher)
+    private async Task ValidateViewPasswordUserAsync(Cipher cipher)
     {
         if (cipher.Type != CipherType.Login || cipher.Data == null || !cipher.OrganizationId.HasValue)
         {
             return;
         }
         var existingCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
-        if (existingCipher != null)
+        if (existingCipher == null) return;
+
+        // Check if user has permission to change passwords
+        var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
+        // No permissions means the user can't change passwords
+        if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
         {
-            // Check if user has permission to change passwords
-            var cipherPermissions = await _getCipherPermissionsForUserQuery.GetByOrganization(cipher.OrganizationId.Value);
-            if (!cipherPermissions.TryGetValue(cipher.Id, out var permission) || !(permission.ViewPassword && permission.Edit))
+            // User's without ViewPassword and Edit permission may not add cipher key encryption
+            if (existingCipher.Key == null && cipher.Key != null)
             {
-                // replace the new cipher's password with the existing cipher's password to prevent password changes
-                var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
-                var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
-                newCipherData.Password = existingCipherPassword;
-                cipher.Data = JsonSerializer.Serialize(newCipherData);
+                throw new BadRequestException("You do not have permission to add cipher key encryption.");
             }
+            // User's without ViewPassword permission may not change passwords so we need to restore the existing password
+            var existingCipherPassword = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data).Password;
+            var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+            newCipherData.Password = existingCipherPassword;
+            cipher.Data = JsonSerializer.Serialize(newCipherData);
         }
     }
 }

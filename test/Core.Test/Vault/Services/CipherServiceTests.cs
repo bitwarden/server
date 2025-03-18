@@ -810,7 +810,8 @@ public class CipherServiceTests
         SutProvider<CipherService> sutProvider,
         string newPassword,
         bool viewPassword,
-        bool editPermission)
+        bool editPermission,
+        string? key = null)
     {
         var cipherDetails = new CipherDetails
         {
@@ -818,7 +819,8 @@ public class CipherServiceTests
             OrganizationId = Guid.NewGuid(),
             Type = CipherType.Login,
             UserId = Guid.NewGuid(),
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
+            Key = key,
         };
 
         var newLoginData = new CipherLoginData { Username = "user", Password = newPassword };
@@ -900,6 +902,36 @@ public class CipherServiceTests
 
         var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
         Assert.Equal("NewPassword", updatedLoginData.Password);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_CipherKeyChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, "NewKey");
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        Assert.Equal("NewKey", deps.CipherDetails.Key);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_CipherKeyChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false, "NewKey");
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true));
+
+        Assert.Contains("do not have permissions", exception.Message);
     }
 
     [Theory]
