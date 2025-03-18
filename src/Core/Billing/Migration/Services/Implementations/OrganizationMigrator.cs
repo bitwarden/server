@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Migration.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
+using Bit.Core.Billing.Services;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -20,7 +21,8 @@ public class OrganizationMigrator(
     IMigrationTrackerCache migrationTrackerCache,
     IOrganizationRepository organizationRepository,
     IPricingClient pricingClient,
-    IStripeAdapter stripeAdapter) : IOrganizationMigrator
+    IStripeAdapter stripeAdapter,
+    IOrganizationAutomaticTaxStrategy automaticTaxStrategy) : IOrganizationMigrator
 {
     private const string _cancellationComment = "Cancelled as part of provider migration to Consolidated Billing";
 
@@ -231,10 +233,6 @@ public class OrganizationMigrator(
 
             var subscriptionCreateOptions = new SubscriptionCreateOptions
             {
-                AutomaticTax = new SubscriptionAutomaticTaxOptions
-                {
-                    Enabled = true
-                },
                 Customer = customer.Id,
                 CollectionMethod = collectionMethod,
                 DaysUntilDue = collectionMethod == StripeConstants.CollectionMethod.SendInvoice ? 30 : null,
@@ -247,6 +245,8 @@ public class OrganizationMigrator(
                 ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
                 TrialPeriodDays = plan.TrialPeriodDays
             };
+
+            await automaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
 
             var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

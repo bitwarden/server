@@ -24,7 +24,9 @@ public class SubscriberService(
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService) : ISubscriberService
+    ITaxService taxService,
+    IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy,
+    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -597,7 +599,7 @@ public class SubscriberService(
             Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        customer = await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
         {
             Address = new AddressOptions
             {
@@ -661,21 +663,17 @@ public class SubscriberService(
             }
         }
 
-        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
         {
-            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
-                new SubscriptionUpdateOptions
-                {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                });
+            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+            var automaticTaxOptions = subscriber.IsUser()
+                ? await individualAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
+                : await organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
+            if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, automaticTaxOptions);
+            }
         }
-
-        return;
-
-        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
-            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
-               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
-               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
     }
 
     public async Task VerifyBankAccount(

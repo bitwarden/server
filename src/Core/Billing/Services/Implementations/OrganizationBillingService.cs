@@ -30,7 +30,8 @@ public class OrganizationBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService) : IOrganizationBillingService
+    ITaxService taxService,
+    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -380,10 +381,6 @@ public class OrganizationBillingService(
 
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customerHasTaxInfo
-            },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,
@@ -394,6 +391,8 @@ public class OrganizationBillingService(
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
+
+        await organizationAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }

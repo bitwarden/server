@@ -74,42 +74,33 @@ public class OrganizationAutomaticTaxStrategy(
 
     private async Task<bool?> IsEnabledAsync(Subscription subscription)
     {
-        if (subscription.AutomaticTax.Enabled ||
-            !subscription.Customer.HasBillingLocation() ||
-            await IsNonTaxableNonUsBusinessUseSubscriptionAsync(subscription))
+        bool shouldBeEnabled;
+        if (subscription.Customer.HasBillingLocation() && subscription.Customer.Address.Country == "US")
         {
-            return null;
+            shouldBeEnabled = true;
+        }
+        else
+        {
+            var familyPriceIds = await _familyPriceIdsTask.Value;
+            shouldBeEnabled = subscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any();
         }
 
-        return !await IsNonTaxableNonUsBusinessUseSubscriptionAsync(subscription);
-    }
+        if (subscription.AutomaticTax.Enabled != shouldBeEnabled)
+        {
+            return shouldBeEnabled;
+        }
 
-    private async Task<bool> IsNonTaxableNonUsBusinessUseSubscriptionAsync(Subscription subscription)
-    {
-        var familyPriceIds = await _familyPriceIdsTask.Value;
-
-        return subscription.Customer.Address.Country != "US" &&
-               !subscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any() &&
-               !subscription.Customer.TaxIds.Any();
+        return null;
     }
 
     private async Task<bool?> IsEnabledAsync(SubscriptionCreateOptions options, Customer customer)
     {
-        if (!customer.HasBillingLocation() ||
-            await IsNonTaxableNonUsBusinessUseSubscriptionAsync(options, customer))
+        if (customer.HasBillingLocation() && customer.Address.Country == "US")
         {
-            return null;
+            return true;
         }
 
-        return !await IsNonTaxableNonUsBusinessUseSubscriptionAsync(options, customer);
-    }
-
-    private async Task<bool> IsNonTaxableNonUsBusinessUseSubscriptionAsync(SubscriptionCreateOptions options, Customer customer)
-    {
         var familyPriceIds = await _familyPriceIdsTask.Value;
-
-        return customer.Address.Country != "US" &&
-               !options.Items.Select(item => item.Price).Intersect(familyPriceIds).Any() &&
-               !customer.TaxIds.Any();
+        return options.Items.Select(item => item.Price).Intersect(familyPriceIds).Any();
     }
 }

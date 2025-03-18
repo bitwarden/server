@@ -228,6 +228,26 @@ public class RemoveOrganizationFromProviderCommandTests
             Id = "subscription_id"
         });
 
+        sutProvider.GetDependency<IOrganizationAutomaticTaxStrategy>()
+            .When(x => x.SetCreateOptionsAsync(
+                Arg.Is<SubscriptionCreateOptions>(options =>
+                    options.Customer == organization.GatewayCustomerId &&
+                    options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&
+                    options.DaysUntilDue == 30 &&
+                    options.Metadata["organizationId"] == organization.Id.ToString() &&
+                    options.OffSession == true &&
+                    options.ProrationBehavior == StripeConstants.ProrationBehavior.CreateProrations &&
+                    options.Items.First().Price == teamsMonthlyPlan.PasswordManager.StripeSeatPlanId &&
+                    options.Items.First().Quantity == organization.Seats)
+                , Arg.Any<Customer>()))
+            .Do(x =>
+            {
+                x.Arg<SubscriptionCreateOptions>().AutomaticTax = new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                };
+            });
+
         await sutProvider.Sut.RemoveOrganizationFromProvider(provider, providerOrganization, organization);
 
         await stripeAdapter.Received(1).SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(options =>

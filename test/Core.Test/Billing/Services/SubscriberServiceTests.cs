@@ -1561,6 +1561,31 @@ public class SubscriberServiceTests
             "Example Town",
             "NY");
 
+        sutProvider.GetDependency<IStripeAdapter>()
+            .CustomerUpdateAsync(
+                Arg.Is<string>(p => p == provider.GatewayCustomerId),
+                Arg.Is<CustomerUpdateOptions>(options =>
+                    options.Address.Country == "US" &&
+                    options.Address.PostalCode == "12345" &&
+                    options.Address.Line1 == "123 Example St." &&
+                    options.Address.Line2 == null &&
+                    options.Address.City == "Example Town" &&
+                    options.Address.State == "NY"))
+            .Returns(new Customer
+            {
+                Id = provider.GatewayCustomerId,
+                Address = new Address
+                {
+                    Country = "US",
+                    PostalCode = "12345",
+                    Line1 = "123 Example St.",
+                    Line2 = null,
+                    City = "Example Town",
+                    State = "NY"
+                },
+                TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] }
+            });
+
         await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
 
         await stripeAdapter.Received(1).CustomerUpdateAsync(provider.GatewayCustomerId, Arg.Is<CustomerUpdateOptions>(
