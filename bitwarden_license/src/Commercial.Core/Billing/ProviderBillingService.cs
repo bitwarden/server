@@ -32,7 +32,6 @@ public class ProviderBillingService(
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
-    IPaymentService paymentService,
     IPricingClient pricingClient,
     IProviderInvoiceItemRepository providerInvoiceItemRepository,
     IProviderOrganizationRepository providerOrganizationRepository,
@@ -395,7 +394,7 @@ public class ProviderBillingService(
 
         var newlyAssignedSeatTotal = currentlyAssignedSeatTotal + seatAdjustment;
 
-        var update = CurrySeatScalingUpdate(
+        var scaleQuantityTo = CurrySeatScalingUpdate(
             provider,
             providerPlan,
             newlyAssignedSeatTotal);
@@ -418,9 +417,7 @@ public class ProviderBillingService(
         else if (currentlyAssignedSeatTotal <= seatMinimum &&
                  newlyAssignedSeatTotal > seatMinimum)
         {
-            await update(
-                seatMinimum,
-                newlyAssignedSeatTotal);
+            await scaleQuantityTo(newlyAssignedSeatTotal);
         }
         /*
          * Above the limit => Above the limit:
@@ -429,9 +426,7 @@ public class ProviderBillingService(
         else if (currentlyAssignedSeatTotal > seatMinimum &&
                  newlyAssignedSeatTotal > seatMinimum)
         {
-            await update(
-                currentlyAssignedSeatTotal,
-                newlyAssignedSeatTotal);
+            await scaleQuantityTo(newlyAssignedSeatTotal);
         }
         /*
          * Above the limit => Below the limit:
@@ -440,9 +435,7 @@ public class ProviderBillingService(
         else if (currentlyAssignedSeatTotal > seatMinimum &&
                  newlyAssignedSeatTotal <= seatMinimum)
         {
-            await update(
-                currentlyAssignedSeatTotal,
-                seatMinimum);
+            await scaleQuantityTo(seatMinimum);
         }
     }
 
@@ -722,18 +715,28 @@ public class ProviderBillingService(
         }
     }
 
-    private Func<int, int, Task> CurrySeatScalingUpdate(
+    private Func<int, Task> CurrySeatScalingUpdate(
         Provider provider,
         ProviderPlan providerPlan,
-        int newlyAssignedSeats) => async (currentlySubscribedSeats, newlySubscribedSeats) =>
+        int newlyAssignedSeats) => async newlySubscribedSeats =>
     {
-        var plan = await pricingClient.GetPlanOrThrow(providerPlan.PlanType);
+        var subscription = await subscriberService.GetSubscriptionOrThrow(provider);
 
-        await paymentService.AdjustSeats(
-            provider,
-            plan,
-            currentlySubscribedSeats,
-            newlySubscribedSeats);
+        var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, providerPlan.PlanType);
+
+        var item = subscription.Items.First(item => item.Price.Id == priceId);
+
+        await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId, new SubscriptionUpdateOptions
+        {
+            Items = [
+                new SubscriptionItemOptions
+                {
+                    Id = item.Id,
+                    Price = priceId,
+                    Quantity = newlySubscribedSeats
+                }
+            ]
+        });
 
         var newlyPurchasedSeats = newlySubscribedSeats > providerPlan.SeatMinimum
             ? newlySubscribedSeats - providerPlan.SeatMinimum

@@ -25,11 +25,6 @@ public interface IPaymentService
         int? newlyPurchasedAdditionalSecretsManagerServiceAccounts,
         int newlyPurchasedAdditionalStorage);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats);
-    Task<string> AdjustSeats(
-        Provider provider,
-        Plan plan,
-        int currentlySubscribedSeats,
-        int newlySubscribedSeats);
     Task<string> AdjustSmSeatsAsync(Organization organization, Plan plan, int additionalSeats);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId);
 
