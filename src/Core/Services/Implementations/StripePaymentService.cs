@@ -817,8 +817,7 @@ public class StripePaymentService : IPaymentService
                 });
             }
 
-            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId) &&
-                customer.Subscriptions.Any(sub => sub.Id == subscriber.GatewaySubscriptionId))
+            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
             {
                 var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
 
