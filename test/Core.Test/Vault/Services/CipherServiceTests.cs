@@ -811,7 +811,10 @@ public class CipherServiceTests
         string newPassword,
         bool viewPassword,
         bool editPermission,
-        string? key = null)
+        string? key = null,
+        string? totp = null,
+        CipherLoginFido2CredentialData[]? passkeys = null
+        )
     {
         var cipherDetails = new CipherDetails
         {
@@ -823,13 +826,21 @@ public class CipherServiceTests
             Key = key,
         };
 
-        var newLoginData = new CipherLoginData { Username = "user", Password = newPassword };
+        var newLoginData = new CipherLoginData { Username = "user", Password = newPassword, Totp = totp, Fido2Credentials = passkeys };
         cipherDetails.Data = JsonSerializer.Serialize(newLoginData);
 
         var existingCipher = new Cipher
         {
             Id = cipherDetails.Id,
-            Data = JsonSerializer.Serialize(new CipherLoginData { Username = "user", Password = "OriginalPassword" })
+            Data = JsonSerializer.Serialize(
+                new CipherLoginData
+                {
+                    Username = "user",
+                    Password = "OriginalPassword",
+                    Totp = "OriginalTotp",
+                    Fido2Credentials = []
+                }
+            ),
         };
 
         sutProvider.GetDependency<ICipherRepository>()
@@ -932,6 +943,88 @@ public class CipherServiceTests
             true));
 
         Assert.Contains("do not have permission", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_TotpChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false, totp: "NewTotp");
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
+        Assert.Equal("OriginalTotp", updatedLoginData.Totp);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_TotpChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, totp: "NewTotp");
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
+        Assert.Equal("NewTotp", updatedLoginData.Totp);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_Fido2CredentialsChangedWithoutPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var passkeys = new[]
+        {
+            new CipherLoginFido2CredentialData
+            {
+                CredentialId = "CredentialId",
+                UserHandle = "UserHandle",
+            }
+        };
+
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: false, passkeys: passkeys);
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
+        Assert.Empty(updatedLoginData.Fido2Credentials);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveDetailsAsync_Fido2CredentialsChangedWithPermission(string _, SutProvider<CipherService> sutProvider)
+    {
+        var passkeys = new[]
+        {
+            new CipherLoginFido2CredentialData
+            {
+                CredentialId = "CredentialId",
+                UserHandle = "UserHandle",
+            }
+        };
+
+        var deps = GetSaveDetailsAsyncDependencies(sutProvider, "NewPassword", viewPassword: true, editPermission: true, passkeys: passkeys);
+
+        await deps.SutProvider.Sut.SaveDetailsAsync(
+            deps.CipherDetails,
+            deps.CipherDetails.UserId.Value,
+            deps.CipherDetails.RevisionDate,
+            null,
+            true);
+
+        var updatedLoginData = JsonSerializer.Deserialize<CipherLoginData>(deps.CipherDetails.Data);
+        Assert.Equal(passkeys.Length, updatedLoginData.Fido2Credentials.Length);
     }
 
     [Theory]

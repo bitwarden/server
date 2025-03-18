@@ -995,8 +995,8 @@ public class CipherService : ICipherService
             var existingCipherData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);
             var newCipherData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
             newCipherData.Fido2Credentials = existingCipherData.Fido2Credentials;
-            newCipherData.Password = existingCipherData.Password;
             newCipherData.Totp = existingCipherData.Totp;
+            newCipherData.Password = existingCipherData.Password;
             cipher.Data = JsonSerializer.Serialize(newCipherData);
         }
     }
