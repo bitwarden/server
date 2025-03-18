@@ -74,8 +74,13 @@ public class OrganizationAutomaticTaxStrategy(
 
     private async Task<bool?> IsEnabledAsync(Subscription subscription)
     {
+        if (!subscription.Customer.HasTaxLocationVerified())
+        {
+            return false;
+        }
+
         bool shouldBeEnabled;
-        if (subscription.Customer.HasBillingLocation() && subscription.Customer.Address.Country == "US")
+        if (subscription.Customer.Address.Country == "US")
         {
             shouldBeEnabled = true;
         }
@@ -95,7 +100,12 @@ public class OrganizationAutomaticTaxStrategy(
 
     private async Task<bool?> IsEnabledAsync(SubscriptionCreateOptions options, Customer customer)
     {
-        if (customer.HasBillingLocation() && customer.Address.Country == "US")
+        if (!customer.HasTaxLocationVerified())
+        {
+            return false;
+        }
+
+        if (customer.Address.Country == "US")
         {
             return true;
         }

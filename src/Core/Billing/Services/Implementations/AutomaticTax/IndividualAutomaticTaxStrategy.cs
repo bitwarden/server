@@ -1,4 +1,4 @@
-﻿using Bit.Core.Billing.Constants;
+﻿using Bit.Core.Billing.Extensions;
 using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
@@ -20,13 +20,7 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
 
     public Task SetUpdateOptionsAsync(SubscriptionUpdateOptions options, Subscription subscription)
     {
-
         ArgumentNullException.ThrowIfNull(options);
-
-        if (subscription.AutomaticTax.Enabled == ShouldEnable(subscription.Customer))
-        {
-            return Task.CompletedTask;
-        }
 
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
@@ -58,6 +52,6 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
 
     private static bool ShouldEnable(Customer customer)
     {
-        return customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+        return customer.HasTaxLocationVerified();
     }
 }
