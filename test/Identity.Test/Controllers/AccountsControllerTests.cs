@@ -3,6 +3,7 @@ using System.Text;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -45,6 +46,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
     private readonly GlobalSettings _globalSettings;
 
 
@@ -61,6 +63,7 @@ public class AccountsControllerTests : IDisposable
         _referenceEventService = Substitute.For<IReferenceEventService>();
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
+        _opaqueKeyExchangeCredentialRepository = Substitute.For<IOpaqueKeyExchangeCredentialRepository>();
         _globalSettings = Substitute.For<GlobalSettings>();
 
         _sut = new AccountsController(
@@ -75,6 +78,7 @@ public class AccountsControllerTests : IDisposable
             _referenceEventService,
             _featureService,
             _registrationEmailVerificationTokenDataFactory,
+            _opaqueKeyExchangeCredentialRepository,
             _globalSettings
         );
     }
