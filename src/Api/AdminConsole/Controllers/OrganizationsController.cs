@@ -16,6 +16,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -61,6 +63,7 @@ public class OrganizationsController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly ICloudOrganizationSignUpCommand _cloudOrganizationSignUpCommand;
     private readonly IOrganizationDeleteCommand _organizationDeleteCommand;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
 
     public OrganizationsController(
@@ -84,6 +87,7 @@ public class OrganizationsController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         ICloudOrganizationSignUpCommand cloudOrganizationSignUpCommand,
         IOrganizationDeleteCommand organizationDeleteCommand,
+        IPolicyRequirementQuery policyRequirementQuery,
         IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
@@ -106,6 +110,7 @@ public class OrganizationsController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _cloudOrganizationSignUpCommand = cloudOrganizationSignUpCommand;
         _organizationDeleteCommand = organizationDeleteCommand;
+        _policyRequirementQuery = policyRequirementQuery;
         _pricingClient = pricingClient;
     }
 
@@ -163,15 +168,23 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
+            var resetPasswordPolicy = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicy.AutoEnrollEnabled);
         }
+        else
+        {
+            var resetPasswordPolicy =
+            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+            {
+                return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
+            }
 
-        var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
-        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+        }
     }
 
     [HttpPost("")]

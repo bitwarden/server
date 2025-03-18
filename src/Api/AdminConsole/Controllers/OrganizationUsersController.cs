@@ -8,6 +8,8 @@ using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -55,6 +57,7 @@ public class OrganizationUsersController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IDeleteManagedOrganizationUserAccountCommand _deleteManagedOrganizationUserAccountCommand;
     private readonly IGetOrganizationUsersManagementStatusQuery _getOrganizationUsersManagementStatusQuery;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IFeatureService _featureService;
     private readonly IPricingClient _pricingClient;
 
@@ -79,6 +82,7 @@ public class OrganizationUsersController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IDeleteManagedOrganizationUserAccountCommand deleteManagedOrganizationUserAccountCommand,
         IGetOrganizationUsersManagementStatusQuery getOrganizationUsersManagementStatusQuery,
+        IPolicyRequirementQuery policyRequirementQuery,
         IFeatureService featureService,
         IPricingClient pricingClient)
     {
@@ -102,6 +106,7 @@ public class OrganizationUsersController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _deleteManagedOrganizationUserAccountCommand = deleteManagedOrganizationUserAccountCommand;
         _getOrganizationUsersManagementStatusQuery = getOrganizationUsersManagementStatusQuery;
+        _policyRequirementQuery = policyRequirementQuery;
         _featureService = featureService;
         _pricingClient = pricingClient;
     }
@@ -315,7 +320,8 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var useMasterPasswordPolicy = await ShouldHandleResetPasswordAsync(orgId);
+        var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements) ?
+         await ShouldHandleResetPasswordAsync_vNext(orgId, user.Id) : await ShouldHandleResetPasswordAsync(orgId);
 
         if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
         {
@@ -345,6 +351,18 @@ public class OrganizationUsersController : Controller
                                           masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 
         return useMasterPasswordPolicy;
+    }
+
+    private async Task<bool> ShouldHandleResetPasswordAsync_vNext(Guid orgId, Guid userId)
+    {
+        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
+
+        if (organizationAbility is not { UsePolicies: true })
+        {
+            return false;
+        }
+
+        return (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId)).AutoEnrollEnabled;
     }
 
     [HttpPost("{id}/confirm")]
