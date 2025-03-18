@@ -640,43 +640,37 @@ public class ProviderBillingService(
 
     public async Task UpdateSeatMinimums(UpdateProviderSeatMinimumsCommand command)
     {
-        if (command.Configuration.Any(x => x.SeatsMinimum < 0))
+        var (provider, updatedPlanConfigurations) = command;
+
+        if (updatedPlanConfigurations.Any(x => x.SeatsMinimum < 0))
         {
             throw new BadRequestException("Provider seat minimums must be at least 0.");
         }
 
-        Subscription subscription;
-        try
-        {
-            subscription = await stripeAdapter.ProviderSubscriptionGetAsync(command.GatewaySubscriptionId, command.Id);
-        }
-        catch (InvalidOperationException)
-        {
-            throw new ConflictException("Subscription not found.");
-        }
+        var subscription = await subscriberService.GetSubscriptionOrThrow(provider);
 
         var subscriptionItemOptionsList = new List<SubscriptionItemOptions>();
 
-        var providerPlans = await providerPlanRepository.GetByProviderId(command.Id);
+        var providerPlans = await providerPlanRepository.GetByProviderId(provider.Id);
 
-        foreach (var newPlanConfiguration in command.Configuration)
+        foreach (var updatedPlanConfiguration in updatedPlanConfigurations)
         {
+            var (updatedPlanType, updatedSeatMinimum) = updatedPlanConfiguration;
+
             var providerPlan =
-                providerPlans.Single(providerPlan => providerPlan.PlanType == newPlanConfiguration.Plan);
+                providerPlans.Single(providerPlan => providerPlan.PlanType == updatedPlanType);
 
-            if (providerPlan.SeatMinimum != newPlanConfiguration.SeatsMinimum)
+            if (providerPlan.SeatMinimum != updatedSeatMinimum)
             {
-                var newPlan = await pricingClient.GetPlanOrThrow(newPlanConfiguration.Plan);
-
-                var priceId = newPlan.PasswordManager.StripeProviderPortalSeatPlanId;
+                var priceId = ProviderPriceAdapter.GetPriceId(provider, subscription, updatedPlanType);
 
                 var subscriptionItem = subscription.Items.First(item => item.Price.Id == priceId);
 
                 if (providerPlan.PurchasedSeats == 0)
                 {
-                    if (providerPlan.AllocatedSeats > newPlanConfiguration.SeatsMinimum)
+                    if (providerPlan.AllocatedSeats > updatedSeatMinimum)
                     {
-                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - newPlanConfiguration.SeatsMinimum;
+                        providerPlan.PurchasedSeats = providerPlan.AllocatedSeats - updatedSeatMinimum;
 
                         subscriptionItemOptionsList.Add(new SubscriptionItemOptions
                         {
@@ -691,7 +685,7 @@ public class ProviderBillingService(
                         {
                             Id = subscriptionItem.Id,
                             Price = priceId,
-                            Quantity = newPlanConfiguration.SeatsMinimum
+                            Quantity = updatedSeatMinimum
                         });
                     }
                 }
@@ -699,9 +693,9 @@ public class ProviderBillingService(
                 {
                     var totalSeats = providerPlan.SeatMinimum + providerPlan.PurchasedSeats;
 
-                    if (newPlanConfiguration.SeatsMinimum <= totalSeats)
+                    if (updatedSeatMinimum <= totalSeats)
                     {
-                        providerPlan.PurchasedSeats = totalSeats - newPlanConfiguration.SeatsMinimum;
+                        providerPlan.PurchasedSeats = totalSeats - updatedSeatMinimum;
                     }
                     else
                     {
@@ -710,12 +704,12 @@ public class ProviderBillingService(
                         {
                             Id = subscriptionItem.Id,
                             Price = priceId,
-                            Quantity = newPlanConfiguration.SeatsMinimum
+                            Quantity = updatedSeatMinimum
                         });
                     }
                 }
 
-                providerPlan.SeatMinimum = newPlanConfiguration.SeatsMinimum;
+                providerPlan.SeatMinimum = updatedSeatMinimum;
 
                 await providerPlanRepository.ReplaceAsync(providerPlan);
             }
@@ -723,7 +717,7 @@ public class ProviderBillingService(
 
         if (subscriptionItemOptionsList.Count > 0)
         {
-            await stripeAdapter.SubscriptionUpdateAsync(command.GatewaySubscriptionId,
+            await stripeAdapter.SubscriptionUpdateAsync(provider.GatewaySubscriptionId,
                 new SubscriptionUpdateOptions { Items = subscriptionItemOptionsList });
         }
     }

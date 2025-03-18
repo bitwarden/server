@@ -1048,8 +1048,7 @@ public class ProviderBillingServiceTests
     {
         // Arrange
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.TeamsMonthly, -10),
                 (PlanType.EnterpriseMonthly, 50)
@@ -1068,6 +1067,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1097,9 +1098,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(
-            provider.GatewaySubscriptionId,
-            provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1116,8 +1115,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 30),
                 (PlanType.TeamsMonthly, 20)
@@ -1149,6 +1147,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1178,7 +1178,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1195,8 +1195,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 70),
                 (PlanType.TeamsMonthly, 50)
@@ -1228,6 +1227,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1257,7 +1258,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1274,8 +1275,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 60),
                 (PlanType.TeamsMonthly, 60)
@@ -1301,6 +1301,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1330,7 +1332,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1347,8 +1349,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 80),
                 (PlanType.TeamsMonthly, 80)
@@ -1380,6 +1381,8 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider)
     {
         // Arrange
+        provider.Type = ProviderType.Msp;
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         var providerPlanRepository = sutProvider.GetDependency<IProviderPlanRepository>();
 
@@ -1409,7 +1412,7 @@ public class ProviderBillingServiceTests
             }
         };
 
-        stripeAdapter.ProviderSubscriptionGetAsync(provider.GatewaySubscriptionId, provider.Id).Returns(subscription);
+        sutProvider.GetDependency<ISubscriberService>().GetSubscriptionOrThrow(provider).Returns(subscription);
 
         var providerPlans = new List<ProviderPlan>
         {
@@ -1426,8 +1429,7 @@ public class ProviderBillingServiceTests
         providerPlanRepository.GetByProviderId(provider.Id).Returns(providerPlans);
 
         var command = new UpdateProviderSeatMinimumsCommand(
-            provider.Id,
-            provider.GatewaySubscriptionId,
+            provider,
             [
                 (PlanType.EnterpriseMonthly, 70),
                 (PlanType.TeamsMonthly, 30)
