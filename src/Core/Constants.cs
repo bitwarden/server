@@ -115,6 +115,7 @@ public static class FeatureFlagKeys
     public const string RiskInsightsCriticalApplication = "pm-14466-risk-insights-critical-application";
     public const string EnableRiskInsightsNotifications = "enable-risk-insights-notifications";
     public const string DesktopSendUIRefresh = "desktop-send-ui-refresh";
+    public const string ExportAttachments = "export-attachments";
 
     /* Vault Team */
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
@@ -174,6 +175,8 @@ public static class FeatureFlagKeys
     public const string WebPush = "web-push";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
+    public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
+    public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
 
     public static List<string> GetAllKeys()
     {
