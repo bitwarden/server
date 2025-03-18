@@ -24,6 +24,9 @@ public class ResetPasswordPolicyRequirementFactoryTests
         [PolicyDetails(PolicyType.ResetPassword)] PolicyDetails[] policies,
         SutProvider<ResetPasswordPolicyRequirementFactory> sutProvider)
     {
+        policies[0].SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+        policies[1].SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = false });
+
         var actual = sutProvider.Sut.Create(policies);
 
         Assert.True(actual.AutoEnrollEnabled);
