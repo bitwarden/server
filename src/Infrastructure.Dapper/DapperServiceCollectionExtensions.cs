@@ -44,7 +44,6 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
-        services.AddSingleton<IPhishingDomainRepository, PhishingDomainRepository>();
         services.AddSingleton<IPolicyRepository, PolicyRepository>();
         services.AddSingleton<IProviderOrganizationRepository, ProviderOrganizationRepository>();
         services.AddSingleton<IProviderRepository, ProviderRepository>();
