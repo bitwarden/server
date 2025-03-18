@@ -1,37 +1,29 @@
-﻿using Bit.Core.Billing.Extensions;
+﻿#nullable enable
+using Bit.Core.Billing.Extensions;
 using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
 
 public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
 {
-    public Task SetCreateOptionsAsync(SubscriptionCreateOptions options, Customer customer)
+    public void SetCreateOptions(SubscriptionCreateOptions options, Customer customer)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(customer);
-
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
             Enabled = ShouldEnable(customer)
         };
-
-        return Task.CompletedTask;
     }
 
-    public Task SetUpdateOptionsAsync(SubscriptionUpdateOptions options, Subscription subscription)
+    public void SetUpdateOptions(SubscriptionUpdateOptions options, Subscription subscription)
     {
-        ArgumentNullException.ThrowIfNull(options);
-
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
             Enabled = ShouldEnable(subscription.Customer)
         };
         options.DefaultTaxRates = [];
-
-        return Task.CompletedTask;
     }
 
-    public Task<SubscriptionUpdateOptions> GetUpdateOptionsAsync(Subscription subscription)
+    public SubscriptionUpdateOptions? GetUpdateOptions(Subscription subscription)
     {
         if (subscription.AutomaticTax.Enabled == ShouldEnable(subscription.Customer))
         {
@@ -47,7 +39,7 @@ public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
             DefaultTaxRates = []
         };
 
-        return Task.FromResult(options);
+        return options;
     }
 
     private static bool ShouldEnable(Customer customer)

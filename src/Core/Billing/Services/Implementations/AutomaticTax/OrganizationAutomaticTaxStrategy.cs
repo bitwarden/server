@@ -1,4 +1,5 @@
-﻿using Bit.Core.Billing.Enums;
+﻿#nullable enable
+using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Stripe;
@@ -17,7 +18,7 @@ public class OrganizationAutomaticTaxStrategy(
         return plans.Select(plan => plan.PasswordManager.StripePlanId);
     });
 
-    public async Task<SubscriptionUpdateOptions> GetUpdateOptionsAsync(Subscription subscription)
+    public async Task<SubscriptionUpdateOptions?> GetUpdateOptionsAsync(Subscription subscription)
     {
         ArgumentNullException.ThrowIfNull(subscription);
 
@@ -41,9 +42,6 @@ public class OrganizationAutomaticTaxStrategy(
 
     public async Task SetCreateOptionsAsync(SubscriptionCreateOptions options, Customer customer)
     {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(customer);
-
         options.AutomaticTax = new SubscriptionAutomaticTaxOptions
         {
             Enabled = await IsEnabledAsync(options, customer)
@@ -52,8 +50,6 @@ public class OrganizationAutomaticTaxStrategy(
 
     public async Task SetUpdateOptionsAsync(SubscriptionUpdateOptions options, Subscription subscription)
     {
-        ArgumentNullException.ThrowIfNull(subscription);
-
         if (subscription.AutomaticTax.Enabled == options.AutomaticTax?.Enabled)
         {
             return;

@@ -332,7 +332,7 @@ public class PremiumUserBillingService(
             OffSession = true
         };
 
-        await individualAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
+        individualAutomaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
 
         var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

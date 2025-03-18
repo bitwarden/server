@@ -823,7 +823,7 @@ public class StripePaymentService : IPaymentService
                 var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
 
                 var subscriptionUpdateOptions = subscriber is User
-                    ? await _individualAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
+                    ? _individualAutomaticTaxStrategy.GetUpdateOptions(subscription)
                     : await _organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
 
                 if (subscriptionUpdateOptions != null)

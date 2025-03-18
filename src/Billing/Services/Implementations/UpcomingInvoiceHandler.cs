@@ -139,7 +139,7 @@ public class UpcomingInvoiceHandler(
     {
         var updateOptions = subscription.IsOrganization()
             ? await organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
-            : await individualAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
+            : individualAutomaticTaxStrategy.GetUpdateOptions(subscription);
 
         if (updateOptions == null)
         {

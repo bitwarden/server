@@ -667,7 +667,7 @@ public class SubscriberService(
         {
             var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
             var automaticTaxOptions = subscriber.IsUser()
-                ? await individualAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
+                ? individualAutomaticTaxStrategy.GetUpdateOptions(subscription)
                 : await organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
             if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
             {
