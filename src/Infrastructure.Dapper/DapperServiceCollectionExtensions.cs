@@ -72,10 +72,4 @@ public static class DapperServiceCollectionExtensions
             services.AddSingleton<IEventRepository, EventRepository>();
         }
     }
-
-    public static void AddDapper(this IServiceCollection services)
-    {
-        // Register repositories
-        services.AddSingleton<IPhishingDomainRepository, PhishingDomainRepository>();
-    }
 }

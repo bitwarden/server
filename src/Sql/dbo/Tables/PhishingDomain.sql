@@ -1,8 +1,7 @@
 CREATE TABLE [dbo].[PhishingDomain] (
-    [Id]            UNIQUEIDENTIFIER    NOT NULL,
-    [Domain]        NVARCHAR(255)       NOT NULL,
-    [CreationDate]  DATETIME2(7)        NOT NULL,
-    [RevisionDate]  DATETIME2(7)        NOT NULL,
+    [Id]       UNIQUEIDENTIFIER    NOT NULL,
+    [Domain]   NVARCHAR(255)       NOT NULL,
+    [Checksum] NVARCHAR(64)        NULL,
     CONSTRAINT [PK_PhishingDomain] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
