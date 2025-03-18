@@ -975,6 +975,7 @@ public class ProviderBillingServiceTests
         SutProvider<ProviderBillingService> sutProvider,
         Provider provider)
     {
+        provider.Type = ProviderType.Msp;
         provider.GatewaySubscriptionId = null;
 
         sutProvider.GetDependency<ISubscriberService>().GetCustomerOrThrow(provider).Returns(new Customer
@@ -1014,9 +1015,6 @@ public class ProviderBillingServiceTests
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id)
             .Returns(providerPlans);
 
-        var teamsPlan = StaticStore.GetPlan(PlanType.TeamsMonthly);
-        var enterprisePlan = StaticStore.GetPlan(PlanType.EnterpriseMonthly);
-
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
         sutProvider.GetDependency<IStripeAdapter>().SubscriptionCreateAsync(Arg.Is<SubscriptionCreateOptions>(
@@ -1026,9 +1024,9 @@ public class ProviderBillingServiceTests
                 sub.Customer == "customer_id" &&
                 sub.DaysUntilDue == 30 &&
                 sub.Items.Count == 2 &&
-                sub.Items.ElementAt(0).Price == teamsPlan.PasswordManager.StripeProviderPortalSeatPlanId &&
+                sub.Items.ElementAt(0).Price == ProviderPriceAdapter.MSP.Active.Teams &&
                 sub.Items.ElementAt(0).Quantity == 100 &&
-                sub.Items.ElementAt(1).Price == enterprisePlan.PasswordManager.StripeProviderPortalSeatPlanId &&
+                sub.Items.ElementAt(1).Price == ProviderPriceAdapter.MSP.Active.Enterprise &&
                 sub.Items.ElementAt(1).Quantity == 100 &&
                 sub.Metadata["providerId"] == provider.Id.ToString() &&
                 sub.OffSession == true &&

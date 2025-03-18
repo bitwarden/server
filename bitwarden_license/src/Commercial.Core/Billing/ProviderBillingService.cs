@@ -575,9 +575,11 @@ public class ProviderBillingService(
                 throw new BillingException();
             }
 
+            var priceId = ProviderPriceAdapter.GetActivePriceId(provider, providerPlan.PlanType);
+
             subscriptionItemOptionsList.Add(new SubscriptionItemOptions
             {
-                Price = plan.PasswordManager.StripeProviderPortalSeatPlanId,
+                Price = priceId,
                 Quantity = providerPlan.SeatMinimum
             });
         }
