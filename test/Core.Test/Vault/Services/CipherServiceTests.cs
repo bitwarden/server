@@ -931,7 +931,7 @@ public class CipherServiceTests
             null,
             true));
 
-        Assert.Contains("do not have permissions", exception.Message);
+        Assert.Contains("do not have permission", exception.Message);
     }
 
     [Theory]
