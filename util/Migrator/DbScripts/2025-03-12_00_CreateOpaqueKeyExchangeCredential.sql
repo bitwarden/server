@@ -25,7 +25,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Create]
     @CipherConfiguration VARCHAR(MAX),
     @CredentialBlob VARCHAR(MAX),
     @EncryptedPublicKey VARCHAR(MAX),
-    @EncryptedPrivateKey TINYINT,
+    @EncryptedPrivateKey VARCHAR(MAX),
     @EncryptedUserKey VARCHAR(MAX),
     @CreationDate DATETIME2(7)
 AS
