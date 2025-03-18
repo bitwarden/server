@@ -39,7 +39,6 @@ public class UpdatePhishingDomainsJob : BaseJob
             return;
         }
 
-        // Get the remote checksum
         var remoteChecksum = await _cloudPhishingDomainQuery.GetRemoteChecksumAsync();
         if (string.IsNullOrWhiteSpace(remoteChecksum))
         {
@@ -47,10 +46,8 @@ public class UpdatePhishingDomainsJob : BaseJob
             return;
         }
 
-        // Get the current checksum from the database
         var currentChecksum = await _phishingDomainRepository.GetCurrentChecksumAsync();
 
-        // Compare checksums to determine if update is needed
         if (string.Equals(currentChecksum, remoteChecksum, StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogInformation(Constants.BypassFiltersEventId,

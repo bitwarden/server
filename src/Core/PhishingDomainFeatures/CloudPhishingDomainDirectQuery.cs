@@ -80,12 +80,8 @@ public class CloudPhishingDomainDirectQuery : ICloudPhishingDomainQuery
 
         // Format is typically "hash *filename"
         var parts = checksumContent.Split(' ', 2);
-        if (parts.Length > 0)
-        {
-            return parts[0].Trim();
-        }
 
-        return string.Empty;
+        return parts.Length > 0 ? parts[0].Trim() : string.Empty;
     }
 
     private static List<string> ParseDomains(string content)

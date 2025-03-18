@@ -8,9 +8,9 @@ namespace Bit.Core.PhishingDomainFeatures;
 
 public class AzurePhishingDomainStorageService
 {
-    public const string ContainerName = "phishingdomains";
-    public const string DomainsFileName = "domains.txt";
-    public const string ChecksumFileName = "checksum.txt";
+    private const string _containerName = "phishingdomains";
+    private const string _domainsFileName = "domains.txt";
+    private const string _checksumFileName = "checksum.txt";
 
     private readonly BlobServiceClient _blobServiceClient;
     private readonly ILogger<AzurePhishingDomainStorageService> _logger;
@@ -28,28 +28,27 @@ public class AzurePhishingDomainStorageService
     {
         await InitAsync();
 
-        var blobClient = _containerClient.GetBlobClient(DomainsFileName);
+        var blobClient = _containerClient.GetBlobClient(_domainsFileName);
         if (!await blobClient.ExistsAsync())
         {
-            return new List<string>();
+            return [];
         }
 
         var response = await blobClient.DownloadAsync();
         using var streamReader = new StreamReader(response.Value.Content);
         var content = await streamReader.ReadToEndAsync();
 
-        return content
+        return [.. content
             .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith("#"))
-            .ToList();
+            .Where(line => !string.IsNullOrWhiteSpace(line) && !line.StartsWith('#'))];
     }
 
     public async Task<string> GetChecksumAsync()
     {
         await InitAsync();
 
-        var blobClient = _containerClient.GetBlobClient(ChecksumFileName);
+        var blobClient = _containerClient.GetBlobClient(_checksumFileName);
         if (!await blobClient.ExistsAsync())
         {
             return string.Empty;
@@ -64,32 +63,30 @@ public class AzurePhishingDomainStorageService
     {
         await InitAsync();
 
-        // Upload domains
         var domainsContent = string.Join(Environment.NewLine, domains);
         var domainsStream = new MemoryStream(Encoding.UTF8.GetBytes(domainsContent));
-        var domainsBlobClient = _containerClient.GetBlobClient(DomainsFileName);
+        var domainsBlobClient = _containerClient.GetBlobClient(_domainsFileName);
 
         await domainsBlobClient.UploadAsync(domainsStream, new BlobUploadOptions
         {
             HttpHeaders = new BlobHttpHeaders { ContentType = "text/plain" }
-        }, default);
+        }, CancellationToken.None);
 
-        // Upload checksum
         var checksumStream = new MemoryStream(Encoding.UTF8.GetBytes(checksum));
-        var checksumBlobClient = _containerClient.GetBlobClient(ChecksumFileName);
+        var checksumBlobClient = _containerClient.GetBlobClient(_checksumFileName);
 
         await checksumBlobClient.UploadAsync(checksumStream, new BlobUploadOptions
         {
             HttpHeaders = new BlobHttpHeaders { ContentType = "text/plain" }
-        }, default);
+        }, CancellationToken.None);
     }
 
     private async Task InitAsync()
     {
-        if (_containerClient == null)
+        if (_containerClient is null)
         {
-            _containerClient = _blobServiceClient.GetBlobContainerClient(ContainerName);
-            await _containerClient.CreateIfNotExistsAsync(PublicAccessType.None, null, null);
+            _containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            await _containerClient.CreateIfNotExistsAsync();
         }
     }
 }
