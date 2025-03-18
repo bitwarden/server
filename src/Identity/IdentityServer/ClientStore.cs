@@ -14,7 +14,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
 
 namespace Bit.Identity.IdentityServer;
 

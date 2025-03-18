@@ -50,7 +50,6 @@ using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
 using DnsClient;
-using IdentityModel;
 using LaunchDarkly.Sdk.Server;
 using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -282,9 +281,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPushNotificationService, MultiServicePushNotificationService>();
         if (globalSettings.SelfHosted)
         {
+            if (globalSettings.Installation.Id == Guid.Empty)
+            {
+                throw new InvalidOperationException("Installation Id must be set for self-hosted installations.");
+            }
+
             if (CoreHelpers.SettingHasValue(globalSettings.PushRelayBaseUri) &&
-                globalSettings.Installation?.Id != null &&
-                CoreHelpers.SettingHasValue(globalSettings.Installation?.Key))
+                CoreHelpers.SettingHasValue(globalSettings.Installation.Key))
             {
                 services.AddKeyedSingleton<IPushNotificationService, RelayPushNotificationService>("implementation");
                 services.AddSingleton<IPushRegistrationService, RelayPushRegistrationService>();
@@ -300,7 +303,7 @@ public static class ServiceCollectionExtensions
                 services.AddKeyedSingleton<IPushNotificationService, NotificationsApiPushNotificationService>("implementation");
             }
         }
-        else if (!globalSettings.SelfHosted)
+        else
         {
             services.AddSingleton<INotificationHubPool, NotificationHubPool>();
             services.AddSingleton<IPushRegistrationService, NotificationHubPushRegistrationService>();

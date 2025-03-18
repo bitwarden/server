@@ -288,12 +288,17 @@ public class TwoFactorController : Controller
         return response;
     }
 
+    /// <summary>
+    /// This endpoint is only used to set-up email two factor authentication.
+    /// </summary>
+    /// <param name="model">secret verification model</param>
+    /// <returns>void</returns>
     [HttpPost("send-email")]
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
         var user = await CheckAsync(model, false, true);
         model.ToUser(user);
-        await _userService.SendTwoFactorEmailAsync(user);
+        await _userService.SendTwoFactorEmailAsync(user, false);
     }
 
     [AllowAnonymous]

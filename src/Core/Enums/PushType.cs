@@ -28,6 +28,8 @@ public enum PushType : byte
     SyncOrganizationStatusChanged = 18,
     SyncOrganizationCollectionSettingChanged = 19,
 
-    SyncNotification = 20,
-    SyncNotificationStatus = 21
+    Notification = 20,
+    NotificationStatus = 21,
+
+    PendingSecurityTasks = 22
 }

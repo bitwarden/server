@@ -5,6 +5,7 @@ namespace Bit.Core.Billing.Models.Mail;
 
 public class TrialInitiationVerifyEmail : RegisterVerifyEmail
 {
+    public bool IsExistingUser { get; set; }
     /// <summary>
     /// See comment on <see cref="RegisterVerifyEmail"/>.<see cref="RegisterVerifyEmail.Url"/>
     /// </summary>
@@ -26,8 +27,18 @@ public class TrialInitiationVerifyEmail : RegisterVerifyEmail
     /// Currently we only support one product type at a time, despite Product being a collection.
     /// If we receive both PasswordManager and SecretsManager, we'll send the user to the PM trial route
     /// </summary>
-    private string Route =>
-        Product.Any(p => p == ProductType.PasswordManager)
-            ? "trial-initiation"
-            : "secrets-manager-trial-initiation";
+    private string Route
+    {
+        get
+        {
+            if (IsExistingUser)
+            {
+                return "create-organization";
+            }
+
+            return Product.Any(p => p == ProductType.PasswordManager)
+                ? "trial-initiation"
+                : "secrets-manager-trial-initiation";
+        }
+    }
 }

@@ -76,32 +76,29 @@
             }
             case ProviderType.MultiOrganizationEnterprise:
             {
-                @if (FeatureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises) && Model.Provider.Type == ProviderType.MultiOrganizationEnterprise)
-                {
-                    <div class="row">
-                        <div class="col-sm">
-                            <div class="mb-3">
-                                @{
-                                    var multiOrgPlans = new List<PlanType>
-                                    {
-                                        PlanType.EnterpriseAnnually,
-                                        PlanType.EnterpriseMonthly
-                                    };
-                                }
-                                <label asp-for="Plan" class="form-label"></label>
-                                <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
-                                    <option value="">--</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-sm">
-                            <div class="mb-3">
-                                <label asp-for="EnterpriseMinimumSeats" class="form-label"></label>
-                                <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
-                            </div>
+                <div class="row">
+                    <div class="col-sm">
+                        <div class="mb-3">
+                            @{
+                                var multiOrgPlans = new List<PlanType>
+                                {
+                                    PlanType.EnterpriseAnnually,
+                                    PlanType.EnterpriseMonthly
+                                };
+                            }
+                            <label asp-for="Plan" class="form-label"></label>
+                            <select class="form-control" asp-for="Plan" asp-items="Html.GetEnumSelectList(multiOrgPlans)">
+                                <option value="">--</option>
+                            </select>
                         </div>
                     </div>
-                }
+                    <div class="col-sm">
+                        <div class="mb-3">
+                            <label asp-for="EnterpriseMinimumSeats" class="form-label"></label>
+                            <input type="number" class="form-control" asp-for="EnterpriseMinimumSeats">
+                        </div>
+                    </div>
+                </div>
                 break;
             }
         }

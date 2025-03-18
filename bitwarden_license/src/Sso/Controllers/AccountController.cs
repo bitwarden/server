@@ -22,7 +22,6 @@ using Bit.Sso.Utilities;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Services;
 using Duende.IdentityServer.Stores;
-using IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

@@ -15,16 +15,12 @@ using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
-using Bit.Core.Billing.Services;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.UserKey;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
-using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
@@ -37,10 +33,8 @@ public class AccountsControllerTests : IDisposable
 {
 
     private readonly AccountsController _sut;
-    private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IPaymentService _paymentService;
     private readonly IUserService _userService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyService _policyService;
@@ -48,9 +42,6 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
     private readonly ITdeOffboardingPasswordCommand _tdeOffboardingPasswordCommand;
     private readonly IFeatureService _featureService;
-    private readonly ISubscriberService _subscriberService;
-    private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext;
 
     private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
     private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
@@ -70,16 +61,11 @@ public class AccountsControllerTests : IDisposable
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _providerUserRepository = Substitute.For<IProviderUserRepository>();
-        _paymentService = Substitute.For<IPaymentService>();
-        _globalSettings = new GlobalSettings();
         _policyService = Substitute.For<IPolicyService>();
         _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _tdeOffboardingPasswordCommand = Substitute.For<ITdeOffboardingPasswordCommand>();
         _featureService = Substitute.For<IFeatureService>();
-        _subscriberService = Substitute.For<ISubscriberService>();
-        _referenceEventService = Substitute.For<IReferenceEventService>();
-        _currentContext = Substitute.For<ICurrentContext>();
         _cipherValidator =
             Substitute.For<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
         _folderValidator =
@@ -93,20 +79,15 @@ public class AccountsControllerTests : IDisposable
                 IReadOnlyList<OrganizationUser>>>();
 
         _sut = new AccountsController(
-            _globalSettings,
             _organizationService,
             _organizationUserRepository,
             _providerUserRepository,
-            _paymentService,
             _userService,
             _policyService,
             _setInitialMasterPasswordCommand,
             _tdeOffboardingPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
-            _subscriberService,
-            _referenceEventService,
-            _currentContext,
             _cipherValidator,
             _folderValidator,
             _sendValidator,
@@ -134,29 +115,43 @@ public class AccountsControllerTests : IDisposable
     [Fact]
     public async Task PostEmailToken_ShouldInitiateEmailChange()
     {
+        // Arrange
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        var newEmail = "example@user.com";
+        const string newEmail = "example@user.com";
+        _userService.ValidateManagedUserDomainAsync(user, newEmail).Returns(IdentityResult.Success);
 
+        // Act
         await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
 
+        // Assert
         await _userService.Received(1).InitiateEmailChangeAsync(user, newEmail);
     }
 
     [Fact]
-    public async Task PostEmailToken_WithAccountDeprovisioningEnabled_WhenUserIsNotManagedByAnOrganization_ShouldInitiateEmailChange()
+    public async Task PostEmailToken_WhenValidateManagedUserDomainAsyncFails_ShouldReturnError()
     {
+        // Arrange
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
         ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(false);
-        var newEmail = "example@user.com";
 
-        await _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail });
+        const string newEmail = "example@user.com";
 
-        await _userService.Received(1).InitiateEmailChangeAsync(user, newEmail);
+        _userService.ValidateManagedUserDomainAsync(user, newEmail)
+            .Returns(IdentityResult.Failed(new IdentityError
+            {
+                Code = "TestFailure",
+                Description = "This is a test."
+            }));
+
+
+        // Act
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => _sut.PostEmailToken(new EmailTokenRequestModel { NewEmail = newEmail })
+        );
     }
 
     [Fact]
@@ -179,22 +174,6 @@ public class AccountsControllerTests : IDisposable
         await Assert.ThrowsAsync<BadRequestException>(
             () => _sut.PostEmailToken(new EmailTokenRequestModel())
         );
-    }
-
-    [Fact]
-    public async Task PostEmailToken_WithAccountDeprovisioningEnabled_WhenUserIsManagedByAnOrganization_ShouldThrowBadRequestException()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        ConfigureUserServiceToAcceptPasswordFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
-
-        var result = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostEmailToken(new EmailTokenRequestModel())
-        );
-
-        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
     }
 
     [Fact]
@@ -248,20 +227,6 @@ public class AccountsControllerTests : IDisposable
         );
     }
 
-    [Fact]
-    public async Task PostEmail_WithAccountDeprovisioningEnabled_WhenUserIsManagedByAnOrganization_ShouldThrowBadRequestException()
-    {
-        var user = GenerateExampleUser();
-        ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning).Returns(true);
-        _userService.IsManagedByAnyOrganizationAsync(user.Id).Returns(true);
-
-        var result = await Assert.ThrowsAsync<BadRequestException>(
-            () => _sut.PostEmail(new EmailRequestModel())
-        );
-
-        Assert.Equal("Cannot change emails for accounts owned by an organization. Contact your organization administrator for additional details.", result.Message);
-    }
 
     [Fact]
     public async Task PostVerifyEmail_ShouldSendEmailVerification()

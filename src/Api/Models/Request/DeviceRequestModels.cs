@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.NotificationHub;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;
@@ -34,6 +35,26 @@ public class DeviceRequestModel
         existingDevice.Type = Type.Value;
 
         return existingDevice;
+    }
+}
+
+public class WebPushAuthRequestModel
+{
+    [Required]
+    public string Endpoint { get; set; }
+    [Required]
+    public string P256dh { get; set; }
+    [Required]
+    public string Auth { get; set; }
+
+    public WebPushRegistrationData ToData()
+    {
+        return new WebPushRegistrationData
+        {
+            Endpoint = Endpoint,
+            P256dh = P256dh,
+            Auth = Auth
+        };
     }
 }
 
