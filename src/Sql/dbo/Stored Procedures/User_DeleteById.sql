@@ -29,7 +29,7 @@ BEGIN
     FROM
         [dbo].[OpaqueKeyExchangeCredential]
     WHERE
-        [UserId] = @UserId
+        [UserId] = @Id
 
     -- Delete WebAuthnCredentials
     DELETE
