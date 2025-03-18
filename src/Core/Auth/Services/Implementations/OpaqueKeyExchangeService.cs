@@ -7,7 +7,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
-using Bitwarden.OPAQUE;
+using Bitwarden.Opaque;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Core.Auth.Services;
