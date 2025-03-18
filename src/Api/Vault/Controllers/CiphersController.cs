@@ -16,6 +16,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Authorization.Permissions;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
@@ -708,13 +709,11 @@ public class CiphersController : Controller
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
+        var user = await _userService.GetUserByIdAsync(userId);
         var cipher = await GetByIdAsync(id, userId);
-        var collectionCiphers = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, cipher.Id);
-        var hasManagePermissionsForCipher = (await _collectionRepository.GetManyByUserIdAsync(userId))
-             .Where(c => c.OrganizationId == cipher.OrganizationId && c.Manage && collectionCiphers.Select(cc => cc.CollectionId).Contains(c.Id))
-             .ToDictionary(c => c.Id)?.Count > 0;
+        var canDelete = NormalCipherPermissions.CanDelete(user, cipher, null);
 
-        if (cipher == null || (!hasManagePermissionsForCipher && cipher.Type == Core.Vault.Enums.CipherType.SecureNote))
+        if (cipher == null || !canDelete)
         {
             throw new NotFoundException();
         }
