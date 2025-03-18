@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Api.Requests.Accounts;
 using Bit.Core.Billing.Models.Api.Requests.Organizations;
