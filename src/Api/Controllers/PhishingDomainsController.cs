@@ -1,11 +1,9 @@
 ﻿using Bit.Core.Repositories;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
 
 [Route("phishing-domains")]
-[Authorize("PhishingDomains")]
 public class PhishingDomainsController(IPhishingDomainRepository phishingDomainRepository) : Controller
 {
     [HttpGet]
