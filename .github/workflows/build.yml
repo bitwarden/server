@@ -55,38 +55,28 @@ jobs:
             base_path: ./util
           - project_name: Billing
             base_path: ./src
-            upload_artifact: true
           - project_name: Events
             base_path: ./src
-            upload_artifact: true
           - project_name: EventsProcessor
             base_path: ./src
-            upload_artifact: true
           - project_name: Icons
             base_path: ./src
-            upload_artifact: true
           - project_name: Identity
             base_path: ./src
-            upload_artifact: true
           - project_name: MsSql
             base_path: ./util
           - project_name: MsSqlMigratorUtility
             base_path: ./util
-            upload_artifact: true
           - project_name: Nginx
             base_path: ./util
           - project_name: Notifications
             base_path: ./src
-            upload_artifact: true
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            upload_artifact: true
           - project_name: Setup
             base_path: ./util
-            upload_artifact: true
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            upload_artifact: true
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
