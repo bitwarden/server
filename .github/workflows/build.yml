@@ -47,10 +47,8 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-            dotnet: true
           - project_name: Api
             base_path: ./src
-            dotnet: true
           - project_name: Attachments
             base_path: ./util
           - project_name: Billing
