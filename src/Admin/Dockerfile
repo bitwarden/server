@@ -5,6 +5,8 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
+ENV NODE_VERSION=16.20.2
+ENV NVM_DIR=/usr/local/nvm
 
 # Determine proper runtime value for .NET
 # We put the value in a file to be read by later layers.
@@ -24,10 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up Node
-ARG NODE_VERSION=16.20.2
-ENV NVM_DIR=/usr/local/nvm
 RUN mkdir -p $NVM_DIR
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash \
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
     && nvm install $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
