@@ -13,7 +13,7 @@ public class OpaqueRegistrationStartRequest
 
 public class CipherConfiguration
 {
-    static string OpaqueKe3Ristretto3DHArgonSuite = "OPAQUE_3_RISTRETTO255_OPRF_RISTRETTO255_KEGROUP_3DH_KEX_ARGON2ID13_KSF";
+    public static string OpaqueKe3Ristretto3DHArgonSuite = "OPAQUE_3_RISTRETTO255_OPRF_RISTRETTO255_KEGROUP_3DH_KEX_ARGON2ID13_KSF";
 
     [Required]
     public string CipherSuite { get; set; }
@@ -26,6 +26,7 @@ public class CipherConfiguration
         {
             return new Bitwarden.Opaque.CipherConfiguration
             {
+                OpaqueVersion = 3,
                 OprfCs = Bitwarden.Opaque.OprfCs.Ristretto255,
                 KeGroup = Bitwarden.Opaque.KeGroup.Ristretto255,
                 KeyExchange = Bitwarden.Opaque.KeyExchange.TripleDH,

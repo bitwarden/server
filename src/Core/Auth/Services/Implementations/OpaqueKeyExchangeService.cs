@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Opaque;
@@ -7,6 +8,8 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bitwarden.Opaque;
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -20,6 +23,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
     private readonly IDistributedCache _distributedCache;
     private readonly IUserRepository _userRepository;
+    private readonly byte[]? _defaultKdfHmacKey;
 
     const string REGISTER_SESSION_KEY = "opaque_register_session_{0}";
     const string LOGIN_SESSION_KEY = "opaque_login_session_{0}";
@@ -27,13 +31,22 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     public OpaqueKeyExchangeService(
         IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
         IDistributedCache distributedCache,
-        IUserRepository userRepository
+        IUserRepository userRepository,
+        GlobalSettings globalSettings
         )
     {
         _bitwardenOpaque = new BitwardenOpaqueServer();
         _opaqueKeyExchangeCredentialRepository = opaqueKeyExchangeCredentialRepository;
         _distributedCache = distributedCache;
         _userRepository = userRepository;
+        if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
+        {
+            _defaultKdfHmacKey = Encoding.UTF8.GetBytes(globalSettings.KdfDefaultHashKey);
+        }
+        else
+        {
+            _defaultKdfHmacKey = new byte[32];
+        }
     }
 
     public async Task<OpaqueRegistrationStartResponse> StartRegistration(byte[] request, User user, Models.Api.Request.Opaque.CipherConfiguration cipherConfiguration)
@@ -75,21 +88,38 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         var user = await _userRepository.GetByEmailAsync(email);
         if (user == null)
         {
-            // todo don't allow user enumeration
-            throw new InvalidOperationException("User not found");
+            user = new User();
+            user.Id = Guid.Empty;
         }
+
 
         var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
+        byte[]? serverSetup = null;
+        byte[]? serverRegistration = null;
+        Models.Api.Request.Opaque.CipherConfiguration? cipherConfiguration = null;
         if (credential == null)
         {
-            // generate fake credential
-            throw new InvalidOperationException("Credential not found");
+            using var hmac = new HMACSHA256(_defaultKdfHmacKey);
+            var hmacHash = hmac.ComputeHash(Encoding.ASCII.GetBytes(email));
+            (serverSetup, serverRegistration) = _bitwardenOpaque.SeededFakeRegistration(hmacHash);
+            cipherConfiguration = new Models.Api.Request.Opaque.CipherConfiguration
+            {
+                CipherSuite = Models.Api.Request.Opaque.CipherConfiguration.OpaqueKe3Ristretto3DHArgonSuite,
+                Argon2Parameters = new Argon2KsfParameters
+                {
+                    Memory = 0,
+                    Iterations = 0,
+                    Parallelism = 0
+                }
+            };
         }
-
-        var cipherConfiguration = JsonSerializer.Deserialize<Models.Api.Request.Opaque.CipherConfiguration>(credential.CipherConfiguration)!;
-        var credentialBlob = JsonSerializer.Deserialize<OpaqueKeyExchangeCredentialBlob>(credential.CredentialBlob)!;
-        var serverSetup = credentialBlob.ServerSetup;
-        var serverRegistration = credentialBlob.PasswordFile;
+        else
+        {
+            var credentialBlob = JsonSerializer.Deserialize<OpaqueKeyExchangeCredentialBlob>(credential.CredentialBlob)!;
+            serverSetup = credentialBlob.ServerSetup;
+            serverRegistration = credentialBlob.PasswordFile;
+            cipherConfiguration = JsonSerializer.Deserialize<Models.Api.Request.Opaque.CipherConfiguration>(credential.CipherConfiguration)!;
+        }
 
         var loginResponse = _bitwardenOpaque.StartLogin(cipherConfiguration.ToNativeConfiguration(), serverSetup, serverRegistration, request, user.Id.ToString());
         var sessionId = Guid.NewGuid();

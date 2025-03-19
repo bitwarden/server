@@ -82,7 +82,7 @@ public class AccountsController : Controller
             KdfIterations = AuthConstants.ARGON2_ITERATIONS.Default,
             KdfMemory = AuthConstants.ARGON2_MEMORY.Default,
             KdfParallelism = AuthConstants.ARGON2_PARALLELISM.Default,
-        }
+        },
     ];
 
     public AccountsController(
@@ -97,8 +97,8 @@ public class AccountsController : Controller
         IReferenceEventService referenceEventService,
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
-        IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
-        GlobalSettings globalSettings
+        GlobalSettings globalSettings,
+        IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository
         )
     {
         _currentContext = currentContext;
@@ -261,21 +261,21 @@ public class AccountsController : Controller
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (kdfInformation == null || user == null)
+        CipherConfiguration cipherConfiguration = null;
+
+        if (kdfInformation == null)
         {
             kdfInformation = GetDefaultKdf(model.Email);
-        }
-
-        var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
-        if (credential != null)
-        {
-            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<CipherConfiguration>(credential.CipherConfiguration)!);
+            cipherConfiguration = GetDefaultOpaqueCipherConfig(model.Email, kdfInformation);
         }
         else
         {
-            return new PreloginResponseModel(kdfInformation, null);
+            var user = await _userRepository.GetByEmailAsync(model.Email);
+            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
+            cipherConfiguration = JsonSerializer.Deserialize<CipherConfiguration>(credential.CipherConfiguration);
         }
+
+        return new PreloginResponseModel(kdfInformation, cipherConfiguration);
     }
 
     [HttpGet("webauthn/assertion-options")]
@@ -312,6 +312,56 @@ public class AccountsController : Controller
             // Find the default KDF value for this hash number
             var hashIndex = (int)(Math.Abs(hashNumber) % _defaultKdfResults.Count);
             return _defaultKdfResults[hashIndex];
+        }
+    }
+
+    private CipherConfiguration GetDefaultOpaqueCipherConfig(string email, UserKdfInformation kdfInformation)
+    {
+        if (_defaultKdfHmacKey == null)
+        {
+            return null;
+        }
+        else
+        {
+            var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+            using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
+            var hmacHash = hmac.ComputeHash(hmacMessage);
+            var hashHex = BitConverter.ToString(hmacHash).Replace("-", string.Empty).ToLowerInvariant();
+            var hashFirst8Bytes = hashHex.Substring(16, 16);
+            var hashNumber = long.Parse(hashFirst8Bytes, System.Globalization.NumberStyles.HexNumber);
+            if ((int)(Math.Abs(hashNumber) % 10) == 0)
+            {
+                if (kdfInformation.Kdf == KdfType.Argon2id)
+                {
+                    return new CipherConfiguration
+                    {
+                        CipherSuite = CipherConfiguration.OpaqueKe3Ristretto3DHArgonSuite,
+                        Argon2Parameters = new Argon2KsfParameters
+                        {
+                            Memory = kdfInformation.KdfMemory.Value * 1024,
+                            Iterations = kdfInformation.KdfIterations,
+                            Parallelism = kdfInformation.KdfParallelism.Value
+                        }
+                    };
+                }
+                else
+                {
+                    return new CipherConfiguration
+                    {
+                        CipherSuite = CipherConfiguration.OpaqueKe3Ristretto3DHArgonSuite,
+                        Argon2Parameters = new Argon2KsfParameters
+                        {
+                            Memory = 256 * 1024,
+                            Iterations = 1,
+                            Parallelism = 4,
+                        }
+                    };
+                }
+            }
+            else
+            {
+                return null;
+            }
         }
     }
 }
