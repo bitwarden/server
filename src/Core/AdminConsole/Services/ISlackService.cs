@@ -5,5 +5,7 @@ public interface ISlackService
     Task<string> GetChannelIdAsync(string token, string channelName);
     Task<List<string>> GetChannelIdsAsync(string token, List<string> channelNames);
     Task<string> GetDmChannelByEmailAsync(string token, string email);
-    Task SendSlackMessageByChannelId(string token, string message, string channelId);
+    string GetRedirectUrl(string redirectUrl);
+    Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId);
+    Task<string> ObtainTokenViaOAuth(string code, string redirectUrl);
 }

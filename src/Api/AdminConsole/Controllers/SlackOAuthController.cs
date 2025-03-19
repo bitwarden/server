@@ -1,29 +1,23 @@
-﻿using System.Text.Json;
-using Bit.Core.Settings;
+﻿using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("slack/oauth")]
-public class SlackOAuthController(
-    IHttpClientFactory httpClientFactory,
-    GlobalSettings globalSettings)
-    : Controller
+public class SlackOAuthController(ISlackService slackService) : Controller
 {
-    private readonly string _clientId = globalSettings.Slack.ClientId;
-    private readonly string _clientSecret = globalSettings.Slack.ClientSecret;
-    private readonly string _scopes = globalSettings.Slack.Scopes;
-    private readonly string _redirectUrl = globalSettings.Slack.RedirectUrl;
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient(HttpClientName);
-
-    public const string HttpClientName = "SlackOAuthContollerHttpClient";
-
     [HttpGet("redirect")]
     public IActionResult RedirectToSlack()
     {
-        string slackOAuthUrl = $"https://slack.com/oauth/v2/authorize?client_id={_clientId}&scope={_scopes}&redirect_uri={_redirectUrl}";
+        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback));
+        var redirectUrl = slackService.GetRedirectUrl(callbackUrl);
 
-        return Redirect(slackOAuthUrl);
+        if (string.IsNullOrEmpty(redirectUrl))
+        {
+            return BadRequest("Slack not currently supported.");
+        }
+
+        return Redirect(redirectUrl);
     }
 
     [HttpGet("callback")]
@@ -34,34 +28,20 @@ public class SlackOAuthController(
             return BadRequest("Missing code from Slack.");
         }
 
-        var tokenResponse = await _httpClient.PostAsync("https://slack.com/api/oauth.v2.access",
-            new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("client_id", _clientId),
-                new KeyValuePair<string, string>("client_secret", _clientSecret),
-                new KeyValuePair<string, string>("code", code),
-                new KeyValuePair<string, string>("redirect_uri", _redirectUrl)
-            }));
+        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback));
+        var token = await slackService.ObtainTokenViaOAuth(code, callbackUrl);
 
-        var responseBody = await tokenResponse.Content.ReadAsStringAsync();
-        var jsonDoc = JsonDocument.Parse(responseBody);
-        var root = jsonDoc.RootElement;
-
-        if (!root.GetProperty("ok").GetBoolean())
+        if (string.IsNullOrEmpty(token))
         {
-            return BadRequest($"OAuth failed: {root.GetProperty("error").GetString()}");
+            return BadRequest("Invalid response from Slack.");
         }
 
-        string botToken = root.GetProperty("access_token").GetString();
-        string teamId = root.GetProperty("team").GetProperty("id").GetString();
-
-        SaveTokenToDatabase(teamId, botToken);
-
+        SaveTokenToDatabase(token);
         return Ok("Slack OAuth successful. Your bot is now installed.");
     }
 
-    private void SaveTokenToDatabase(string teamId, string botToken)
+    private void SaveTokenToDatabase(string botToken)
     {
-        Console.WriteLine($"Stored bot token for team {teamId}: {botToken}");
+        Console.WriteLine($"Stored bot token for team: {botToken}");
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Context;
 using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
@@ -120,10 +121,18 @@ public class Startup
 
             services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
 
-            services.AddHttpClient(SlackService.HttpClientName);
-            services.AddSingleton<ISlackService, SlackService>();
+            if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
+                CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&
+                CoreHelpers.SettingHasValue(globalSettings.Slack.Scopes))
+            {
+                services.AddHttpClient(SlackService.HttpClientName);
+                services.AddSingleton<ISlackService, SlackService>();
+            }
+            else
+            {
+                services.AddSingleton<ISlackService, NoopSlackService>();
+            }
             services.AddSingleton<SlackEventHandler>();
-
             services.AddSingleton<IHostedService>(provider =>
                 new RabbitMqEventListenerService(
                     provider.GetRequiredService<SlackEventHandler>(),
@@ -131,6 +140,7 @@ public class Startup
                     globalSettings,
                     globalSettings.EventLogging.RabbitMq.SlackQueueName));
 
+            services.AddHttpClient(WebhookEventHandler.HttpClientName);
             services.AddSingleton<WebhookEventHandler>();
             services.AddSingleton<IHostedService>(provider =>
                 new RabbitMqEventListenerService(

@@ -20,7 +20,7 @@ public class SlackEventHandler(
 
         foreach (var configuration in configurations)
         {
-            await slackService.SendSlackMessageByChannelId(
+            await slackService.SendSlackMessageByChannelIdAsync(
                 configuration.Configuration.Token,
                 TemplateProcessor.ReplaceTokens(configuration.Template, eventMessage),
                 configuration.Configuration.ChannelId

@@ -27,6 +27,18 @@ public class SlackUserResponse : SlackApiResponse
     public SlackUser User { get; set; } = new();
 }
 
+public class SlackOAuthResponse : SlackApiResponse
+{
+    [JsonPropertyName("access_token")]
+    public string AccessToken { get; set; } = string.Empty;
+    public SlackTeam Team { get; set; } = new();
+}
+
+public class SlackTeam
+{
+    public string Id { get; set; } = string.Empty;
+}
+
 public class SlackChannel
 {
     public string Id { get; set; } = string.Empty;

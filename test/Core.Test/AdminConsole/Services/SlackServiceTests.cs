@@ -6,6 +6,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.MockedHttpClient;
 using NSubstitute;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Services;
 
@@ -195,6 +196,70 @@ public class SlackServiceTests
         Assert.Equal(dmChannelId, result);
     }
 
+
+    [Fact]
+    public void GetRedirectUrl_ReturnsCorrectUrl()
+    {
+        var sutProvider = GetSutProvider();
+        var ClientId = sutProvider.GetDependency<GlobalSettings>().Slack.ClientId;
+        var Scopes = sutProvider.GetDependency<GlobalSettings>().Slack.Scopes;
+        var redirectUrl = "https://example.com/callback";
+        var expectedUrl = $"https://slack.com/oauth/v2/authorize?client_id={ClientId}&scope={Scopes}&redirect_uri={redirectUrl}";
+        var result = sutProvider.Sut.GetRedirectUrl(redirectUrl);
+        Assert.Equal(expectedUrl, result);
+    }
+
+    [Fact]
+    public async Task ObtainTokenViaOAuth_ReturnsAccessToken_WhenSuccessful()
+    {
+        var sutProvider = GetSutProvider();
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            ok = true,
+            access_token = "test-access-token"
+        });
+
+        _handler.When("https://slack.com/api/oauth.v2.access")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(jsonResponse));
+
+        var result = await sutProvider.Sut.ObtainTokenViaOAuth("test-code", "https://example.com/callback");
+
+        Assert.Equal("test-access-token", result);
+    }
+
+    [Fact]
+    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenErrorResponse()
+    {
+        var sutProvider = GetSutProvider();
+        var jsonResponse = JsonSerializer.Serialize(new
+        {
+            ok = false,
+            error = "invalid_code"
+        });
+
+        _handler.When("https://slack.com/api/oauth.v2.access")
+            .RespondWith(HttpStatusCode.OK)
+            .WithContent(new StringContent(jsonResponse));
+
+        var result = await sutProvider.Sut.ObtainTokenViaOAuth("test-code", "https://example.com/callback");
+
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public async Task ObtainTokenViaOAuth_ReturnsEmptyString_WhenHttpCallFails()
+    {
+        var sutProvider = GetSutProvider();
+        _handler.When("https://slack.com/api/oauth.v2.access")
+            .RespondWith(HttpStatusCode.InternalServerError)
+            .WithContent(new StringContent(string.Empty));
+
+        var result = await sutProvider.Sut.ObtainTokenViaOAuth("test-code", "https://example.com/callback");
+
+        Assert.Equal(string.Empty, result);
+    }
+
     [Fact]
     public async Task SendSlackMessageByChannelId_Sends_Correct_Message()
     {
@@ -206,7 +271,7 @@ public class SlackServiceTests
             .RespondWith(HttpStatusCode.OK)
             .WithContent(new StringContent(string.Empty));
 
-        await sutProvider.Sut.SendSlackMessageByChannelId(_token, message, channelId);
+        await sutProvider.Sut.SendSlackMessageByChannelIdAsync(_token, message, channelId);
 
         Assert.Single(_handler.CapturedRequests);
         var request = _handler.CapturedRequests[0];

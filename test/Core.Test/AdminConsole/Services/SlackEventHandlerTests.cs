@@ -86,7 +86,7 @@ public class SlackEventHandlerTests
         var sutProvider = GetSutProvider(OneConfiguration());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
-        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelId(
+        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelIdAsync(
             Arg.Is(AssertHelper.AssertPropertyEqual(_token)),
             Arg.Is(AssertHelper.AssertPropertyEqual(
                 $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}")),
@@ -100,13 +100,13 @@ public class SlackEventHandlerTests
         var sutProvider = GetSutProvider(TwoConfigurations());
 
         await sutProvider.Sut.HandleEventAsync(eventMessage);
-        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelId(
+        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelIdAsync(
             Arg.Is(AssertHelper.AssertPropertyEqual(_token)),
             Arg.Is(AssertHelper.AssertPropertyEqual(
                 $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}")),
             Arg.Is(AssertHelper.AssertPropertyEqual(_channelId))
         );
-        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelId(
+        sutProvider.GetDependency<ISlackService>().Received(1).SendSlackMessageByChannelIdAsync(
             Arg.Is(AssertHelper.AssertPropertyEqual(_token2)),
             Arg.Is(AssertHelper.AssertPropertyEqual(
                 $"Date: {eventMessage.Date}, Type: {eventMessage.Type}, UserId: {eventMessage.UserId}")),
