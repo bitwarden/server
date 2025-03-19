@@ -220,7 +220,8 @@ public class OrganizationLicense : ILicense
                             !p.Name.Equals(nameof(Issued)) &&
                             !p.Name.Equals(nameof(Refresh))
                         )
-                    ))
+                    ) &&
+                    !p.Name.Equals(nameof(UseRiskInsights)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
