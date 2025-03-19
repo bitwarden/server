@@ -158,6 +158,147 @@ public class OrganizationMigrator(
 
     #endregion
 
+    #region Reverse
+
+    private async Task RemoveMigrationRecordAsync(Guid providerId, Organization organization)
+    {
+        logger.LogInformation("CB: Removing migration record for organization ({OrganizationID})", organization.Id);
+
+        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id);
+
+        if (migrationRecord != null)
+        {
+            await clientOrganizationMigrationRecordRepository.DeleteAsync(migrationRecord);
+
+            logger.LogInformation(
+                "CB: Removed migration record for organization ({OrganizationID})",
+                organization.Id);
+        }
+        else
+        {
+            logger.LogInformation("CB: Did not remove migration record for organization ({OrganizationID}) as it does not exist", organization.Id);
+        }
+
+        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id, ClientMigrationProgress.Reversed);
+    }
+
+    private async Task RecreateSubscriptionAsync(Guid providerId, Organization organization)
+    {
+        logger.LogInformation("CB: Recreating subscription for organization ({OrganizationID})", organization.Id);
+
+        if (!string.IsNullOrEmpty(organization.GatewaySubscriptionId))
+        {
+            if (string.IsNullOrEmpty(organization.GatewayCustomerId))
+            {
+                logger.LogError(
+                    "CB: Cannot recreate subscription for organization ({OrganizationID}) as it does not have a Stripe customer",
+                    organization.Id);
+
+                throw new Exception();
+            }
+
+            var customer = await stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId,
+                new CustomerGetOptions { Expand = ["default_source", "invoice_settings.default_payment_method"] });
+
+            var collectionMethod =
+                customer.DefaultSource != null ||
+                customer.InvoiceSettings?.DefaultPaymentMethod != null ||
+                customer.Metadata.ContainsKey(Utilities.BraintreeCustomerIdKey)
+                    ? StripeConstants.CollectionMethod.ChargeAutomatically
+                    : StripeConstants.CollectionMethod.SendInvoice;
+
+            var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            var items = new List<SubscriptionItemOptions>
+            {
+                new ()
+                {
+                    Price = plan.PasswordManager.StripeSeatPlanId,
+                    Quantity = organization.Seats
+                }
+            };
+
+            if (organization.MaxStorageGb.HasValue && plan.PasswordManager.BaseStorageGb.HasValue && organization.MaxStorageGb.Value > plan.PasswordManager.BaseStorageGb.Value)
+            {
+                var additionalStorage = organization.MaxStorageGb.Value - plan.PasswordManager.BaseStorageGb.Value;
+
+                items.Add(new SubscriptionItemOptions
+                {
+                    Price = plan.PasswordManager.StripeStoragePlanId,
+                    Quantity = additionalStorage
+                });
+            }
+
+            var subscriptionCreateOptions = new SubscriptionCreateOptions
+            {
+                AutomaticTax = new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                },
+                Customer = customer.Id,
+                CollectionMethod = collectionMethod,
+                DaysUntilDue = collectionMethod == StripeConstants.CollectionMethod.SendInvoice ? 30 : null,
+                Items = items,
+                Metadata = new Dictionary<string, string>
+                {
+                    [organization.GatewayIdField()] = organization.Id.ToString()
+                },
+                OffSession = true,
+                ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations,
+                TrialPeriodDays = plan.TrialPeriodDays
+            };
+
+            var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
+
+            organization.GatewaySubscriptionId = subscription.Id;
+
+            await organizationRepository.ReplaceAsync(organization);
+
+            logger.LogInformation("CB: Recreated subscription for organization ({OrganizationID})", organization.Id);
+        }
+        else
+        {
+            logger.LogInformation(
+                "CB: Did not recreate subscription for organization ({OrganizationID}) as it already exists",
+                organization.Id);
+        }
+
+        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
+            ClientMigrationProgress.RecreatedSubscription);
+    }
+
+    private async Task ReverseOrganizationUpdateAsync(Guid providerId, Organization organization)
+    {
+        var migrationRecord = await clientOrganizationMigrationRecordRepository.GetByOrganizationId(organization.Id);
+
+        if (migrationRecord == null)
+        {
+            logger.LogError(
+                "CB: Cannot reverse migration for organization ({OrganizationID}) as it does not have a migration record",
+                organization.Id);
+
+            throw new Exception();
+        }
+
+        var plan = await pricingClient.GetPlanOrThrow(migrationRecord.PlanType);
+
+        ResetOrganizationPlan(organization, plan);
+        organization.MaxStorageGb = migrationRecord.MaxStorageGb;
+        organization.ExpirationDate = migrationRecord.ExpirationDate;
+        organization.MaxAutoscaleSeats = migrationRecord.MaxAutoscaleSeats;
+        organization.Status = migrationRecord.Status;
+
+        await organizationRepository.ReplaceAsync(organization);
+
+        logger.LogInformation("CB: Reversed organization ({OrganizationID}) updates",
+            organization.Id);
+
+        await migrationTrackerCache.UpdateTrackingStatus(providerId, organization.Id,
+            ClientMigrationProgress.ResetOrganization);
+    }
+
+    #endregion
+
     #region Shared
 
     private static void ResetOrganizationPlan(Organization organization, Plan plan)
