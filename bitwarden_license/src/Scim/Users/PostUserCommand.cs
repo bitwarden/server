@@ -98,6 +98,16 @@ public class PostUserCommand(
 
         var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
 
+        if (result is Failure<ScimInviteOrganizationUsersResponse> failure)
+        {
+            if (failure.ErrorMessages.Count != 0)
+            {
+                throw new BadRequestException(failure.ErrorMessage);
+            }
+
+            return null;
+        }
+
         if (result is not Success<ScimInviteOrganizationUsersResponse> successfulResponse)
         {
             return null;
