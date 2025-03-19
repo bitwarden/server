@@ -51,6 +51,7 @@ public class DatabaseContext : DbContext
     public DbSet<Group> Groups { get; set; }
     public DbSet<GroupUser> GroupUsers { get; set; }
     public DbSet<Installation> Installations { get; set; }
+    public DbSet<Core.Auth.Entities.OpaqueKeyExchangeCredential> OpaqueKeyExchangeCredentials { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
@@ -106,6 +107,7 @@ public class DatabaseContext : DbContext
         var eSsoConfig = builder.Entity<SsoConfig>();
         var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
+        var eOpaqueCredential = builder.Entity<Core.Auth.Entities.OpaqueKeyExchangeCredential>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
@@ -122,6 +124,7 @@ public class DatabaseContext : DbContext
         eProvider.Property(c => c.Id).ValueGeneratedNever();
         eProviderUser.Property(c => c.Id).ValueGeneratedNever();
         eProviderOrganization.Property(c => c.Id).ValueGeneratedNever();
+        eOpaqueCredential.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
@@ -162,6 +165,7 @@ public class DatabaseContext : DbContext
         eProviderOrganization.ToTable(nameof(ProviderOrganization));
         eSsoConfig.ToTable(nameof(SsoConfig));
         eTaxRate.ToTable(nameof(TaxRate));
+        eOpaqueCredential.ToTable(nameof(Core.Auth.Entities.OpaqueKeyExchangeCredential));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
