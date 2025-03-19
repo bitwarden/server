@@ -710,8 +710,18 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
+        var user = await _userService.GetUserByIdAsync(userId);
 
-        if (cipher == null)
+        OrganizationAbility orgAbility = null;
+
+        if (cipher.OrganizationId.HasValue)
+        {
+            orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync((Guid)cipher.OrganizationId);
+        }
+
+        var canDelete = NormalCipherPermissions.CanDelete(user, cipher, orgAbility);
+
+        if (cipher == null || !canDelete)
         {
             throw new NotFoundException();
         }
@@ -781,7 +791,14 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
         var user = await _userService.GetUserByIdAsync(userId);
-        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value); //Clean thi sup later
+
+        OrganizationAbility orgAbility = null;
+
+        if (cipher.OrganizationId.HasValue)
+        {
+            orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync((Guid)cipher.OrganizationId);
+        }
+
         var canDelete = NormalCipherPermissions.CanDelete(user, cipher, orgAbility);
 
         if (cipher == null || !canDelete)
