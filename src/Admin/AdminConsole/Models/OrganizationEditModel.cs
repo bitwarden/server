@@ -22,13 +22,14 @@ public class OrganizationEditModel : OrganizationViewModel
 
     public OrganizationEditModel() { }
 
-    public OrganizationEditModel(Provider provider)
+    public OrganizationEditModel(Provider provider, List<Plan> plans)
     {
         Provider = provider;
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Billing.Enums.PlanType.TeamsMonthly;
         Plan = Core.Billing.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
         LicenseKey = RandomLicenseKey;
+        _plans = plans;
     }
 
     public OrganizationEditModel(
