@@ -1,4 +1,5 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreOrganizationUser;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +24,7 @@ public class UsersController : Controller
     private readonly IRemoveOrganizationUserCommand _removeOrganizationUserCommand;
     private readonly IPatchUserCommand _patchUserCommand;
     private readonly IPostUserCommand _postUserCommand;
+    private readonly IRestoreOrganizationUserCommand _restoreOrganizationUserCommand;
     private readonly ILogger<UsersController> _logger;
 
     public UsersController(
@@ -32,6 +34,7 @@ public class UsersController : Controller
         IRemoveOrganizationUserCommand removeOrganizationUserCommand,
         IPatchUserCommand patchUserCommand,
         IPostUserCommand postUserCommand,
+        IRestoreOrganizationUserCommand restoreOrganizationUserCommand,
         ILogger<UsersController> logger)
     {
         _organizationUserRepository = organizationUserRepository;
@@ -40,6 +43,7 @@ public class UsersController : Controller
         _removeOrganizationUserCommand = removeOrganizationUserCommand;
         _patchUserCommand = patchUserCommand;
         _postUserCommand = postUserCommand;
+        _restoreOrganizationUserCommand = restoreOrganizationUserCommand;
         _logger = logger;
     }
 
@@ -93,7 +97,7 @@ public class UsersController : Controller
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
+            await _restoreOrganizationUserCommand.RestoreUserAsync(orgUser, EventSystemUser.SCIM);
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
