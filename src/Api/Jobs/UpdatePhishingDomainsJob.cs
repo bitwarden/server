@@ -62,7 +62,7 @@ public class UpdatePhishingDomainsJob : BaseJob
 
         try
         {
-            var domains = await _cloudPhishingDomainQuery.GetPhishingDomainsAsync(); error WHITESPACE: Fix whitespace formatting
+            var domains = await _cloudPhishingDomainQuery.GetPhishingDomainsAsync();
             if (!domains.Contains("phishing.testcategory.com", StringComparer.OrdinalIgnoreCase))
             {
                 domains.Add("phishing.testcategory.com");
