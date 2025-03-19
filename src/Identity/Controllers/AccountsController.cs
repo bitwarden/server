@@ -1,10 +1,13 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Api.Request.Opaque;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.Registration;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
@@ -45,6 +48,7 @@ public class AccountsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
 
     private readonly byte[] _defaultKdfHmacKey = null;
     private static readonly List<UserKdfInformation> _defaultKdfResults =
@@ -93,6 +97,7 @@ public class AccountsController : Controller
         IReferenceEventService referenceEventService,
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
+        IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
         GlobalSettings globalSettings
         )
     {
@@ -107,6 +112,7 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _opaqueKeyExchangeCredentialRepository = opaqueKeyExchangeCredentialRepository;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
         {
@@ -255,11 +261,21 @@ public class AccountsController : Controller
     public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
     {
         var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (kdfInformation == null || user == null)
         {
             kdfInformation = GetDefaultKdf(model.Email);
         }
-        return new PreloginResponseModel(kdfInformation);
+
+        var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
+        if (credential != null)
+        {
+            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<CipherConfiguration>(credential.CipherConfiguration)!);
+        }
+        else
+        {
+            return new PreloginResponseModel(kdfInformation, null);
+        }
     }
 
     [HttpGet("webauthn/assertion-options")]

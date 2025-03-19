@@ -15,7 +15,6 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.TdeOffboardingPassword.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
@@ -58,7 +57,6 @@ public class AccountsController : Controller
         _organizationUserValidator;
     private readonly IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>>
         _webauthnKeyValidator;
-    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
 
 
     public AccountsController(
@@ -78,8 +76,7 @@ public class AccountsController : Controller
             emergencyAccessValidator,
         IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>, IReadOnlyList<OrganizationUser>>
             organizationUserValidator,
-        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator,
-        IOpaqueKeyExchangeService opaqueKeyExchangeService
+        IRotationValidator<IEnumerable<WebAuthnLoginRotateKeyRequestModel>, IEnumerable<WebAuthnLoginRotateKeyData>> webAuthnKeyValidator
         )
     {
         _organizationService = organizationService;
@@ -97,7 +94,6 @@ public class AccountsController : Controller
         _emergencyAccessValidator = emergencyAccessValidator;
         _organizationUserValidator = organizationUserValidator;
         _webauthnKeyValidator = webAuthnKeyValidator;
-        _opaqueKeyExchangeService = opaqueKeyExchangeService;
     }
 
 

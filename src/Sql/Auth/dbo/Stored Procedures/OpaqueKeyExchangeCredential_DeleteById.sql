@@ -1,5 +1,5 @@
 ﻿CREATE PROCEDURE [dbo].[OpaqueKeyExchangeCredential_DeleteById]
-    @Id UNIQUEIDENTIFIER,
+    @Id UNIQUEIDENTIFIER
 AS
 BEGIN
     DELETE
