@@ -35,14 +35,13 @@ public class ResetPasswordPolicyRequirementFactory : BasePolicyRequirementFactor
     {
         var result = policyDetails
             .Aggregate(
-                new ResetPasswordPolicyRequirement(),
+                new ResetPasswordPolicyRequirement() { AutoEnroll = [] },
                 (result, data) =>
                 {
                     var dataModel = data.GetDataModel<ResetPasswordDataModel>();
-
                     if (dataModel.AutoEnrollEnabled && !result.AutoEnroll.Any(orgId => orgId.Equals(data.OrganizationId)))
                     {
-                        result.AutoEnroll.Append(data.OrganizationId);
+                        return new ResetPasswordPolicyRequirement() { AutoEnroll = result.AutoEnroll.Append(data.OrganizationId) };
                     }
 
                     return result;
