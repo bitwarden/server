@@ -21,7 +21,6 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 using CipherType = Bit.Core.Vault.Enums.CipherType;
-using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Api.Test.Controllers;
 
@@ -234,108 +233,6 @@ public class CiphersControllerTests
         }
 
         await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(organization.Id);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutArchive_ShouldArchiveCipher(
-        Guid cipherId, User user, SutProvider<CiphersController> sutProvider)
-    {
-        // Arrange
-        var cipherDetails = new CipherDetails { Id = cipherId, UserId = user.Id };
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(user.Id);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).Returns(cipherDetails);
-
-        // Act
-        await sutProvider.Sut.PutArchive(cipherId);
-
-        // Assert
-        await sutProvider.GetDependency<ICipherService>().Received(1).ArchiveAsync(cipherDetails);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutArchiveMany_ShouldArchiveCipher(
-        CipherBulkArchiveRequestModel model, User user, SutProvider<CiphersController> sutProvider)
-    {
-        // Arrange
-        model.Ids = [Guid.NewGuid().ToString(), Guid.NewGuid().ToString()];
-        sutProvider.GetDependency<IUserService>().GetProperUserId(null).ReturnsForAnyArgs(user.Id);
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-
-        // Act
-        await sutProvider.Sut.PutArchiveMany(model);
-
-        // Assert
-        await sutProvider.GetDependency<ICipherService>()
-            .Received(1).ArchiveManyAsync(Arg.Any<IEnumerable<Guid>>(), user.Id);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutArchiveMany_ShouldNotArchiveCipher_Over500(
-        CipherBulkArchiveRequestModel model, User user, SutProvider<CiphersController> sutProvider)
-    {
-        // Arrange
-        var guid = Guid.NewGuid().ToString();
-        model.Ids = Enumerable.Repeat(guid, 501).ToList();
-        sutProvider.GetDependency<IUserService>().GetProperUserId(null).ReturnsForAnyArgs(user.Id);
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-
-        // Act/Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutArchiveMany(model));
-
-        // Assert
-        await sutProvider.GetDependency<ICipherService>()
-            .DidNotReceive().ArchiveManyAsync(Arg.Any<IEnumerable<Guid>>(), user.Id);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutUnarchive_ShouldUnarchiveCipher(
-        Guid cipherId, User user, SutProvider<CiphersController> sutProvider)
-    {
-        // Arrange
-        var cipherDetails = new CipherDetails { Id = cipherId, UserId = user.Id };
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).Returns(cipherDetails);
-
-        // Act
-        await sutProvider.Sut.PutUnarchive(cipherId);
-
-        // Assert
-        await sutProvider.GetDependency<ICipherService>().Received(1).UnarchiveAsync(cipherDetails);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutUnarchiveMany_ShouldUnarchiveCipher(
-        Guid cipherId, User user, SutProvider<CiphersController> sutProvider)
-    {
-        // Arrange
-        var cipherDetails = new CipherDetails { Id = cipherId, UserId = user.Id };
-        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
-        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, user.Id).Returns(cipherDetails);
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-
-        // Act
-        await sutProvider.Sut.PutUnarchive(cipherId);
-
-        // Assert
-        await sutProvider.GetDependency<ICipherService>().Received(1).UnarchiveAsync(cipherDetails);
-    }
-
-    [Theory, BitAutoData]
-    public async Task PutUnarchiveMany_ShouldNotUnarchiveCipher_Over500(
-        CipherBulkUnarchiveRequestModel model, User user, SutProvider<CiphersController> sutProvider)
-    {
-        // Arrange
-        var guid = Guid.NewGuid().ToString();
-        model.Ids = Enumerable.Repeat(guid, 501).ToList();
-        sutProvider.GetDependency<IUserService>().GetProperUserId(null).ReturnsForAnyArgs(user.Id);
-        sutProvider.GetDependency<GlobalSettings>().SelfHosted = false;
-
-        // Act/Assert
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PutUnarchiveMany(model));
-
-        // Assert
-        await sutProvider.GetDependency<ICipherService>()
-            .DidNotReceive().ArchiveManyAsync(Arg.Any<IEnumerable<Guid>>(), user.Id);
     }
 
     [Theory]
