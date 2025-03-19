@@ -19,7 +19,7 @@ public class ResetPasswordPolicyRequirement : IPolicyRequirement
     /// </summary>
     public bool AutoEnrollEnabled(Guid organizationId)
     {
-        return AutoEnroll.Any(orgId => orgId.Equals(organizationId));
+        return AutoEnroll.Contains(organizationId);
     }
 }
 
@@ -39,7 +39,7 @@ public class ResetPasswordPolicyRequirementFactory : BasePolicyRequirementFactor
                 (result, data) =>
                 {
                     var dataModel = data.GetDataModel<ResetPasswordDataModel>();
-                    if (dataModel.AutoEnrollEnabled && !result.AutoEnroll.Any(orgId => orgId.Equals(data.OrganizationId)))
+                    if (dataModel.AutoEnrollEnabled && !result.AutoEnroll.Contains(data.OrganizationId))
                     {
                         return new ResetPasswordPolicyRequirement() { AutoEnroll = result.AutoEnroll.Append(data.OrganizationId) };
                     }
