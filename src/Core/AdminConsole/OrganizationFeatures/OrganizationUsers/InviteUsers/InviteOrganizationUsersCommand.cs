@@ -37,6 +37,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     public const string IssueNotifyingOwnersOfSeatLimitReached = "Error encountered notifying organization owners of seat limit reached.";
     public const string FailedToInviteUsers = "Failed to invite user(s).";
     public const string NoUsersToInvite = "No users to invite.";
+    public const string InvalidResultType = "Invalid result type.";
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
     {
@@ -62,7 +63,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 });
 
             default:
-                return new Failure<ScimInviteOrganizationUsersResponse>("WAHT");
+                return new Failure<ScimInviteOrganizationUsersResponse>(InvalidResultType);
         }
     }
 

@@ -70,23 +70,27 @@ public class PostUserCommand(
 
         if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
         {
-            return await InviteScimOrganizationUserAsync(model, organization, scimProvider, hasStandaloneSecretsManager);
+            return await InviteScimOrganizationUserAsync(model, organization, scimProvider,
+                hasStandaloneSecretsManager);
         }
 
-        var invitedOrgUser = await organizationService.InviteUserAsync(organizationId, invitingUserId: null, EventSystemUser.SCIM,
+        var invitedOrgUser = await organizationService.InviteUserAsync(organizationId, invitingUserId: null,
+            EventSystemUser.SCIM,
             invite, externalId);
         var orgUser = await organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;
     }
 
-    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(ScimUserRequestModel model, Organization organization, ScimProviderType scimProvider, bool hasStandaloneSecretsManager)
+    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(ScimUserRequestModel model,
+        Organization organization, ScimProviderType scimProvider, bool hasStandaloneSecretsManager)
     {
         var plan = await pricingClient.GetPlan(organization.PlanType);
 
         if (plan == null)
         {
-            logger.LogError("Plan {planType} not found for organization {organizationId}", organization.PlanType, organization.Id);
+            logger.LogError("Plan {planType} not found for organization {organizationId}", organization.PlanType,
+                organization.Id);
             return null;
         }
 
@@ -98,24 +102,20 @@ public class PostUserCommand(
 
         var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
 
-        if (result is Failure<ScimInviteOrganizationUsersResponse> failure)
+        var invitedUserId = result switch
         {
-            if (failure.ErrorMessages.Count != 0)
-            {
-                throw new BadRequestException(failure.ErrorMessage);
-            }
+            Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.OrganizationId,
+            Failure<ScimInviteOrganizationUsersResponse> { ErrorMessage: InviteOrganizationUsersCommand.NoUsersToInvite } => (Guid?)null,
+            Failure<ScimInviteOrganizationUsersResponse> failure when failure.ErrorMessages.Count != 0 => throw new BadRequestException(failure.ErrorMessage),
+            _ => throw new InvalidOperationException()
+        };
 
-            return null;
-        }
+        var organizationUser = invitedUserId.HasValue
+            ? await organizationUserRepository.GetDetailsByIdAsync(invitedUserId.Value)
+            : null;
 
-        if (result is not Success<ScimInviteOrganizationUsersResponse> successfulResponse)
-        {
-            return null;
-        }
-
-        var invitedUser = await organizationUserRepository.GetDetailsByIdAsync(successfulResponse.Value.InvitedUser.Id);
-
-        return invitedUser;
-
+        return organizationUser;
     }
+
+
 }
