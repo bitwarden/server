@@ -32,7 +32,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.21.2" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.19.1" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
-    <PackageReference Include="Bitwarden.Opaque" Version="0.1.0-beta.2" />
+    <PackageReference Include="Bitwarden.Opaque" Version="0.1.0-beta.3" />
     <PackageReference Include="DuoUniversal" Version="1.2.5" />
     <PackageReference Include="DnsClient" Version="1.8.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
