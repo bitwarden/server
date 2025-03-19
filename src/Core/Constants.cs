@@ -126,6 +126,9 @@ public static class FeatureFlagKeys
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
 
+    /* Auth Team */
+    public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
+
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
