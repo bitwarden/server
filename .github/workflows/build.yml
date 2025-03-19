@@ -34,8 +34,8 @@ jobs:
       - name: Verify format
         run: dotnet format --verify-no-changes
 
-  build-docker:
-    name: Build Docker images
+  build-container:
+    name: Build container images
     runs-on: ubuntu-24.04
     needs: lint
     permissions:
@@ -112,8 +112,8 @@ jobs:
       - name: Log in to ACR - production subscription
         run: az acr login -n bitwardenprod
 
-      ########## Generate image tag and build Docker image ##########
-      - name: Generate Docker image tag
+      ########## Generate image tag and build container image ##########
+      - name: Generate container image tag
         id: tag
         run: |
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request_target" ]]; then
@@ -127,7 +127,7 @@ jobs:
           fi
 
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "### :mega: Docker Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "### :mega: Container Image Tag: $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
 
       - name: Set up project name
         id: setup
@@ -158,8 +158,8 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:buildcache" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image
-        id: build-docker
+      - name: Build Container image
+        id: build-container
         uses: docker/build-push-action@67a2d409c0a876cbe6b11854e3e25193efe4e62d # v6.12.0
         with:
           cache-from: type=registry,ref=${{ steps.cache-name.outputs.name }}
@@ -180,7 +180,7 @@ jobs:
       - name: Sign image with Cosign
         if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
         env:
-          DIGEST: ${{ steps.build-docker.outputs.digest }}
+          DIGEST: ${{ steps.build-container.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
         run: |
           IFS="," read -a tags <<< "${TAGS}"
@@ -190,7 +190,7 @@ jobs:
           done
           cosign sign --yes ${images}
 
-      - name: Scan Docker image
+      - name: Scan container image
         id: container-scan
         uses: anchore/scan-action@abae793926ec39a78ab18002bc7fc45bbbd94342 # v6.0.0
         with:
@@ -206,7 +206,7 @@ jobs:
   build-stub-swagger:
     name: Build Docker-Stub/Swagger
     runs-on: ubuntu-24.04
-    needs: build-docker
+    needs: build-container
     steps:
       - name: Check out repo
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -447,7 +447,7 @@ jobs:
       github.event_name != 'pull_request_target'
       && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc')
     runs-on: ubuntu-24.04
-    needs: build-docker
+    needs: build-container
     steps:
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -480,7 +480,7 @@ jobs:
     name: Trigger k8s deploy
     if: github.event_name != 'pull_request_target' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    needs: build-docker
+    needs: build-container
     steps:
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -516,7 +516,7 @@ jobs:
       github.event_name == 'pull_request_target'
       && contains(github.event.pull_request.labels.*.name, 'ephemeral-environment')
     runs-on: ubuntu-24.04
-    needs: build-docker
+    needs: build-container
     steps:
       - name: Log in to Azure - CI subscription
         uses: Azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.6.0
@@ -566,7 +566,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs:
       - lint
-      - build-docker
+      - build-container
       - build-stub-swagger
       - build-mssqlmigratorutility
       - self-host-build
