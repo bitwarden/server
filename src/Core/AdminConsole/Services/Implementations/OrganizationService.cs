@@ -115,7 +115,7 @@ public class OrganizationService : IOrganizationService
         IOrganizationBillingService organizationBillingService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
         IPricingClient pricingClient,
-    IPolicyRequirementQuery policyRequirementQuery)
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -1361,7 +1361,7 @@ public class OrganizationService : IOrganizationService
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
             var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId);
-            if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled)
+            if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
             }

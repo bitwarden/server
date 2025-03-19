@@ -170,21 +170,19 @@ public class OrganizationsController : Controller
 
         if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            var resetPasswordPolicy = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicy.AutoEnrollEnabled);
+            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id);
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, resetPasswordPolicyRequirement.AutoEnrollEnabled(organization.Id));
         }
-        else
-        {
-            var resetPasswordPolicy =
-            await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-            if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
-            {
-                return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
-            }
 
-            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
-            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+        var resetPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
+        if (resetPasswordPolicy == null || !resetPasswordPolicy.Enabled || resetPasswordPolicy.Data == null)
+        {
+            return new OrganizationAutoEnrollStatusResponseModel(organization.Id, false);
         }
+
+        var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
+        return new OrganizationAutoEnrollStatusResponseModel(organization.Id, data?.AutoEnrollEnabled ?? false);
+
     }
 
     [HttpPost("")]

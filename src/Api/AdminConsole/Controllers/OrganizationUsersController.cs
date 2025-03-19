@@ -320,12 +320,13 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements) ?
-         await ShouldHandleResetPasswordAsync_vNext(orgId, user.Id) : await ShouldHandleResetPasswordAsync(orgId);
+        var useMasterPasswordPolicy = _featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements)
+        ? (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id)).AutoEnrollEnabled(orgId)
+        : await ShouldHandleResetPasswordAsync(orgId);
 
         if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
         {
-            throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+            throw new BadRequestException("Master Password reset is required, but not provided.");
         }
 
         await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
@@ -351,18 +352,6 @@ public class OrganizationUsersController : Controller
                                           masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
 
         return useMasterPasswordPolicy;
-    }
-
-    private async Task<bool> ShouldHandleResetPasswordAsync_vNext(Guid orgId, Guid userId)
-    {
-        var organizationAbility = await _applicationCacheService.GetOrganizationAbilityAsync(orgId);
-
-        if (organizationAbility is not { UsePolicies: true })
-        {
-            return false;
-        }
-
-        return (await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId)).AutoEnrollEnabled;
     }
 
     [HttpPost("{id}/confirm")]

@@ -450,7 +450,7 @@ public class OrganizationUsersControllerTests
 
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
 
-        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnrollEnabled = true };
+        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnroll = [orgId] };
 
         policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
 
@@ -464,10 +464,10 @@ public class OrganizationUsersControllerTests
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
-        await applicationCacheService.Received(1).GetOrganizationAbilityAsync(orgId);
+        await applicationCacheService.Received(0).GetOrganizationAbilityAsync(orgId);
         await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
         await policyRequirementQuery.Received(1).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
-
+        Assert.True(policyRequirement.AutoEnrollEnabled(orgId));
     }
 
     [Theory]
@@ -494,7 +494,7 @@ public class OrganizationUsersControllerTests
 
         var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
 
-        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnrollEnabled = true };
+        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnroll = [orgId] };
 
         policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
 
@@ -509,10 +509,10 @@ public class OrganizationUsersControllerTests
             .UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
 
         await userService.Received(1).GetUserByPrincipalAsync(default);
-        await applicationCacheService.Received(1).GetOrganizationAbilityAsync(orgId);
+        await applicationCacheService.Received(0).GetOrganizationAbilityAsync(orgId);
         await policyRepository.Received(0).GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
         await policyRequirementQuery.Received(1).GetAsync<ResetPasswordPolicyRequirement>(user.Id);
 
-        Assert.Equal("The model state is invalid.", exception.Message);
+        Assert.Equal("Master Password reset is required, but not provided.", exception.Message);
     }
 }

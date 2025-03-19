@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 
@@ -9,24 +10,42 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements
 public class ResetPasswordPolicyRequirement : IPolicyRequirement
 {
     /// <summary>
-    /// Indicates that new members will automatically be enrolled in account recovery administration when joining an organization.
+    /// List of Organization Ids that require automatic enrollment in password recovery.
     /// </summary>
-    public bool AutoEnrollEnabled { get; init; }
+    public IEnumerable<Guid> AutoEnroll { get; init; }
+
+    /// <summary>
+    /// Returns true if provided organizationId requires automatic enrollment in password recovery.
+    /// </summary>
+    public bool AutoEnrollEnabled(Guid organizationId)
+    {
+        return AutoEnroll.Any(orgId => orgId.Equals(organizationId));
+    }
 }
 
 public class ResetPasswordPolicyRequirementFactory : BasePolicyRequirementFactory<ResetPasswordPolicyRequirement>
 {
     public override PolicyType PolicyType => PolicyType.ResetPassword;
 
+    protected override bool ExemptProviders => false;
+
+    protected override IEnumerable<OrganizationUserType> ExemptRoles => [];
+
     public override ResetPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = policyDetails
-            .Select(p => p.GetDataModel<ResetPasswordDataModel>())
             .Aggregate(
                 new ResetPasswordPolicyRequirement(),
-                (result, data) => new ResetPasswordPolicyRequirement
+                (result, data) =>
                 {
-                    AutoEnrollEnabled = result.AutoEnrollEnabled || data.AutoEnrollEnabled
+                    var dataModel = data.GetDataModel<ResetPasswordDataModel>();
+
+                    if (dataModel.AutoEnrollEnabled && !result.AutoEnroll.Any(orgId => orgId.Equals(data.OrganizationId)))
+                    {
+                        result.AutoEnroll.Append(data.OrganizationId);
+                    }
+
+                    return result;
                 });
 
         return result;
