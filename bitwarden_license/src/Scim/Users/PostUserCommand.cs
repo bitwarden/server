@@ -102,16 +102,16 @@ public class PostUserCommand(
 
         var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
 
-        var invitedUserId = result switch
+        var invitedOrganizationUserId = result switch
         {
-            Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.OrganizationId,
+            Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
             Failure<ScimInviteOrganizationUsersResponse> { ErrorMessage: InviteOrganizationUsersCommand.NoUsersToInvite } => (Guid?)null,
             Failure<ScimInviteOrganizationUsersResponse> failure when failure.ErrorMessages.Count != 0 => throw new BadRequestException(failure.ErrorMessage),
             _ => throw new InvalidOperationException()
         };
 
-        var organizationUser = invitedUserId.HasValue
-            ? await organizationUserRepository.GetDetailsByIdAsync(invitedUserId.Value)
+        var organizationUser = invitedOrganizationUserId.HasValue
+            ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
             : null;
 
         return organizationUser;
