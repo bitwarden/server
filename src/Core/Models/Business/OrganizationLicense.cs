@@ -55,6 +55,7 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+        UseRiskInsights = org.UseRiskInsights;
 
         // Deprecated. Left for backwards compatibility with old license versions.
         LimitCollectionCreationDeletion = org.LimitCollectionCreation || org.LimitCollectionDeletion;
@@ -143,6 +144,7 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool UseRiskInsights { get; set; }
 
     // Deprecated. Left for backwards compatibility with old license versions.
     public bool LimitCollectionCreationDeletion { get; set; } = true;
