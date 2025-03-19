@@ -1000,21 +1000,21 @@ public class CipherService : ICipherService
             return ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).ToList();
         }
 
-        var filteredCiphers = new List<T>();
         var user = await _userService.GetUserByIdAsync(userId);
-        var ciphersByOrg = ciphers.Where(c => cipherIdsSet.Contains(c.Id))
-            .GroupBy(c => c.OrganizationId);
         var organizationAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
 
-        foreach (var group in ciphersByOrg)
-        {
-            var organizationAbility = group.Key.HasValue &&
-                organizationAbilities.TryGetValue(group.Key.Value, out var ability) ?
-                ability : null;
+        var filteredCiphers = ciphers
+            .Where(c => cipherIdsSet.Contains(c.Id))
+            .GroupBy(c => c.OrganizationId)
+            .SelectMany(group =>
+            {
+                var organizationAbility = group.Key.HasValue &&
+                    organizationAbilities.TryGetValue(group.Key.Value, out var ability) ?
+                    ability : null;
 
-            filteredCiphers.AddRange(group
-                .Where(c => NormalCipherPermissions.CanDelete(user, c, organizationAbility)));
-        }
+                return group.Where(c => NormalCipherPermissions.CanDelete(user, c, organizationAbility));
+            })
+            .ToList();
 
         return filteredCiphers;
     }
