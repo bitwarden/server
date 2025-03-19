@@ -709,11 +709,9 @@ public class CiphersController : Controller
     public async Task Delete(Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var user = await _userService.GetUserByIdAsync(userId);
         var cipher = await GetByIdAsync(id, userId);
-        var canDelete = NormalCipherPermissions.CanDelete(user, cipher, null);
 
-        if (cipher == null || !canDelete)
+        if (cipher == null)
         {
             throw new NotFoundException();
         }
@@ -782,7 +780,11 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await GetByIdAsync(id, userId);
-        if (cipher == null)
+        var user = await _userService.GetUserByIdAsync(userId);
+        var orgAbility = await _applicationCacheService.GetOrganizationAbilityAsync(cipher.OrganizationId.Value); //Clean thi sup later
+        var canDelete = NormalCipherPermissions.CanDelete(user, cipher, orgAbility);
+
+        if (cipher == null || !canDelete)
         {
             throw new NotFoundException();
         }
