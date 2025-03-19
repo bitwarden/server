@@ -3,10 +3,13 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Billing.Services.Implementations;
 using Bit.Core.Enums;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.Billing.Stubs;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
@@ -1585,6 +1588,12 @@ public class SubscriberServiceTests
                 },
                 TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] }
             });
+
+        var subscription = new Subscription { Items = new StripeList<SubscriptionItem>() };
+        sutProvider.GetDependency<IStripeAdapter>().SubscriptionGetAsync(Arg.Any<string>())
+            .Returns(subscription);
+        sutProvider.GetDependency<IAutomaticTaxFactory>().CreateAsync(Arg.Any<AutomaticTaxFactoryParameters>())
+            .Returns(new FakeAutomaticTaxStrategy(true));
 
         await sutProvider.Sut.UpdateTaxInformation(provider, taxInformation);
 
