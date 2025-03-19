@@ -384,12 +384,7 @@ public class CiphersController : Controller
             var orgCiphers = (await _cipherRepository.GetManyByOrganizationIdAsync(organizationId)).ToDictionary(c => c.Id);
 
             // Ensure all requested ciphers are in orgCiphers
-            if (cipherIds.Any(c => !orgCiphers.ContainsKey(c)))
-            {
-                return false;
-            }
-
-            return true;
+            return cipherIds.All(c => orgCiphers.ContainsKey(c));
         }
 
         // The user cannot access any ciphers for the organization, we're done
@@ -419,12 +414,7 @@ public class CiphersController : Controller
             .Where(c => NormalCipherPermissions.CanDelete(user, c, organizationAbility))
             .ToDictionary(c => c.Id);
 
-        if (cipherIds.Any(c => !deletableOrgCiphers.ContainsKey(c)))
-        {
-            return false;
-        }
-
-        return true;
+        return cipherIds.All(c => deletableOrgCiphers.ContainsKey(c));
     }
 
     /// <summary>
