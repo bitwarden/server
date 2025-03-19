@@ -57,6 +57,11 @@ public class BusinessUseAutomaticTaxStrategy : IAutomaticTaxStrategy
             return false;
         }
 
-        return customer.Address.Country == "US";
+        if (customer.Address.Country == "US")
+        {
+            return true;
+        }
+
+        return customer.TaxIds != null && customer.TaxIds.Any();
     }
 }
