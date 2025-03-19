@@ -56,7 +56,7 @@ public class ImportCiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
         var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
-        await _importCiphersCommand.ImportIntoIndividualVaultAsync(folders, ciphers, model.FolderRelationships);
+        await _importCiphersCommand.ImportIntoIndividualVaultAsync(folders, ciphers, model.FolderRelationships, userId);
     }
 
     [HttpPost("import-organization")]
