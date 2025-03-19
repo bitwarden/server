@@ -26,6 +26,7 @@ public class CipherConfiguration
         {
             return new Bitwarden.Opaque.CipherConfiguration
             {
+                OpaqueVersion = 3,
                 OprfCs = Bitwarden.Opaque.OprfCs.Ristretto255,
                 KeGroup = Bitwarden.Opaque.KeGroup.Ristretto255,
                 KeyExchange = Bitwarden.Opaque.KeyExchange.TripleDH,
