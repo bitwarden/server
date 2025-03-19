@@ -405,51 +405,6 @@ public class CipherService : ICipherService
         return response;
     }
 
-    public async Task ArchiveAsync(Cipher cipher)
-    {
-        if (cipher.ArchivedDate.HasValue)
-        {
-            // Already archived, we can safely ignore this
-            return;
-        }
-
-        cipher.ArchivedDate = cipher.RevisionDate = DateTime.UtcNow;
-
-        if (cipher is CipherDetails details)
-        {
-            await _cipherRepository.UpsertAsync(details);
-        }
-        else
-        {
-            await _cipherRepository.UpsertAsync(cipher);
-        }
-        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Archived);
-
-        // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
-    }
-
-    public async Task ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId)
-    {
-        var cipherIdsSet = new HashSet<Guid>(cipherIds);
-        List<Cipher> archivingCiphers;
-
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(archivingUserId);
-        archivingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
-
-        await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
-
-        var events = archivingCiphers.Select(c =>
-            new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Archived, null));
-        foreach (var eventsBatch in events.Chunk(100))
-        {
-            await _eventService.LogCipherEventsAsync(eventsBatch);
-        }
-
-        // push
-        await _pushService.PushSyncCiphersAsync(archivingUserId);
-    }
-
     public async Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, deletingUserId)))
@@ -519,7 +474,7 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
-        await _eventService.LogOrganizationEventAsync(org, Bit.Core.Enums.EventType.Organization_PurgedVault);
+        await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
     public async Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId)
@@ -791,31 +746,6 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCiphersAsync(deletingUserId);
     }
 
-    public async Task UnarchiveAsync(Cipher cipher)
-    {
-        if (!cipher.ArchivedDate.HasValue)
-        {
-            // Already unarchived, we can safely ignore this
-            return;
-        }
-
-        cipher.ArchivedDate = null;
-        cipher.RevisionDate = DateTime.UtcNow;
-
-        if (cipher is CipherDetails details)
-        {
-            await _cipherRepository.UpsertAsync(details);
-        }
-        else
-        {
-            await _cipherRepository.UpsertAsync(cipher);
-        }
-        await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_Unarchived);
-
-        // push
-        await _pushService.PushSyncCipherUpdateAsync(cipher, null);
-    }
-
     public async Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false)
     {
         if (!orgAdmin && !(await UserCanEditAsync(cipher, restoringUserId)))
@@ -844,35 +774,6 @@ public class CipherService : ICipherService
 
         // push
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
-    }
-
-    public async Task UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId)
-    {
-        if (cipherIds == null || !cipherIds.Any())
-        {
-            return;
-        }
-
-        var cipherIdsSet = new HashSet<Guid>(cipherIds);
-
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(unarchivingUserId);
-        var restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
-
-        DateTime? revisionDate = await _cipherRepository.UnarchiveAsync(restoringCiphers.Select(c => c.Id), unarchivingUserId);
-
-        var events = restoringCiphers.Select(c =>
-        {
-            c.RevisionDate = revisionDate.Value;
-            c.ArchivedDate = null;
-            return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
-        });
-        foreach (var eventsBatch in events.Chunk(100))
-        {
-            await _eventService.LogCipherEventsAsync(eventsBatch);
-        }
-
-        // push
-        await _pushService.PushSyncCiphersAsync(unarchivingUserId);
     }
 
     public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
@@ -1041,6 +942,11 @@ public class CipherService : ICipherService
         if (!cipher.UserId.HasValue || cipher.UserId.Value != sharingUserId)
         {
             throw new BadRequestException("One or more ciphers do not belong to you.");
+        }
+
+        if (cipher.ArchivedDate.HasValue)
+        {
+            throw new BadRequestException("Cipher cannot be shared with organization because it is archived.");
         }
 
         var attachments = cipher.GetAttachments();
