@@ -740,6 +740,45 @@ public class HandlebarsMailService : IMailService
             var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
             writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
         });
+
+        // Construct markup for admin and owner email addresses.
+        // Using conditionals within the handlebar syntax was including extra spaces around
+        // concatenated strings, which this helper avoids.
+        Handlebars.RegisterHelper("formatAdminOwnerEmails", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            var emailList = ((IEnumerable<string>)parameters[0]).ToList();
+            if (emailList.Count == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            string constructAnchorElement(string email)
+            {
+                return $"<a style=\"color: #175DDC\" href=\"mailto:{email}\">{email}</a>";
+            }
+
+            var outputMessage = "This request was initiated by ";
+
+            if (emailList.Count == 1)
+            {
+                outputMessage += $"{constructAnchorElement(emailList[0])}.";
+            }
+            else
+            {
+                outputMessage += string.Join(", ", emailList.Take(emailList.Count - 1)
+                    .Select(email => constructAnchorElement(email)));
+                outputMessage += $", and {constructAnchorElement(emailList.Last())}.";
+            }
+
+            writer.WriteSafeString($"{outputMessage}");
+        });
     }
 
     public async Task SendEmergencyAccessInviteEmailAsync(EmergencyAccess emergencyAccess, string name, string token)
@@ -1201,7 +1240,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    public async Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons, IEnumerable<string> adminOwnerEmails)
     {
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
@@ -1210,6 +1249,7 @@ public class HandlebarsMailService : IMailService
             {
                 OrgName = orgName,
                 TaskCount = notification.TaskCount,
+                AdminOwnerEmails = adminOwnerEmails,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
             message.Category = "SecurityTasksNotification";

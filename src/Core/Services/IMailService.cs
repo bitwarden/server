@@ -99,5 +99,5 @@ public interface IMailService
         string organizationName);
     Task SendClaimedDomainUserEmailAsync(ManagedUserDomainClaimedEmails emailList);
     Task SendDeviceApprovalRequestedNotificationEmailAsync(IEnumerable<string> adminEmails, Guid organizationId, string email, string userName);
-    Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons);
+    Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons, IEnumerable<string> adminOwnerEmails);
 }
