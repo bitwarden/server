@@ -14,6 +14,7 @@ using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -22,6 +23,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using CsvHelper;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -41,7 +43,8 @@ public class ProviderBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     ITaxService taxService,
-    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy) : IProviderBillingService
+    [FromKeyedServices(AutomaticTaxFactory.BusinessUse)] IAutomaticTaxStrategy automaticTaxStrategy)
+    : IProviderBillingService
 {
     [RequireFeature(FeatureFlagKeys.P15179_AddExistingOrgsFromProviderPortal)]
     public async Task AddExistingOrganization(
@@ -602,7 +605,7 @@ public class ProviderBillingService(
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
 
-        await organizationAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
+        automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
 
         try
         {

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -25,8 +26,7 @@ public class SubscriberService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ITaxService taxService,
-    IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy,
-    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy) : ISubscriberService
+    IAutomaticTaxFactory automaticTaxFactory) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -666,9 +666,9 @@ public class SubscriberService(
         if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
         {
             var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
-            var automaticTaxOptions = subscriber.IsUser()
-                ? individualAutomaticTaxStrategy.GetUpdateOptions(subscription)
-                : await organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
+            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+            var automaticTaxOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
             if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
             {
                 await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, automaticTaxOptions);

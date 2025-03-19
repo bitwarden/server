@@ -2,6 +2,7 @@
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Services.Implementations.AutomaticTax;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -9,6 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Braintree;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 using Customer = Stripe.Customer;
@@ -26,7 +28,7 @@ public class PremiumUserBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     IUserRepository userRepository,
-    IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy) : IPremiumUserBillingService
+    [FromKeyedServices(AutomaticTaxFactory.PersonalUse)] IAutomaticTaxStrategy automaticTaxStrategy) : IPremiumUserBillingService
 {
     public async Task Credit(User user, decimal amount)
     {
@@ -332,7 +334,7 @@ public class PremiumUserBillingService(
             OffSession = true
         };
 
-        individualAutomaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
 
         var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

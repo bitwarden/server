@@ -228,8 +228,8 @@ public class RemoveOrganizationFromProviderCommandTests
             Id = "subscription_id"
         });
 
-        sutProvider.GetDependency<IOrganizationAutomaticTaxStrategy>()
-            .When(x => x.SetCreateOptionsAsync(
+        sutProvider.GetDependency<IAutomaticTaxStrategy>()
+            .When(x => x.SetCreateOptions(
                 Arg.Is<SubscriptionCreateOptions>(options =>
                     options.Customer == organization.GatewayCustomerId &&
                     options.CollectionMethod == StripeConstants.CollectionMethod.SendInvoice &&

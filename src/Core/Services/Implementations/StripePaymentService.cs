@@ -9,6 +9,7 @@ using Bit.Core.Billing.Models.Api.Responses;
 using Bit.Core.Billing.Models.Business;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -36,8 +37,7 @@ public class StripePaymentService : IPaymentService
     private readonly ITaxService _taxService;
     private readonly ISubscriberService _subscriberService;
     private readonly IPricingClient _pricingClient;
-    private readonly IIndividualAutomaticTaxStrategy _individualAutomaticTaxStrategy;
-    private readonly IOrganizationAutomaticTaxStrategy _organizationAutomaticTaxStrategy;
+    private readonly IAutomaticTaxFactory _automaticTaxFactory;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -49,8 +49,7 @@ public class StripePaymentService : IPaymentService
         ITaxService taxService,
         ISubscriberService subscriberService,
         IPricingClient pricingClient,
-        IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy,
-        IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy)
+        IAutomaticTaxFactory automaticTaxFactory)
     {
         _transactionRepository = transactionRepository;
         _logger = logger;
@@ -61,8 +60,7 @@ public class StripePaymentService : IPaymentService
         _taxService = taxService;
         _subscriberService = subscriberService;
         _pricingClient = pricingClient;
-        _individualAutomaticTaxStrategy = individualAutomaticTaxStrategy;
-        _organizationAutomaticTaxStrategy = organizationAutomaticTaxStrategy;
+        _automaticTaxFactory = automaticTaxFactory;
     }
 
     private async Task ChangeOrganizationSponsorship(
@@ -130,7 +128,9 @@ public class StripePaymentService : IPaymentService
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
-        await _organizationAutomaticTaxStrategy.SetUpdateOptionsAsync(subUpdateOptions, sub);
+        var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, sub.Items.Select(x => x.Price.Id));
+        var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
+        automaticTaxStrategy.SetUpdateOptions(subUpdateOptions, sub);
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
         {
@@ -821,9 +821,9 @@ public class StripePaymentService : IPaymentService
             {
                 var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
 
-                var subscriptionUpdateOptions = subscriber is User
-                    ? _individualAutomaticTaxStrategy.GetUpdateOptions(subscription)
-                    : await _organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription);
+                var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
+                var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
+                var subscriptionUpdateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
 
                 if (subscriptionUpdateOptions != null)
                 {

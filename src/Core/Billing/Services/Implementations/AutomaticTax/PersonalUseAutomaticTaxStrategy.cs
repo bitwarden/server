@@ -4,7 +4,7 @@ using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
 
-public class IndividualAutomaticTaxStrategy : IIndividualAutomaticTaxStrategy
+public class PersonalUseAutomaticTaxStrategy : IAutomaticTaxStrategy
 {
     public void SetCreateOptions(SubscriptionCreateOptions options, Customer customer)
     {

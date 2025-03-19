@@ -1018,8 +1018,8 @@ public class ProviderBillingServiceTests
 
         var expected = new Subscription { Id = "subscription_id", Status = StripeConstants.SubscriptionStatus.Active };
 
-        sutProvider.GetDependency<IOrganizationAutomaticTaxStrategy>()
-            .When(x => x.SetCreateOptionsAsync(
+        sutProvider.GetDependency<IAutomaticTaxStrategy>()
+            .When(x => x.SetCreateOptions(
                 Arg.Is<SubscriptionCreateOptions>(options =>
                     options.Customer == "customer_id")
                 , Arg.Is<Customer>(p => p == customer)))

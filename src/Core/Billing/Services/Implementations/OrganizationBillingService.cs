@@ -4,6 +4,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -31,7 +32,7 @@ public class OrganizationBillingService(
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
     ITaxService taxService,
-    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy) : IOrganizationBillingService
+    IAutomaticTaxFactory automaticTaxFactory) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -370,15 +371,6 @@ public class OrganizationBillingService(
             }
         }
 
-        var customerHasTaxInfo = customer is
-        {
-            Address:
-            {
-                Country: not null and not "",
-                PostalCode: not null and not ""
-            }
-        };
-
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
@@ -392,7 +384,9 @@ public class OrganizationBillingService(
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
-        await organizationAutomaticTaxStrategy.SetCreateOptionsAsync(subscriptionCreateOptions, customer);
+        var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriptionSetup.PlanType);
+        var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+        automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }

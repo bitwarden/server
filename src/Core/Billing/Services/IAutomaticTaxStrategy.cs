@@ -3,7 +3,7 @@ using Stripe;
 
 namespace Bit.Core.Billing.Services;
 
-public interface IIndividualAutomaticTaxStrategy
+public interface IAutomaticTaxStrategy
 {
     /// <summary>
     ///

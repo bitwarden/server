@@ -1,7 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,8 +21,7 @@ public class UpcomingInvoiceHandler(
     IStripeEventUtilityService stripeEventUtilityService,
     IUserRepository userRepository,
     IValidateSponsorshipCommand validateSponsorshipCommand,
-    IIndividualAutomaticTaxStrategy individualAutomaticTaxStrategy,
-    IOrganizationAutomaticTaxStrategy organizationAutomaticTaxStrategy)
+    IAutomaticTaxFactory automaticTaxFactory)
     : IUpcomingInvoiceHandler
 {
     public async Task HandleAsync(Event parsedEvent)
@@ -137,9 +136,9 @@ public class UpcomingInvoiceHandler(
 
     private async Task TryEnableAutomaticTaxAsync(Subscription subscription)
     {
-        var updateOptions = subscription.IsOrganization()
-            ? await organizationAutomaticTaxStrategy.GetUpdateOptionsAsync(subscription)
-            : individualAutomaticTaxStrategy.GetUpdateOptions(subscription);
+        var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscription.Items.Select(x => x.Price.Id));
+        var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+        var updateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
 
         if (updateOptions == null)
         {
