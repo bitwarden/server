@@ -7,6 +7,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityModel;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Infrastructure;
 using Microsoft.AspNetCore.Authentication;

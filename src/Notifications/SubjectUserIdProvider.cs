@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Duende.IdentityModel;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Bit.Notifications;
 

@@ -9,6 +9,7 @@ using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityModel;
 using Microsoft.AspNetCore.DataProtection;
 using Xunit;
 
