@@ -156,7 +156,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         return await _userRepository.GetByIdAsync(loginSession.UserId!)!;
     }
 
-    public async Task SetActive(Guid sessionId, User user)
+    public async Task SetRegistrationActiveForAccount(Guid sessionId, User user)
     {
         var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
         if (serializedRegisterSession == null)

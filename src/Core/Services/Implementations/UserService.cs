@@ -670,7 +670,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
             if (opaqueSessionId != null)
             {
-                await _opaqueKeyExchangeService.SetActive((Guid)opaqueSessionId, user);
+                await _opaqueKeyExchangeService.SetRegistrationActiveForAccount((Guid)opaqueSessionId, user);
             }
             else
             {

@@ -42,6 +42,13 @@ public class OpaqueKeyExchangeController : Controller
         await _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet);
     }
 
+    [Authorize("Web")]
+    [HttpPost("~/opaque/set-registration-active")]
+    public async void SetRegistrationActive([FromBody] OpaqueSetRegistrationActiveRequest request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        await _opaqueKeyExchangeService.SetRegistrationActiveForAccount(request.SessionId, user);
+    }
 
     // TODO: Remove and move to token endpoint
     [HttpPost("~/opaque/start-login")]

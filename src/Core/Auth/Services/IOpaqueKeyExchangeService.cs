@@ -62,7 +62,7 @@ public interface IOpaqueKeyExchangeService
     /// <param name="sessionId">cache value</param>
     /// <param name="user">user being acted on</param>
     /// <returns>void</returns>
-    public Task SetActive(Guid sessionId, User user);
+    public Task SetRegistrationActiveForAccount(Guid sessionId, User user);
     /// <summary>
     /// Removes the credential for the user.
     /// </summary>
