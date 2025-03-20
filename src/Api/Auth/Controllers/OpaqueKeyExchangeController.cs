@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("opaque")]
-[Authorize("Web")]
 public class OpaqueKeyExchangeController : Controller
 {
     private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
@@ -25,6 +24,7 @@ public class OpaqueKeyExchangeController : Controller
         _userService = userService;
     }
 
+    [Authorize("Web")]
     [HttpPost("~/opaque/start-registration")]
     public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync([FromBody] OpaqueRegistrationStartRequest request)
     {
@@ -34,6 +34,7 @@ public class OpaqueKeyExchangeController : Controller
     }
 
 
+    [Authorize("Web")]
     [HttpPost("~/opaque/finish-registration")]
     public async void FinishRegistrationAsync([FromBody] OpaqueRegistrationFinishRequest request)
     {
