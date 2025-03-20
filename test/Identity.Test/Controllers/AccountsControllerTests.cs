@@ -47,6 +47,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
     private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
+    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
     private readonly GlobalSettings _globalSettings;
 
 
@@ -64,6 +65,7 @@ public class AccountsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _registrationEmailVerificationTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>();
         _opaqueKeyExchangeCredentialRepository = Substitute.For<IOpaqueKeyExchangeCredentialRepository>();
+        _opaqueKeyExchangeService = Substitute.For<IOpaqueKeyExchangeService>();
         _globalSettings = Substitute.For<GlobalSettings>();
 
         _sut = new AccountsController(
@@ -79,6 +81,7 @@ public class AccountsControllerTests : IDisposable
             _featureService,
             _registrationEmailVerificationTokenDataFactory,
             _opaqueKeyExchangeCredentialRepository,
+            _opaqueKeyExchangeService,
             _globalSettings
         );
     }
