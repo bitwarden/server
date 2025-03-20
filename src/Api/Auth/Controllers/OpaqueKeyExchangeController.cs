@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Auth.Controllers;
 
 [Route("opaque")]
-[Authorize("Web")]
 public class OpaqueKeyExchangeController : Controller
 {
     private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
@@ -25,6 +24,7 @@ public class OpaqueKeyExchangeController : Controller
         _userService = userService;
     }
 
+    [Authorize("Web")]
     [HttpPost("~/opaque/start-registration")]
     public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync([FromBody] OpaqueRegistrationStartRequest request)
     {
@@ -34,6 +34,7 @@ public class OpaqueKeyExchangeController : Controller
     }
 
 
+    [Authorize("Web")]
     [HttpPost("~/opaque/finish-registration")]
     public async void FinishRegistrationAsync([FromBody] OpaqueRegistrationFinishRequest request)
     {
@@ -41,6 +42,13 @@ public class OpaqueKeyExchangeController : Controller
         await _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet);
     }
 
+    [Authorize("Web")]
+    [HttpPost("~/opaque/set-registration-active")]
+    public async void SetRegistrationActive([FromBody] OpaqueSetRegistrationActiveRequest request)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        await _opaqueKeyExchangeService.SetRegistrationActiveForAccount(request.SessionId, user);
+    }
 
     // TODO: Remove and move to token endpoint
     [HttpPost("~/opaque/start-login")]

@@ -35,14 +35,26 @@ public interface IOpaqueKeyExchangeService
     /// <returns>tuple(login SessionId for cache lookup, Server crypto material)</returns>
     public Task<(Guid, byte[])> StartLogin(byte[] request, string email);
     /// <summary>
-    /// Accepts the client's login request and validates it against the server's crypto material. If successful then the user is logged in.
+    /// Accepts the client's login request and validates it against the server's crypto material. If successful then the  session is marked as authenticated.
     /// If using a fake account we will return a standard failed login. If the account does have a legitimate credential but is still invalid
-    /// we will return a failed login.
+    /// the session is not marked as authenticated.
     /// </summary>
     /// <param name="sessionId"></param>
     /// <param name="finishCredential"></param>
     /// <returns></returns>
     public Task<bool> FinishLogin(Guid sessionId, byte[] finishCredential);
+    /// <summary>
+    /// Returns the user for the authentication session, or null if the session is invalid or has not yet finished authentication.
+    /// </summary>
+    /// <param name="sessionId"></param>
+    /// <returns></returns>
+    public Task<User> GetUserForAuthenticatedSession(Guid sessionId);
+    /// <summary>
+    /// Clears the authentication session from the cache.
+    /// </summary>
+    /// <param name="sessionId"></param>
+    /// <returns></returns>
+    public Task ClearAuthenticationSession(Guid sessionId);
     /// <summary>
     /// This is where registration really finishes. This method writes the Credential to the database. If a credential already exists then it will be removed before the new one is added.
     /// A user can only have one credential.
@@ -50,7 +62,7 @@ public interface IOpaqueKeyExchangeService
     /// <param name="sessionId">cache value</param>
     /// <param name="user">user being acted on</param>
     /// <returns>void</returns>
-    public Task SetActive(Guid sessionId, User user);
+    public Task SetRegistrationActiveForAccount(Guid sessionId, User user);
     /// <summary>
     /// Removes the credential for the user.
     /// </summary>

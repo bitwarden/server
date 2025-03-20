@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Opaque;
@@ -92,11 +93,13 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         var serverRegistration = credentialBlob.PasswordFile;
 
         var loginResponse = _bitwardenOpaque.StartLogin(cipherConfiguration.ToNativeConfiguration(), serverSetup, serverRegistration, request, user.Id.ToString());
-        var sessionId = Guid.NewGuid();
-        var loginSession = new OpaqueKeyExchangeLoginSession() {
+        var sessionId = MakeCryptoGuid();
+        var loginSession = new OpaqueKeyExchangeLoginSession()
+        {
             UserId = user.Id,
             LoginState = loginResponse.state,
-            CipherConfiguration = cipherConfiguration
+            CipherConfiguration = cipherConfiguration,
+            IsAuthenticated = false
         };
         await _distributedCache.SetAsync(string.Format(LOGIN_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)));
         return (sessionId, loginResponse.credentialResponse);
@@ -124,6 +127,8 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         try
         {
             var success = _bitwardenOpaque.FinishLogin(cipherConfiguration.ToNativeConfiguration(), loginState, credentialFinalization);
+            loginSession.IsAuthenticated = true;
+            await _distributedCache.SetAsync(string.Format(LOGIN_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)));
             return true;
         }
         catch (Exception e)
@@ -134,7 +139,24 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         }
     }
 
-    public async Task SetActive(Guid sessionId, User user)
+    public async Task<User?> GetUserForAuthenticatedSession(Guid sessionId)
+    {
+        var serializedLoginSession = await _distributedCache.GetAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
+        if (serializedLoginSession == null)
+        {
+            throw new InvalidOperationException("Session not found");
+        }
+        var loginSession = JsonSerializer.Deserialize<OpaqueKeyExchangeLoginSession>(Encoding.ASCII.GetString(serializedLoginSession))!;
+
+        if (!loginSession.IsAuthenticated)
+        {
+            throw new InvalidOperationException("Session not authenticated");
+        }
+
+        return await _userRepository.GetByIdAsync(loginSession.UserId!)!;
+    }
+
+    public async Task SetRegistrationActiveForAccount(Guid sessionId, User user)
     {
         var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
         if (serializedRegisterSession == null)
@@ -186,6 +208,23 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             await _opaqueKeyExchangeCredentialRepository.DeleteAsync(credential);
         }
     }
+
+    private static Guid MakeCryptoGuid()
+    {
+        // Get 16 cryptographically random bytes
+        byte[] data = RandomNumberGenerator.GetBytes(16);
+
+        // Mark it as a version 4 GUID
+        data[7] = (byte)((data[7] | (byte)0x40) & (byte)0x4f);
+        data[8] = (byte)((data[8] | (byte)0x80) & (byte)0xbf);
+
+        return new Guid(data);
+    }
+
+    public async Task ClearAuthenticationSession(Guid sessionId)
+    {
+        await _distributedCache.RemoveAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
+    }
 }
 
 public class OpaqueKeyExchangeRegisterSession
@@ -203,4 +242,5 @@ public class OpaqueKeyExchangeLoginSession
     public required Guid UserId { get; set; }
     public required byte[] LoginState { get; set; }
     public required OpaqueKeyExchangeCipherConfiguration CipherConfiguration { get; set; }
+    public required bool IsAuthenticated { get; set; }
 }
