@@ -5,6 +5,7 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Core.Auth.Models.Api.Response;
 
+// TODO: in order to support opaque decryption via export key, we must update this to have a new option for opaque
 public class UserDecryptionOptions : ResponseModel
 {
     public UserDecryptionOptions() : base("userDecryptionOptions")

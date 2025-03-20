@@ -15,6 +15,8 @@ namespace Bit.Core.Auth.Services;
 
 #nullable enable
 
+// TODO: feature flag this service
+// TODO: add test suite
 public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 {
     private readonly BitwardenOpaqueServer _bitwardenOpaque;
@@ -22,7 +24,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     private readonly IDistributedCache _distributedCache;
     private readonly IUserRepository _userRepository;
 
-    const string REGISTER_SESSION_KEY = "opaque_register_session_{0}";
+    const string REGISTRATION_SESSION_KEY = "opaque_register_session_{0}";
     const string LOGIN_SESSION_KEY = "opaque_login_session_{0}";
 
     public OpaqueKeyExchangeService(
@@ -41,16 +43,21 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     {
         var registrationRequest = _bitwardenOpaque.StartRegistration(cipherConfiguration.ToNativeConfiguration(), null, request, user.Id.ToString());
 
-        var sessionId = Guid.NewGuid();
-        var registerSession = new OpaqueKeyExchangeRegisterSession() { SessionId = sessionId, ServerSetup = registrationRequest.serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id };
-        await _distributedCache.SetAsync(string.Format(REGISTER_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registerSession)));
+        // We must persist the registration session state to the cache so we can have the server setup and cipher
+        // Ïconfiguration available when the client finishes registration.
+        var registrationSessionId = Guid.NewGuid();
+        var registrationSession = new OpaqueKeyExchangeRegistrationSession() { RegistrationSessionId = registrationSessionId, ServerSetup = registrationRequest.serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id };
 
-        return new OpaqueRegistrationStartResponse(sessionId, Convert.ToBase64String(registrationRequest.registrationResponse));
+        // TODO: We need to audit this approach to make sure it works for all our use cases. We probably need a timeout to avoid persisting this indefinitely.
+        await _distributedCache.SetAsync(string.Format(REGISTRATION_SESSION_KEY, registrationSessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registrationSession)));
+
+        return new OpaqueRegistrationStartResponse(registrationSessionId, Convert.ToBase64String(registrationRequest.registrationResponse));
     }
 
     public async Task FinishRegistration(Guid sessionId, byte[] registrationUpload, User user, RotateableOpaqueKeyset keyset)
     {
-        var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
+        // Look up the user's registration session
+        var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTRATION_SESSION_KEY, sessionId));
         if (serializedRegisterSession == null)
         {
             throw new InvalidOperationException("Session not found");
@@ -58,17 +65,26 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
         try
         {
-            var registerSession = JsonSerializer.Deserialize<OpaqueKeyExchangeRegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
-            var registrationFinish = _bitwardenOpaque.FinishRegistration(registerSession.CipherConfiguration.ToNativeConfiguration(), registrationUpload);
-            registerSession.PasswordFile = registrationFinish.serverRegistration;
-            registerSession.KeySet = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(keyset));
-            await _distributedCache.SetAsync(string.Format(REGISTER_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registerSession)));
+            // Deserialize the registration session and finish the registration
+            var registrationSession = JsonSerializer.Deserialize<OpaqueKeyExchangeRegistrationSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
+            var registrationFinish = _bitwardenOpaque.FinishRegistration(registrationSession.CipherConfiguration.ToNativeConfiguration(), registrationUpload);
+            // Save the keyset and password file to the registration session. In order to set their registration as
+            // active, clients must call SetRegistrationActive or the user must change their password
+            registrationSession.PasswordFile = registrationFinish.serverRegistration;
+            registrationSession.KeySet = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(keyset));
+            await _distributedCache.SetAsync(string.Format(REGISTRATION_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registrationSession)));
         }
         catch (Exception e)
         {
-            await _distributedCache.RemoveAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
+            // If anything goes wrong, we need to remove the session from the cache
+            await ClearRegistrationSession(sessionId);
             throw new Exception(e.Message);
         }
+    }
+
+    private async Task ClearRegistrationSession(Guid sessionId)
+    {
+        await _distributedCache.RemoveAsync(string.Format(REGISTRATION_SESSION_KEY, sessionId));
     }
 
     public async Task<(Guid, byte[])> StartLogin(byte[] request, string email)
@@ -76,7 +92,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         var user = await _userRepository.GetByEmailAsync(email);
         if (user == null)
         {
-            // todo don't allow user enumeration
+            // TODO: don't allow user enumeration
             throw new InvalidOperationException("User not found");
         }
 
@@ -122,7 +138,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
         var loginState = loginSession.LoginState;
         var cipherConfiguration = loginSession.CipherConfiguration;
-        await _distributedCache.RemoveAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
+        await ClearAuthenticationSession(sessionId);
 
         try
         {
@@ -158,12 +174,12 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
     public async Task SetRegistrationActiveForAccount(Guid sessionId, User user)
     {
-        var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTER_SESSION_KEY, sessionId));
+        var serializedRegisterSession = await _distributedCache.GetAsync(string.Format(REGISTRATION_SESSION_KEY, sessionId));
         if (serializedRegisterSession == null)
         {
             throw new InvalidOperationException("Session not found");
         }
-        var session = JsonSerializer.Deserialize<OpaqueKeyExchangeRegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
+        var session = JsonSerializer.Deserialize<OpaqueKeyExchangeRegistrationSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
 
         if (session.UserId != user.Id)
         {
@@ -196,6 +212,8 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             CreationDate = DateTime.UtcNow
         };
 
+        // Delete any existing registration and then enroll user with latest
+        // TODO: this could be a single atomic replace / upsert
         await Unenroll(user);
         await _opaqueKeyExchangeCredentialRepository.CreateAsync(credential);
     }
@@ -209,6 +227,10 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         }
     }
 
+    // TODO: evaluate if this should live in a utility class and/or under KM control
+    /// <summary>
+    /// Creates a genuinely random GUID as the login session IDs for opaque need to be cryptographically secure.
+    /// </summary>
     private static Guid MakeCryptoGuid()
     {
         // Get 16 cryptographically random bytes
@@ -227,9 +249,9 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     }
 }
 
-public class OpaqueKeyExchangeRegisterSession
+public class OpaqueKeyExchangeRegistrationSession
 {
-    public required Guid SessionId { get; set; }
+    public required Guid RegistrationSessionId { get; set; }
     public required byte[] ServerSetup { get; set; }
     public required OpaqueKeyExchangeCipherConfiguration CipherConfiguration { get; set; }
     public required Guid UserId { get; set; }

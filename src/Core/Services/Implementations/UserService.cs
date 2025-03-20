@@ -668,6 +668,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             user.Key = key;
             user.MasterPasswordHint = passwordHint;
 
+            // TODO: feature flag this
             if (opaqueSessionId != null)
             {
                 await _opaqueKeyExchangeService.SetRegistrationActiveForAccount((Guid)opaqueSessionId, user);

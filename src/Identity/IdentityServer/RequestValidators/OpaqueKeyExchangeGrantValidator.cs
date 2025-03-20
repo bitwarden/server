@@ -79,6 +79,10 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             return;
         }
 
+        // TODO: we need to validate that the email sent up is the same one pulled from the session
+        // TODO: discuss with Ike if pulling over existing AuthEmailHeaderIsValid logic from
+        // ResourceOwnerPasswordValidator is best or if we should should refactor in some way.
+
         await ValidateAsync(context, context.Request, new CustomValidatorRequestContext { User = user });
     }
 

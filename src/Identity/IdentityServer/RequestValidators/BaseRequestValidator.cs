@@ -431,6 +431,7 @@ public abstract class BaseRequestValidator<T> where T : class
     /// </summary>
     private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
     {
+        // TODO: update this builder to retrieve Opaque credentials by user id and build the OpaqueUserDecryptionOption
         var ssoConfig = await GetSsoConfigurationDataAsync(subject);
         return await UserDecryptionOptionsBuilder
             .ForUser(user)

@@ -292,6 +292,7 @@ public class AccountsController : Controller
         };
     }
 
+    // TODO: (1) This should be on own controller (2) reconcile this w/ start login on existing controller
     [HttpPost("opaque-ke/start-login")]
     [RequireFeature(FeatureFlagKeys.OpaqueKeyExchange)]
     public async Task<OpaqueLoginStartResponse> GetOpaqueKeyExchangeStartLoginMaterial([FromBody] OpaqueLoginStartRequest request)
