@@ -1,6 +1,6 @@
-###############################################
-#                 Build stage                 #
-###############################################
+# TODO: We need to build from source for multi-arch and self-contained
+# support until the base ghcr.io/bitwarden/server supports this, or our
+# workflows support building the base server image from a feature branch.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ENV PROJECT_NAME=Attachments
 ARG GIT_COMMIT

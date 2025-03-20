@@ -214,9 +214,9 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
-            OrganizationId = organization.Id,
             InitialSeatCount = initialSeatCount,
             CurrentSeatCount = organization.Seats.Value,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
@@ -229,8 +229,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -1103,8 +1103,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1118,8 +1118,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxServiceAccountsCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1201,21 +1201,22 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendBulkSecurityTaskNotificationsAsync(string orgName, IEnumerable<UserSecurityTasksCount> securityTaskNotificaitons)
+    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications)
     {
         MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
         {
-            var message = CreateDefaultMessage($"{orgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
+            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
             var model = new SecurityTaskNotificationViewModel
             {
-                OrgName = orgName,
+                OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
                 TaskCount = notification.TaskCount,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             };
             message.Category = "SecurityTasksNotification";
             return new MailQueueMessage(message, "SecurityTasksNotification", model);
         }
-        var messageModels = securityTaskNotificaitons.Select(CreateMessage);
+        var messageModels = securityTaskNotifications.Select(CreateMessage);
         await EnqueueMailAsync(messageModels.ToList());
     }
 
@@ -1223,4 +1224,11 @@ public class HandlebarsMailService : IMailService
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
+
+    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
+        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
+        {
+            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
+            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
+        };
 }

@@ -46,7 +46,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
 
-        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount);
+        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount);
 
         // Break securityTaskCiphers into separate lists by user Id
         var securityTaskCiphersByUser = securityTaskCiphers.GroupBy(x => x.UserId)
