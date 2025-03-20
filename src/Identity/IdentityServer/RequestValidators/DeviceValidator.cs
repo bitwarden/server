@@ -120,6 +120,13 @@ public class DeviceValidator(
             return DeviceValidationResultType.Success;
         }
 
+        // User is newly registered, so don't require new device verification
+        var createdSpan = DateTime.UtcNow - user.CreationDate;
+        if (createdSpan < TimeSpan.FromHours(24))
+        {
+            return DeviceValidationResultType.Success;
+        }
+
         // CS exception flow
         // Check cache for user information
         var cacheKey = string.Format(AuthConstants.NewDeviceVerificationExceptionCacheKeyFormat, user.Id.ToString());
@@ -243,6 +250,11 @@ public class DeviceValidator(
         var customResponse = new Dictionary<string, object>();
         switch (errorType)
         {
+            /* 
+             * The ErrorMessage is brittle and is used to control the flow in the clients. Do not change them without updating the client as well.
+             * There is a backwards compatibility issue as well: if you make a change on the clients then ensure that they are backwards
+             * compatible.
+             */
             case DeviceValidationResultType.InvalidUser:
                 result.ErrorDescription = "Invalid user";
                 customResponse.Add("ErrorModel", new ErrorResponseModel("invalid user"));

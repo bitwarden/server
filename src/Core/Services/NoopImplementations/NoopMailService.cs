@@ -5,6 +5,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Mail;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Services;
 
@@ -322,5 +323,9 @@ public class NoopMailService : IMailService
     {
         return Task.FromResult(0);
     }
-}
 
+    public Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails)
+    {
+        return Task.FromResult(0);
+    }
+}

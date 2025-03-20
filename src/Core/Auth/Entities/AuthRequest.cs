@@ -16,6 +16,12 @@ public class AuthRequest : ITableObject<Guid>
     public DeviceType RequestDeviceType { get; set; }
     [MaxLength(50)]
     public string RequestIpAddress { get; set; }
+    /// <summary>
+    /// This country name is populated through a header value fetched from the ISO-3166 country code.
+    /// It will always be the English short form of the country name. The length should never be over 200 characters.
+    /// </summary>
+    [MaxLength(200)]
+    public string RequestCountryName { get; set; }
     public Guid? ResponseDeviceId { get; set; }
     [MaxLength(25)]
     public string AccessCode { get; set; }

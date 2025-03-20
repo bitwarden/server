@@ -232,6 +232,11 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await SendMessageAsync(PushType.NotificationStatus, message, true);
     }
 
+    public async Task PushPendingSecurityTasksAsync(Guid userId)
+    {
+        await PushUserAsync(userId, PushType.PendingSecurityTasks);
+    }
+
     private async Task PushSendAsync(Send send, PushType type)
     {
         if (send.UserId.HasValue)

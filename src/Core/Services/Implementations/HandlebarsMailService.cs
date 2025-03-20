@@ -15,6 +15,7 @@ using Bit.Core.Models.Mail.Provider;
 using Bit.Core.SecretsManager.Models.Mail;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Models.Data;
 using HandlebarsDotNet;
 
 namespace Bit.Core.Services;
@@ -213,9 +214,9 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
-            OrganizationId = organization.Id,
             InitialSeatCount = initialSeatCount,
             CurrentSeatCount = organization.Seats.Value,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsAutoscaled", model);
@@ -228,8 +229,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSeatsMaxReached", model);
@@ -654,6 +655,10 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("TitleContactUsHtmlLayout", titleContactUsHtmlLayoutSource);
         var titleContactUsTextLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.text");
         Handlebars.RegisterTemplate("TitleContactUsTextLayout", titleContactUsTextLayoutSource);
+        var securityTasksHtmlLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.html");
+        Handlebars.RegisterTemplate("SecurityTasksHtmlLayout", securityTasksHtmlLayoutSource);
+        var securityTasksTextLayoutSource = await ReadSourceAsync("Layouts.SecurityTasks.text");
+        Handlebars.RegisterTemplate("SecurityTasksTextLayout", securityTasksTextLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
@@ -734,6 +739,45 @@ public class HandlebarsMailService : IMailService
 
             var clickTrackingText = (clickTrackingOff ? "clicktracking=off" : string.Empty);
             writer.WriteSafeString($"<a href=\"{href}\" target=\"_blank\" {clickTrackingText}>{text}</a>");
+        });
+
+        // Construct markup for admin and owner email addresses.
+        // Using conditionals within the handlebar syntax was including extra spaces around
+        // concatenated strings, which this helper avoids.
+        Handlebars.RegisterHelper("formatAdminOwnerEmails", (writer, context, parameters) =>
+        {
+            if (parameters.Length == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            var emailList = ((IEnumerable<string>)parameters[0]).ToList();
+            if (emailList.Count == 0)
+            {
+                writer.WriteSafeString(string.Empty);
+                return;
+            }
+
+            string constructAnchorElement(string email)
+            {
+                return $"<a style=\"color: #175DDC\" href=\"mailto:{email}\">{email}</a>";
+            }
+
+            var outputMessage = "This request was initiated by ";
+
+            if (emailList.Count == 1)
+            {
+                outputMessage += $"{constructAnchorElement(emailList[0])}.";
+            }
+            else
+            {
+                outputMessage += string.Join(", ", emailList.Take(emailList.Count - 1)
+                    .Select(email => constructAnchorElement(email)));
+                outputMessage += $", and {constructAnchorElement(emailList.Last())}.";
+            }
+
+            writer.WriteSafeString($"{outputMessage}");
         });
     }
 
@@ -1098,8 +1142,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxSeatCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
@@ -1113,8 +1157,8 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"{organization.DisplayName()} Secrets Manager Machine Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
-            OrganizationId = organization.Id,
             MaxServiceAccountsCount = maxSeatCount,
+            VaultSubscriptionUrl = GetCloudVaultSubscriptionUrl(organization.Id)
         };
 
         await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
@@ -1196,9 +1240,35 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendBulkSecurityTaskNotificationsAsync(Organization org, IEnumerable<UserSecurityTasksCount> securityTaskNotifications, IEnumerable<string> adminOwnerEmails)
+    {
+        MailQueueMessage CreateMessage(UserSecurityTasksCount notification)
+        {
+            var sanitizedOrgName = CoreHelpers.SanitizeForEmail(org.DisplayName(), false);
+            var message = CreateDefaultMessage($"{sanitizedOrgName} has identified {notification.TaskCount} at-risk password{(notification.TaskCount.Equals(1) ? "" : "s")}", notification.Email);
+            var model = new SecurityTaskNotificationViewModel
+            {
+                OrgName = CoreHelpers.SanitizeForEmail(sanitizedOrgName, false),
+                TaskCount = notification.TaskCount,
+                AdminOwnerEmails = adminOwnerEmails,
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+            };
+            message.Category = "SecurityTasksNotification";
+            return new MailQueueMessage(message, "SecurityTasksNotification", model);
+        }
+        var messageModels = securityTaskNotifications.Select(CreateMessage);
+        await EnqueueMailAsync(messageModels.ToList());
+    }
+
     private static string GetUserIdentifier(string email, string userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
-}
 
+    private string GetCloudVaultSubscriptionUrl(Guid organizationId)
+        => _globalSettings.BaseServiceUri.CloudRegion?.ToLower() switch
+        {
+            "eu" => $"https://vault.bitwarden.eu/#/organizations/{organizationId}/billing/subscription",
+            _ => $"https://vault.bitwarden.com/#/organizations/{organizationId}/billing/subscription"
+        };
+}

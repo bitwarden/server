@@ -5,13 +5,13 @@ namespace Bit.Core.Billing.Models.Api.Requests.Accounts;
 public class PreviewIndividualInvoiceRequestBody
 {
     [Required]
-    public PasswordManagerRequestModel PasswordManager { get; set; }
+    public IndividualPasswordManagerRequestModel PasswordManager { get; set; }
 
     [Required]
     public TaxInformationRequestModel TaxInformation { get; set; }
 }
 
-public class PasswordManagerRequestModel
+public class IndividualPasswordManagerRequestModel
 {
     [Range(0, int.MaxValue)]
     public int AdditionalStorage { get; set; }
