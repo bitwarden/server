@@ -221,7 +221,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         return new Guid(data);
     }
 
-    public async Task ClearAuthenticatedSession(Guid sessionId)
+    public async Task ClearAuthenticationSession(Guid sessionId)
     {
         await _distributedCache.RemoveAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
     }

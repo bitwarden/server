@@ -100,7 +100,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             identityProvider: Constants.IdentityProvider,
             claims: claims.Count > 0 ? claims : null,
             customResponse: customResponse);
-        await opaqueKeyExchangeService.ClearAuthenticatedSession(Guid.Parse(context.Request.Raw.Get("sessionId")));
+        await opaqueKeyExchangeService.ClearAuthenticationSession(Guid.Parse(context.Request.Raw.Get("sessionId")));
     }
 
     protected override ClaimsPrincipal GetSubject(ExtensionGrantValidationContext context)
