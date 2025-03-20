@@ -12,10 +12,9 @@ public class InviteOrganizationUserRequestTests
 {
     [Theory]
     [BitAutoData]
-    public void Create_WhenPassedInvalidEmail_ThrowsException(string email,
-        OrganizationUserType type, Permissions permissions, bool accessSecretsManager)
+    public void Create_WhenPassedInvalidEmail_ThrowsException(string email, OrganizationUserType type, Permissions permissions)
     {
-        var action = () => new OrganizationUserSingleEmailInvite(email, [], type, permissions, accessSecretsManager);
+        var action = () => new OrganizationUserSingleEmailInvite(email, [], type, permissions);
 
         var exception = Assert.Throws<BadRequestException>(action);
 
@@ -24,13 +23,13 @@ public class InviteOrganizationUserRequestTests
 
     [Theory]
     [BitAutoData]
-    public void Create_WhenPassedInvalidCollectionAccessConfiguration_ThrowsException(OrganizationUserType type, Permissions permissions, bool accessSecretsManager)
+    public void Create_WhenPassedInvalidCollectionAccessConfiguration_ThrowsException(OrganizationUserType type, Permissions permissions)
     {
         var validEmail = "test@email.com";
 
         var invalidCollectionConfiguration = new CollectionAccessSelection { Manage = true, HidePasswords = true };
 
-        var action = () => new OrganizationUserSingleEmailInvite(validEmail, [invalidCollectionConfiguration], type, permissions, accessSecretsManager);
+        var action = () => new OrganizationUserSingleEmailInvite(validEmail, [invalidCollectionConfiguration], type, permissions);
 
         var exception = Assert.Throws<BadRequestException>(action);
 
@@ -39,12 +38,12 @@ public class InviteOrganizationUserRequestTests
 
     [Theory]
     [BitAutoData]
-    public void Create_WhenPassedValidArguments_ReturnsInvite(OrganizationUserType type, Permissions permissions, bool accessSecretsManager)
+    public void Create_WhenPassedValidArguments_ReturnsInvite(OrganizationUserType type, Permissions permissions)
     {
         const string validEmail = "test@email.com";
         var validCollectionConfiguration = new CollectionAccessSelection { Id = Guid.NewGuid(), Manage = true };
 
-        var invite = new OrganizationUserSingleEmailInvite(validEmail, [validCollectionConfiguration], type, permissions, accessSecretsManager);
+        var invite = new OrganizationUserSingleEmailInvite(validEmail, [validCollectionConfiguration], type, permissions);
 
         Assert.NotNull(invite);
         Assert.Equal(validEmail, invite.Email);

@@ -44,7 +44,6 @@ public class InviteOrganizationUserCommandTests
         var organizationDto = new InviteOrganization(organization);
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
-            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -93,7 +92,6 @@ public class InviteOrganizationUserCommandTests
         var organizationDto = new InviteOrganization(organization);
 
         var request = new OrganizationUserSingleEmailInvite(orgUser.Email,
-            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -146,7 +144,6 @@ public class InviteOrganizationUserCommandTests
         var organizationDto = new InviteOrganization(organization);
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
-            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -201,7 +198,6 @@ public class InviteOrganizationUserCommandTests
         var organizationDto = new InviteOrganization(organization);
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
-            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -259,7 +255,6 @@ public class InviteOrganizationUserCommandTests
         var organizationDto = new InviteOrganization(organization);
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
-            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);
@@ -322,7 +317,6 @@ public class InviteOrganizationUserCommandTests
         var organizationDto = new InviteOrganization(organization);
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
-            true,
             organizationDto,
             timeProvider.GetUtcNow(),
             externalId);

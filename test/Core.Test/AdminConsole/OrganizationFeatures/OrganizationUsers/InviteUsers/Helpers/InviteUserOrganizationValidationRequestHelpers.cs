@@ -14,7 +14,7 @@ public static class InviteUserOrganizationValidationRequestHelpers
             Invites =
             [
                 OrganizationUserInviteDto.Create(request.Email,
-                    OrganizationUserInvite.Create(request), inviteOrganization.OrganizationId)
+                    OrganizationUserInvite.Create(request, inviteOrganization.UseSecretsManager), inviteOrganization.OrganizationId)
             ],
             InviteOrganization = inviteOrganization,
             PerformedBy = Guid.Empty,
