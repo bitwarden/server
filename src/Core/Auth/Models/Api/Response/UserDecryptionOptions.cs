@@ -5,7 +5,6 @@ using Bit.Core.Models.Api;
 
 namespace Bit.Core.Auth.Models.Api.Response;
 
-// TODO: in order to support opaque decryption via export key, we must update this to have a new option for opaque
 public class UserDecryptionOptions : ResponseModel
 {
     public UserDecryptionOptions() : base("userDecryptionOptions")
@@ -30,10 +29,16 @@ public class UserDecryptionOptions : ResponseModel
     public TrustedDeviceUserDecryptionOption? TrustedDeviceOption { get; set; }
 
     /// <summary>
-    /// Gets or set information about the current users KeyConnector setup.
+    /// Gets or sets information about the current users KeyConnector setup.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public KeyConnectorUserDecryptionOption? KeyConnectorOption { get; set; }
+
+    /// <summary>
+    /// Gets or sets information about the current OPAQUE setup.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public OpaqueUserDecryptionOption? OpaqueOption { get; set; }
 }
 
 public class WebAuthnPrfDecryptionOption
@@ -82,5 +87,20 @@ public class KeyConnectorUserDecryptionOption
     public KeyConnectorUserDecryptionOption(string keyConnectorUrl)
     {
         KeyConnectorUrl = keyConnectorUrl;
+    }
+}
+
+
+public class OpaqueUserDecryptionOption
+{
+    public string EncryptedPrivateKey { get; }
+    public string EncryptedUserKey { get; }
+
+    public OpaqueUserDecryptionOption(
+        string encryptedPrivateKey,
+        string encryptedUserKey)
+    {
+        EncryptedPrivateKey = encryptedPrivateKey;
+        EncryptedUserKey = encryptedUserKey;
     }
 }
