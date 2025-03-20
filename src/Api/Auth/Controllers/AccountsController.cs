@@ -209,11 +209,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        // TODO: should this be feature flagged
         Guid? opaqueSessionId = null;
-        if (model.OpaqueSessionId != null)
-        {
-            opaqueSessionId = Guid.Parse(model.OpaqueSessionId);
+        if(_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange)){
+            if (model.OpaqueSessionId != null)
+            {
+                opaqueSessionId = Guid.Parse(model.OpaqueSessionId);
+            }
         }
 
         var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,

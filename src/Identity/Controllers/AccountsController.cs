@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using Bit.Api.Auth.Models.Response.Opaque;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -289,15 +288,6 @@ public class AccountsController : Controller
             Options = options,
             Token = token
         };
-    }
-
-    // TODO: (1) This should be on own controller (2) reconcile this w/ start login on existing controller
-    [HttpPost("opaque-ke/start-login")]
-    [RequireFeature(FeatureFlagKeys.OpaqueKeyExchange)]
-    public async Task<OpaqueLoginStartResponse> GetOpaqueKeyExchangeStartLoginMaterial([FromBody] OpaqueLoginStartRequest request)
-    {
-        var result = await _opaqueKeyExchangeService.StartLogin(Convert.FromBase64String(request.CredentialRequest), request.Email);
-        return new OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
     }
 
     private UserKdfInformation GetDefaultKdf(string email)

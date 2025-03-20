@@ -28,7 +28,7 @@ public interface IOpaqueKeyExchangeService
     /// <returns>void</returns>
     public Task<bool> FinishRegistration(Guid sessionId, byte[] registrationUpload, User user, RotateableOpaqueKeyset keyset);
     /// <summary>
-    /// Returns server crypto material for the client to consume and reply with a login request to the identity/token endpoint.
+    /// Returns server crypto material for the client to consume and reply to the finish-login endpoint for authentication.
     /// To protect against account enumeration we will always return a deterministic response based on the user's email.
     /// </summary>
     /// <param name="request">client crypto material</param>
