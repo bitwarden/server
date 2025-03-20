@@ -210,7 +210,8 @@ public class AccountsController : Controller
         }
 
         Guid? opaqueSessionId = null;
-        if(_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange)){
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
             if (model.OpaqueSessionId != null)
             {
                 opaqueSessionId = Guid.Parse(model.OpaqueSessionId);

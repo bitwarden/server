@@ -1,4 +1,4 @@
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Opaque;
 using Bit.Core.Auth.Models.Api.Response.Opaque;
 using Bit.Core.Auth.Services;
