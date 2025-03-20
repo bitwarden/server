@@ -139,7 +139,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         }
     }
 
-    public async Task<User?> FinishLoginSession(Guid sessionId)
+    public async Task<User?> GetUserForAuthenticatedSession(Guid sessionId)
     {
         var serializedLoginSession = await _distributedCache.GetAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
         if (serializedLoginSession == null)
@@ -152,7 +152,6 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         {
             throw new InvalidOperationException("Session not authenticated");
         }
-        _distributedCache.Remove(string.Format(LOGIN_SESSION_KEY, sessionId));
 
         return await _userRepository.GetByIdAsync(loginSession.UserId!)!;
     }
@@ -220,6 +219,11 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         data[8] = (byte)((data[8] | (byte)0x80) & (byte)0xbf);
 
         return new Guid(data);
+    }
+
+    public async Task ClearAuthenticatedSession(Guid sessionId)
+    {
+        await _distributedCache.RemoveAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
     }
 }
 

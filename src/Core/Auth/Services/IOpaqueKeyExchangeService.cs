@@ -43,7 +43,9 @@ public interface IOpaqueKeyExchangeService
     /// <param name="finishCredential"></param>
     /// <returns></returns>
     public Task<bool> FinishLogin(Guid sessionId, byte[] finishCredential);
-    public Task<User> FinishLoginSession(Guid sessionId);
+    public Task<User> GetUserForAuthenticatedSession(Guid sessionId);
+    public Task ClearAuthenticatedSession(Guid sessionId);
+
     /// <summary>
     /// This is where registration really finishes. This method writes the Credential to the database. If a credential already exists then it will be removed before the new one is added.
     /// A user can only have one credential.

@@ -72,7 +72,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             return;
         }
 
-        var user = await opaqueKeyExchangeService.FinishLoginSession(Guid.Parse(sessionId));
+        var user = await opaqueKeyExchangeService.GetUserForAuthenticatedSession(Guid.Parse(sessionId));
         if (user == null)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
@@ -93,14 +93,14 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
         return Task.FromResult(true);
     }
 
-    protected override Task SetSuccessResult(ExtensionGrantValidationContext context, User user,
+    protected override async Task SetSuccessResult(ExtensionGrantValidationContext context, User user,
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
             identityProvider: Constants.IdentityProvider,
             claims: claims.Count > 0 ? claims : null,
             customResponse: customResponse);
-        return Task.CompletedTask;
+        await opaqueKeyExchangeService.ClearAuthenticatedSession(Guid.Parse(context.Request.Raw.Get("sessionId")));
     }
 
     protected override ClaimsPrincipal GetSubject(ExtensionGrantValidationContext context)
