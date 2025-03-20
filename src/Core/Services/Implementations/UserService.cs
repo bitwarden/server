@@ -668,14 +668,16 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             user.Key = key;
             user.MasterPasswordHint = passwordHint;
 
-            // TODO: feature flag this
-            if (opaqueSessionId != null)
+            if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
             {
-                await _opaqueKeyExchangeService.WriteCacheCredentialToDatabase((Guid)opaqueSessionId, user);
-            }
-            else
-            {
-                await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+                if (opaqueSessionId != null)
+                {
+                    await _opaqueKeyExchangeService.WriteCacheCredentialToDatabase((Guid)opaqueSessionId, user);
+                }
+                else
+                {
+                    await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+                }
             }
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
@@ -818,7 +820,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.Key = key;
 
         // TODO: Add Opaque-KE support
-        await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+        }
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
@@ -846,7 +851,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.MasterPasswordHint = hint;
 
         // TODO: Add Opaque-KE support
-        await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
+        }
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);

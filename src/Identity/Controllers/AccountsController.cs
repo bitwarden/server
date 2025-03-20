@@ -48,7 +48,6 @@ public class AccountsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
-    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
     private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
 
     private readonly byte[] _defaultKdfHmacKey = null;
@@ -99,7 +98,6 @@ public class AccountsController : Controller
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
-        IOpaqueKeyExchangeService opaqueKeyExchangeService,
         GlobalSettings globalSettings
         )
     {
@@ -114,7 +112,6 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
-        _opaqueKeyExchangeService = opaqueKeyExchangeService;
         _opaqueKeyExchangeCredentialRepository = opaqueKeyExchangeCredentialRepository;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))

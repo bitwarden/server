@@ -1,23 +1,22 @@
-﻿using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Opaque;
 using Bit.Core.Auth.Models.Api.Response.Opaque;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Bitwarden.Opaque;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Auth.Services;
 
-#nullable enable
-
-// TODO: feature flag this service
 // TODO: add test suite
+[RequireFeature(FeatureFlagKeys.OpaqueKeyExchange)]
 public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 {
     private readonly BitwardenOpaqueServer _bitwardenOpaque;
@@ -25,6 +24,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     private readonly IDistributedCache _distributedCache;
     private readonly IUserRepository _userRepository;
     private readonly ILogger<OpaqueKeyExchangeService> _logger;
+    private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
 
     const string REGISTRATION_SESSION_KEY = "opaque_register_session_{0}";
     const string LOGIN_SESSION_KEY = "opaque_login_session_{0}";
@@ -41,6 +41,10 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         _distributedCache = distributedCache;
         _userRepository = userRepository;
         _logger = logger;
+        _distributedCacheEntryOptions = new DistributedCacheEntryOptions()
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1)
+        };
     }
 
     public async Task<OpaqueRegistrationStartResponse> StartRegistration(
@@ -50,12 +54,20 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             cipherConfiguration.ToNativeConfiguration(), null, request, user.Id.ToString());
 
         // We must persist the registration session state to the cache so we can have the server setup and cipher
-        // Ïconfiguration available when the client finishes registration.
+        // configuration available when the client finishes registration.
         var registrationSessionId = Guid.NewGuid();
-        var registrationSession = new OpaqueKeyExchangeRegistrationSession() { RegistrationSessionId = registrationSessionId, ServerSetup = registrationRequest.serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id };
+        var registrationSession = new OpaqueKeyExchangeRegistrationSession()
+        {
+            RegistrationSessionId = registrationSessionId,
+            ServerSetup = registrationRequest.serverSetup,
+            CipherConfiguration = cipherConfiguration,
+            UserId = user.Id
+        };
 
-        // TODO: We need to audit this approach to make sure it works for all our use cases. We probably need a timeout to avoid persisting this indefinitely.
-        await _distributedCache.SetAsync(string.Format(REGISTRATION_SESSION_KEY, registrationSessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registrationSession)));
+        await _distributedCache.SetAsync(
+            string.Format(REGISTRATION_SESSION_KEY, registrationSessionId),
+            Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registrationSession)),
+            _distributedCacheEntryOptions);
 
         return new OpaqueRegistrationStartResponse(registrationSessionId, Convert.ToBase64String(registrationRequest.registrationResponse));
     }
@@ -74,19 +86,22 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             // active, clients must call SetRegistrationActive or the user must change their password
             registrationSession.PasswordFile = registrationFinish.serverRegistration;
             registrationSession.KeySet = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(keyset));
-            await _distributedCache.SetAsync(string.Format(REGISTRATION_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registrationSession)));
+            await _distributedCache.SetAsync(
+                string.Format(REGISTRATION_SESSION_KEY, sessionId),
+                Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registrationSession)),
+                _distributedCacheEntryOptions);
             return true;
         }
         catch (Exception e)
         {
             // If anything goes wrong, we need to remove the session from the cache
-            await ClearRegistrationSession(sessionId);
+            await ClearRegistrationSessionAsync(sessionId);
             _logger.LogError(e, "Error finishing registration for user {UserId}", user.Id);
             return false;
         }
     }
 
-    private async Task ClearRegistrationSession(Guid sessionId)
+    private async Task ClearRegistrationSessionAsync(Guid sessionId)
     {
         await _distributedCache.RemoveAsync(string.Format(REGISTRATION_SESSION_KEY, sessionId));
     }
@@ -111,7 +126,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             var loginResponse = _bitwardenOpaque.StartLogin(
                 cipherConfiguration.ToNativeConfiguration(), serverSetup, serverRegistration, request, user.Id.ToString());
 
-            var sessionId = MakeCryptoGuid();
+            var sessionId = GuidUtilities.MakeCryptoGuid();
             var loginSession = new OpaqueKeyExchangeLoginSession()
             {
                 UserId = user.Id,
@@ -119,7 +134,11 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
                 CipherConfiguration = cipherConfiguration,
                 IsAuthenticated = false
             };
-            await _distributedCache.SetAsync(string.Format(LOGIN_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)));
+            await _distributedCache.SetAsync(
+                string.Format(LOGIN_SESSION_KEY, sessionId),
+                Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)),
+                _distributedCacheEntryOptions);
+
             return (sessionId, loginResponse.credentialResponse);
         }
         catch (InvalidOperationException e)
@@ -133,18 +152,12 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     {
         try
         {
-            var serializedLoginSession = await _distributedCache.GetAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
-            if (serializedLoginSession == null)
-            {
-                throw new InvalidOperationException("Session not found");
-            }
+            var serializedLoginSession = await _distributedCache.GetAsync(string.Format(LOGIN_SESSION_KEY, sessionId))
+                ?? throw new InvalidOperationException("Session not found");
             var loginSession = JsonSerializer.Deserialize<OpaqueKeyExchangeLoginSession>(Encoding.ASCII.GetString(serializedLoginSession))!;
 
-            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(loginSession.UserId);
-            if (credential == null)
-            {
-                throw new InvalidOperationException("Credential not found");
-            }
+            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(loginSession.UserId)
+                ?? throw new InvalidOperationException("Credential not found");
 
             var loginState = loginSession.LoginState;
             var cipherConfiguration = loginSession.CipherConfiguration;
@@ -152,18 +165,22 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
             var success = _bitwardenOpaque.FinishLogin(cipherConfiguration.ToNativeConfiguration(), loginState, credentialFinalization);
             loginSession.IsAuthenticated = true;
-            await _distributedCache.SetAsync(string.Format(LOGIN_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)));
+            await _distributedCache.SetAsync(
+                string.Format(LOGIN_SESSION_KEY, sessionId),
+                Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)),
+                _distributedCacheEntryOptions);
+
             return true;
         }
-        catch (Exception e)
+        catch (InvalidOperationException e)
         {
-            // print
-            Console.WriteLine(e.Message);
+            await ClearAuthenticationSession(sessionId);
+            _logger.LogError(e, "Error finishing login for session {SessionId}", sessionId);
             return false;
         }
     }
 
-    public async Task<User?> GetUserForAuthenticatedSession(Guid sessionId)
+    public async Task<User> GetUserForAuthenticatedSession(Guid sessionId)
     {
         try
         {
@@ -247,22 +264,6 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         }
     }
 
-    // TODO: evaluate if this should live in a utility class and/or under KM control
-    /// <summary>
-    /// Creates a genuinely random GUID as the login session IDs for opaque need to be cryptographically secure.
-    /// </summary>
-    private static Guid MakeCryptoGuid()
-    {
-        // Get 16 cryptographically random bytes
-        var data = RandomNumberGenerator.GetBytes(16);
-
-        // Mark it as a version 4 GUID
-        data[7] = (byte)((data[7] | (byte)0x40) & (byte)0x4f);
-        data[8] = (byte)((data[8] | (byte)0x80) & (byte)0xbf);
-
-        return new Guid(data);
-    }
-
     public async Task ClearAuthenticationSession(Guid sessionId)
     {
         await _distributedCache.RemoveAsync(string.Format(LOGIN_SESSION_KEY, sessionId));
@@ -280,8 +281,8 @@ public class OpaqueKeyExchangeRegistrationSession
     public required byte[] ServerSetup { get; set; }
     public required OpaqueKeyExchangeCipherConfiguration CipherConfiguration { get; set; }
     public required Guid UserId { get; set; }
-    public byte[]? PasswordFile { get; set; }
-    public byte[]? KeySet { get; set; }
+    public byte[] PasswordFile { get; set; } = null;
+    public byte[] KeySet { get; set; } = null;
 }
 
 /// <summary>
