@@ -17,19 +17,22 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
     private readonly IMailService _mailService;
     private readonly ICreateNotificationCommand _createNotificationCommand;
     private readonly IPushNotificationService _pushNotificationService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public CreateManyTaskNotificationsCommand(
         IGetSecurityTasksNotificationDetailsQuery getSecurityTasksNotificationDetailsQuery,
         IOrganizationRepository organizationRepository,
         IMailService mailService,
         ICreateNotificationCommand createNotificationCommand,
-        IPushNotificationService pushNotificationService)
+        IPushNotificationService pushNotificationService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _getSecurityTasksNotificationDetailsQuery = getSecurityTasksNotificationDetailsQuery;
         _organizationRepository = organizationRepository;
         _mailService = mailService;
         _createNotificationCommand = createNotificationCommand;
         _pushNotificationService = pushNotificationService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task CreateAsync(Guid orgId, IEnumerable<SecurityTask> securityTasks)
@@ -45,8 +48,11 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         }).ToList();
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var orgAdminEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Admin);
+        var orgOwnerEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Owner);
+        var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Select(x => x.Email).Distinct().ToList();
 
-        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount);
+        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount, orgAdminAndOwnerEmails);
 
         // Break securityTaskCiphers into separate lists by user Id
         var securityTaskCiphersByUser = securityTaskCiphers.GroupBy(x => x.UserId)
