@@ -18,14 +18,15 @@ public interface IOpaqueKeyExchangeService
     /// <returns>void</returns>
     public Task<OpaqueRegistrationStartResponse> StartRegistration(byte[] request, User user, OpaqueKeyExchangeCipherConfiguration cipherConfiguration);
     /// <summary>
-    /// This doesn't actually finish registration. It updates the cache with the server setup and cipher configuration so that the clearly named "SetActive" method can finish registration.
+    /// This updates the cache with the server setup and cipher configuration so that WriteCacheCredentialToDatabase method can finish registration
+    /// by writing the credential to the database.
     /// </summary>
     /// <param name="sessionId">Cache Id</param>
     /// <param name="registrationUpload">Byte Array for Rust Magic</param>
     /// <param name="user">User being acted on</param>
     /// <param name="keyset">Key Pair that can be used for vault decryption</param>
     /// <returns>void</returns>
-    public Task FinishRegistration(Guid sessionId, byte[] registrationUpload, User user, RotateableOpaqueKeyset keyset);
+    public Task<bool> FinishRegistration(Guid sessionId, byte[] registrationUpload, User user, RotateableOpaqueKeyset keyset);
     /// <summary>
     /// Returns server crypto material for the client to consume and reply with a login request to the identity/token endpoint.
     /// To protect against account enumeration we will always return a deterministic response based on the user's email.
@@ -52,21 +53,21 @@ public interface IOpaqueKeyExchangeService
     /// <summary>
     /// Clears the authentication session from the cache.
     /// </summary>
-    /// <param name="sessionId"></param>
-    /// <returns></returns>
+    /// <param name="sessionId">session being acted on.</param>
+    /// <returns>void</returns>
     public Task ClearAuthenticationSession(Guid sessionId);
     /// <summary>
-    /// This is where registration really finishes. This method writes the Credential to the database. If a credential already exists then it will be removed before the new one is added.
+    /// This method writes the Credential to the database. If a credential already exists then it will be removed before the new one is added.
     /// A user can only have one credential.
     /// </summary>
     /// <param name="sessionId">cache value</param>
     /// <param name="user">user being acted on</param>
-    /// <returns>void</returns>
-    public Task SetRegistrationActiveForAccount(Guid sessionId, User user);
+    /// <returns>bool based on action result</returns>
+    public Task<bool> WriteCacheCredentialToDatabase(Guid sessionId, User user);
     /// <summary>
-    /// Removes the credential for the user.
+    /// Removes the credential for the user. If the user does not exist then this does nothing.
     /// </summary>
-    /// <param name="user">user being acted on</param>
+    /// <param name="user">User being acted on.</param>
     /// <returns>void</returns>
-    public Task Unenroll(User user);
+    public Task RemoveUserOpaqueKeyExchangeCredential(User user);
 }

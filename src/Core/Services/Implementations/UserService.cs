@@ -670,11 +670,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
             if (opaqueSessionId != null)
             {
-                await _opaqueKeyExchangeService.SetRegistrationActiveForAccount((Guid)opaqueSessionId, user);
+                await _opaqueKeyExchangeService.WriteCacheCredentialToDatabase((Guid)opaqueSessionId, user);
             }
             else
             {
-                await _opaqueKeyExchangeService.Unenroll(user);
+                await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
             }
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
@@ -817,7 +817,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.Key = key;
 
         // TODO: Add Opaque-KE support
-        await _opaqueKeyExchangeService.Unenroll(user);
+        await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_AdminResetPassword);
@@ -845,7 +845,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.MasterPasswordHint = hint;
 
         // TODO: Add Opaque-KE support
-        await _opaqueKeyExchangeService.Unenroll(user);
+        await _opaqueKeyExchangeService.RemoveUserOpaqueKeyExchangeCredential(user);
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_UpdatedTempPassword);

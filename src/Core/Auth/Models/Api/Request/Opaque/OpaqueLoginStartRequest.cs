@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Auth.Models.Request.Opaque;
+namespace Bit.Core.Auth.Models.Api.Request.Opaque;
 
 public class OpaqueLoginStartRequest
 {
@@ -8,5 +8,4 @@ public class OpaqueLoginStartRequest
     public string Email { get; set; }
     [Required]
     public string CredentialRequest { get; set; }
-
 }

@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using Bit.Api.Auth.Models.Request.Opaque;
 using Bit.Api.Auth.Models.Response.Opaque;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
