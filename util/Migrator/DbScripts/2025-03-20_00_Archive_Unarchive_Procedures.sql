@@ -1,11 +1,6 @@
 -- Cipher Archive
 
-IF OBJECT_ID('[dbo].[Cipher_Archive]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[Cipher_Archive];
-    END
-GO
-CREATE PROCEDURE [dbo].[Cipher_Archive]
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_Archive]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS
@@ -48,12 +43,8 @@ GO
 
 -- Unarchive Cipher
 
-IF OBJECT_ID('[dbo].[Cipher_Unarchive]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[Cipher_Unarchive];
-    END
-GO
-CREATE PROCEDURE [dbo].[Cipher_Unarchive]
+
+CREATE OR ALTER PROCEDURE [dbo].[Cipher_Unarchive]
     @Ids AS [dbo].[GuidIdArray] READONLY,
     @UserId AS UNIQUEIDENTIFIER
 AS

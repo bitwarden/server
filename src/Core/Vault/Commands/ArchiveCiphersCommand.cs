@@ -40,12 +40,12 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
             .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && !c.OrganizationId.HasValue)
             .Select(CipherOrganizationDetails (c) => c).ToList();
 
-        DateTime? revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
+        DateTime revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
         var events = archivingCiphers.Select(c =>
         {
-            c.RevisionDate = revisionDate.Value;
-            c.ArchivedDate = revisionDate.Value;
+            c.RevisionDate = revisionDate;
+            c.ArchivedDate = revisionDate;
             return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
         });
         foreach (var eventsBatch in events.Chunk(100))

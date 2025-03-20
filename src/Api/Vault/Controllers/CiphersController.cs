@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using AutoMapper;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -49,7 +48,6 @@ public class CiphersController : Controller
     private readonly ICollectionRepository _collectionRepository;
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
-    private readonly IMapper _mapper;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -66,8 +64,7 @@ public class CiphersController : Controller
         IApplicationCacheService applicationCacheService,
         ICollectionRepository collectionRepository,
         IArchiveCiphersCommand archiveCiphersCommand,
-        IUnarchiveCiphersCommand unarchiveCiphersCommand,
-        IMapper mapper)
+        IUnarchiveCiphersCommand unarchiveCiphersCommand)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -84,7 +81,6 @@ public class CiphersController : Controller
         _collectionRepository = collectionRepository;
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
-        _mapper = mapper;
     }
 
     [HttpGet("{id}")]
@@ -764,11 +760,9 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        var archivedCipherDetails = await _archiveCiphersCommand.ArchiveManyAsync([id], userId);
+        var archivedCipherOrganizationDetails = await _archiveCiphersCommand.ArchiveManyAsync([id], userId);
 
-        var cipher = _mapper.Map<Cipher>(archivedCipherDetails.First());
-
-        return new CipherMiniResponseModel(cipher, _globalSettings, archivedCipherDetails.First().OrganizationUseTotp);
+        return new CipherMiniResponseModel(archivedCipherOrganizationDetails.First(), _globalSettings, archivedCipherOrganizationDetails.First().OrganizationUseTotp);
     }
 
     [HttpPut("archive")]
@@ -932,9 +926,7 @@ public class CiphersController : Controller
 
         var unarchivedCipherDetails = await _unarchiveCiphersCommand.UnarchiveManyAsync([id], userId);
 
-        var cipher = _mapper.Map<Cipher>(unarchivedCipherDetails.First());
-
-        return new CipherMiniResponseModel(cipher, _globalSettings, unarchivedCipherDetails.First().OrganizationUseTotp);
+        return new CipherMiniResponseModel(unarchivedCipherDetails.First(), _globalSettings, unarchivedCipherDetails.First().OrganizationUseTotp);
     }
 
     [HttpPut("unarchive")]

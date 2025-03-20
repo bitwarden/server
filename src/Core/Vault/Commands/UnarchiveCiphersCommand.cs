@@ -40,11 +40,11 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
             .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit)
             .Select(CipherOrganizationDetails (c) => c).ToList();
 
-        DateTime? revisionDate = await _cipherRepository.UnarchiveAsync(unarchivingCiphers.Select(c => c.Id), unarchivingUserId);
+        DateTime revisionDate = await _cipherRepository.UnarchiveAsync(unarchivingCiphers.Select(c => c.Id), unarchivingUserId);
 
         var events = unarchivingCiphers.Select(c =>
         {
-            c.RevisionDate = revisionDate.Value;
+            c.RevisionDate = revisionDate;
             c.ArchivedDate = null;
             return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
         });

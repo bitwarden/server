@@ -785,7 +785,7 @@ public class CipherService : ICipherService
 
         var cipherIdsSet = new HashSet<Guid>(cipherIds);
         List<CipherOrganizationDetails> restoringCiphers;
-        DateTime? revisionDate;
+        DateTime? revisionDate; // TODO: Make this not nullable
 
         if (orgAdmin && organizationId.HasValue)
         {
