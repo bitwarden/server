@@ -2,6 +2,7 @@
 using Bit.Core.Jobs;
 using Bit.Core.PhishingDomainFeatures.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Quartz;
 
@@ -12,21 +13,29 @@ public class UpdatePhishingDomainsJob : BaseJob
     private readonly GlobalSettings _globalSettings;
     private readonly IPhishingDomainRepository _phishingDomainRepository;
     private readonly ICloudPhishingDomainQuery _cloudPhishingDomainQuery;
-
+    private readonly IFeatureService _featureService;
     public UpdatePhishingDomainsJob(
         GlobalSettings globalSettings,
         IPhishingDomainRepository phishingDomainRepository,
         ICloudPhishingDomainQuery cloudPhishingDomainQuery,
+        IFeatureService featureService,
         ILogger<UpdatePhishingDomainsJob> logger)
         : base(logger)
     {
         _globalSettings = globalSettings;
         _phishingDomainRepository = phishingDomainRepository;
         _cloudPhishingDomainQuery = cloudPhishingDomainQuery;
+        _featureService = featureService;
     }
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.PhishingDetection))
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Skipping phishing domain update. Feature flag is disabled.");
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_globalSettings.PhishingDomain?.UpdateUrl))
         {
             _logger.LogInformation(Constants.BypassFiltersEventId, "Skipping phishing domain update. No URL configured.");
