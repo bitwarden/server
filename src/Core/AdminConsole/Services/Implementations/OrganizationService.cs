@@ -1363,7 +1363,7 @@ public class OrganizationService : IOrganizationService
             var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId);
             if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
             {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.);
             }
 
         }
@@ -1375,7 +1375,7 @@ public class OrganizationService : IOrganizationService
 
                 if (data?.AutoEnrollEnabled ?? false)
                 {
-                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
                 }
             }
         }
