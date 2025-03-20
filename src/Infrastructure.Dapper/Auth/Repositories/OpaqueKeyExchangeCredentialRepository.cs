@@ -25,15 +25,13 @@ public class OpaqueKeyExchangeCredentialRepository : Repository<OpaqueKeyExchang
 
     public async Task<OpaqueKeyExchangeCredential?> GetByUserIdAsync(Guid userId)
     {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<OpaqueKeyExchangeCredential>(
-                $"[{Schema}].[{Table}_ReadByUserId]",
-                new { UserId = userId },
-                commandType: CommandType.StoredProcedure);
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<OpaqueKeyExchangeCredential>(
+            $"[{Schema}].[{Table}_ReadByUserId]",
+            new { UserId = userId },
+            commandType: CommandType.StoredProcedure);
 
-            return results.FirstOrDefault();
-        }
+        return results.FirstOrDefault();
     }
 
     // TODO - How do we want to handle rotation?

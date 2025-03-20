@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bitwarden.Opaque;
 
 namespace Bit.Core.Auth.Models.Api.Request.Opaque;
 
@@ -8,10 +9,10 @@ public class OpaqueRegistrationStartRequest
     [Required]
     public string RegistrationRequest { get; set; }
     [Required]
-    public CipherConfiguration CipherConfiguration { get; set; }
+    public OpaqueKeyExchangeCipherConfiguration CipherConfiguration { get; set; }
 }
 
-public class CipherConfiguration
+public class OpaqueKeyExchangeCipherConfiguration
 {
     static string OpaqueKe3Ristretto3DHArgonSuite = "OPAQUE_3_RISTRETTO255_OPRF_RISTRETTO255_KEGROUP_3DH_KEX_ARGON2ID13_KSF";
 
@@ -20,20 +21,20 @@ public class CipherConfiguration
     [Required]
     public Argon2KsfParameters Argon2Parameters { get; set; }
 
-    public Bitwarden.Opaque.CipherConfiguration ToNativeConfiguration()
+    public CipherConfiguration ToNativeConfiguration()
     {
         if (CipherSuite == OpaqueKe3Ristretto3DHArgonSuite)
         {
-            return new Bitwarden.Opaque.CipherConfiguration
+            return new CipherConfiguration
             {
                 OpaqueVersion = 3,
-                OprfCs = Bitwarden.Opaque.OprfCs.Ristretto255,
-                KeGroup = Bitwarden.Opaque.KeGroup.Ristretto255,
-                KeyExchange = Bitwarden.Opaque.KeyExchange.TripleDH,
-                Ksf = new Bitwarden.Opaque.Ksf
+                OprfCs = OprfCs.Ristretto255,
+                KeGroup = KeGroup.Ristretto255,
+                KeyExchange = KeyExchange.TripleDH,
+                Ksf = new Ksf
                 {
-                    Algorithm = Bitwarden.Opaque.KsfAlgorithm.Argon2id,
-                    Parameters = new Bitwarden.Opaque.KsfParameters
+                    Algorithm = KsfAlgorithm.Argon2id,
+                    Parameters = new KsfParameters
                     {
                         Iterations = Argon2Parameters.Iterations,
                         Memory = Argon2Parameters.Memory,

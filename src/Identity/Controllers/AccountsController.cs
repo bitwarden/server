@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using Bit.Api.Auth.Models.Request.Opaque;
+using Bit.Api.Auth.Models.Response.Opaque;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
@@ -48,6 +50,7 @@ public class AccountsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFeatureService _featureService;
     private readonly IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> _registrationEmailVerificationTokenDataFactory;
+    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
     private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
 
     private readonly byte[] _defaultKdfHmacKey = null;
@@ -98,6 +101,7 @@ public class AccountsController : Controller
         IFeatureService featureService,
         IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable> registrationEmailVerificationTokenDataFactory,
         IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
+        IOpaqueKeyExchangeService opaqueKeyExchangeService,
         GlobalSettings globalSettings
         )
     {
@@ -112,6 +116,7 @@ public class AccountsController : Controller
         _referenceEventService = referenceEventService;
         _featureService = featureService;
         _registrationEmailVerificationTokenDataFactory = registrationEmailVerificationTokenDataFactory;
+        _opaqueKeyExchangeService = opaqueKeyExchangeService;
         _opaqueKeyExchangeCredentialRepository = opaqueKeyExchangeCredentialRepository;
 
         if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
@@ -204,33 +209,27 @@ public class AccountsController : Controller
                         model.EmailVerificationToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
-
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
@@ -270,7 +269,7 @@ public class AccountsController : Controller
         var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
         if (credential != null)
         {
-            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<CipherConfiguration>(credential.CipherConfiguration)!);
+            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!);
         }
         else
         {
@@ -291,6 +290,14 @@ public class AccountsController : Controller
             Options = options,
             Token = token
         };
+    }
+
+    [HttpPost("opaque-ke/start-login")]
+    [RequireFeature(FeatureFlagKeys.OpaqueKeyExchange)]
+    public async Task<OpaqueLoginStartResponse> GetOpaqueKeyExchangeStartLoginMaterial([FromBody] OpaqueLoginStartRequest request)
+    {
+        var result = await _opaqueKeyExchangeService.StartLogin(Convert.FromBase64String(request.CredentialRequest), request.Email);
+        return new OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
     }
 
     private UserKdfInformation GetDefaultKdf(string email)

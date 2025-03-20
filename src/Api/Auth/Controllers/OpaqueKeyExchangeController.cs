@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Opaque;
+﻿using Bit.Api.Auth.Models.Request.Opaque;
+using Bit.Api.Auth.Models.Response.Opaque;
+using Bit.Core.Auth.Models.Api.Request.Opaque;
 using Bit.Core.Auth.Models.Api.Response.Opaque;
 using Bit.Core.Auth.Services;
 using Bit.Core.Services;
@@ -42,15 +44,15 @@ public class OpaqueKeyExchangeController : Controller
 
     // TODO: Remove and move to token endpoint
     [HttpPost("~/opaque/start-login")]
-    public async Task<Models.Response.Opaque.OpaqueLoginStartResponse> StartLoginAsync([FromBody] Models.Request.Opaque.OpaqueLoginStartRequest request)
+    public async Task<OpaqueLoginStartResponse> StartLoginAsync([FromBody] OpaqueLoginStartRequest request)
     {
         var result = await _opaqueKeyExchangeService.StartLogin(Convert.FromBase64String(request.CredentialRequest), request.Email);
-        return new Models.Response.Opaque.OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
+        return new OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
     }
 
     // TODO: Remove and move to token endpoint
     [HttpPost("~/opaque/finish-login")]
-    public async Task<bool> FinishLoginAsync([FromBody] Models.Request.Opaque.OpaqueLoginFinishRequest request)
+    public async Task<bool> FinishLoginAsync([FromBody] OpaqueLoginFinishRequest request)
     {
         var result = await _opaqueKeyExchangeService.FinishLogin(request.SessionId, Convert.FromBase64String(request.CredentialFinalization));
         return result;

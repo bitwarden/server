@@ -36,12 +36,12 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         _userRepository = userRepository;
     }
 
-    public async Task<OpaqueRegistrationStartResponse> StartRegistration(byte[] request, User user, Models.Api.Request.Opaque.CipherConfiguration cipherConfiguration)
+    public async Task<OpaqueRegistrationStartResponse> StartRegistration(byte[] request, User user, OpaqueKeyExchangeCipherConfiguration cipherConfiguration)
     {
         var registrationRequest = _bitwardenOpaque.StartRegistration(cipherConfiguration.ToNativeConfiguration(), null, request, user.Id.ToString());
 
         var sessionId = Guid.NewGuid();
-        var registerSession = new RegisterSession() { SessionId = sessionId, ServerSetup = registrationRequest.serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id };
+        var registerSession = new OpaqueKeyExchangeRegisterSession() { SessionId = sessionId, ServerSetup = registrationRequest.serverSetup, CipherConfiguration = cipherConfiguration, UserId = user.Id };
         await _distributedCache.SetAsync(string.Format(REGISTER_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(registerSession)));
 
         return new OpaqueRegistrationStartResponse(sessionId, Convert.ToBase64String(registrationRequest.registrationResponse));
@@ -57,7 +57,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
 
         try
         {
-            var registerSession = JsonSerializer.Deserialize<RegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
+            var registerSession = JsonSerializer.Deserialize<OpaqueKeyExchangeRegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
             var registrationFinish = _bitwardenOpaque.FinishRegistration(registerSession.CipherConfiguration.ToNativeConfiguration(), registrationUpload);
             registerSession.PasswordFile = registrationFinish.serverRegistration;
             registerSession.KeySet = Encoding.ASCII.GetBytes(JsonSerializer.Serialize(keyset));
@@ -86,14 +86,18 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             throw new InvalidOperationException("Credential not found");
         }
 
-        var cipherConfiguration = JsonSerializer.Deserialize<Models.Api.Request.Opaque.CipherConfiguration>(credential.CipherConfiguration)!;
+        var cipherConfiguration = JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!;
         var credentialBlob = JsonSerializer.Deserialize<OpaqueKeyExchangeCredentialBlob>(credential.CredentialBlob)!;
         var serverSetup = credentialBlob.ServerSetup;
         var serverRegistration = credentialBlob.PasswordFile;
 
         var loginResponse = _bitwardenOpaque.StartLogin(cipherConfiguration.ToNativeConfiguration(), serverSetup, serverRegistration, request, user.Id.ToString());
         var sessionId = Guid.NewGuid();
-        var loginSession = new LoginSession() { UserId = user.Id, LoginState = loginResponse.state, CipherConfiguration = cipherConfiguration };
+        var loginSession = new OpaqueKeyExchangeLoginSession() {
+            UserId = user.Id,
+            LoginState = loginResponse.state,
+            CipherConfiguration = cipherConfiguration
+        };
         await _distributedCache.SetAsync(string.Format(LOGIN_SESSION_KEY, sessionId), Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)));
         return (sessionId, loginResponse.credentialResponse);
     }
@@ -105,7 +109,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         {
             throw new InvalidOperationException("Session not found");
         }
-        var loginSession = JsonSerializer.Deserialize<LoginSession>(Encoding.ASCII.GetString(serializedLoginSession))!;
+        var loginSession = JsonSerializer.Deserialize<OpaqueKeyExchangeLoginSession>(Encoding.ASCII.GetString(serializedLoginSession))!;
 
         var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(loginSession.UserId);
         if (credential == null)
@@ -137,7 +141,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         {
             throw new InvalidOperationException("Session not found");
         }
-        var session = JsonSerializer.Deserialize<RegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
+        var session = JsonSerializer.Deserialize<OpaqueKeyExchangeRegisterSession>(Encoding.ASCII.GetString(serializedRegisterSession))!;
 
         if (session.UserId != user.Id)
         {
@@ -184,19 +188,19 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     }
 }
 
-public class RegisterSession
+public class OpaqueKeyExchangeRegisterSession
 {
     public required Guid SessionId { get; set; }
     public required byte[] ServerSetup { get; set; }
-    public required Models.Api.Request.Opaque.CipherConfiguration CipherConfiguration { get; set; }
+    public required OpaqueKeyExchangeCipherConfiguration CipherConfiguration { get; set; }
     public required Guid UserId { get; set; }
     public byte[]? PasswordFile { get; set; }
     public byte[]? KeySet { get; set; }
 }
 
-public class LoginSession
+public class OpaqueKeyExchangeLoginSession
 {
     public required Guid UserId { get; set; }
     public required byte[] LoginState { get; set; }
-    public required Models.Api.Request.Opaque.CipherConfiguration CipherConfiguration { get; set; }
+    public required OpaqueKeyExchangeCipherConfiguration CipherConfiguration { get; set; }
 }

@@ -816,7 +816,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.ForcePasswordReset = true;
         user.Key = key;
 
-        // TODO: Add support
+        // TODO: Add Opaque-KE support
         await _opaqueKeyExchangeService.Unenroll(user);
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendAdminResetPasswordEmailAsync(user.Email, user.Name, org.DisplayName());
@@ -844,7 +844,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         user.Key = key;
         user.MasterPasswordHint = hint;
 
-        // TODO: Add support
+        // TODO: Add Opaque-KE support
         await _opaqueKeyExchangeService.Unenroll(user);
         await _userRepository.ReplaceAsync(user);
         await _mailService.SendUpdatedTempPasswordEmailAsync(user.Email, user.Name);
