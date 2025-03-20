@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
 using System.Text;
+using System.Text.Json;
 using Bit.Api.Auth.Models.Request.Opaque;
 using Bit.Api.Auth.Models.Response.Opaque;
-using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
@@ -267,7 +267,7 @@ public class AccountsController : Controller
         }
 
         var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
-        if (credential != null)
+        if (credential != null && _featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
         {
             return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!);
         }
