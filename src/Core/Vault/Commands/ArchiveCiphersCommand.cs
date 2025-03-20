@@ -40,7 +40,7 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
             .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && !c.OrganizationId.HasValue)
             .Select(CipherOrganizationDetails (c) => c).ToList();
 
-        DateTime revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
+        var revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
         var events = archivingCiphers.Select(c =>
         {
