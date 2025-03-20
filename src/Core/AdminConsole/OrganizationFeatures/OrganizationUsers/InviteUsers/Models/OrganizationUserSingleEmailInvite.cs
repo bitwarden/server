@@ -14,21 +14,18 @@ public record OrganizationUserSingleEmailInvite
     public CollectionAccessSelection[] AccessibleCollections { get; init; } = [];
     public Permissions Permissions { get; init; } = new();
     public OrganizationUserType Type { get; init; } = OrganizationUserType.User;
-    public bool AccessSecretsManager { get; init; }
     public InviteOrganization InviteOrganization { get; private init; }
     public DateTimeOffset PerformedAt { get; private init; }
     public string ExternalId { get; private init; } = string.Empty;
 
     public OrganizationUserSingleEmailInvite(string email,
-        bool hasSecretsManager,
         InviteOrganization inviteOrganization,
         DateTimeOffset performedAt,
         string externalId) : this(
         email: email,
         accessibleCollections: [],
         type: OrganizationUserType.User,
-        permissions: new Permissions(),
-        accessSecretsManager: hasSecretsManager)
+        permissions: new Permissions())
     {
         InviteOrganization = inviteOrganization;
         PerformedAt = performedAt;
@@ -38,8 +35,7 @@ public record OrganizationUserSingleEmailInvite
     public OrganizationUserSingleEmailInvite(string email,
         IEnumerable<CollectionAccessSelection> accessibleCollections,
         OrganizationUserType type,
-        Permissions permissions,
-        bool accessSecretsManager)
+        Permissions permissions)
     {
         if (!email.IsValidEmail())
         {
@@ -55,6 +51,5 @@ public record OrganizationUserSingleEmailInvite
         AccessibleCollections = accessibleCollections.ToArray();
         Type = type;
         Permissions = permissions;
-        AccessSecretsManager = accessSecretsManager;
     }
 }

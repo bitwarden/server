@@ -65,14 +65,14 @@ public class PostUserCommand(
             throw new NotFoundException();
         }
 
-        var hasStandaloneSecretsManager = await paymentService.HasSecretsManagerStandalone(organization);
-        invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
         if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
         {
-            return await InviteScimOrganizationUserAsync(model, organization, scimProvider,
-                hasStandaloneSecretsManager);
+            return await InviteScimOrganizationUserAsync(model, organization, scimProvider);
         }
+
+        var hasStandaloneSecretsManager = await paymentService.HasSecretsManagerStandalone(organization);
+        invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
         var invitedOrgUser = await organizationService.InviteUserAsync(organizationId, invitingUserId: null,
             EventSystemUser.SCIM,
@@ -83,7 +83,7 @@ public class PostUserCommand(
     }
 
     private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(ScimUserRequestModel model,
-        Organization organization, ScimProviderType scimProvider, bool hasStandaloneSecretsManager)
+        Organization organization, ScimProviderType scimProvider)
     {
         var plan = await pricingClient.GetPlan(organization.PlanType);
 
@@ -96,7 +96,6 @@ public class PostUserCommand(
 
         var request = model.ToRequest(
             scimProvider: scimProvider,
-            hasSecretsManager: hasStandaloneSecretsManager,
             inviteOrganization: new InviteOrganization(organization, plan),
             performedAt: timeProvider.GetUtcNow());
 

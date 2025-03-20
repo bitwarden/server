@@ -41,7 +41,9 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
     {
-        var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request));
+        var hasSecretsManager = await paymentService.HasSecretsManagerStandalone(request.InviteOrganization);
+
+        var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request, hasSecretsManager));
 
         switch (result)
         {

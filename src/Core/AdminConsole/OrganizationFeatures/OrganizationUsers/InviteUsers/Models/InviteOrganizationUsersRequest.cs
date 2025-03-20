@@ -20,8 +20,8 @@ public class InviteOrganizationUsersRequest
         PerformedAt = performedAt;
     }
 
-    public InviteOrganizationUsersRequest(OrganizationUserSingleEmailInvite request) :
-        this([OrganizationUserInvite.Create(request)],
+    public InviteOrganizationUsersRequest(OrganizationUserSingleEmailInvite request, bool hasStandaloneSecretsManager) :
+        this([OrganizationUserInvite.Create(request, hasStandaloneSecretsManager)],
             request.InviteOrganization,
             Guid.Empty,
             request.PerformedAt)
