@@ -782,7 +782,7 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
 
-        var cipherIdsToArchive = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+        var cipherIdsToArchive = new HashSet<Guid>(model.Ids);
 
         var archivedCiphers = await _archiveCiphersCommand.ArchiveManyAsync(cipherIdsToArchive, userId);
 
@@ -948,7 +948,7 @@ public class CiphersController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
 
-        var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+        var cipherIdsToUnarchive = new HashSet<Guid>(model.Ids);
 
         var unarchivedCipherOrganizationDetails = await _unarchiveCiphersCommand.UnarchiveManyAsync(cipherIdsToUnarchive, userId);
 

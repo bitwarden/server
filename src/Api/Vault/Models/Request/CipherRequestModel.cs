@@ -307,7 +307,7 @@ public class CipherCollectionsRequestModel
 public class CipherBulkArchiveRequestModel
 {
     [Required]
-    public IEnumerable<string> Ids { get; set; }
+    public IEnumerable<Guid> Ids { get; set; }
 }
 
 public class CipherBulkDeleteRequestModel
@@ -320,7 +320,7 @@ public class CipherBulkDeleteRequestModel
 public class CipherBulkUnarchiveRequestModel
 {
     [Required]
-    public IEnumerable<string> Ids { get; set; }
+    public IEnumerable<Guid> Ids { get; set; }
 }
 
 public class CipherBulkRestoreRequestModel

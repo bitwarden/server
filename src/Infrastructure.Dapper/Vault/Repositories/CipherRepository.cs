@@ -232,14 +232,16 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            await connection.ExecuteAsync(
+            var results = await connection.ExecuteScalarAsync<DateTime>(
                 $"[{Schema}].[Cipher_Archive]",
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
+
+            return results;
         }
     }
 

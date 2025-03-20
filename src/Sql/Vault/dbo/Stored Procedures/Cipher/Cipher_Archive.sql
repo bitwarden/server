@@ -34,4 +34,6 @@ BEGIN
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
     DROP TABLE #Temp
+
+    SELECT @UtcNow
 END

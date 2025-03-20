@@ -749,9 +749,9 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task<DateTime> ArchiveAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        await ToggleArchiveCipherStatesAsync(ids, userId, CipherStateAction.Archive);
+        return await ToggleArchiveCipherStatesAsync(ids, userId, CipherStateAction.Archive);
     }
 
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)

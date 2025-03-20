@@ -27,22 +27,27 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
 
     public async Task<ICollection<CipherOrganizationDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId)
     {
-        if (cipherIds == null || !cipherIds.Any())
+        var cipherIdEnumerable = cipherIds as Guid[] ?? cipherIds.ToArray();
+        if (cipherIds == null || cipherIdEnumerable.Length == 0)
         {
             throw new BadRequestException("No cipher ids provided.");
         }
 
-        var cipherIdsSet = new HashSet<Guid>(cipherIds);
+        var cipherIdsSet = new HashSet<Guid>(cipherIdEnumerable);
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(archivingUserId);
         var archivingCiphers = ciphers
-            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit)
-            .Select(c => (CipherOrganizationDetails)c).ToList();
+            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && !c.OrganizationId.HasValue)
+            .Select(CipherOrganizationDetails (c) => c).ToList();
 
-        await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
+        DateTime? revisionDate = await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
         var events = archivingCiphers.Select(c =>
-            new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Archived, null));
+        {
+            c.RevisionDate = revisionDate.Value;
+            c.ArchivedDate = revisionDate.Value;
+            return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Unarchived, null);
+        });
         foreach (var eventsBatch in events.Chunk(100))
         {
             await _eventService.LogCipherEventsAsync(eventsBatch);
@@ -50,6 +55,6 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
 
         await _pushService.PushSyncCiphersAsync(archivingUserId);
 
-        return archivingCiphers.ToList();
+        return archivingCiphers;
     }
 }
