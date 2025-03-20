@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 
 namespace Bit.Core.Vault.Commands.Interfaces;
@@ -23,19 +25,19 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
         _pushService = pushService;
     }
 
-    public async Task ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId)
+    public async Task<ICollection<CipherOrganizationDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId)
     {
         if (cipherIds == null || !cipherIds.Any())
         {
-            return;
+            throw new BadRequestException("No cipher ids provided.");
         }
 
         var cipherIdsSet = new HashSet<Guid>(cipherIds);
 
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(archivingUserId);
         var archivingCiphers = ciphers
-            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit && c.OrganizationId == null)
-            .Select(x => (Cipher)x).ToList();
+            .Where(c => cipherIdsSet.Contains(c.Id) && c.Edit)
+            .Select(c => (CipherOrganizationDetails)c).ToList();
 
         await _cipherRepository.ArchiveAsync(archivingCiphers.Select(c => c.Id), archivingUserId);
 
@@ -46,7 +48,8 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
 
-        // push
         await _pushService.PushSyncCiphersAsync(archivingUserId);
+
+        return archivingCiphers.ToList();
     }
 }

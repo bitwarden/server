@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
@@ -24,11 +25,11 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
         _pushService = pushService;
     }
 
-    public async Task UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId)
+    public async Task<ICollection<CipherOrganizationDetails>> UnarchiveManyAsync(IEnumerable<Guid> cipherIds, Guid unarchivingUserId)
     {
         if (cipherIds == null || !cipherIds.Any())
         {
-            return;
+            throw new BadRequestException("No cipher ids provided.");
         }
 
         var cipherIdsSet = new HashSet<Guid>(cipherIds);
@@ -51,7 +52,8 @@ public class UnarchiveCiphersCommand : IUnarchiveCiphersCommand
             await _eventService.LogCipherEventsAsync(eventsBatch);
         }
 
-        // push
         await _pushService.PushSyncCiphersAsync(unarchivingUserId);
+
+        return unarchivingCiphers.ToList();
     }
 }

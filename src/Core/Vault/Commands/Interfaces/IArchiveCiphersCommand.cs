@@ -1,6 +1,8 @@
-﻿namespace Bit.Core.Vault.Commands.Interfaces;
+﻿using Bit.Core.Vault.Models.Data;
+
+namespace Bit.Core.Vault.Commands.Interfaces;
 
 public interface IArchiveCiphersCommand
 {
-    public Task ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId);
+    public Task<ICollection<CipherOrganizationDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds, Guid archivingUserId);
 }
