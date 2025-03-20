@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreOrganizationUser;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
@@ -694,8 +693,5 @@ public class RestoreOrganizationUserCommandTests
             requestingOrganizationUser is { Type: OrganizationUserType.Owner });
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(
             requestingOrganizationUser is { Type: OrganizationUserType.Owner or OrganizationUserType.Admin });
-        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
-            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
-            .Returns(true);
     }
 }
