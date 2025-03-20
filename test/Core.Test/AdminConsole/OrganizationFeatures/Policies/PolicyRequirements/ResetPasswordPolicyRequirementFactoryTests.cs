@@ -4,7 +4,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Duende.IdentityServer.Extensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -13,11 +12,11 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Policies.PolicyRequire
 public class ResetPasswordPolicyRequirementFactoryTests
 {
     [Theory, BitAutoData]
-    public void AutoEnroll_WithNoPolicies_IsEmpty(SutProvider<ResetPasswordPolicyRequirementFactory> sutProvider)
+    public void AutoEnroll_WithNoPolicies_IsEmpty(SutProvider<ResetPasswordPolicyRequirementFactory> sutProvider, Guid orgId)
     {
         var actual = sutProvider.Sut.Create([]);
 
-        Assert.True(actual.AutoEnroll.IsNullOrEmpty());
+        Assert.False(actual.AutoEnrollEnabled(orgId));
     }
 
     [Theory, BitAutoData]
@@ -31,8 +30,8 @@ public class ResetPasswordPolicyRequirementFactoryTests
 
         var actual = sutProvider.Sut.Create(policies);
 
-        Assert.True(actual.AutoEnroll.Count().Equals(2));
-        Assert.True(actual.AutoEnroll.ToList()[0].Equals(policies[0].OrganizationId));
-        Assert.True(actual.AutoEnroll.ToList()[1].Equals(policies[2].OrganizationId));
+        Assert.True(actual.AutoEnrollEnabled(policies[0].OrganizationId));
+        Assert.False(actual.AutoEnrollEnabled(policies[1].OrganizationId));
+        Assert.True(actual.AutoEnrollEnabled(policies[2].OrganizationId));
     }
 }

@@ -250,7 +250,7 @@ public class OrganizationsControllerTests : IDisposable
         OrganizationUser organizationUser
     )
     {
-        var policyRequirement = new ResetPasswordPolicyRequirement() { AutoEnroll = [organization.Id] };
+        var policyRequirement = new ResetPasswordPolicyRequirement() { AutoEnrollOrganizations = [organization.Id] };
 
         _userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).Returns(user);
         _organizationRepository.GetByIdentifierAsync(organization.Id.ToString()).Returns(organization);

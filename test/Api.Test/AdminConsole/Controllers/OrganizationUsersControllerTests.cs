@@ -450,7 +450,7 @@ public class OrganizationUsersControllerTests
 
         var policyRepository = sutProvider.GetDependency<IPolicyRepository>();
 
-        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnroll = [orgId] };
+        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnrollOrganizations = [orgId] };
 
         policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
 
@@ -494,7 +494,7 @@ public class OrganizationUsersControllerTests
 
         var policyRequirementQuery = sutProvider.GetDependency<IPolicyRequirementQuery>();
 
-        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnroll = [orgId] };
+        var policyRequirement = new ResetPasswordPolicyRequirement { AutoEnrollOrganizations = [orgId] };
 
         policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(user.Id).Returns(policyRequirement);
 

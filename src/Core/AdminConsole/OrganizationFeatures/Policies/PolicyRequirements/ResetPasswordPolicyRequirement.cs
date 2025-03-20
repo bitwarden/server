@@ -12,15 +12,18 @@ public class ResetPasswordPolicyRequirement : IPolicyRequirement
     /// <summary>
     /// List of Organization Ids that require automatic enrollment in password recovery.
     /// </summary>
-    public IEnumerable<Guid> AutoEnroll { get; init; }
+    private IEnumerable<Guid> _autoEnrollOrganizations;
+    public IEnumerable<Guid> AutoEnrollOrganizations { init => _autoEnrollOrganizations = value; }
 
     /// <summary>
     /// Returns true if provided organizationId requires automatic enrollment in password recovery.
     /// </summary>
     public bool AutoEnrollEnabled(Guid organizationId)
     {
-        return AutoEnroll.Contains(organizationId);
+        return _autoEnrollOrganizations.Contains(organizationId);
     }
+
+
 }
 
 public class ResetPasswordPolicyRequirementFactory : BasePolicyRequirementFactory<ResetPasswordPolicyRequirement>
@@ -34,19 +37,10 @@ public class ResetPasswordPolicyRequirementFactory : BasePolicyRequirementFactor
     public override ResetPasswordPolicyRequirement Create(IEnumerable<PolicyDetails> policyDetails)
     {
         var result = policyDetails
-            .Aggregate(
-                new ResetPasswordPolicyRequirement() { AutoEnroll = [] },
-                (result, data) =>
-                {
-                    var dataModel = data.GetDataModel<ResetPasswordDataModel>();
-                    if (dataModel.AutoEnrollEnabled && !result.AutoEnroll.Contains(data.OrganizationId))
-                    {
-                        return new ResetPasswordPolicyRequirement() { AutoEnroll = result.AutoEnroll.Append(data.OrganizationId) };
-                    }
+        .Where(p => p.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled)
+        .Select(p => p.OrganizationId)
+        .ToHashSet();
 
-                    return result;
-                });
-
-        return result;
+        return new ResetPasswordPolicyRequirement() { AutoEnrollOrganizations = result };
     }
 }
