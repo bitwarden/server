@@ -52,7 +52,7 @@ public class CreateManyTaskNotificationsCommand : ICreateManyTaskNotificationsCo
         var orgOwnerEmails = await _organizationUserRepository.GetManyDetailsByRoleAsync(orgId, OrganizationUserType.Owner);
         var orgAdminAndOwnerEmails = orgAdminEmails.Concat(orgOwnerEmails).Select(x => x.Email).Distinct().ToList();
 
-        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization.Name, userTaskCount, orgAdminAndOwnerEmails);
+        await _mailService.SendBulkSecurityTaskNotificationsAsync(organization, userTaskCount, orgAdminAndOwnerEmails);
 
         // Break securityTaskCiphers into separate lists by user Id
         var securityTaskCiphersByUser = securityTaskCiphers.GroupBy(x => x.UserId)
