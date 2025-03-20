@@ -25,7 +25,7 @@ public class OpaqueKeyExchangeCredential : ITableObject<Guid>
     public string CredentialBlob { get; set; }
 
     /// <summary>
-    /// User key encapsulated OPAQUE credential public key (used for user key rotation enablement).
+    /// User key encapsulated OPAQUE credential public key (enables user key rotation).
     /// </summary>
     public string EncryptedPublicKey { get; set; }
 
