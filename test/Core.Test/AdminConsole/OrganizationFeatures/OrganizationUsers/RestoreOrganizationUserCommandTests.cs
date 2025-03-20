@@ -23,12 +23,11 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers;
 [SutProviderCustomize]
 public class RestoreOrganizationUserCommandTests
 {
-
     [Theory, BitAutoData]
     public async Task RestoreUser_Success(Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
 
@@ -46,7 +45,7 @@ public class RestoreOrganizationUserCommandTests
     public async Task RestoreUser_WithPushSyncOrgKeysOnRevokeRestoreEnabled_Success(Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
 
@@ -71,7 +70,7 @@ public class RestoreOrganizationUserCommandTests
     public async Task RestoreUser_WithEventSystemUser_Success(Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         EventSystemUser eventSystemUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
 
@@ -90,7 +89,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         EventSystemUser eventSystemUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         RestoreUser_Setup(organization, null, organizationUser, sutProvider);
 
@@ -115,7 +114,7 @@ public class RestoreOrganizationUserCommandTests
     public async Task RestoreUser_RestoreThemselves_Fails(Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.UserId = owner.Id;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
@@ -144,7 +143,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed)] OrganizationUser restoringUser,
         [OrganizationUser(OrganizationUserStatusType.Revoked, OrganizationUserType.Owner)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         restoringUser.Type = restoringUserType;
         RestoreUser_Setup(organization, restoringUser, organizationUser, sutProvider);
@@ -174,7 +173,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Status = userStatus;
         RestoreUser_Setup(organization, owner, organizationUser, sutProvider);
@@ -201,7 +200,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email =
             null; // this is required to mock that the user as had already been confirmed before the revoke
@@ -240,7 +239,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email = null;
 
@@ -289,7 +288,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email =
             null; // this is required to mock that the user as had already been confirmed before the revoke
@@ -326,7 +325,7 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email =
             null; // this is required to mock that the user as had already been confirmed before the revoke
@@ -377,7 +376,7 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email =
             null; // this is required to mock that the user as had already been confirmed before the revoke
@@ -422,7 +421,7 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
         [OrganizationUser(OrganizationUserStatusType.Accepted)] OrganizationUser secondOrganizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email =
             null; // this is required to mock that the user as had already been confirmed before the revoke
@@ -487,7 +486,7 @@ public class RestoreOrganizationUserCommandTests
         OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)]
         OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email = null;
 
@@ -532,7 +531,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser organizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         organizationUser.Email =
             null; // this is required to mock that the user as had already been confirmed before the revoke
@@ -569,7 +568,7 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         // Arrange
         RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
@@ -617,7 +616,7 @@ public class RestoreOrganizationUserCommandTests
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser1,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser2,
         [OrganizationUser(OrganizationUserStatusType.Revoked)] OrganizationUser orgUser3,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         // Arrange
         RestoreUser_Setup(organization, owner, orgUser1, sutProvider);
@@ -681,7 +680,7 @@ public class RestoreOrganizationUserCommandTests
         Organization organization,
         OrganizationUser? requestingOrganizationUser,
         OrganizationUser targetOrganizationUser,
-        SutProvider<IRestoreOrganizationUserCommand> sutProvider)
+        SutProvider<RestoreOrganizationUserCommand> sutProvider)
     {
         if (requestingOrganizationUser != null)
         {
