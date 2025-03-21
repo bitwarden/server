@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿#nullable enable
+
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -6,43 +8,58 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures;
 
-public class RoleRequirementAttribute
+public abstract class OrganizationRequirementAttribute
     : AuthorizeAttribute, IAuthorizationRequirement, IAuthorizationRequirementData
 {
-    public OrganizationUserType Role { get; set; }
-
-    public RoleRequirementAttribute(OrganizationUserType type)
-    {
-        Role = type;
-    }
-
-    public IEnumerable<IAuthorizationRequirement> GetRequirements()
-    {
-        yield return this;
-    }
+    public IEnumerable<IAuthorizationRequirement> GetRequirements() => [this];
 }
 
-public class RoleAuthorizationHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor) : AuthorizationHandler<RoleRequirementAttribute>
+public abstract class OrganizationRequirementHandler : AuthorizationHandler<OrganizationRequirementAttribute>
 {
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, RoleRequirementAttribute requirementAttribute)
+    protected Guid? OrganizationId { get; set; }
+    protected CurrentContextOrganization? Organization { get; set; }
+
+    protected OrganizationRequirementHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor)
     {
         if (httpContextAccessor.HttpContext is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         httpContextAccessor.HttpContext.GetRouteData().Values.TryGetValue("orgId", out var orgIdParam);
         if (!Guid.TryParse(orgIdParam?.ToString(), out var orgId))
         {
             // No orgId supplied, unable to authorize
-            return Task.CompletedTask;
+            return;
         }
 
-        // This could be an extension method on ClaimsPrincipal
-        var orgClaims = currentContext.GetOrganization(orgId);
-        if (orgClaims?.Type == requirementAttribute.Role)
+        OrganizationId = orgId;
+        if (OrganizationId.HasValue)
         {
-            context.Succeed(requirementAttribute);
+            Organization = currentContext.GetOrganization(OrganizationId.Value);
+        }
+    }
+}
+
+public class ManageUsersRequirementAttribute : OrganizationRequirementAttribute;
+
+public class AdminConsoleRequirementsHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor)
+    : OrganizationRequirementHandler(currentContext, httpContextAccessor)
+{
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
+        OrganizationRequirementAttribute requirement)
+    {
+        var authorized = requirement switch
+        {
+            ManageUsersRequirementAttribute => Organization is
+            { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+            { Permissions.ManageUsers: true },
+            _ => false
+        };
+
+        if (authorized)
+        {
+            context.Succeed(requirement);
         }
 
         return Task.CompletedTask;

@@ -107,6 +107,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAuthorizationHandler, SecurityTaskAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, SecurityTaskOrganizationAuthorizationHandler>();
 
-        services.AddScoped<IAuthorizationHandler, RoleAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, AdminConsoleRequirementsHandler>();
     }
 }
