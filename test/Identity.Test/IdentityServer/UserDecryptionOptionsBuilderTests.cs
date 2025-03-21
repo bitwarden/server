@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Identity.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -18,6 +20,8 @@ public class UserDecryptionOptionsBuilderTests
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IFeatureService _featureService;
+    private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
     private readonly UserDecryptionOptionsBuilder _builder;
 
     public UserDecryptionOptionsBuilderTests()
@@ -25,7 +29,9 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext = Substitute.For<ICurrentContext>();
         _deviceRepository = Substitute.For<IDeviceRepository>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
-        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository);
+        _featureService = Substitute.For<IFeatureService>();
+        _opaqueKeyExchangeCredentialRepository = Substitute.For<IOpaqueKeyExchangeCredentialRepository>();
+        _builder = new UserDecryptionOptionsBuilder(_currentContext, _deviceRepository, _organizationUserRepository, _featureService, _opaqueKeyExchangeCredentialRepository);
     }
 
     [Theory]
