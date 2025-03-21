@@ -27,7 +27,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -1055,20 +1054,11 @@ public class OrganizationService : IOrganizationService
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization) =>
         await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(orgUsers, organization));
 
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
-    {
-        // convert single org user into array of 1 org user
-        var orgUsers = new[] { orgUser };
-
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(orgUsers, organization, initOrganization);
-
-        await _mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
-    }
-
-    private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(
-        IEnumerable<OrganizationUser> orgUsers, Organization organization, bool initOrganization = false) =>
-        await _sendOrganizationInvitesCommand.BuildOrganizationInvitesInfoAsync(orgUsers, organization,
-            initOrganization);
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization) =>
+        await _sendOrganizationInvitesCommand.SendInvitesAsync(new SendInvitesRequest(
+            users: [orgUser],
+            organization: organization,
+            initOrganization: initOrganization));
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId)

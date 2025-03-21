@@ -23,12 +23,12 @@ public class SendOrganizationInvitesCommand(
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
     {
-        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(request.Users, request.Organization);
+        var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(request.Users, request.Organization, request.InitOrganization);
 
         await mailService.SendOrganizationInviteEmailsAsync(orgInvitesInfo);
     }
 
-    public async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers,
+    private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers,
         Organization organization, bool initOrganization = false)
     {
         // Materialize the sequence into a list to avoid multiple enumeration warnings

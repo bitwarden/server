@@ -1,13 +1,16 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
-using Bit.Core.Entities;
-using Bit.Core.Models.Mail;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 
+/// <summary>
+/// This is for sending the invite to an organization user.
+/// </summary>
 public interface ISendOrganizationInvitesCommand
 {
+    /// <summary>
+    /// This sends emails out to organization users for a given organization.
+    /// </summary>
+    /// <param name="request"><see cref="SendInvitesRequest"/></param>
+    /// <returns></returns>
     Task SendInvitesAsync(SendInvitesRequest request);
-
-    Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization, bool initOrganization = false);
 }
