@@ -31,6 +31,7 @@ namespace Bit.Commercial.Core.Billing;
 
 public class ProviderBillingService(
     IEventService eventService,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<ProviderBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -605,7 +606,14 @@ public class ProviderBillingService(
             ProrationBehavior = StripeConstants.ProrationBehavior.CreateProrations
         };
 
-        automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        }
+        else
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true };
+        }
 
         try
         {

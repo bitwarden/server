@@ -5,6 +5,16 @@ namespace Bit.Core.Billing.Extensions;
 
 public static class CustomerExtensions
 {
+    public static bool HasBillingLocation(this Customer customer)
+        => customer is
+        {
+            Address:
+            {
+                Country: not null and not "",
+                PostalCode: not null and not ""
+            }
+        };
+
     /// <summary>
     /// Determines if a Stripe customer supports automatic tax
     /// </summary>

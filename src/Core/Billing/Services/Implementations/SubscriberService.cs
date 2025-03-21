@@ -21,6 +21,7 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
@@ -663,16 +664,37 @@ public class SubscriberService(
             }
         }
 
-        if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
         {
-            var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
-            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
-            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
-            var automaticTaxOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
-            if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
+            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
             {
-                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, automaticTaxOptions);
+                var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+                var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
+                var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+                var automaticTaxOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
+                if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
+                {
+                    await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, automaticTaxOptions);
+                }
             }
+        }
+        else
+        {
+            if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
+
+            return;
+
+            bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
+                => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
+                   (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
+                   localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
         }
     }
 

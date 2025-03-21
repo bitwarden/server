@@ -128,9 +128,16 @@ public class StripePaymentService : IPaymentService
                 new SubscriptionPendingInvoiceItemIntervalOptions { Interval = "month" };
         }
 
-        var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, sub.Items.Select(x => x.Price.Id));
-        var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
-        automaticTaxStrategy.SetUpdateOptions(subUpdateOptions, sub);
+        if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, sub.Items.Select(x => x.Price.Id));
+            var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
+            automaticTaxStrategy.SetUpdateOptions(subUpdateOptions, sub);
+        }
+        else
+        {
+            subUpdateOptions.EnableAutomaticTax(sub.Customer, sub);
+        }
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
         {
@@ -817,16 +824,38 @@ public class StripePaymentService : IPaymentService
                 });
             }
 
-            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
             {
-                var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
-
-                var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
-                var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
-                var subscriptionUpdateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
-
-                if (subscriptionUpdateOptions != null)
+                if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
                 {
+                    var subscription = await _stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+
+                    var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
+                    var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
+                    var subscriptionUpdateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
+
+                    if (subscriptionUpdateOptions != null)
+                    {
+                        _ = await _stripeAdapter.SubscriptionUpdateAsync(
+                            subscriber.GatewaySubscriptionId,
+                            subscriptionUpdateOptions);
+                    }
+                }
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId) &&
+                    customer.Subscriptions.Any(sub =>
+                        sub.Id == subscriber.GatewaySubscriptionId &&
+                        !sub.AutomaticTax.Enabled) &&
+                    customer.HasTaxLocationVerified())
+                {
+                    var subscriptionUpdateOptions = new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true },
+                        DefaultTaxRates = []
+                    };
+
                     _ = await _stripeAdapter.SubscriptionUpdateAsync(
                         subscriber.GatewaySubscriptionId,
                         subscriptionUpdateOptions);

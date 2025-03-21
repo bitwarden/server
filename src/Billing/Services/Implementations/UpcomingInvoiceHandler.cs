@@ -1,4 +1,8 @@
-﻿using Bit.Core.AdminConsole.Repositories;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
@@ -11,6 +15,7 @@ using Event = Stripe.Event;
 namespace Bit.Billing.Services.Implementations;
 
 public class UpcomingInvoiceHandler(
+    IFeatureService featureService,
     ILogger<StripeEventProcessor> logger,
     IMailService mailService,
     IOrganizationRepository organizationRepository,
@@ -136,15 +141,48 @@ public class UpcomingInvoiceHandler(
 
     private async Task TryEnableAutomaticTaxAsync(Subscription subscription)
     {
-        var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscription.Items.Select(x => x.Price.Id));
-        var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
-        var updateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscription.Items.Select(x => x.Price.Id));
+            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+            var updateOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
 
-        if (updateOptions == null)
+            if (updateOptions == null)
+            {
+                return;
+            }
+
+            await stripeFacade.UpdateSubscription(subscription.Id, updateOptions);
+            return;
+        }
+
+        if (subscription.AutomaticTax.Enabled ||
+            !subscription.Customer.HasBillingLocation() ||
+            await IsNonTaxableNonUSBusinessUseSubscription(subscription))
         {
             return;
         }
 
-        await stripeFacade.UpdateSubscription(subscription.Id, updateOptions);
+        await stripeFacade.UpdateSubscription(subscription.Id,
+            new SubscriptionUpdateOptions
+            {
+                DefaultTaxRates = [],
+                AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+            });
+
+        return;
+
+        async Task<bool> IsNonTaxableNonUSBusinessUseSubscription(Subscription localSubscription)
+        {
+            var familyPriceIds = (await Task.WhenAll(
+                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019),
+                    pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually)))
+                .Select(plan => plan.PasswordManager.StripePlanId);
+
+            return localSubscription.Customer.Address.Country != "US" &&
+                   localSubscription.Metadata.ContainsKey(StripeConstants.MetadataKeys.OrganizationId) &&
+                   !localSubscription.Items.Select(item => item.Price.Id).Intersect(familyPriceIds).Any() &&
+                   !localSubscription.Customer.TaxIds.Any();
+        }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -134,7 +135,17 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
                 Items = [new SubscriptionItemOptions { Price = plan.PasswordManager.StripeSeatPlanId, Quantity = organization.Seats }]
             };
 
-            _automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+            if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+            {
+                _automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+            }
+            else
+            {
+                subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions
+                {
+                    Enabled = true
+                };
+            }
 
             var subscription = await _stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

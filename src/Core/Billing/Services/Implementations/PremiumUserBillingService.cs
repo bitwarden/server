@@ -22,6 +22,7 @@ using static Utilities;
 
 public class PremiumUserBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<PremiumUserBillingService> logger,
     ISetupIntentCache setupIntentCache,
@@ -334,7 +335,17 @@ public class PremiumUserBillingService(
             OffSession = true
         };
 
-        automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        }
+        else
+        {
+            subscriptionCreateOptions.AutomaticTax = new SubscriptionAutomaticTaxOptions
+            {
+                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported,
+            };
+        }
 
         var subscription = await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
 

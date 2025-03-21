@@ -174,6 +174,7 @@ public static class FeatureFlagKeys
     public const string PM3503_MobileAnonAddySelfHostAlias = "anon-addy-self-host-alias";
     public const string WebPush = "web-push";
     public const string AndroidImportLoginsFlow = "import-logins-flow";
+    public const string PM19147_AutomaticTaxImprovements = "pm-19147-automatic-tax-improvements";
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";

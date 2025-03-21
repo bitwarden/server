@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
@@ -24,6 +25,7 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -384,9 +386,17 @@ public class OrganizationBillingService(
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
-        var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriptionSetup.PlanType);
-        var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
-        automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriptionSetup.PlanType);
+            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        }
+        else
+        {
+            subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions();
+            subscriptionCreateOptions.AutomaticTax.Enabled = customer.HasBillingLocation();
+        }
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
