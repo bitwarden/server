@@ -3,6 +3,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures;
@@ -10,23 +11,34 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures;
 public class ManageUsersRequirement : IOrganizationRequirement;
 
 public class AdminConsoleRequirementsHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor)
-    : OrganizationRequirementHandler(currentContext, httpContextAccessor)
+    : AuthorizationHandler<IOrganizationRequirement>
 {
-    protected override async Task<bool> HandleOrganizationRequirementAsync(IOrganizationRequirement requirement,
-        Guid organizationId, CurrentContextOrganization? organization)
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
+        IOrganizationRequirement requirement)
     {
+        var organizationId = httpContextAccessor.GetOrganizationId();
+        if (organizationId is null)
+        {
+            return;
+        }
+
+        var organization = currentContext.GetOrganization(organizationId.Value);
+
         var authorized = requirement switch
         {
-            ManageUsersRequirement => await ManageUsersAsync(organizationId, organization),
+            ManageUsersRequirement => await ManageUsersAsync(organizationId.Value, organization),
             _ => false
         };
 
-        return authorized;
+        if (authorized)
+        {
+            context.Succeed(requirement);
+        }
     }
 
     private async Task<bool> ManageUsersAsync(Guid organizationId, CurrentContextOrganization? organization)
         => organization is
     { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
     { Permissions.ManageUsers: true }
-           || await IsProviderForOrganizationAsync(organizationId);
+           || await currentContext.ProviderUserForOrgAsync(organizationId);
 }
