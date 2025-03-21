@@ -55,6 +55,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             userDecryptionOptionsBuilder)
     {
         _opaqueKeyExchangeService = opaqueKeyExchangeService;
+        _featureService = featureService;
     }
 
     string IExtensionGrantValidator.GrantType => "opaque-ke";
