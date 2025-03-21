@@ -1,22 +1,26 @@
-CREATE TABLE [dbo].[OpaqueKeyExchangeCredential]
-(
-    [Id] UNIQUEIDENTIFIER NOT NULL,
-    [UserId] UNIQUEIDENTIFIER NOT NULL,
-    [CipherConfiguration] VARCHAR(MAX) NOT NULL,
-    [CredentialBlob] VARCHAR(MAX) NOT NULL,
-    [EncryptedPublicKey] VARCHAR(MAX) NOT NULL,
-    [EncryptedPrivateKey] VARCHAR(MAX) NOT NULL,
-    [EncryptedUserKey] VARCHAR(MAX) NULL,
-    [CreationDate] DATETIME2 (7) NOT NULL,
-    CONSTRAINT [PK_OpaqueKeyExchangeCredential] PRIMARY KEY CLUSTERED ([UserId]), -- using this as the primary key ensure users only have one credential
-    CONSTRAINT [FK_OpaqueKeyExchangeCredential_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
-);
-
+IF OBJECT_ID('[dbo].[OpaqueKeyExchangeCredential]') IS NULL
+BEGIN
+    CREATE TABLE [dbo].[OpaqueKeyExchangeCredential]
+    (
+        [Id] UNIQUEIDENTIFIER NOT NULL,
+        [UserId] UNIQUEIDENTIFIER NOT NULL,
+        [CipherConfiguration] VARCHAR(MAX) NOT NULL,
+        [CredentialBlob] VARCHAR(MAX) NOT NULL,
+        [EncryptedPublicKey] VARCHAR(MAX) NOT NULL,
+        [EncryptedPrivateKey] VARCHAR(MAX) NOT NULL,
+        [EncryptedUserKey] VARCHAR(MAX) NULL,
+        [CreationDate] DATETIME2 (7) NOT NULL,
+        CONSTRAINT [PK_OpaqueKeyExchangeCredential] PRIMARY KEY CLUSTERED ([UserId]), -- using this as the primary key ensure users only have one credential
+        CONSTRAINT [FK_OpaqueKeyExchangeCredential_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
+    )
+END
 GO
 
-CREATE NONCLUSTERED INDEX [IX_OpaqueKeyExchangeCredential_UserId]
-    ON [dbo].[OpaqueKeyExchangeCredential]([UserId] ASC);
-
+IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_OpaqueKeyExchangeCredential_UserId')
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_OpaqueKeyExchangeCredential_UserId]
+        ON [dbo].[OpaqueKeyExchangeCredential]([UserId] ASC);
+END
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Create]
