@@ -3,12 +3,12 @@ using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Braintree;
 using Microsoft.Extensions.Logging;
 using Stripe;
@@ -26,9 +26,11 @@ public class OrganizationBillingService(
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
+    IPricingClient pricingClient,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ISubscriberService subscriberService) : IOrganizationBillingService
+    ISubscriberService subscriberService,
+    ITaxService taxService) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -62,25 +64,44 @@ public class OrganizationBillingService(
             return null;
         }
 
-        var isEligibleForSelfHost = IsEligibleForSelfHost(organization);
+        if (globalSettings.SelfHosted)
+        {
+            return OrganizationMetadata.Default;
+        }
+
+        var isEligibleForSelfHost = await IsEligibleForSelfHostAsync(organization);
+
         var isManaged = organization.Status == OrganizationStatusType.Managed;
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            return new OrganizationMetadata(isEligibleForSelfHost, isManaged, false,
-                false, false);
+            return OrganizationMetadata.Default with
+            {
+                IsEligibleForSelfHost = isEligibleForSelfHost,
+                IsManaged = isManaged
+            };
         }
 
         var customer = await subscriberService.GetCustomer(organization,
             new CustomerGetOptions { Expand = ["discount.coupon.applies_to"] });
 
         var subscription = await subscriberService.GetSubscription(organization);
-        var isOnSecretsManagerStandalone = IsOnSecretsManagerStandalone(organization, customer, subscription);
-        var isSubscriptionUnpaid = IsSubscriptionUnpaid(subscription);
-        var hasSubscription = true;
 
-        return new OrganizationMetadata(isEligibleForSelfHost, isManaged, isOnSecretsManagerStandalone,
-            isSubscriptionUnpaid, hasSubscription);
+        var isOnSecretsManagerStandalone = await IsOnSecretsManagerStandalone(organization, customer, subscription);
+
+        var invoice = await stripeAdapter.InvoiceGetAsync(subscription.LatestInvoiceId, new InvoiceGetOptions());
+
+        return new OrganizationMetadata(
+            isEligibleForSelfHost,
+            isManaged,
+            isOnSecretsManagerStandalone,
+            subscription.Status == StripeConstants.SubscriptionStatus.Unpaid,
+            true,
+            invoice?.Status == StripeConstants.InvoiceStatus.Open,
+            subscription.Status == StripeConstants.SubscriptionStatus.Canceled,
+            invoice?.DueDate,
+            invoice?.Created,
+            subscription.CurrentPeriodEnd);
     }
 
     public async Task UpdatePaymentMethod(
@@ -167,14 +188,38 @@ public class OrganizationBillingService(
                 throw new BillingException();
             }
 
-            var (address, taxIdData) = customerSetup.TaxInformation.GetStripeOptions();
-
-            customerCreateOptions.Address = address;
+            customerCreateOptions.Address = new AddressOptions
+            {
+                Line1 = customerSetup.TaxInformation.Line1,
+                Line2 = customerSetup.TaxInformation.Line2,
+                City = customerSetup.TaxInformation.City,
+                PostalCode = customerSetup.TaxInformation.PostalCode,
+                State = customerSetup.TaxInformation.State,
+                Country = customerSetup.TaxInformation.Country,
+            };
             customerCreateOptions.Tax = new CustomerTaxOptions
             {
                 ValidateLocation = StripeConstants.ValidateTaxLocationTiming.Immediately
             };
-            customerCreateOptions.TaxIdData = taxIdData;
+
+            if (!string.IsNullOrEmpty(customerSetup.TaxInformation.TaxId))
+            {
+                var taxIdType = taxService.GetStripeTaxCode(customerSetup.TaxInformation.Country,
+                    customerSetup.TaxInformation.TaxId);
+
+                if (taxIdType == null)
+                {
+                    logger.LogWarning("Could not determine tax ID type for organization '{OrganizationID}' in country '{Country}' with tax ID '{TaxID}'.",
+                        organization.Id,
+                        customerSetup.TaxInformation.Country,
+                        customerSetup.TaxInformation.TaxId);
+                }
+
+                customerCreateOptions.TaxIdData =
+                [
+                    new() { Type = taxIdType, Value = customerSetup.TaxInformation.TaxId }
+                ];
+            }
 
             var (paymentMethodType, paymentMethodToken) = customerSetup.TokenizedPaymentSource;
 
@@ -267,7 +312,7 @@ public class OrganizationBillingService(
         Customer customer,
         SubscriptionSetup subscriptionSetup)
     {
-        var plan = subscriptionSetup.Plan;
+        var plan = await pricingClient.GetPlanOrThrow(subscriptionSetup.PlanType);
 
         var passwordManagerOptions = subscriptionSetup.PasswordManagerOptions;
 
@@ -324,11 +369,20 @@ public class OrganizationBillingService(
             }
         }
 
+        var customerHasTaxInfo = customer is
+        {
+            Address:
+            {
+                Country: not null and not "",
+                PostalCode: not null and not ""
+            }
+        };
+
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
             AutomaticTax = new SubscriptionAutomaticTaxOptions
             {
-                Enabled = customer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported
+                Enabled = customerHasTaxInfo
             },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
@@ -338,21 +392,23 @@ public class OrganizationBillingService(
                 ["organizationId"] = organizationId.ToString()
             },
             OffSession = true,
-            TrialPeriodDays = plan.TrialPeriodDays
+            TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
 
-    private static bool IsEligibleForSelfHost(
+    private async Task<bool> IsEligibleForSelfHostAsync(
         Organization organization)
     {
-        var eligibleSelfHostPlans = StaticStore.Plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
+        var plans = await pricingClient.ListPlans();
+
+        var eligibleSelfHostPlans = plans.Where(plan => plan.HasSelfHost).Select(plan => plan.Type);
 
         return eligibleSelfHostPlans.Contains(organization.PlanType);
     }
 
-    private static bool IsOnSecretsManagerStandalone(
+    private async Task<bool> IsOnSecretsManagerStandalone(
         Organization organization,
         Customer? customer,
         Subscription? subscription)
@@ -362,7 +418,7 @@ public class OrganizationBillingService(
             return false;
         }
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = await pricingClient.GetPlanOrThrow(organization.PlanType);
 
         if (!plan.SupportsSecretsManager)
         {
@@ -382,17 +438,6 @@ public class OrganizationBillingService(
 
         return subscriptionProductIds.Intersect(couponAppliesTo ?? []).Any();
     }
-
-    private static bool IsSubscriptionUnpaid(Subscription subscription)
-    {
-        if (subscription == null)
-        {
-            return false;
-        }
-
-        return subscription.Status == "unpaid";
-    }
-
 
     #endregion
 }

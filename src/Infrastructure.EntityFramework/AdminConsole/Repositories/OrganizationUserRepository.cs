@@ -46,6 +46,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
     public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
     {
+        organizationUsers = organizationUsers.ToList();
         if (!organizationUsers.Any())
         {
             return new List<Guid>();
@@ -248,6 +249,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+#nullable enable
     public async Task<(OrganizationUserUserDetails? OrganizationUser, ICollection<CollectionAccessSelection> Collections)> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
@@ -268,6 +270,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return (organizationUserUserDetails, collections);
         }
     }
+#nullable disable
 
     public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null)
     {
@@ -719,6 +722,39 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = new OrganizationUserReadByClaimedOrganizationDomainsQuery(organizationId);
             var data = await query.Run(dbContext).ToListAsync();
             return data;
+        }
+    }
+
+    public async Task RevokeManyByIdAsync(IEnumerable<Guid> organizationUserIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.OrganizationUsers.Where(x => organizationUserIds.Contains(x.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, OrganizationUserStatusType.Revoked));
+
+        await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdsAsync(organizationUserIds);
+    }
+
+    public async Task<IEnumerable<OrganizationUserUserDetails>> GetManyDetailsByRoleAsync(Guid organizationId, OrganizationUserType role)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from ou in dbContext.OrganizationUsers
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        where ou.OrganizationId == organizationId &&
+                            ou.Type == role &&
+                            ou.Status == OrganizationUserStatusType.Confirmed
+                        select new OrganizationUserUserDetails
+                        {
+                            Id = ou.Id,
+                            Email = ou.Email ?? u.Email,
+                            Permissions = ou.Permissions
+                        };
+            return await query.ToListAsync();
         }
     }
 }

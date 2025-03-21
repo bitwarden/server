@@ -302,6 +302,97 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    public async Task<ICollection<OrganizationCipherPermission>>
+        GetCipherPermissionsForOrganizationAsync(Guid organizationId, Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new CipherOrganizationPermissionsQuery(organizationId, userId).Run(dbContext);
+
+            ICollection<OrganizationCipherPermission> permissions;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                permissions = (await query.ToListAsync())
+                    .GroupBy(c => new { c.Id, c.OrganizationId })
+                    .Select(g => new OrganizationCipherPermission
+                    {
+                        Id = g.Key.Id,
+                        OrganizationId = g.Key.OrganizationId,
+                        Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                        ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                        Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                        Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.Id, p.OrganizationId }
+                    into g
+                                   select new OrganizationCipherPermission
+                                   {
+                                       Id = g.Key.Id,
+                                       OrganizationId = g.Key.OrganizationId,
+                                       Read = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Read))),
+                                       ViewPassword = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.ViewPassword))),
+                                       Edit = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Edit))),
+                                       Manage = Convert.ToBoolean(g.Max(c => Convert.ToInt32(c.Manage))),
+                                   };
+                permissions = await groupByQuery.ToListAsync();
+            }
+
+            return permissions;
+        }
+    }
+
+    public async Task<ICollection<UserSecurityTaskCipher>> GetUserSecurityTasksByCipherIdsAsync(Guid organizationId, IEnumerable<Core.Vault.Entities.SecurityTask> tasks)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var cipherIds = tasks.Where(t => t.CipherId.HasValue).Select(t => t.CipherId.Value);
+            var dbContext = GetDatabaseContext(scope);
+            var query = new UserSecurityTasksByCipherIdsQuery(organizationId, cipherIds).Run(dbContext);
+
+            ICollection<UserSecurityTaskCipher> userTaskCiphers;
+
+            // SQLite does not support the GROUP BY clause
+            if (dbContext.Database.IsSqlite())
+            {
+                userTaskCiphers = (await query.ToListAsync())
+                    .GroupBy(c => new { c.UserId, c.Email, c.CipherId })
+                    .Select(g => new UserSecurityTaskCipher
+                    {
+                        UserId = g.Key.UserId,
+                        Email = g.Key.Email,
+                        CipherId = g.Key.CipherId,
+                    }).ToList();
+            }
+            else
+            {
+                var groupByQuery = from p in query
+                                   group p by new { p.UserId, p.Email, p.CipherId }
+                    into g
+                                   select new UserSecurityTaskCipher
+                                   {
+                                       UserId = g.Key.UserId,
+                                       CipherId = g.Key.CipherId,
+                                       Email = g.Key.Email,
+                                   };
+                userTaskCiphers = await groupByQuery.ToListAsync();
+            }
+
+            foreach (var userTaskCipher in userTaskCiphers)
+            {
+                userTaskCipher.TaskId = tasks.First(t => t.CipherId == userTaskCipher.CipherId).Id;
+            }
+
+            return userTaskCiphers;
+        }
+    }
+
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -386,6 +477,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Edit = true,
                                         Reprompt = c.Reprompt,
                                         ViewPassword = true,
+                                        Manage = true,
                                         OrganizationUseTotp = false,
                                         Key = c.Key
                                     };

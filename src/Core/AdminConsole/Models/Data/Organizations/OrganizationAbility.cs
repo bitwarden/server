@@ -23,9 +23,9 @@ public class OrganizationAbility
         UsePolicies = organization.UsePolicies;
         LimitCollectionCreation = organization.LimitCollectionCreation;
         LimitCollectionDeletion = organization.LimitCollectionDeletion;
-        // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
+        LimitItemDeletion = organization.LimitItemDeletion;
         AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        UseRiskInsights = organization.UseRiskInsights;
     }
 
     public Guid Id { get; set; }
@@ -42,7 +42,7 @@ public class OrganizationAbility
     public bool UsePolicies { get; set; }
     public bool LimitCollectionCreation { get; set; }
     public bool LimitCollectionDeletion { get; set; }
-    // Deprecated: https://bitwarden.atlassian.net/browse/PM-10863
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitItemDeletion { get; set; }
     public bool AllowAdminAccessToAllCollectionItems { get; set; }
+    public bool UseRiskInsights { get; set; }
 }

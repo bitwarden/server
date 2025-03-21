@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.Models.Business.Tokenables;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -27,7 +28,11 @@ namespace Bit.Commercial.Core.AdminConsole.Services;
 
 public class ProviderService : IProviderService
 {
-    public static PlanType[] ProviderDisallowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
+    private static readonly PlanType[] _resellerDisallowedOrganizationTypes = [
+        PlanType.Free,
+        PlanType.FamiliesAnnually,
+        PlanType.FamiliesAnnually2019
+    ];
 
     private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
@@ -46,6 +51,7 @@ public class ProviderService : IProviderService
     private readonly IDataProtectorTokenFactory<ProviderDeleteTokenable> _providerDeleteTokenDataFactory;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IPricingClient _pricingClient;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
@@ -54,7 +60,7 @@ public class ProviderService : IProviderService
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
         ICurrentContext currentContext, IStripeAdapter stripeAdapter, IFeatureService featureService,
         IDataProtectorTokenFactory<ProviderDeleteTokenable> providerDeleteTokenDataFactory,
-        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService)
+        IApplicationCacheService applicationCacheService, IProviderBillingService providerBillingService, IPricingClient pricingClient)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -73,6 +79,7 @@ public class ProviderService : IProviderService
         _providerDeleteTokenDataFactory = providerDeleteTokenDataFactory;
         _applicationCacheService = applicationCacheService;
         _providerBillingService = providerBillingService;
+        _pricingClient = pricingClient;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key, TaxInfo taxInfo = null)
@@ -448,30 +455,31 @@ public class ProviderService : IProviderService
 
         if (!string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId,
-                GetStripeSeatPlanId(organization.PlanType));
+            var plan = await _pricingClient.GetPlanOrThrow(organization.PlanType);
+
+            var subscriptionItem = await GetSubscriptionItemAsync(
+                organization.GatewaySubscriptionId,
+                plan.PasswordManager.StripeSeatPlanId);
+
             var extractedPlanType = PlanTypeMappings(organization);
+            var extractedPlan = await _pricingClient.GetPlanOrThrow(extractedPlanType);
+
             if (subscriptionItem != null)
             {
-                await UpdateSubscriptionAsync(subscriptionItem, GetStripeSeatPlanId(extractedPlanType), organization);
+                await UpdateSubscriptionAsync(subscriptionItem, extractedPlan.PasswordManager.StripeSeatPlanId, organization);
             }
         }
 
         await _organizationRepository.UpsertAsync(organization);
     }
 
-    private async Task<Stripe.SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
+    private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
     {
         var subscriptionDetails = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
         return subscriptionDetails.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
-    private static string GetStripeSeatPlanId(PlanType planType)
-    {
-        return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
-    }
-
-    private async Task UpdateSubscriptionAsync(Stripe.SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
+    private async Task UpdateSubscriptionAsync(SubscriptionItem subscriptionItem, string extractedPlanType, Organization organization)
     {
         try
         {
@@ -690,13 +698,14 @@ public class ProviderService : IProviderService
                     throw new BadRequestException($"Multi-organization Enterprise Providers cannot manage organizations with the plan type {requestedType}. Only Enterprise (Monthly) and Enterprise (Annually) are allowed.");
                 }
                 break;
+            case ProviderType.Reseller:
+                if (_resellerDisallowedOrganizationTypes.Contains(requestedType))
+                {
+                    throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
+                }
+                break;
             default:
                 throw new BadRequestException($"Unsupported provider type {providerType}.");
-        }
-
-        if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
-        {
-            throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
         }
     }
 }

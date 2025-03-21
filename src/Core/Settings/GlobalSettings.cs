@@ -41,6 +41,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
     public virtual bool DisableEmailNewDevice { get; set; }
+    public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
@@ -52,6 +53,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual SqlSettings PostgreSql { get; set; } = new SqlSettings();
     public virtual SqlSettings MySql { get; set; } = new SqlSettings();
     public virtual SqlSettings Sqlite { get; set; } = new SqlSettings() { ConnectionString = "Data Source=:memory:" };
+    public virtual EventLoggingSettings EventLogging { get; set; } = new EventLoggingSettings();
     public virtual MailSettings Mail { get; set; } = new MailSettings();
     public virtual IConnectionStringSettings Storage { get; set; } = new ConnectionStringSettings();
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
@@ -68,6 +70,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual YubicoSettings Yubico { get; set; } = new YubicoSettings();
     public virtual DuoSettings Duo { get; set; } = new DuoSettings();
     public virtual BraintreeSettings Braintree { get; set; } = new BraintreeSettings();
+    public virtual ImportCiphersLimitationSettings ImportCiphersLimitation { get; set; } = new ImportCiphersLimitationSettings();
     public virtual BitPaySettings BitPay { get; set; } = new BitPaySettings();
     public virtual AmazonSettings Amazon { get; set; } = new AmazonSettings();
     public virtual ServiceBusSettings ServiceBus { get; set; } = new ServiceBusSettings();
@@ -80,8 +83,11 @@ public class GlobalSettings : IGlobalSettings
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
     public virtual string DevelopmentDirectory { get; set; }
+    public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
 
     public virtual bool EnableEmailVerification { get; set; }
+    public virtual string KdfDefaultHashKey { get; set; }
+    public virtual string PricingUri { get; set; }
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -237,7 +243,18 @@ public class GlobalSettings : IGlobalSettings
         public string ConnectionString
         {
             get => _connectionString;
-            set => _connectionString = value.Trim('"');
+            set
+            {
+                // On development environment, the self-hosted overrides would not override the read-only connection string, since it is already set from the non-self-hosted connection string.
+                // This causes a bug, where the read-only connection string is pointing to self-hosted database.
+                if (!string.IsNullOrWhiteSpace(_readOnlyConnectionString) &&
+                    _readOnlyConnectionString == _connectionString)
+                {
+                    _readOnlyConnectionString = null;
+                }
+
+                _connectionString = value.Trim('"');
+            }
         }
 
         public string ReadOnlyConnectionString
@@ -251,6 +268,66 @@ public class GlobalSettings : IGlobalSettings
         {
             get => _jobSchedulerConnectionString;
             set => _jobSchedulerConnectionString = value.Trim('"');
+        }
+    }
+
+    public class EventLoggingSettings
+    {
+        public AzureServiceBusSettings AzureServiceBus { get; set; } = new AzureServiceBusSettings();
+        public virtual string WebhookUrl { get; set; }
+        public RabbitMqSettings RabbitMq { get; set; } = new RabbitMqSettings();
+
+        public class AzureServiceBusSettings
+        {
+            private string _connectionString;
+            private string _topicName;
+
+            public virtual string EventRepositorySubscriptionName { get; set; } = "events-write-subscription";
+            public virtual string WebhookSubscriptionName { get; set; } = "events-webhook-subscription";
+
+            public string ConnectionString
+            {
+                get => _connectionString;
+                set => _connectionString = value.Trim('"');
+            }
+
+            public string TopicName
+            {
+                get => _topicName;
+                set => _topicName = value.Trim('"');
+            }
+        }
+
+        public class RabbitMqSettings
+        {
+            private string _hostName;
+            private string _username;
+            private string _password;
+            private string _exchangeName;
+
+            public virtual string EventRepositoryQueueName { get; set; } = "events-write-queue";
+            public virtual string WebhookQueueName { get; set; } = "events-webhook-queue";
+
+            public string HostName
+            {
+                get => _hostName;
+                set => _hostName = value.Trim('"');
+            }
+            public string Username
+            {
+                get => _username;
+                set => _username = value.Trim('"');
+            }
+            public string Password
+            {
+                get => _password;
+                set => _password = value.Trim('"');
+            }
+            public string ExchangeName
+            {
+                get => _exchangeName;
+                set => _exchangeName = value.Trim('"');
+            }
         }
     }
 
@@ -340,7 +417,7 @@ public class GlobalSettings : IGlobalSettings
         public string CertificatePassword { get; set; }
         public string RedisConnectionString { get; set; }
         public string CosmosConnectionString { get; set; }
-        public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzAxODIwODAwLCJleHAiOjE3MzM0NDMyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNDMxOSIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.iLA771PffgIh0ClRS8OWHbg2cAgjhgOkUjRRkLNr9dpQXhYZkVKdpUn-Gw9T7grsGcAx0f4p-TQmtcCpbN9EJCF5jlF0-NfsRTp_gmCgQ5eXyiE4DzJp2OCrz_3STf07N1dILwhD3nk9rzcA6SRQ4_kja8wAMHKnD5LisW98r5DfRDBecRs16KS5HUhg99DRMR5fd9ntfydVMTC_E23eEOHVLsR4YhiSXaEINPjFDG1czyOBClJItDW8g9X8qlClZegr630UjnKKg06A4usoL25VFHHn8Ew3v-_-XdlWoWsIpMMVvacwZT8rwkxjIesFNsXG6yzuROIhaxAvB1297A";
+        public string LicenseKey { get; set; } = "eyJhbGciOiJQUzI1NiIsImtpZCI6IklkZW50aXR5U2VydmVyTGljZW5zZWtleS83Y2VhZGJiNzgxMzA0NjllODgwNjg5MTAyNTQxNGYxNiIsInR5cCI6ImxpY2Vuc2Urand0In0.eyJpc3MiOiJodHRwczovL2R1ZW5kZXNvZnR3YXJlLmNvbSIsImF1ZCI6IklkZW50aXR5U2VydmVyIiwiaWF0IjoxNzM0NTY2NDAwLCJleHAiOjE3NjQ5NzkyMDAsImNvbXBhbnlfbmFtZSI6IkJpdHdhcmRlbiBJbmMuIiwiY29udGFjdF9pbmZvIjoiY29udGFjdEBkdWVuZGVzb2Z0d2FyZS5jb20iLCJlZGl0aW9uIjoiU3RhcnRlciIsImlkIjoiNjg3OCIsImZlYXR1cmUiOlsiaXN2IiwidW5saW1pdGVkX2NsaWVudHMiXSwicHJvZHVjdCI6IkJpdHdhcmRlbiJ9.TYc88W_t2t0F2AJV3rdyKwGyQKrKFriSAzm1tWFNHNR9QizfC-8bliGdT4Wgeie-ynCXs9wWaF-sKC5emg--qS7oe2iIt67Qd88WS53AwgTvAddQRA4NhGB1R7VM8GAikLieSos-DzzwLYRgjZdmcsprItYGSJuY73r-7-F97ta915majBytVxGF966tT9zF1aYk0bA8FS6DcDYkr5f7Nsy8daS_uIUAgNa_agKXtmQPqKujqtUb6rgWEpSp4OcQcG-8Dpd5jHqoIjouGvY-5LTgk5WmLxi_m-1QISjxUJrUm-UGao3_VwV5KFGqYrz8csdTl-HS40ihWcsWnrV0ug";
     }
 
     public class DataProtectionSettings
@@ -433,18 +510,18 @@ public class GlobalSettings : IGlobalSettings
         public bool EnableSendTracing { get; set; } = false;
         /// <summary>
         /// The date and time at which registration will be enabled.
-        /// 
+        ///
         /// **This value should not be updated once set, as it is used to determine installation location of devices.**
-        /// 
+        ///
         /// If null, registration is disabled.
-        /// 
+        ///
         /// </summary>
         public DateTime? RegistrationStartDate { get; set; }
         /// <summary>
         /// The date and time at which registration will be disabled.
-        /// 
+        ///
         /// **This value should not be updated once set, as it is used to determine installation location of devices.**
-        /// 
+        ///
         /// If null, hub registration has no yet known expiry.
         /// </summary>
         public DateTime? RegistrationEndDate { get; set; }
@@ -454,7 +531,7 @@ public class GlobalSettings : IGlobalSettings
     {
         /// <summary>
         /// List of Notification Hub settings to use for sending push notifications.
-        /// 
+        ///
         /// Note that hubs on the same namespace share active device limits, so multiple namespaces should be used to increase capacity.
         /// </summary>
         public List<NotificationHubSettings> NotificationHubs { get; set; } = new();
@@ -478,6 +555,13 @@ public class GlobalSettings : IGlobalSettings
         public string MerchantId { get; set; }
         public string PublicKey { get; set; }
         public string PrivateKey { get; set; }
+    }
+
+    public class ImportCiphersLimitationSettings
+    {
+        public int CiphersLimit { get; set; }
+        public int CollectionRelationshipsLimit { get; set; }
+        public int CollectionsLimit { get; set; }
     }
 
     public class BitPaySettings
@@ -594,5 +678,10 @@ public class GlobalSettings : IGlobalSettings
     {
         public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
         public virtual IConnectionStringSettings Cosmos { get; set; } = new ConnectionStringSettings();
+    }
+
+    public class WebPushSettings : IWebPushSettings
+    {
+        public string VapidPublicKey { get; set; }
     }
 }

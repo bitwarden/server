@@ -1,8 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -338,16 +339,26 @@ public class SsoConfigServiceTests
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
 
-        await sutProvider.GetDependency<IPolicyService>().Received(1)
+        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
-                Arg.Is<Policy>(t => t.Type == PolicyType.SingleOrg),
-                null
+                Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.SingleOrg &&
+                    t.OrganizationId == organization.Id &&
+                    t.Enabled)
             );
 
-        await sutProvider.GetDependency<IPolicyService>().Received(1)
+        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
             .SaveAsync(
-                Arg.Is<Policy>(t => t.Type == PolicyType.ResetPassword && t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled),
-                null
+                Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.ResetPassword &&
+                    t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled &&
+                    t.OrganizationId == organization.Id &&
+                    t.Enabled)
+            );
+
+        await sutProvider.GetDependency<ISavePolicyCommand>().Received(1)
+            .SaveAsync(
+                Arg.Is<PolicyUpdate>(t => t.Type == PolicyType.RequireSso &&
+                    t.OrganizationId == organization.Id &&
+                    t.Enabled)
             );
 
         await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()

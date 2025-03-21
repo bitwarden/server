@@ -1,4 +1,5 @@
-﻿using Quartz;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Quartz;
 using Quartz.Spi;
 
 namespace Bit.Core.Jobs;
@@ -14,7 +15,8 @@ public class JobFactory : IJobFactory
 
     public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
     {
-        return _container.GetService(bundle.JobDetail.JobType) as IJob;
+        var scope = _container.CreateScope();
+        return scope.ServiceProvider.GetService(bundle.JobDetail.JobType) as IJob;
     }
 
     public void ReturnJob(IJob job)

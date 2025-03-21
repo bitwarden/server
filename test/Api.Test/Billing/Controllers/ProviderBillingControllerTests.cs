@@ -8,6 +8,7 @@ using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -260,13 +261,15 @@ public class ProviderBillingControllerTests
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        var (thisYear, thisMonth, _) = DateTime.UtcNow;
-        var daysInThisMonth = DateTime.DaysInMonth(thisYear, thisMonth);
+        var now = DateTime.UtcNow;
+        var oneMonthAgo = now.AddMonths(-1);
+
+        var daysInThisMonth = DateTime.DaysInMonth(now.Year, now.Month);
 
         var subscription = new Subscription
         {
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
-            CurrentPeriodEnd = new DateTime(thisYear, thisMonth, daysInThisMonth),
+            CurrentPeriodEnd = new DateTime(now.Year, now.Month, daysInThisMonth),
             Customer = new Customer
             {
                 Address = new Address
@@ -290,15 +293,14 @@ public class ProviderBillingControllerTests
                 options.Expand.Contains("customer.tax_ids") &&
                 options.Expand.Contains("test_clock"))).Returns(subscription);
 
-        var lastMonth = thisMonth - 1;
-        var daysInLastMonth = DateTime.DaysInMonth(thisYear, lastMonth);
+        var daysInLastMonth = DateTime.DaysInMonth(oneMonthAgo.Year, oneMonthAgo.Month);
 
         var overdueInvoice = new Invoice
         {
             Id = "invoice_id",
             Status = "open",
-            Created = new DateTime(thisYear, lastMonth, 1),
-            PeriodEnd = new DateTime(thisYear, lastMonth, daysInLastMonth),
+            Created = new DateTime(oneMonthAgo.Year, oneMonthAgo.Month, 1),
+            PeriodEnd = new DateTime(oneMonthAgo.Year, oneMonthAgo.Month, daysInLastMonth),
             Attempted = true
         };
 
@@ -329,6 +331,11 @@ public class ProviderBillingControllerTests
         };
 
         sutProvider.GetDependency<IProviderPlanRepository>().GetByProviderId(provider.Id).Returns(providerPlans);
+
+        foreach (var providerPlan in providerPlans)
+        {
+            sutProvider.GetDependency<IPricingClient>().GetPlanOrThrow(providerPlan.PlanType).Returns(StaticStore.GetPlan(providerPlan.PlanType));
+        }
 
         var result = await sutProvider.Sut.GetSubscriptionAsync(provider.Id);
 

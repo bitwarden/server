@@ -1,0 +1,17 @@
+﻿{{#>SecurityTasksHtmlLayout}}
+Keep you and your organization's data safe by changing passwords that are weak, reused, or have been exposed in a data
+breach.
+
+Launch the Bitwarden extension to review your at-risk passwords.
+
+Review at-risk passwords ({{{ReviewPasswordsUrl}}})
+
+{{#if (eq (length AdminOwnerEmails) 1)}}
+This request was initiated by {{AdminOwnerEmails.[0]}}.
+{{else}}
+This request was initiated by
+{{#each AdminOwnerEmails}}
+  {{#if @last}}and {{/if}}{{this}}{{#unless @last}}, {{/unless}}
+{{/each}}.
+{{/if}}
+{{/SecurityTasksHtmlLayout}}

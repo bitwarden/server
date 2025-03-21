@@ -1,18 +1,20 @@
 ﻿using System.Diagnostics;
 using System.Security.Claims;
+using Bit.Core;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.IdentityServer;
+using Bit.Core.Platform.Installations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Duende.IdentityModel;
 using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Validation;
 using HandlebarsDotNet;
-using IdentityModel;
 using Microsoft.AspNetCore.Identity;
 
 #nullable enable
@@ -23,6 +25,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     ICustomTokenRequestValidator
 {
     private readonly UserManager<User> _userManager;
+    private readonly IUpdateInstallationCommand _updateInstallationCommand;
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -39,7 +42,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IUpdateInstallationCommand updateInstallationCommand
         )
         : base(
             userManager,
@@ -59,6 +63,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
+        _updateInstallationCommand = updateInstallationCommand;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -76,21 +81,28 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
 
         string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
+        string clientId = context.Result.ValidatedRequest.ClientId;
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
-            || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
-            || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
-            || context.Result.ValidatedRequest.ClientId.StartsWith("internal")
+            || clientId.StartsWith("organization")
+            || clientId.StartsWith("installation")
+            || clientId.StartsWith("internal")
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
         {
             if (context.Result.ValidatedRequest.Client.Properties.TryGetValue("encryptedPayload", out var payload) &&
                 !string.IsNullOrWhiteSpace(payload))
             {
                 context.Result.CustomResponse = new Dictionary<string, object> { { "encrypted_payload", payload } };
+
+            }
+            if (FeatureService.IsEnabled(FeatureFlagKeys.RecordInstallationLastActivityDate)
+                && context.Result.ValidatedRequest.ClientId.StartsWith("installation"))
+            {
+                var installationIdPart = clientId.Split(".")[1];
+                await RecordActivityForInstallation(clientId.Split(".")[1]);
             }
             return;
         }
-        await ValidateAsync(context, context.Result.ValidatedRequest,
-            new CustomValidatorRequestContext { KnownDevice = true });
+        await ValidateAsync(context, context.Result.ValidatedRequest, new CustomValidatorRequestContext { });
     }
 
     protected async override Task<bool> ValidateContextAsync(CustomTokenRequestValidationContext context,
@@ -153,6 +165,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
             context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
+
         return Task.CompletedTask;
     }
 
@@ -162,6 +175,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         return context.Result.ValidatedRequest.Subject;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -172,16 +186,18 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.CustomResponse = customResponse;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetSsoResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
         Debug.Assert(context.Result is not null);
         context.Result.Error = "invalid_grant";
-        context.Result.ErrorDescription = "Single Sign on required.";
+        context.Result.ErrorDescription = "Sso authentication required.";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;
     }
 
+    [Obsolete("Consider using SetGrantValidationErrorResult instead.")]
     protected override void SetErrorResult(CustomTokenRequestValidationContext context,
         Dictionary<string, object> customResponse)
     {
@@ -189,5 +205,36 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.Error = "invalid_grant";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;
+    }
+
+    protected override void SetValidationErrorResult(
+        CustomTokenRequestValidationContext context, CustomValidatorRequestContext requestContext)
+    {
+        Debug.Assert(context.Result is not null);
+        context.Result.Error = requestContext.ValidationErrorResult.Error;
+        context.Result.IsError = requestContext.ValidationErrorResult.IsError;
+        context.Result.ErrorDescription = requestContext.ValidationErrorResult.ErrorDescription;
+        context.Result.CustomResponse = requestContext.CustomResponse;
+    }
+
+    /// <summary>
+    /// To help mentally separate organizations that self host from abandoned
+    /// organizations we hook in to the token refresh event for installations
+    /// to write a simple `DateTime.Now` to the database.
+    /// </summary>
+    /// <remarks>
+    /// This works well because installations don't phone home very often.
+    /// Currently self hosted installations only refresh tokens every 24
+    /// hours or so for the sake of hooking in to cloud's push relay service.
+    /// If installations ever start refreshing tokens more frequently we may need to
+    /// adjust this to avoid making a bunch of unnecessary database calls!
+    /// </remarks>
+    private async Task RecordActivityForInstallation(string? installationIdString)
+    {
+        if (!Guid.TryParse(installationIdString, out var installationId))
+        {
+            return;
+        }
+        await _updateInstallationCommand.UpdateLastActivityDateAsync(installationId);
     }
 }

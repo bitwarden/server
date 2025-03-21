@@ -19,6 +19,7 @@ using Xunit;
 using static Bit.Core.Test.Billing.Utilities;
 using Address = Stripe.Address;
 using Customer = Stripe.Customer;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 
@@ -1446,7 +1447,7 @@ public class SubscriberServiceTests
             });
 
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
+            .Returns(new GlobalSettings.BaseServiceUriSettings(new GlobalSettings())
             {
                 CloudRegion = "US"
             });
@@ -1488,7 +1489,7 @@ public class SubscriberServiceTests
             });
 
         sutProvider.GetDependency<IGlobalSettings>().BaseServiceUri
-            .Returns(new Settings.GlobalSettings.BaseServiceUriSettings(new Settings.GlobalSettings())
+            .Returns(new GlobalSettings.BaseServiceUriSettings(new GlobalSettings())
             {
                 CloudRegion = "US"
             });
@@ -1545,7 +1546,7 @@ public class SubscriberServiceTests
     {
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
 
-        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1" }] } };
+        var customer = new Customer { Id = provider.GatewayCustomerId, TaxIds = new StripeList<TaxId> { Data = [new TaxId { Id = "tax_id_1", Type = "us_ein" }] } };
 
         stripeAdapter.CustomerGetAsync(provider.GatewayCustomerId, Arg.Is<CustomerGetOptions>(
             options => options.Expand.Contains("tax_ids"))).Returns(customer);
@@ -1554,6 +1555,7 @@ public class SubscriberServiceTests
             "US",
             "12345",
             "123456789",
+            "us_ein",
             "123 Example St.",
             null,
             "Example Town",

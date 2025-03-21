@@ -3,7 +3,6 @@ using System.Net;
 using Bit.Admin.AdminConsole.Models;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
@@ -12,6 +11,7 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Entities;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Repositories;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Services.Contracts;
@@ -43,6 +43,7 @@ public class ProvidersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IProviderPlanRepository _providerPlanRepository;
     private readonly IProviderBillingService _providerBillingService;
+    private readonly IPricingClient _pricingClient;
     private readonly string _stripeUrl;
     private readonly string _braintreeMerchantUrl;
     private readonly string _braintreeMerchantId;
@@ -61,7 +62,8 @@ public class ProvidersController : Controller
         IFeatureService featureService,
         IProviderPlanRepository providerPlanRepository,
         IProviderBillingService providerBillingService,
-        IWebHostEnvironment webHostEnvironment)
+        IWebHostEnvironment webHostEnvironment,
+        IPricingClient pricingClient)
     {
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
@@ -76,6 +78,7 @@ public class ProvidersController : Controller
         _featureService = featureService;
         _providerPlanRepository = providerPlanRepository;
         _providerBillingService = providerBillingService;
+        _pricingClient = pricingClient;
         _stripeUrl = webHostEnvironment.GetStripeUrl();
         _braintreeMerchantUrl = webHostEnvironment.GetBraintreeMerchantUrl();
         _braintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -133,11 +136,6 @@ public class ProvidersController : Controller
     [HttpGet("providers/create/multi-organization-enterprise")]
     public IActionResult CreateMultiOrganizationEnterprise(int enterpriseMinimumSeats, string ownerEmail = null)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-        {
-            return RedirectToAction("Create");
-        }
-
         return View(new CreateMultiOrganizationEnterpriseProviderModel
         {
             OwnerEmail = ownerEmail,
@@ -211,10 +209,6 @@ public class ProvidersController : Controller
         }
         var provider = model.ToProvider();
 
-        if (!_featureService.IsEnabled(FeatureFlagKeys.PM12275_MultiOrganizationEnterprises))
-        {
-            return RedirectToAction("Create");
-        }
         await _createProviderCommand.CreateMultiOrganizationEnterpriseAsync(
             provider,
             model.OwnerEmail,
@@ -235,7 +229,8 @@ public class ProvidersController : Controller
 
         var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
         var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderViewModel(provider, users, providerOrganizations));
+        var providerPlans = await _providerPlanRepository.GetByProviderId(id);
+        return View(new ProviderViewModel(provider, users, providerOrganizations, providerPlans.ToList()));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -248,6 +243,18 @@ public class ProvidersController : Controller
         }
 
         return View(provider);
+    }
+
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var provider = await GetEditModel(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        return RedirectToAction("Edit", new { id });
     }
 
     [HttpPost]
@@ -412,7 +419,9 @@ public class ProvidersController : Controller
             return RedirectToAction("Index");
         }
 
-        return View(new OrganizationEditModel(provider));
+        var plans = await _pricingClient.ListPlans();
+
+        return View(new OrganizationEditModel(provider, plans));
     }
 
     [HttpPost]
