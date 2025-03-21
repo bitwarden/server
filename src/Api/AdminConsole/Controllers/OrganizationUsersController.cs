@@ -7,6 +7,9 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserAccountRecoveryDetails;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserDetails;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization.OrganizationUserGroups;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
@@ -107,10 +110,18 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(Guid id, bool includeGroups = false)
+    public async Task<OrganizationUserDetailsResponseModel> Get([FromRoute] Guid orgId, Guid id, bool includeGroups = false)
     {
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
+            OrganizationUserDetailsOperations.Read);
+
+        if (authorizationResult.Succeeded is false)
+        {
+            throw new NotFoundException();
+        }
+
         var (organizationUser, collections) = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(id);
-        if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.OrganizationId))
+        if (organizationUser == null)
         {
             throw new NotFoundException();
         }
@@ -177,11 +188,18 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}/groups")]
-    public async Task<IEnumerable<string>> GetGroups(string orgId, string id)
+    public async Task<IEnumerable<string>> GetGroups([FromRoute] Guid orgId, [FromRoute] Guid id)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || (!await _currentContext.ManageGroups(organizationUser.OrganizationId) &&
-                                         !await _currentContext.ManageUsers(organizationUser.OrganizationId)))
+        var authorized = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
+            [OrganizationUserGroupOperations.ReadAllIds]);
+
+        if (authorized.Succeeded is false)
+        {
+            throw new NotFoundException();
+        }
+
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null)
         {
             throw new NotFoundException();
         }
@@ -192,17 +210,19 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}/reset-password-details")]
-    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(string orgId, string id)
+    public async Task<OrganizationUserResetPasswordDetailsResponseModel> GetResetPasswordDetails(Guid orgId, string id)
     {
-        // Make sure the calling user can reset passwords for this org
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageResetPassword(orgGuidId))
+        var authResult = await _authorizationService.AuthorizeAsync(User,
+            new OrganizationScope(orgId),
+            [OrganizationUsersAccountRecoveryDetailsOperations.Read]);
+
+        if (authResult.Succeeded is false)
         {
             throw new NotFoundException();
         }
 
         var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || !organizationUser.UserId.HasValue)
+        if (organizationUser is not { UserId: not null })
         {
             throw new NotFoundException();
         }
@@ -216,7 +236,7 @@ public class OrganizationUsersController : Controller
         }
 
         // Retrieve Encrypted Private Key from organization
-        var org = await _organizationRepository.GetByIdAsync(orgGuidId);
+        var org = await _organizationRepository.GetByIdAsync(orgId);
         if (org == null)
         {
             throw new NotFoundException();
@@ -228,8 +248,11 @@ public class OrganizationUsersController : Controller
     [HttpPost("account-recovery-details")]
     public async Task<ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>> GetAccountRecoveryDetails(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
-        // Make sure the calling user can reset passwords for this org
-        if (!await _currentContext.ManageResetPassword(orgId))
+        var authResult = await _authorizationService.AuthorizeAsync(User,
+            new OrganizationScope(orgId),
+            [OrganizationUsersAccountRecoveryDetailsOperations.ReadAll]);
+
+        if (authResult.Succeeded is false)
         {
             throw new NotFoundException();
         }
@@ -707,7 +730,7 @@ public class OrganizationUsersController : Controller
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.AccountDeprovisioning))
         {
-            return userIds.ToDictionary(kvp => kvp, kvp => false);
+            return userIds.ToDictionary(kvp => kvp, _ => false);
         }
 
         var usersOrganizationManagementStatus = await _getOrganizationUsersManagementStatusQuery.GetUsersOrganizationManagementStatusAsync(orgId, userIds);
