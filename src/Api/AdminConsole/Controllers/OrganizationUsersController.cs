@@ -146,7 +146,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    [ManageUsersRequirement]
+    [OrganizationAuthorize(typeof(ManageUsersRequirement))]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
