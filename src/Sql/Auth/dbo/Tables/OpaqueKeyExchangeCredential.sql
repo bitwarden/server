@@ -8,7 +8,7 @@
     [EncryptedPrivateKey] VARCHAR(MAX) NOT NULL,
     [EncryptedUserKey] VARCHAR(MAX) NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
-    CONSTRAINT [PK_OpaqueKeyExchangeCredential] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [PK_OpaqueKeyExchangeCredential] PRIMARY KEY CLUSTERED ([UserId]),
     CONSTRAINT [FK_OpaqueKeyExchangeCredential_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 

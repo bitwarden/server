@@ -1,8 +1,3 @@
-
-
-
-
-
 IF OBJECT_ID('[dbo].[OpaqueKeyExchangeCredential]') IS NULL
 BEGIN
     CREATE TABLE [dbo].[OpaqueKeyExchangeCredential]
@@ -27,7 +22,6 @@ BEGIN
         ON [dbo].[OpaqueKeyExchangeCredential]([UserId] ASC);
 END
 GO
-
 
 CREATE OR ALTER PROCEDURE [dbo].[OpaqueKeyExchangeCredential_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
