@@ -8,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -20,8 +19,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
     public const string GrantType = "opaque-ke";
     private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
     private readonly IFeatureService _featureService;
-    private readonly ICurrentContext _currentContext;
-    private readonly ILogger<OpaqueKeyExchangeGrantValidator> _logger;
+    private readonly IAuthRequestHeaderValidator _authRequestHeaderValidator;
 
     public OpaqueKeyExchangeGrantValidator(
         UserManager<User> userManager,
@@ -39,7 +37,8 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IOpaqueKeyExchangeService opaqueKeyExchangeService)
+        IOpaqueKeyExchangeService opaqueKeyExchangeService,
+        IAuthRequestHeaderValidator authRequestHeaderValidator)
         : base(
             userManager,
             userService,
@@ -58,9 +57,8 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             userDecryptionOptionsBuilder)
     {
         _opaqueKeyExchangeService = opaqueKeyExchangeService;
-        _currentContext = currentContext;
         _featureService = featureService;
-        _logger = logger;
+        _authRequestHeaderValidator = authRequestHeaderValidator;
     }
 
     string IExtensionGrantValidator.GrantType => "opaque-ke";
@@ -81,7 +79,12 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
         }
 
         var user = await _opaqueKeyExchangeService.GetUserForAuthenticatedSession(Guid.Parse(sessionId));
-        if (user == null || !AuthEmailHeaderIsValid(user))
+        if (user == null)
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
+            return;
+        }
+        if (_authRequestHeaderValidator.ValidateAuthEmailHeader(user.Email))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
                 "Auth-Email header invalid.");
@@ -149,35 +152,5 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             IsError = true,
             CustomResponse = requestContext.CustomResponse
         };
-    }
-
-    /// <summary>
-    /// This method matches the Email in the header to the email fetched from the SessionId
-    /// </summary>
-    /// <param name="user">User associated with the Authenticated cache</param>
-    /// <returns>true if the emails match false otherwise</returns>
-    private bool AuthEmailHeaderIsValid(User user)
-    {
-        if (_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
-        {
-            try
-            {
-                var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-                if (authEmailDecoded != user.Email)
-                {
-                    return false;
-                }
-            }
-            catch (Exception e) when (e is InvalidOperationException || e is FormatException)
-            {
-                _logger.LogError(e, "Invalid B64 encoding for Auth-Email header {UserId}", user.Id);
-                return false;
-            }
-        }
-        else
-        {
-            return false;
-        }
-        return true;
     }
 }
