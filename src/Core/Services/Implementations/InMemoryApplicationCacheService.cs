@@ -50,14 +50,7 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitProviderAbilitiesAsync();
         var newAbility = new ProviderAbility(provider);
 
-        if (_providerAbilities.ContainsKey(provider.Id))
-        {
-            _providerAbilities[provider.Id] = newAbility;
-        }
-        else
-        {
-            _providerAbilities.Add(provider.Id, newAbility);
-        }
+        _providerAbilities[provider.Id] = newAbility;
     }
 
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
@@ -65,32 +58,19 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
         await InitOrganizationAbilitiesAsync();
         var newAbility = new OrganizationAbility(organization);
 
-        if (_orgAbilities.ContainsKey(organization.Id))
-        {
-            _orgAbilities[organization.Id] = newAbility;
-        }
-        else
-        {
-            _orgAbilities.Add(organization.Id, newAbility);
-        }
+        _orgAbilities[organization.Id] = newAbility;
     }
 
     public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
-        if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
-        {
-            _orgAbilities.Remove(organizationId);
-        }
+        _orgAbilities?.Remove(organizationId);
 
         return Task.FromResult(0);
     }
 
     public virtual Task DeleteProviderAbilityAsync(Guid providerId)
     {
-        if (_providerAbilities != null && _providerAbilities.ContainsKey(providerId))
-        {
-            _providerAbilities.Remove(providerId);
-        }
+        _providerAbilities?.Remove(providerId);
 
         return Task.FromResult(0);
     }
