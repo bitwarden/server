@@ -1,4 +1,4 @@
-namespace Bit.Identity.IdentityServer.RequestValidators;
+﻿namespace Bit.Identity.IdentityServer.RequestValidators;
 
 public interface IAuthRequestHeaderValidator
 {

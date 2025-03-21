@@ -1,4 +1,4 @@
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Utilities;
 
 namespace Bit.Identity.IdentityServer.RequestValidators;
