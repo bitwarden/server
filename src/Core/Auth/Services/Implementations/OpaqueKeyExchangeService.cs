@@ -197,7 +197,11 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             await _distributedCache.SetAsync(
                 string.Format(LOGIN_SESSION_KEY, sessionId),
                 Encoding.ASCII.GetBytes(JsonSerializer.Serialize(loginSession)),
-                _distributedCacheEntryOptions);
+                new DistributedCacheEntryOptions()
+                {
+                    // Our login sessions are 5 minutes long so if a user needs to accomplish 2FA this ensures the user has time to do so.
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+                });
 
             return true;
         }
