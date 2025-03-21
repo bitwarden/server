@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -9,7 +8,6 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -19,8 +17,8 @@ namespace Bit.Identity.IdentityServer.RequestValidators;
 public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
 {
     public const string GrantType = "opaque-ke";
-    private IUserRepository userRepository;
-    private IOpaqueKeyExchangeService opaqueKeyExchangeService;
+    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
+    private readonly IFeatureService _featureService;
 
     public OpaqueKeyExchangeGrantValidator(
         UserManager<User> userManager,
@@ -36,7 +34,6 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
         IOpaqueKeyExchangeService opaqueKeyExchangeService)
@@ -57,14 +54,19 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             ssoConfigRepository,
             userDecryptionOptionsBuilder)
     {
-        this.userRepository = userRepository;
-        this.opaqueKeyExchangeService = opaqueKeyExchangeService;
+        _opaqueKeyExchangeService = opaqueKeyExchangeService;
     }
 
     string IExtensionGrantValidator.GrantType => "opaque-ke";
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
+        if (!_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
+            return;
+        }
+
         var sessionId = context.Request.Raw.Get("sessionId");
         if (string.IsNullOrWhiteSpace(sessionId))
         {
@@ -72,7 +74,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             return;
         }
 
-        var user = await opaqueKeyExchangeService.GetUserForAuthenticatedSession(Guid.Parse(sessionId));
+        var user = await _opaqueKeyExchangeService.GetUserForAuthenticatedSession(Guid.Parse(sessionId));
         if (user == null)
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
@@ -104,7 +106,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             identityProvider: Constants.IdentityProvider,
             claims: claims.Count > 0 ? claims : null,
             customResponse: customResponse);
-        await opaqueKeyExchangeService.ClearAuthenticationSession(Guid.Parse(context.Request.Raw.Get("sessionId")));
+        await _opaqueKeyExchangeService.ClearAuthenticationSession(Guid.Parse(context.Request.Raw.Get("sessionId")));
     }
 
     protected override ClaimsPrincipal GetSubject(ExtensionGrantValidationContext context)
