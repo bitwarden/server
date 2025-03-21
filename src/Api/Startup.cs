@@ -27,10 +27,8 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
-using Bit.Core.AdminConsole.OrganizationFeatures;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
-using Bit.Core.Enums;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 
@@ -153,10 +151,10 @@ public class Startup
             // - does not allow for more complex conditional logic - e.g. providers can affect whether owners can view billing
             // Alternative: describe broad action/capability, e.g. ManageUsers, ManageGroups, ViewBilling, similar to CurrentContext today
             // the handler is then implemented per domain to define who can do those things
-            config.AddPolicy("owner", policy
-                => policy.AddRequirements(new RoleRequirement(OrganizationUserType.Owner)));
-            config.AddPolicy("admin", policy
-                => policy.AddRequirements(new RoleRequirement(OrganizationUserType.Admin)));
+            // config.AddPolicy("owner", policy
+            //     => policy.AddRequirements(new RoleRequirementAttribute(OrganizationUserType.Owner)));
+            // config.AddPolicy("admin", policy
+            //     => policy.AddRequirements(new RoleRequirementAttribute(OrganizationUserType.Admin)));
         });
 
         services.AddScoped<AuthenticatorTokenProvider>();

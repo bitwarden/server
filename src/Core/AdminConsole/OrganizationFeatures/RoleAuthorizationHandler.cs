@@ -6,11 +6,25 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures;
 
-public record RoleRequirement(OrganizationUserType Role) : IAuthorizationRequirement;
-
-public class RoleAuthorizationHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor) : AuthorizationHandler<RoleRequirement>
+public class RoleRequirementAttribute
+    : AuthorizeAttribute, IAuthorizationRequirement, IAuthorizationRequirementData
 {
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, RoleRequirement requirement)
+    public OrganizationUserType Role { get; set; }
+
+    public RoleRequirementAttribute(OrganizationUserType type)
+    {
+        Role = type;
+    }
+
+    public IEnumerable<IAuthorizationRequirement> GetRequirements()
+    {
+        yield return this;
+    }
+}
+
+public class RoleAuthorizationHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor) : AuthorizationHandler<RoleRequirementAttribute>
+{
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, RoleRequirementAttribute requirementAttribute)
     {
         if (httpContextAccessor.HttpContext is null)
         {
@@ -26,9 +40,9 @@ public class RoleAuthorizationHandler(ICurrentContext currentContext, IHttpConte
 
         // This could be an extension method on ClaimsPrincipal
         var orgClaims = currentContext.GetOrganization(orgId);
-        if (orgClaims?.Type == requirement.Role)
+        if (orgClaims?.Type == requirementAttribute.Role)
         {
-            context.Succeed(requirement);
+            context.Succeed(requirementAttribute);
         }
 
         return Task.CompletedTask;

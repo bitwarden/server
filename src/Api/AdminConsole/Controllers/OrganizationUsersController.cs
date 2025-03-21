@@ -6,6 +6,7 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
@@ -145,7 +146,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    [Authorize(Policy = "owner")]
+    [RoleRequirement(OrganizationUserType.Owner)]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         // var authorized = (await _authorizationService.AuthorizeAsync(
