@@ -22,6 +22,37 @@ namespace Bit.MySqlMigrations.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("Bit.Core.Auth.Entities.OpaqueKeyExchangeCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("CipherConfiguration")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("CredentialBlob")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OpaqueKeyExchangeCredential", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -407,10 +438,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<string>("RequestCountryName")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -425,6 +452,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("PublicKey")
                         .HasColumnType("longtext");
+
+                    b.Property<string>("RequestCountryName")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
 
                     b.Property<string>("RequestDeviceIdentifier")
                         .HasMaxLength(50)

@@ -1,11 +1,14 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Identity.Utilities;
 
 namespace Bit.Identity.IdentityServer;
@@ -21,6 +24,8 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     private readonly ICurrentContext _currentContext;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IFeatureService _featureService;
+    private readonly IOpaqueKeyExchangeCredentialRepository _opaqueKeyExchangeCredentialRepository;
 
     private UserDecryptionOptions _options = new UserDecryptionOptions();
     private User? _user;
@@ -30,12 +35,16 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     public UserDecryptionOptionsBuilder(
         ICurrentContext currentContext,
         IDeviceRepository deviceRepository,
-        IOrganizationUserRepository organizationUserRepository
+        IOrganizationUserRepository organizationUserRepository,
+        IFeatureService featureService,
+        IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository
     )
     {
         _currentContext = currentContext;
         _deviceRepository = deviceRepository;
         _organizationUserRepository = organizationUserRepository;
+        _featureService = featureService;
+        _opaqueKeyExchangeCredentialRepository = opaqueKeyExchangeCredentialRepository;
     }
 
     public IUserDecryptionOptionsBuilder ForUser(User user)
@@ -70,6 +79,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     {
         BuildKeyConnectorOptions();
         await BuildTrustedDeviceOptions();
+        await BuildOpaqueOption();
 
         return _options;
     }
@@ -150,5 +160,32 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
             isTdeOffboarding,
             encryptedPrivateKey,
             encryptedUserKey);
+    }
+
+    private async Task BuildOpaqueOption()
+    {
+
+        if (!_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            return;
+        }
+
+        if (_user == null)
+        {
+            return;
+        }
+
+        var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(_user.Id);
+
+        if (credential == null)
+        {
+            return;
+        }
+
+        _options.OpaqueOption = new OpaqueUserDecryptionOption(
+            credential.EncryptedPrivateKey,
+            credential.EncryptedUserKey
+        );
+
     }
 }

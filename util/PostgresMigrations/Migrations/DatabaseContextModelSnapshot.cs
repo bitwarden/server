@@ -23,6 +23,37 @@ namespace Bit.PostgresMigrations.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Bit.Core.Auth.Entities.OpaqueKeyExchangeCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CipherConfiguration")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CredentialBlob")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OpaqueKeyExchangeCredential", (string)null);
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
                     b.Property<Guid>("Id")
@@ -410,10 +441,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("RequestCountryName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -428,6 +455,10 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("PublicKey")
                         .HasColumnType("text");
+
+                    b.Property<string>("RequestCountryName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("RequestDeviceIdentifier")
                         .HasMaxLength(50)

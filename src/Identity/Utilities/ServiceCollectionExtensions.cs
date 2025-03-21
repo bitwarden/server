@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<IAuthRequestHeaderValidator, AuthRequestHeaderValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -53,7 +54,8 @@ public static class ServiceCollectionExtensions
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
             .AddClientStore<ClientStore>()
             .AddIdentityServerCertificate(env, globalSettings)
-            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>()
+            .AddExtensionGrantValidator<OpaqueKeyExchangeGrantValidator>();
 
         if (CoreHelpers.SettingHasValue(globalSettings.IdentityServer.CosmosConnectionString))
         {

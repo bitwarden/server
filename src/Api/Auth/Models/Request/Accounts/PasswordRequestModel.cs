@@ -11,4 +11,5 @@ public class PasswordRequestModel : SecretVerificationRequestModel
     public string MasterPasswordHint { get; set; }
     [Required]
     public string Key { get; set; }
+    public string OpaqueSessionId { get; set; }
 }

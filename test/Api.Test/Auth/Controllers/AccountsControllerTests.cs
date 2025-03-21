@@ -291,12 +291,12 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangePasswordAsync(user, default, default, default, default)
+        _userService.ChangePasswordAsync(user, default, default, default, default, null)
                     .Returns(Task.FromResult(IdentityResult.Success));
 
         await _sut.PostPassword(new PasswordRequestModel());
 
-        await _userService.Received(1).ChangePasswordAsync(user, default, default, default, default);
+        await _userService.Received(1).ChangePasswordAsync(user, default, default, default, default, null);
     }
 
     [Fact]
@@ -314,7 +314,7 @@ public class AccountsControllerTests : IDisposable
     {
         var user = GenerateExampleUser();
         ConfigureUserServiceToReturnValidPrincipalFor(user);
-        _userService.ChangePasswordAsync(user, default, default, default, default)
+        _userService.ChangePasswordAsync(user, default, default, default, default, null)
                     .Returns(Task.FromResult(IdentityResult.Failed()));
 
         await Assert.ThrowsAsync<BadRequestException>(

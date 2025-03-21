@@ -209,8 +209,17 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        Guid? opaqueSessionId = null;
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
+        {
+            if (model.OpaqueSessionId != null)
+            {
+                opaqueSessionId = Guid.Parse(model.OpaqueSessionId);
+            }
+        }
+
         var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key);
+            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key, opaqueSessionId);
         if (result.Succeeded)
         {
             return;
