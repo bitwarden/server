@@ -83,13 +83,13 @@ export default function (data) {
     const syncJson = syncRes.json();
 
     check(syncJson, {
-      "sync response has profile": (j) => j.Profile !== undefined,
-      "sync response has folders": (j) => Array.isArray(j.Folders),
-      "sync response has collections": (j) => Array.isArray(j.Collections),
-      "sync response has ciphers": (j) => Array.isArray(j.Ciphers),
-      "sync response has policies": (j) => Array.isArray(j.Policies),
-      "sync response has sends": (j) => Array.isArray(j.Sends),
-      "sync response has correct object type": (j) => j.Object === "sync"
+      "sync response has profile": (j) => j.profile !== undefined,
+      "sync response has folders": (j) => Array.isArray(j.folders),
+      "sync response has collections": (j) => Array.isArray(j.collections),
+      "sync response has ciphers": (j) => Array.isArray(j.ciphers),
+      "sync response has policies": (j) => Array.isArray(j.policies),
+      "sync response has sends": (j) => Array.isArray(j.sends),
+      "sync response has correct object type": (j) => j.object === "sync"
     });
   }
 }
