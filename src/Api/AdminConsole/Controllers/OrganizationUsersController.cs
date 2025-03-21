@@ -7,7 +7,6 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Authorization;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 using Bit.Core.AdminConsole.Repositories;
@@ -130,16 +129,10 @@ public class OrganizationUsersController : Controller
         return response;
     }
 
+    [OrganizationAuthorize<OrganizationMemberRequirement>]
     [HttpGet("mini-details")]
     public async Task<ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>> GetMiniDetails(Guid orgId)
     {
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(orgId),
-            OrganizationUserUserMiniDetailsOperations.ReadAll);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
-
         var organizationUserUserDetails = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId);
         return new ListResponseModel<OrganizationUserUserMiniDetailsResponseModel>(
             organizationUserUserDetails.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
