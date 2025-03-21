@@ -2,6 +2,8 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 
+public interface IOrganizationRequirement : IAuthorizationRequirement;
+
 public class OrganizationAuthorizeAttribute<T>
     : AuthorizeAttribute, IAuthorizationRequirementData
     where T : IOrganizationRequirement, new()
