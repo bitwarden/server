@@ -20,6 +20,7 @@ public class OrganizationSponsorship : ITableObject<Guid>
     public DateTime? LastSyncDate { get; set; }
     public DateTime? ValidUntil { get; set; }
     public bool ToDelete { get; set; }
+    public bool IsAdminInitiated { get; set; }
 
     public void SetNewId()
     {

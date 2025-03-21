@@ -1,71 +1,37 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Billing.Extensions;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SponsorshipCreation;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 
 public class CreateSponsorshipCommand : ICreateSponsorshipCommand
 {
     private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
-    private readonly IUserService _userService;
 
-    public CreateSponsorshipCommand(IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IUserService userService)
+    private readonly BaseCreateSponsorshipHandler _createSponsorshipHandler;
+
+    public CreateSponsorshipCommand(
+        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
+        IUserService userService,
+        ICurrentContext currentContext)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
-        _userService = userService;
+
+        var adminInitiatedSponsorshipHandler = new CreateAdminInitiatedSponsorshipHandler(currentContext);
+        _createSponsorshipHandler = new CreateSponsorshipHandler(userService, organizationSponsorshipRepository);
+        _createSponsorshipHandler.SetNext(adminInitiatedSponsorshipHandler);
     }
 
     public async Task<OrganizationSponsorship> CreateSponsorshipAsync(Organization sponsoringOrg, OrganizationUser sponsoringOrgUser,
         PlanSponsorshipType sponsorshipType, string sponsoredEmail, string friendlyName)
     {
-        var sponsoringUser = await _userService.GetUserByIdAsync(sponsoringOrgUser.UserId.Value);
-        if (sponsoringUser == null || string.Equals(sponsoringUser.Email, sponsoredEmail, System.StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new BadRequestException("Cannot offer a Families Organization Sponsorship to yourself. Choose a different email.");
-        }
-
-        var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductTierType;
-        var sponsoringOrgProductTier = sponsoringOrg.PlanType.GetProductTier();
-
-        if (requiredSponsoringProductType == null ||
-            sponsoringOrgProductTier != requiredSponsoringProductType.Value)
-        {
-            throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
-        }
-
-        if (sponsoringOrgUser == null || sponsoringOrgUser.Status != OrganizationUserStatusType.Confirmed)
-        {
-            throw new BadRequestException("Only confirmed users can sponsor other organizations.");
-        }
-
-        var existingOrgSponsorship = await _organizationSponsorshipRepository
-            .GetBySponsoringOrganizationUserIdAsync(sponsoringOrgUser.Id);
-        if (existingOrgSponsorship?.SponsoredOrganizationId != null)
-        {
-            throw new BadRequestException("Can only sponsor one organization per Organization User.");
-        }
-
-        var sponsorship = new OrganizationSponsorship
-        {
-            SponsoringOrganizationId = sponsoringOrg.Id,
-            SponsoringOrganizationUserId = sponsoringOrgUser.Id,
-            FriendlyName = friendlyName,
-            OfferedToEmail = sponsoredEmail,
-            PlanSponsorshipType = sponsorshipType,
-        };
-
-        if (existingOrgSponsorship != null)
-        {
-            // Replace existing invalid offer with our new sponsorship offer
-            sponsorship.Id = existingOrgSponsorship.Id;
-        }
+        var createSponsorshipRequest = new CreateSponsorshipRequest(sponsoringOrg, sponsoringOrgUser, sponsorshipType, sponsoredEmail, friendlyName);
+        var sponsorship = await _createSponsorshipHandler.HandleAsync(createSponsorshipRequest);
 
         try
         {
@@ -74,7 +40,7 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
         }
         catch
         {
-            if (sponsorship.Id != default)
+            if (sponsorship.Id != Guid.Empty)
             {
                 await _organizationSponsorshipRepository.DeleteAsync(sponsorship);
             }
