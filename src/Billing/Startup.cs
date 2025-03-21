@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Net.Http.Headers;
+using Bit.Billing.HealthChecks;
 using Bit.Billing.Services;
 using Bit.Billing.Services.Implementations;
 using Bit.Core.Billing.Extensions;
@@ -8,7 +9,9 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
 using Stripe;
@@ -88,10 +91,7 @@ public class Startup
         services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
         // Mvc
-        services.AddMvc(config =>
-        {
-            config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
-        });
+        services.AddMvc(config => { config.Filters.Add(new LoggingExceptionHandlerFilterAttribute()); });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
 
         // Authentication
@@ -99,20 +99,19 @@ public class Startup
 
         // Set up HttpClients
         services.AddHttpClient("FreshdeskApi");
-        services.AddHttpClient("OnyxApi", client =>
-        {
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", billingSettings.Onyx.ApiKey);
-        });
+        services.AddHttpClient("OnyxApi",
+            client =>
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", billingSettings.Onyx.ApiKey);
+            });
 
         services.AddScoped<IStripeFacade, StripeFacade>();
         services.AddScoped<IStripeEventService, StripeEventService>();
         services.AddScoped<IProviderEventService, ProviderEventService>();
 
         // Add Quartz services first
-        services.AddQuartz(q =>
-        {
-            q.UseMicrosoftDependencyInjectionJobFactory();
-        });
+        services.AddQuartz(q => { q.UseMicrosoftDependencyInjectionJobFactory(); });
         services.AddQuartzHostedService();
 
         // Jobs service
@@ -122,6 +121,10 @@ public class Startup
         // Swagger
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
+
+        services.AddHealthChecks()
+            .AddDbContextCheck<DatabaseContext>("ef", tags: ["db"])
+            .AddCheck<StripeHealthCheck>("stripe", tags: ["ext-api"]);
     }
 
     public void Configure(
@@ -149,6 +152,18 @@ public class Startup
         app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+
+            endpoints.MapHealthChecks("/healthz", new HealthCheckOptions
+            {
+                Predicate = registration =>
+                {
+                    string[] tags = ["db", "ext-api"];
+                    return registration.Tags.Any(tag => tags.Contains(tag));
+                }
+            });
+        });
     }
 }
