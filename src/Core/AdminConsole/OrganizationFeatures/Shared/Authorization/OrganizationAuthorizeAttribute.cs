@@ -2,12 +2,13 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 
-public class OrganizationAuthorizeAttribute(Type requirementType)
+public class OrganizationAuthorizeAttribute<T>
     : AuthorizeAttribute, IAuthorizationRequirementData
+    where T : IOrganizationRequirement, new()
 {
     public IEnumerable<IAuthorizationRequirement> GetRequirements()
     {
-        var requirement = (IOrganizationRequirement)Activator.CreateInstance(requirementType)!;
+        var requirement = new T();
         yield return requirement;
     }
 }
