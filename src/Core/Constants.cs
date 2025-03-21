@@ -119,12 +119,16 @@ public static class FeatureFlagKeys
     public const string ExportAttachments = "export-attachments";
 
     /* Vault Team */
+    public const string PM8851_BrowserOnboardingNudge = "pm-8851-browser-onboarding-nudge";
     public const string PM9111ExtensionPersistAddEditForm = "pm-9111-extension-persist-add-edit-form";
     public const string NewDeviceVerificationPermanentDismiss = "new-device-permanent-dismiss";
     public const string NewDeviceVerificationTemporaryDismiss = "new-device-temporary-dismiss";
     public const string VaultBulkManagementAction = "vault-bulk-management-action";
     public const string RestrictProviderAccess = "restrict-provider-access";
     public const string SecurityTasks = "security-tasks";
+
+    /* Auth Team */
+    public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
 
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
@@ -178,6 +182,8 @@ public static class FeatureFlagKeys
     public const string PM12276Breadcrumbing = "pm-12276-breadcrumbing-for-business-features";
     public const string PM18794_ProviderPaymentMethod = "pm-18794-provider-payment-method";
     public const string PM3553_MobileSimpleLoginSelfHostAlias = "simple-login-self-host-alias";
+    public const string SetInitialPasswordRefactor = "pm-16117-set-initial-password-refactor";
+    public const string ChangeExistingPasswordRefactor = "pm-16117-change-existing-password-refactor";
 
     public static List<string> GetAllKeys()
     {
