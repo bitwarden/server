@@ -8,6 +8,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bitwarden.Opaque;
 using Microsoft.Extensions.Caching.Distributed;
@@ -25,6 +26,7 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     private readonly IUserRepository _userRepository;
     private readonly ILogger<OpaqueKeyExchangeService> _logger;
     private readonly DistributedCacheEntryOptions _distributedCacheEntryOptions;
+    private readonly byte[] _defaultKdfHmacKey = null;
 
     const string REGISTRATION_SESSION_KEY = "opaque_register_session_{0}";
     const string LOGIN_SESSION_KEY = "opaque_login_session_{0}";
@@ -33,7 +35,8 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         IOpaqueKeyExchangeCredentialRepository opaqueKeyExchangeCredentialRepository,
         IDistributedCache distributedCache,
         IUserRepository userRepository,
-        ILogger<OpaqueKeyExchangeService> logger
+        ILogger<OpaqueKeyExchangeService> logger,
+        GlobalSettings globalSettings
         )
     {
         _bitwardenOpaque = new BitwardenOpaqueServer();
@@ -45,6 +48,14 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1)
         };
+        if (CoreHelpers.SettingHasValue(globalSettings.KdfDefaultHashKey))
+        {
+            _defaultKdfHmacKey = Encoding.UTF8.GetBytes(globalSettings.KdfDefaultHashKey);
+        }
+        else
+        {
+            _defaultKdfHmacKey = new byte[32];
+        }
     }
 
     public async Task<OpaqueRegistrationStartResponse> StartRegistration(
@@ -110,18 +121,39 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
     {
         try
         {
-            // todo: don't allow user enumeration
-            var user = await _userRepository.GetByEmailAsync(email)
-                ?? throw new InvalidOperationException("User not found");
+            var user = await _userRepository.GetByEmailAsync(email);
+            // Fake user to prevent user enumeration
+            user ??= new User() { Id = Guid.Empty };
 
-            // todo: generate fake credential
-            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id)
-                ?? throw new InvalidOperationException("Credential not found");
-
-            var cipherConfiguration = JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!;
-            var credentialBlob = JsonSerializer.Deserialize<OpaqueKeyExchangeCredentialBlob>(credential.CredentialBlob)!;
-            var serverSetup = credentialBlob.ServerSetup;
-            var serverRegistration = credentialBlob.PasswordFile;
+            byte[] serverSetup = null;
+            byte[] serverRegistration = null;
+            OpaqueKeyExchangeCipherConfiguration cipherConfiguration;
+            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
+            if (credential != null)
+            {
+                cipherConfiguration = JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!;
+                var credentialBlob = JsonSerializer.Deserialize<OpaqueKeyExchangeCredentialBlob>(credential.CredentialBlob)!;
+                serverSetup = credentialBlob.ServerSetup;
+                serverRegistration = credentialBlob.PasswordFile;
+            }
+            else
+            {
+                // Generate a fake registration for non-existent users
+                cipherConfiguration = new OpaqueKeyExchangeCipherConfiguration()
+                {
+                    CipherSuite = OpaqueKeyExchangeCipherConfiguration.OpaqueKe3Ristretto3DHArgonSuite,
+                    Argon2Parameters = new Argon2KsfParameters()
+                    {
+                        Memory = 0,
+                        Iterations = 0,
+                        Parallelism = 0
+                    }
+                };
+                var hmacMessage = Encoding.UTF8.GetBytes(email.Trim().ToLowerInvariant());
+                using var hmac = new System.Security.Cryptography.HMACSHA256(_defaultKdfHmacKey);
+                var hmacHash = hmac.ComputeHash(hmacMessage);
+                (serverSetup, serverRegistration) = _bitwardenOpaque.SeededFakeRegistration(hmacHash);
+            }
 
             var loginResponse = _bitwardenOpaque.StartLogin(
                 cipherConfiguration.ToNativeConfiguration(), serverSetup, serverRegistration, request, user.Id.ToString());
@@ -155,9 +187,6 @@ public class OpaqueKeyExchangeService : IOpaqueKeyExchangeService
             var serializedLoginSession = await _distributedCache.GetAsync(string.Format(LOGIN_SESSION_KEY, sessionId))
                 ?? throw new InvalidOperationException("Session not found");
             var loginSession = JsonSerializer.Deserialize<OpaqueKeyExchangeLoginSession>(Encoding.ASCII.GetString(serializedLoginSession))!;
-
-            var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(loginSession.UserId)
-                ?? throw new InvalidOperationException("Credential not found");
 
             var loginState = loginSession.LoginState;
             var cipherConfiguration = loginSession.CipherConfiguration;
