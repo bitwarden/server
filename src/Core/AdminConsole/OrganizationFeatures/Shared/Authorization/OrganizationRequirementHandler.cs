@@ -6,13 +6,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Shared.Authorization;
 
-public abstract class OrganizationRequirementHandler<T>(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor)
-    : AuthorizationHandler<T>
-    where T : IAuthorizationRequirement
+public class OrganizationRequirementHandler(ICurrentContext currentContext, IHttpContextAccessor httpContextAccessor)
+    : AuthorizationHandler<IOrganizationRequirement>
 {
-    protected abstract Task<bool> Authorize(Guid organizationId, CurrentContextOrganization? organizationClaims);
-
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, T requirement)
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IOrganizationRequirement requirement)
     {
         var organizationId = httpContextAccessor.GetOrganizationId();
         if (organizationId is null)
@@ -22,7 +19,7 @@ public abstract class OrganizationRequirementHandler<T>(ICurrentContext currentC
 
         var organization = currentContext.GetOrganization(organizationId.Value);
 
-        var authorized = await Authorize(organizationId.Value, organization);
+        var authorized = await requirement.AuthorizeAsync(organizationId.Value, organization, currentContext);
 
         if (authorized)
         {
