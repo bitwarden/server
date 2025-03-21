@@ -29,10 +29,16 @@ public class UserDecryptionOptions : ResponseModel
     public TrustedDeviceUserDecryptionOption? TrustedDeviceOption { get; set; }
 
     /// <summary>
-    /// Gets or set information about the current users KeyConnector setup.
+    /// Gets or sets information about the current users KeyConnector setup.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public KeyConnectorUserDecryptionOption? KeyConnectorOption { get; set; }
+
+    /// <summary>
+    /// Gets or sets information about the current OPAQUE setup.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public OpaqueUserDecryptionOption? OpaqueOption { get; set; }
 }
 
 public class WebAuthnPrfDecryptionOption
@@ -81,5 +87,20 @@ public class KeyConnectorUserDecryptionOption
     public KeyConnectorUserDecryptionOption(string keyConnectorUrl)
     {
         KeyConnectorUrl = keyConnectorUrl;
+    }
+}
+
+
+public class OpaqueUserDecryptionOption
+{
+    public string EncryptedPrivateKey { get; }
+    public string EncryptedUserKey { get; }
+
+    public OpaqueUserDecryptionOption(
+        string encryptedPrivateKey,
+        string encryptedUserKey)
+    {
+        EncryptedPrivateKey = encryptedPrivateKey;
+        EncryptedUserKey = encryptedUserKey;
     }
 }

@@ -209,14 +209,17 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        Guid? sessionId = null;
-        if (model.OpaqueSessionId != null)
+        Guid? opaqueSessionId = null;
+        if (_featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
         {
-            sessionId = Guid.Parse(model.OpaqueSessionId);
+            if (model.OpaqueSessionId != null)
+            {
+                opaqueSessionId = Guid.Parse(model.OpaqueSessionId);
+            }
         }
 
         var result = await _userService.ChangePasswordAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key, sessionId);
+            model.NewMasterPasswordHash, model.MasterPasswordHint, model.Key, opaqueSessionId);
         if (result.Succeeded)
         {
             return;

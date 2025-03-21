@@ -1,58 +1,56 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Opaque;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Opaque;
 using Bit.Core.Auth.Models.Api.Response.Opaque;
 using Bit.Core.Auth.Services;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
-[Route("opaque")]
-[Authorize("Web")]
-public class OpaqueKeyExchangeController : Controller
+[RequireFeature(FeatureFlagKeys.OpaqueKeyExchange)]
+[Route("opaque-ke")]
+[Authorize("Application")]
+public class OpaqueKeyExchangeController(
+    IOpaqueKeyExchangeService opaqueKeyExchangeService,
+    IUserService userService
+    ) : Controller
 {
-    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
-    private readonly IUserService _userService;
+    private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService = opaqueKeyExchangeService;
+    private readonly IUserService _userService = userService;
 
-    public OpaqueKeyExchangeController(
-        IOpaqueKeyExchangeService opaqueKeyExchangeService,
-        IUserService userService
-    )
+    [HttpPost("start-registration")]
+    public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync(
+        [FromBody] OpaqueRegistrationStartRequest request)
     {
-        _opaqueKeyExchangeService = opaqueKeyExchangeService;
-        _userService = userService;
-    }
-
-    [HttpPost("~/opaque/start-registration")]
-    public async Task<OpaqueRegistrationStartResponse> StartRegistrationAsync([FromBody] OpaqueRegistrationStartRequest request)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        var result = await _opaqueKeyExchangeService.StartRegistration(Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration);
+        var user = await _userService.GetUserByPrincipalAsync(User)
+            ?? throw new UnauthorizedAccessException();
+        var result = await _opaqueKeyExchangeService.StartRegistration(
+            Convert.FromBase64String(request.RegistrationRequest), user, request.CipherConfiguration);
         return result;
     }
 
-
-    [HttpPost("~/opaque/finish-registration")]
-    public async void FinishRegistrationAsync([FromBody] OpaqueRegistrationFinishRequest request)
+    [HttpPost("finish-registration")]
+    public async Task FinishRegistrationAsync([FromBody] OpaqueRegistrationFinishRequest request)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        await _opaqueKeyExchangeService.FinishRegistration(request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet);
+        var user = await _userService.GetUserByPrincipalAsync(User)
+            ?? throw new UnauthorizedAccessException();
+        if (!await _opaqueKeyExchangeService.FinishRegistration(
+           request.SessionId, Convert.FromBase64String(request.RegistrationUpload), user, request.KeySet))
+        {
+            throw new InvalidOperationException("Failed to finish registration.");
+        }
     }
 
-
-    // TODO: Remove and move to token endpoint
-    [HttpPost("~/opaque/start-login")]
-    public async Task<Models.Response.Opaque.OpaqueLoginStartResponse> StartLoginAsync([FromBody] Models.Request.Opaque.OpaqueLoginStartRequest request)
+    [HttpPost("set-registration-active")]
+    public async Task SetRegistrationActiveAsync([FromBody] OpaqueSetRegistrationActiveRequest request)
     {
-        var result = await _opaqueKeyExchangeService.StartLogin(Convert.FromBase64String(request.CredentialRequest), request.Email);
-        return new Models.Response.Opaque.OpaqueLoginStartResponse(result.Item1, Convert.ToBase64String(result.Item2));
-    }
-
-    // TODO: Remove and move to token endpoint
-    [HttpPost("~/opaque/finish-login")]
-    public async Task<bool> FinishLoginAsync([FromBody] Models.Request.Opaque.OpaqueLoginFinishRequest request)
-    {
-        var result = await _opaqueKeyExchangeService.FinishLogin(request.SessionId, Convert.FromBase64String(request.CredentialFinalization));
-        return result;
+        var user = await _userService.GetUserByPrincipalAsync(User)
+            ?? throw new UnauthorizedAccessException();
+        if (!await _opaqueKeyExchangeService.WriteCacheCredentialToDatabase(request.SessionId, user))
+        {
+            throw new InvalidOperationException("Failed to save credential.");
+        }
     }
 }

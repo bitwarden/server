@@ -204,33 +204,27 @@ public class AccountsController : Controller
                         model.EmailVerificationToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrganizationInvite:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationInviteToken(user, model.MasterPasswordHash,
                     model.OrgInviteToken, model.OrganizationUserId);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.OrgSponsoredFreeFamilyPlan:
                 identityResult = await _registerUserCommand.RegisterUserViaOrganizationSponsoredFreeFamilyPlanInviteToken(user, model.MasterPasswordHash, model.OrgSponsoredFreeFamilyPlanToken);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.EmergencyAccessInvite:
                 Debug.Assert(model.AcceptEmergencyAccessId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaAcceptEmergencyAccessInviteToken(user, model.MasterPasswordHash,
                     model.AcceptEmergencyAccessInviteToken, model.AcceptEmergencyAccessId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
             case RegisterFinishTokenType.ProviderInvite:
                 Debug.Assert(model.ProviderUserId.HasValue);
                 identityResult = await _registerUserCommand.RegisterUserViaProviderInviteToken(user, model.MasterPasswordHash,
                     model.ProviderInviteToken, model.ProviderUserId.Value);
 
                 return await ProcessRegistrationResult(identityResult, user, delaysEnabled);
-                break;
-
             default:
                 throw new BadRequestException("Invalid registration finish request");
         }
@@ -268,9 +262,9 @@ public class AccountsController : Controller
         }
 
         var credential = await _opaqueKeyExchangeCredentialRepository.GetByUserIdAsync(user.Id);
-        if (credential != null)
+        if (credential != null && _featureService.IsEnabled(FeatureFlagKeys.OpaqueKeyExchange))
         {
-            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<CipherConfiguration>(credential.CipherConfiguration)!);
+            return new PreloginResponseModel(kdfInformation, JsonSerializer.Deserialize<OpaqueKeyExchangeCipherConfiguration>(credential.CipherConfiguration)!);
         }
         else
         {

@@ -6,7 +6,7 @@ namespace Bit.Identity.Models.Response.Accounts;
 
 public class PreloginResponseModel
 {
-    public PreloginResponseModel(UserKdfInformation kdfInformation, CipherConfiguration opaqueConfiguration)
+    public PreloginResponseModel(UserKdfInformation kdfInformation, OpaqueKeyExchangeCipherConfiguration opaqueConfiguration)
     {
         Kdf = kdfInformation.Kdf;
         KdfIterations = kdfInformation.KdfIterations;
@@ -19,5 +19,5 @@ public class PreloginResponseModel
     public int KdfIterations { get; set; }
     public int? KdfMemory { get; set; }
     public int? KdfParallelism { get; set; }
-    public CipherConfiguration OpaqueConfiguration { get; set; }
+    public OpaqueKeyExchangeCipherConfiguration OpaqueConfiguration { get; set; }
 }

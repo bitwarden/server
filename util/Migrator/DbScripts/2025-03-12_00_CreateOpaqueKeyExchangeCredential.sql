@@ -8,7 +8,7 @@ CREATE TABLE [dbo].[OpaqueKeyExchangeCredential]
     [EncryptedPrivateKey] VARCHAR(MAX) NOT NULL,
     [EncryptedUserKey] VARCHAR(MAX) NULL,
     [CreationDate] DATETIME2 (7) NOT NULL,
-    CONSTRAINT [PK_OpaqueKeyExchangeCredential] PRIMARY KEY CLUSTERED ([Id] ASC),
+    CONSTRAINT [PK_OpaqueKeyExchangeCredential] PRIMARY KEY CLUSTERED ([UserId]), -- using this as the primary key ensure users only have one credential
     CONSTRAINT [FK_OpaqueKeyExchangeCredential_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
 

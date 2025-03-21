@@ -14,7 +14,7 @@ public class ApiClient : Client
         string[] scopes = null)
     {
         ClientId = id;
-        AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, WebAuthnGrantValidator.GrantType };
+        AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, WebAuthnGrantValidator.GrantType, OpaqueKeyExchangeGrantValidator.GrantType };
         RefreshTokenExpiration = TokenExpiration.Sliding;
         RefreshTokenUsage = TokenUsage.ReUse;
         SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
