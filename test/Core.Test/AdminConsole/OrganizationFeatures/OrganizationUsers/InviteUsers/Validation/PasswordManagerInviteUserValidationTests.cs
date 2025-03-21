@@ -69,6 +69,7 @@ public class PasswordManagerInviteUserValidationTests
     public void Validate_GivenThePlanDoesNotAllowAdditionalSeats_ShouldBeInvalidMessageOfPlanNotAllowingSeats(Organization organization)
     {
         organization.Seats = 8;
+        organization.MaxAutoscaleSeats = 9;
         var seatsOccupiedByUsers = 4;
         var additionalSeats = 4;
         organization.PlanType = PlanType.Free;
