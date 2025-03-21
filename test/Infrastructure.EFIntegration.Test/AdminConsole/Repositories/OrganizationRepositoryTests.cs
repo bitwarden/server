@@ -196,4 +196,43 @@ public class OrganizationRepositoryTests
         Assert.Single(sqlResult);
         Assert.True(sqlResult.All(o => o.Name == org.Name));
     }
+
+    [CiSkippedTheory, EfOrganizationAutoData]
+    public async Task GetManyByIdsAsync_Works_DataMatches(List<Organization> organizations,
+        SqlRepo.OrganizationRepository sqlOrganizationRepo,
+        List<EfRepo.OrganizationRepository> suts)
+    {
+        var returnedOrgs = new List<Organization>();
+
+        foreach (var sut in suts)
+        {
+            _ = await sut.CreateMany(organizations);
+            sut.ClearChangeTracking();
+
+            var efReturnedOrgs = await sut.GetManyByIdsAsync(organizations.Select(o => o.Id).ToList());
+            returnedOrgs.AddRange(efReturnedOrgs);
+        }
+
+        foreach (var organization in organizations)
+        {
+            var postSqlOrg = await sqlOrganizationRepo.CreateAsync(organization);
+            returnedOrgs.Add(await sqlOrganizationRepo.GetByIdAsync(postSqlOrg.Id));
+        }
+
+        var orgIds = organizations.Select(o => o.Id).ToList();
+        var distinctReturnedOrgIds = returnedOrgs.Select(o => o.Id).Distinct().ToList();
+
+        Assert.Equal(orgIds.Count, distinctReturnedOrgIds.Count);
+        Assert.Equivalent(orgIds, distinctReturnedOrgIds);
+
+        // clean up
+        foreach (var organization in organizations)
+        {
+            await sqlOrganizationRepo.DeleteAsync(organization);
+            foreach (var sut in suts)
+            {
+                await sut.DeleteAsync(organization);
+            }
+        }
+    }
 }
