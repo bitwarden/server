@@ -145,14 +145,15 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
+    [Authorize(Policy = "owner")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        var authorized = (await _authorizationService.AuthorizeAsync(
-            User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
-        if (!authorized)
-        {
-            throw new NotFoundException();
-        }
+        // var authorized = (await _authorizationService.AuthorizeAsync(
+        //     User, new OrganizationScope(orgId), OrganizationUserUserDetailsOperations.ReadAll)).Succeeded;
+        // if (!authorized)
+        // {
+        //     throw new NotFoundException();
+        // }
 
         var organizationUsers = await _organizationUserUserDetailsQuery.GetOrganizationUserUserDetails(
             new OrganizationUserUserDetailsQueryRequest

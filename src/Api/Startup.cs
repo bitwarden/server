@@ -27,8 +27,10 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Api.Auth.Models.Request.WebAuthn;
+using Bit.Core.AdminConsole.OrganizationFeatures;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Identity.TokenProviders;
+using Bit.Core.Enums;
 using Bit.Core.Tools.ImportFeatures;
 using Bit.Core.Tools.ReportFeatures;
 
@@ -143,6 +145,18 @@ public class Startup
                     (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
                 ));
             });
+
+            // Simplest implementation: check for role
+            // Issues:
+            // - unable to specify custom permissions
+            // - multiple policies are treated as AND rather than OR
+            // - does not allow for more complex conditional logic - e.g. providers can affect whether owners can view billing
+            // Alternative: describe broad action/capability, e.g. ManageUsers, ManageGroups, ViewBilling, similar to CurrentContext today
+            // the handler is then implemented per domain to define who can do those things
+            config.AddPolicy("owner", policy
+                => policy.AddRequirements(new RoleRequirement(OrganizationUserType.Owner)));
+            config.AddPolicy("admin", policy
+                => policy.AddRequirements(new RoleRequirement(OrganizationUserType.Admin)));
         });
 
         services.AddScoped<AuthenticatorTokenProvider>();
@@ -255,10 +269,11 @@ public class Startup
 
         // Add authentication and authorization to the request pipeline.
         app.UseAuthentication();
-        app.UseAuthorization();
 
-        // Add current context
+        // Add current context - before authz
         app.UseMiddleware<CurrentContextMiddleware>();
+
+        app.UseAuthorization();
 
         // Add endpoints to the request pipeline.
         app.UseEndpoints(endpoints =>
