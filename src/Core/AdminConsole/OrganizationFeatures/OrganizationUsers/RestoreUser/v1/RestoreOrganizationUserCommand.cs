@@ -118,8 +118,7 @@ public class RestoreOrganizationUserCommand(
         var otherOrganizationUsers = (await organizationUserRepository.GetManyByManyUsersAsync(allUserIds))
             .Where(x => organizationUsers.Any(y => y.Id == x.Id) == false);
 
-        var otherOrgs =
-            await organizationRepository.GetManyByIdsAsync(otherOrganizationUsers
+        var otherOrgs = await organizationRepository.GetManyByIdsAsync(otherOrganizationUsers
                 .Select(x => x.OrganizationId)
                 .Distinct());
 

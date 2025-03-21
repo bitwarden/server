@@ -1,5 +1,4 @@
-CREATE PROCEDURE [dbo].[Organization_ReadManyByIds]
-    @OrganizationIds AS [dbo].[GuidIdArray] READONLY
+CREATE PROCEDURE [dbo].[Organization_ReadManyByIds] @OrganizationIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -62,7 +61,7 @@ BEGIN
            o.[AllowAdminAccessToAllCollectionItems],
            o.[UseRiskInsights]
     FROM [dbo].[OrganizationView] o
-    WHERE o.[Id] IN (SELECT [Id] FROM @OrganizationIds)
+    INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 
 END
 

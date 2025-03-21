@@ -61,6 +61,6 @@ BEGIN
            o.[AllowAdminAccessToAllCollectionItems],
            o.[UseRiskInsights]
     FROM [dbo].[OrganizationView] o
-    WHERE o.[Id] IN (SELECT [Id] FROM @OrganizationIds)
-
+             INNER JOIN @OrganizationIds ids ON o.[Id] = ids.[Id]
 END
+
