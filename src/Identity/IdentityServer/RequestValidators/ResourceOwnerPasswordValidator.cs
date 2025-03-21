@@ -23,6 +23,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly IDeviceValidator _deviceValidator;
+    private readonly IAuthRequestHeaderValidator _authRequestHeaderValidator;
     public ResourceOwnerPasswordValidator(
         UserManager<User> userManager,
         IUserService userService,
@@ -40,7 +41,8 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IPolicyService policyService,
         IFeatureService featureService,
         ISsoConfigRepository ssoConfigRepository,
-        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
+        IAuthRequestHeaderValidator authRequestHeaderValidator)
         : base(
             userManager,
             userService,
@@ -63,11 +65,12 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         _captchaValidationService = captchaValidationService;
         _authRequestRepository = authRequestRepository;
         _deviceValidator = deviceValidator;
+        _authRequestHeaderValidator = authRequestHeaderValidator;
     }
 
     public async Task ValidateAsync(ResourceOwnerPasswordValidationContext context)
     {
-        if (!AuthEmailHeaderIsValid(context))
+        if (!_authRequestHeaderValidator.ValidateAuthEmailHeader(context.UserName))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
                 "Auth-Email header invalid.");
@@ -199,31 +202,5 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
     protected override ClaimsPrincipal GetSubject(ResourceOwnerPasswordValidationContext context)
     {
         return context.Result.Subject;
-    }
-
-    private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)
-    {
-        if (_currentContext.HttpContext.Request.Headers.TryGetValue("Auth-Email", out var authEmailHeader))
-        {
-            try
-            {
-                var authEmailDecoded = CoreHelpers.Base64UrlDecodeString(authEmailHeader);
-                if (authEmailDecoded != context.UserName)
-                {
-                    return false;
-                }
-            }
-            catch (Exception e) when (e is InvalidOperationException || e is FormatException)
-            {
-                // Invalid B64 encoding
-                return false;
-            }
-        }
-        else
-        {
-            return false;
-        }
-
-        return true;
     }
 }

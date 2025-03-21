@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
         services.AddTransient<IDeviceValidator, DeviceValidator>();
         services.AddTransient<ITwoFactorAuthenticationValidator, TwoFactorAuthenticationValidator>();
+        services.AddTransient<IAuthRequestHeaderValidator, AuthRequestHeaderValidator>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services

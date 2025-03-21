@@ -19,6 +19,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
     public const string GrantType = "opaque-ke";
     private readonly IOpaqueKeyExchangeService _opaqueKeyExchangeService;
     private readonly IFeatureService _featureService;
+    private readonly IAuthRequestHeaderValidator _authRequestHeaderValidator;
 
     public OpaqueKeyExchangeGrantValidator(
         UserManager<User> userManager,
@@ -28,15 +29,16 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
         ITwoFactorAuthenticationValidator twoFactorAuthenticationValidator,
         IOrganizationUserRepository organizationUserRepository,
         IMailService mailService,
-        ILogger<CustomTokenRequestValidator> logger,
+        ILogger<OpaqueKeyExchangeGrantValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
         IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository,
         IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder,
-        IOpaqueKeyExchangeService opaqueKeyExchangeService)
+        IOpaqueKeyExchangeService opaqueKeyExchangeService,
+        IAuthRequestHeaderValidator authRequestHeaderValidator)
         : base(
             userManager,
             userService,
@@ -56,6 +58,7 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
     {
         _opaqueKeyExchangeService = opaqueKeyExchangeService;
         _featureService = featureService;
+        _authRequestHeaderValidator = authRequestHeaderValidator;
     }
 
     string IExtensionGrantValidator.GrantType => "opaque-ke";
@@ -81,10 +84,12 @@ public class OpaqueKeyExchangeGrantValidator : BaseRequestValidator<ExtensionGra
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;
         }
-
-        // TODO: we need to validate that the email sent up is the same one pulled from the session
-        // TODO: discuss with Ike if pulling over existing AuthEmailHeaderIsValid logic from
-        // ResourceOwnerPasswordValidator is best or if we should should refactor in some way.
+        if (_authRequestHeaderValidator.ValidateAuthEmailHeader(user.Email))
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant,
+                "Auth-Email header invalid.");
+            return;
+        }
 
         await ValidateAsync(context, context.Request, new CustomValidatorRequestContext { User = user });
     }
