@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -882,5 +883,36 @@ public class CipherRepositoryTests
         Assert.Equal(user2.Id, user2TaskCiphers.Last().UserId);
         Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher1.Id && t.TaskId == securityTasks[0].Id);
         Assert.Contains(user2TaskCiphers, t => t.CipherId == manageCipher2.Id && t.TaskId == securityTasks[1].Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task UpdateCiphersAsync_Works(ICipherRepository cipherRepository, IUserRepository userRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Test User",
+            Email = $"test+{Guid.NewGuid()}@email.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        var cipher1 = await CreatePersonalCipher(user, cipherRepository);
+        var cipher2 = await CreatePersonalCipher(user, cipherRepository);
+
+        cipher1.Reprompt = CipherRepromptType.Password;
+        cipher2.Favorites = new JsonObject
+        {
+            [user.Id.ToString()] = true,
+        }.ToJsonString();
+
+        await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2]);
+
+        var updatedCipher1 = await cipherRepository.GetByIdAsync(cipher1.Id);
+        var updatedCipher2 = await cipherRepository.GetByIdAsync(cipher2.Id);
+
+        Assert.NotNull(updatedCipher1);
+        Assert.NotNull(updatedCipher2);
+
+        Assert.Equal(CipherRepromptType.Password, updatedCipher1.Reprompt);
     }
 }
