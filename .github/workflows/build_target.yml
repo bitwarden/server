@@ -11,7 +11,12 @@ defaults:
 jobs:
   check-run:
     name: Check PR run
-    uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check user permission
+        run: |
+          exit 1
 
   run-workflow:
     name: Run Build on PR Target
