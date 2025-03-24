@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Models;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -20,11 +21,13 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class SubscriberService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<SubscriberService> logger,
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
-    ITaxService taxService) : ISubscriberService
+    ITaxService taxService,
+    IAutomaticTaxFactory automaticTaxFactory) : ISubscriberService
 {
     public async Task CancelSubscription(
         ISubscriber subscriber,
@@ -597,7 +600,7 @@ public class SubscriberService(
             Expand = ["subscriptions", "tax", "tax_ids"]
         });
 
-        await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
+        customer = await stripeAdapter.CustomerUpdateAsync(customer.Id, new CustomerUpdateOptions
         {
             Address = new AddressOptions
             {
@@ -661,21 +664,38 @@ public class SubscriberService(
             }
         }
 
-        if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
         {
-            await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
-                new SubscriptionUpdateOptions
+            if (!string.IsNullOrEmpty(subscriber.GatewaySubscriptionId))
+            {
+                var subscription = await stripeAdapter.SubscriptionGetAsync(subscriber.GatewaySubscriptionId);
+                var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, subscription.Items.Select(x => x.Price.Id));
+                var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+                var automaticTaxOptions = automaticTaxStrategy.GetUpdateOptions(subscription);
+                if (automaticTaxOptions?.AutomaticTax?.Enabled != null)
                 {
-                    AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
-                });
+                    await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId, automaticTaxOptions);
+                }
+            }
         }
+        else
+        {
+            if (SubscriberIsEligibleForAutomaticTax(subscriber, customer))
+            {
+                await stripeAdapter.SubscriptionUpdateAsync(subscriber.GatewaySubscriptionId,
+                    new SubscriptionUpdateOptions
+                    {
+                        AutomaticTax = new SubscriptionAutomaticTaxOptions { Enabled = true }
+                    });
+            }
 
-        return;
+            return;
 
-        bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
-            => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
-               (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
-               localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+            bool SubscriberIsEligibleForAutomaticTax(ISubscriber localSubscriber, Customer localCustomer)
+                => !string.IsNullOrEmpty(localSubscriber.GatewaySubscriptionId) &&
+                   (localCustomer.Subscriptions?.Any(sub => sub.Id == localSubscriber.GatewaySubscriptionId && !sub.AutomaticTax.Enabled) ?? false) &&
+                   localCustomer.Tax?.AutomaticTax == StripeConstants.AutomaticTaxStatus.Supported;
+        }
     }
 
     public async Task VerifyBankAccount(
