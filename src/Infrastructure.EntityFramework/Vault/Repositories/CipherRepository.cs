@@ -16,6 +16,7 @@ using LinqToDB.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NSec.Cryptography;
 using NS = Newtonsoft.Json;
 using NSL = Newtonsoft.Json.Linq;
 
@@ -863,11 +864,30 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entities = Mapper.Map<List<Cipher>>(ciphers);
-            foreach (var cipher in entities)
+            var ciphersToUpdate = ciphers.ToDictionary(c => c.Id);
+
+            var existingCiphers = await dbContext.Ciphers
+                .Where(c => c.UserId == userId && ciphersToUpdate.Keys.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id);
+
+            foreach (var (cipherId, cipher) in ciphersToUpdate)
             {
-                dbContext.Ciphers.Attach(cipher);
+                if (!existingCiphers.TryGetValue(cipherId, out var existingCipher))
+                {
+                    // The Dapper version does not validate that the same amount of items given where updated.
+                    continue;
+                }
+
+                existingCipher.UserId = cipher.UserId;
+                existingCipher.OrganizationId = cipher.OrganizationId;
+                existingCipher.Type = cipher.Type;
+                existingCipher.Data = cipher.Data;
+                existingCipher.Attachments = cipher.Attachments;
+                existingCipher.RevisionDate = cipher.RevisionDate;
+                existingCipher.DeletedDate = cipher.DeletedDate;
+                existingCipher.Key = cipher.Key;
             }
+
             await dbContext.UserBumpAccountRevisionDateAsync(userId);
             await dbContext.SaveChangesAsync();
         }

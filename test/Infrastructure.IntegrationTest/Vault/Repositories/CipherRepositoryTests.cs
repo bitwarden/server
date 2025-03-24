@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Json.Nodes;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -899,11 +898,8 @@ public class CipherRepositoryTests
         var cipher1 = await CreatePersonalCipher(user, cipherRepository);
         var cipher2 = await CreatePersonalCipher(user, cipherRepository);
 
-        cipher1.Reprompt = CipherRepromptType.Password;
-        cipher2.Favorites = new JsonObject
-        {
-            [user.Id.ToString()] = true,
-        }.ToJsonString();
+        cipher1.Type = CipherType.SecureNote;
+        cipher2.Attachments = "new_attachments";
 
         await cipherRepository.UpdateCiphersAsync(user.Id, [cipher1, cipher2]);
 
@@ -913,6 +909,7 @@ public class CipherRepositoryTests
         Assert.NotNull(updatedCipher1);
         Assert.NotNull(updatedCipher2);
 
-        Assert.Equal(CipherRepromptType.Password, updatedCipher1.Reprompt);
+        Assert.Equal(CipherType.SecureNote, updatedCipher1.Type);
+        Assert.Equal("new_attachments", updatedCipher2.Attachments);
     }
 }
