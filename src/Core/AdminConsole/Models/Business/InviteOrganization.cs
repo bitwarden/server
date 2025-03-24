@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Models.Business;
 
@@ -21,7 +20,6 @@ public record InviteOrganization
 
     }
 
-
     public InviteOrganization(Organization organization, Plan plan)
     {
         OrganizationId = organization.Id;
@@ -33,9 +31,5 @@ public record InviteOrganization
         GatewayCustomerId = organization.GatewayCustomerId;
         GatewaySubscriptionId = organization.GatewaySubscriptionId;
         UseSecretsManager = organization.UseSecretsManager;
-    }
-
-    public InviteOrganization(Organization organization) : this(organization, StaticStore.GetPlan(organization.PlanType))
-    {
     }
 }

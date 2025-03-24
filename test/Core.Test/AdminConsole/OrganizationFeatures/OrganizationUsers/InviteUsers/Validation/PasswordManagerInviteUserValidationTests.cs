@@ -3,6 +3,7 @@ using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -17,7 +18,7 @@ public class PasswordManagerInviteUserValidationTests
     {
         organization.Seats = null;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
@@ -35,7 +36,7 @@ public class PasswordManagerInviteUserValidationTests
         var seatsOccupiedByUsers = 4;
         var additionalSeats = 4;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
@@ -54,7 +55,7 @@ public class PasswordManagerInviteUserValidationTests
         var seatsOccupiedByUsers = 4;
         var additionalSeats = 1;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
@@ -74,7 +75,7 @@ public class PasswordManagerInviteUserValidationTests
         var additionalSeats = 4;
         organization.PlanType = PlanType.Free;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 

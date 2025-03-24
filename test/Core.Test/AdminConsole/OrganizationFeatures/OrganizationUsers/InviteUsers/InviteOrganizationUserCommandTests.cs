@@ -8,6 +8,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager;
 using Bit.Core.AdminConsole.Shared.Validation;
+using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Commands;
@@ -41,7 +42,7 @@ public class InviteOrganizationUserCommandTests
         // Arrange
         user.Email = address.Address;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
             organizationDto,
@@ -89,7 +90,7 @@ public class InviteOrganizationUserCommandTests
         // Arrange
         orgUser.Email = address.Address;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var request = new OrganizationUserSingleEmailInvite(orgUser.Email,
             organizationDto,
@@ -141,7 +142,7 @@ public class InviteOrganizationUserCommandTests
 
         user.Email = address.Address;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
             organizationDto,
@@ -195,7 +196,7 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
             organizationDto,
@@ -252,7 +253,7 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
             organizationDto,
@@ -314,7 +315,7 @@ public class InviteOrganizationUserCommandTests
         organization.MaxAutoscaleSeats = 2;
         ownerDetails.Type = OrganizationUserType.Owner;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
 
         var request = new OrganizationUserSingleEmailInvite(user.Email,
             organizationDto,

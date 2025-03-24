@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
@@ -22,7 +23,7 @@ public class InviteUserPaymentValidationTests
         var result = InviteUserPaymentValidation.Validate(new PaymentsSubscription
         {
             SubscriptionStatus = StripeConstants.SubscriptionStatus.Active,
-            ProductTierType = new InviteOrganization(organization).Plan.ProductTier
+            ProductTierType = new InviteOrganization(organization, new FreePlan()).Plan.ProductTier
         });
 
         Assert.IsType<Valid<PaymentsSubscription>>(result);
@@ -38,7 +39,7 @@ public class InviteUserPaymentValidationTests
         });
 
         Assert.IsType<Invalid<PaymentsSubscription>>(result);
-        Assert.Equal(PaymentCancelledSubscriptionError.Code, (result as Invalid<PaymentsSubscription>).ErrorMessageString);
+        Assert.Equal(PaymentCancelledSubscriptionError.Code, (result as Invalid<PaymentsSubscription>)!.ErrorMessageString);
     }
 
     [Fact]

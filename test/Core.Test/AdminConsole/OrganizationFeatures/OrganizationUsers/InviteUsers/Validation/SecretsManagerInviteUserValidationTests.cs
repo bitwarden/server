@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.V
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.SecretsManager;
 using Bit.Core.AdminConsole.Shared.Validation;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Models.StaticStore.Plans;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -22,7 +23,7 @@ public class SecretsManagerInviteUserValidationTests
     {
         organization.UseSecretsManager = false;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -49,7 +50,7 @@ public class SecretsManagerInviteUserValidationTests
     {
         organization.UseSecretsManager = false;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var invite = OrganizationUserInvite.Create(["email@test.com"], [], OrganizationUserType.User, new Permissions(), string.Empty, true);
@@ -69,7 +70,7 @@ public class SecretsManagerInviteUserValidationTests
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
         Assert.IsType<Invalid<SecretsManagerSubscriptionUpdate>>(result);
-        Assert.Equal(OrganizationNoSecretsManagerError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>).ErrorMessageString);
+        Assert.Equal(OrganizationNoSecretsManagerError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>)!.ErrorMessageString);
     }
 
     [Theory]
@@ -80,7 +81,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.SmSeats = null;
         organization.UseSecretsManager = true;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new FreePlan());
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -110,7 +111,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -128,7 +129,7 @@ public class SecretsManagerInviteUserValidationTests
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
         Assert.IsType<Invalid<SecretsManagerSubscriptionUpdate>>(result);
-        Assert.Equal(SecretsManagerSeatLimitReachedError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>).ErrorMessageString);
+        Assert.Equal(SecretsManagerSeatLimitReachedError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>)!.ErrorMessageString);
     }
 
     [Theory]
@@ -141,7 +142,7 @@ public class SecretsManagerInviteUserValidationTests
         organization.UseSecretsManager = true;
         organization.PlanType = PlanType.EnterpriseAnnually;
 
-        var organizationDto = new InviteOrganization(organization);
+        var organizationDto = new InviteOrganization(organization, new Enterprise2023Plan(isAnnual: true));
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
         var request = new InviteUserOrganizationValidationRequest
@@ -159,6 +160,6 @@ public class SecretsManagerInviteUserValidationTests
         var result = SecretsManagerInviteUserValidation.Validate(update);
 
         Assert.IsType<Invalid<SecretsManagerSubscriptionUpdate>>(result);
-        Assert.Equal(SecretsManagerCannotExceedPasswordManagerError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>).ErrorMessageString);
+        Assert.Equal(SecretsManagerCannotExceedPasswordManagerError.Code, (result as Invalid<SecretsManagerSubscriptionUpdate>)!.ErrorMessageString);
     }
 }
