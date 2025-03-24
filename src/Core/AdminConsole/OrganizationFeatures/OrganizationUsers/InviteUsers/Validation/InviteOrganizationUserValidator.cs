@@ -82,7 +82,7 @@ public class InviteUsersValidator(
     }
 
     public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings, Valid<PasswordManagerSubscriptionUpdate> subscriptionUpdate) =>
-        globalSettings.SelfHosted && subscriptionUpdate?.Value.AdditionalSeats > 0
+        globalSettings.SelfHosted && subscriptionUpdate?.Value.SeatsRequiredToAdd > 0
             ? new Invalid<IGlobalSettings>(new CannotAutoScaleOnSelfHostError(globalSettings))
             : new Valid<IGlobalSettings>(globalSettings);
 }

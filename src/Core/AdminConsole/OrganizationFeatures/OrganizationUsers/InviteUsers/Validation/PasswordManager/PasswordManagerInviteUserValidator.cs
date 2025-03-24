@@ -16,7 +16,7 @@ public static class PasswordManagerInviteUserValidator
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
 
-        if (subscriptionUpdate.AdditionalSeats == 0)
+        if (subscriptionUpdate.NewUsersToAdd == 0)
         {
             return new Valid<PasswordManagerSubscriptionUpdate>(subscriptionUpdate);
         }
@@ -35,7 +35,7 @@ public static class PasswordManagerInviteUserValidator
         }
 
         // Apparently MaxAdditionalSeats is never set. Can probably be removed.
-        if (subscriptionUpdate.AdditionalSeats > subscriptionUpdate.PasswordManagerPlan.MaxAdditionalSeats)
+        if (subscriptionUpdate.NewUsersToAdd > subscriptionUpdate.PasswordManagerPlan.MaxAdditionalSeats)
         {
             return new Invalid<PasswordManagerSubscriptionUpdate>(
                 new PasswordManagerPlanOnlyAllowsMaxAdditionalSeatsError(subscriptionUpdate));
