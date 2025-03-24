@@ -55,7 +55,8 @@ CREATE PROCEDURE [dbo].[Organization_Create]
     @LimitCollectionDeletion BIT = NULL,
     @AllowAdminAccessToAllCollectionItems BIT = 0,
     @UseRiskInsights BIT = 0,
-    @LimitItemDeletion BIT = 0
+    @LimitItemDeletion BIT = 0,
+    @UseOrganizationDomains BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
