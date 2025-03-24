@@ -1,7 +1,7 @@
 name: Build on PR Target
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize]
 
 defaults:
@@ -11,6 +11,7 @@ defaults:
 jobs:
   check-run:
     name: Check PR run
+    if: ${{ github.event.pull_request.head.repo.full_name != github.repository }}
     uses: bitwarden/gh-actions/.github/workflows/check-run.yml@main
 
   run-workflow:
