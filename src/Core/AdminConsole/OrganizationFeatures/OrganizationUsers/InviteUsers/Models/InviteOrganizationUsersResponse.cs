@@ -11,4 +11,17 @@ public class ScimInviteOrganizationUsersResponse
 {
     public OrganizationUser InvitedUser { get; init; }
 
+    public ScimInviteOrganizationUsersResponse()
+    {
+
+    }
+
+    public ScimInviteOrganizationUsersResponse(OrganizationUserSingleEmailInvite request)
+    {
+        InvitedUser = new OrganizationUser
+        {
+            Email = request.Email,
+            ExternalId = request.ExternalId
+        };
+    }
 }

@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
@@ -16,6 +15,7 @@ using Bit.Core.Services;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
 using Bit.Scim.Users.Interfaces;
+using static Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors.ErrorMapper;
 
 namespace Bit.Scim.Users;
 
@@ -34,7 +34,63 @@ public class PostUserCommand(
 {
     public async Task<OrganizationUserUserDetails?> PostUserAsync(Guid organizationId, ScimUserRequestModel model)
     {
-        var scimProvider = scimContext.RequestScimProvider;
+        if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization) is false)
+        {
+            return await InviteScimOrganizationUserAsync(model, organizationId, scimContext.RequestScimProvider);
+        }
+
+        return await InviteScimOrganizationUserAsync_vNext(model, organizationId, scimContext.RequestScimProvider);
+    }
+
+    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync_vNext(
+        ScimUserRequestModel model,
+        Guid organizationId,
+        ScimProviderType scimProvider)
+    {
+        var organization = await organizationRepository.GetByIdAsync(organizationId);
+
+        if (organization is null)
+        {
+            throw new NotFoundException();
+        }
+
+        var plan = await pricingClient.GetPlan(organization.PlanType);
+
+        if (plan == null)
+        {
+            logger.LogError("Plan {planType} not found for organization {organizationId}",
+                organization.PlanType, organization.Id);
+            return null;
+        }
+
+        var request = model.ToRequest(
+            scimProvider: scimProvider,
+            inviteOrganization: new InviteOrganization(organization, plan),
+            performedAt: timeProvider.GetUtcNow());
+
+        var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
+
+        var invitedOrganizationUserId = result switch
+        {
+            Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
+            Failure<ScimInviteOrganizationUsersResponse> { ErrorMessage: InviteOrganizationUsersCommand.NoUsersToInvite } => (Guid?)null,
+            Failure<ScimInviteOrganizationUsersResponse> failure when failure.Errors.Length != 0 => throw MapToBitException(failure.Errors),
+            Failure<ScimInviteOrganizationUsersResponse> failure when failure.ErrorMessages.Count != 0 => throw new BadRequestException(failure.ErrorMessage),
+            _ => throw new InvalidOperationException()
+        };
+
+        var organizationUser = invitedOrganizationUserId.HasValue
+            ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
+            : null;
+
+        return organizationUser;
+    }
+
+    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(
+        ScimUserRequestModel model,
+        Guid organizationId,
+        ScimProviderType scimProvider)
+    {
         var invite = model.ToOrganizationUserInvite(scimProvider);
 
         var email = invite.Emails.Single();
@@ -65,56 +121,15 @@ public class PostUserCommand(
             throw new NotFoundException();
         }
 
-
-        if (featureService.IsEnabled(FeatureFlagKeys.ScimInviteUserOptimization))
-        {
-            return await InviteScimOrganizationUserAsync(model, organization, scimProvider);
-        }
-
         var hasStandaloneSecretsManager = await paymentService.HasSecretsManagerStandalone(organization);
         invite.AccessSecretsManager = hasStandaloneSecretsManager;
 
         var invitedOrgUser = await organizationService.InviteUserAsync(organizationId, invitingUserId: null,
             EventSystemUser.SCIM,
-            invite, externalId);
+            invite,
+            externalId);
         var orgUser = await organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;
     }
-
-    private async Task<OrganizationUserUserDetails?> InviteScimOrganizationUserAsync(ScimUserRequestModel model,
-        Organization organization, ScimProviderType scimProvider)
-    {
-        var plan = await pricingClient.GetPlan(organization.PlanType);
-
-        if (plan == null)
-        {
-            logger.LogError("Plan {planType} not found for organization {organizationId}", organization.PlanType,
-                organization.Id);
-            return null;
-        }
-
-        var request = model.ToRequest(
-            scimProvider: scimProvider,
-            inviteOrganization: new InviteOrganization(organization, plan),
-            performedAt: timeProvider.GetUtcNow());
-
-        var result = await inviteOrganizationUsersCommand.InviteScimOrganizationUserAsync(request);
-
-        var invitedOrganizationUserId = result switch
-        {
-            Success<ScimInviteOrganizationUsersResponse> success => success.Value.InvitedUser.Id,
-            Failure<ScimInviteOrganizationUsersResponse> { ErrorMessage: InviteOrganizationUsersCommand.NoUsersToInvite } => (Guid?)null,
-            Failure<ScimInviteOrganizationUsersResponse> failure when failure.ErrorMessages.Count != 0 => throw new BadRequestException(failure.ErrorMessage),
-            _ => throw new InvalidOperationException()
-        };
-
-        var organizationUser = invitedOrganizationUserId.HasValue
-            ? await organizationUserRepository.GetDetailsByIdAsync(invitedOrganizationUserId.Value)
-            : null;
-
-        return organizationUser;
-    }
-
-
 }

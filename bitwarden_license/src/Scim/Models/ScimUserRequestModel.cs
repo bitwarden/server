@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using OrganizationUserInvite = Bit.Core.Models.Business.OrganizationUserInvite;
@@ -30,12 +31,21 @@ public class ScimUserRequestModel : BaseScimUserModel
     public OrganizationUserSingleEmailInvite ToRequest(
         ScimProviderType scimProvider,
         InviteOrganization inviteOrganization,
-        DateTimeOffset performedAt) =>
-        new(
-            email: EmailForInvite(scimProvider),
-            inviteOrganization: inviteOrganization,
-            performedAt: performedAt,
-            externalId: ExternalIdForInvite());
+        DateTimeOffset performedAt)
+    {
+        var email = EmailForInvite(scimProvider);
+
+        if (string.IsNullOrWhiteSpace(email) || !Active)
+        {
+            throw new BadRequestException();
+        }
+
+        return new(
+                email: email,
+                inviteOrganization: inviteOrganization,
+                performedAt: performedAt,
+                externalId: ExternalIdForInvite());
+    }
 
     private string EmailForInvite(ScimProviderType scimProvider)
     {

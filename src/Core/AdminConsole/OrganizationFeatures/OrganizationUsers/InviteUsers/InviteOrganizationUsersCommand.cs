@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 using Bit.Core.AdminConsole.Shared.Validation;
@@ -39,9 +40,20 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
     public const string NoUsersToInvite = "No users to invite.";
     public const string InvalidResultType = "Invalid result type.";
 
+
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
     {
         var hasSecretsManager = await paymentService.HasSecretsManagerStandalone(request.InviteOrganization);
+
+        var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
+
+        if (orgUsers.Any(existingUser =>
+                request.Email.Equals(existingUser.Email, StringComparison.InvariantCultureIgnoreCase) ||
+                request.ExternalId.Equals(existingUser.ExternalId, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            return new Failure<ScimInviteOrganizationUsersResponse>(
+                new UserAlreadyExistsError(new ScimInviteOrganizationUsersResponse(request)));
+        }
 
         var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request, hasSecretsManager));
 

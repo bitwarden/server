@@ -5,5 +5,5 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public record CannotAutoScaleOnSelfHostError(IGlobalSettings InvalidSettings) : Error<IGlobalSettings>(Code, InvalidSettings)
 {
-    public const string Code = "CannotAutoScaleOnSelfHost";
+    public const string Code = "Cannot auto scale self-host.";
 }
