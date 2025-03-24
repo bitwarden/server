@@ -38,7 +38,7 @@ public class InviteUsersValidator(
         }
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(request);
-        var passwordManagerValidationResult = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
+        var passwordManagerValidationResult = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
 
         if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
         {

@@ -10,7 +10,7 @@ using Xunit;
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
 
-public class PasswordManagerInviteUserValidationTests
+public class PasswordManagerInviteUserValidatorTests
 {
     [Theory]
     [BitAutoData]
@@ -22,7 +22,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, 0, 0);
 
-        var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
+        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
 
         Assert.IsType<Valid<PasswordManagerSubscriptionUpdate>>(result);
     }
@@ -40,7 +40,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
-        var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
+        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
 
         Assert.IsType<Valid<PasswordManagerSubscriptionUpdate>>(result);
     }
@@ -59,7 +59,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
-        var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
+        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(PasswordManagerSeatLimitHasBeenReachedError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);
@@ -79,7 +79,7 @@ public class PasswordManagerInviteUserValidationTests
 
         var subscriptionUpdate = new PasswordManagerSubscriptionUpdate(organizationDto, seatsOccupiedByUsers, additionalSeats);
 
-        var result = PasswordManagerInviteUserValidation.Validate(subscriptionUpdate);
+        var result = PasswordManagerInviteUserValidator.Validate(subscriptionUpdate);
 
         Assert.IsType<Invalid<PasswordManagerSubscriptionUpdate>>(result);
         Assert.Equal(PasswordManagerPlanDoesNotAllowAdditionalSeatsError.Code, (result as Invalid<PasswordManagerSubscriptionUpdate>)!.ErrorMessageString);

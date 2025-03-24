@@ -2,7 +2,7 @@
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.PasswordManager;
 
-public static class PasswordManagerInviteUserValidation
+public static class PasswordManagerInviteUserValidator
 {
     // NOTE This is only for validating adding users to an organization, not removing
     public static ValidationResult<PasswordManagerSubscriptionUpdate> Validate(PasswordManagerSubscriptionUpdate subscriptionUpdate)
