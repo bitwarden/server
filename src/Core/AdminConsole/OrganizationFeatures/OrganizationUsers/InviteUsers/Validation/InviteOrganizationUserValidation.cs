@@ -30,7 +30,7 @@ public class InviteUsersValidator(
             return invalidEnvironment.Map(request);
         }
 
-        var organizationValidationResult = InvitingUserOrganizationValidation.Validate(request.InviteOrganization);
+        var organizationValidationResult = InvitingUserOrganizationValidator.Validate(request.InviteOrganization);
 
         if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
         {
