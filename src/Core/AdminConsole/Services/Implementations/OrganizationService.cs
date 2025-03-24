@@ -1920,7 +1920,7 @@ public class OrganizationService : IOrganizationService
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -1932,7 +1932,7 @@ public class OrganizationService : IOrganizationService
         await RepositoryRevokeUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -2001,7 +2001,7 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.RevokeAsync(organizationUser.Id);
                 organizationUser.Status = OrganizationUserStatusType.Revoked;
                 await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked);
-                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+                if (organizationUser.UserId.HasValue)
                 {
                     await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
@@ -2033,7 +2033,7 @@ public class OrganizationService : IOrganizationService
         await RepositoryRestoreUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -2044,7 +2044,7 @@ public class OrganizationService : IOrganizationService
         await RepositoryRestoreUserAsync(organizationUser);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, systemUser);
 
-        if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+        if (organizationUser.UserId.HasValue)
         {
             await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
         }
@@ -2139,7 +2139,7 @@ public class OrganizationService : IOrganizationService
                 await _organizationUserRepository.RestoreAsync(organizationUser.Id, status);
                 organizationUser.Status = status;
                 await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored);
-                if (_featureService.IsEnabled(FeatureFlagKeys.PushSyncOrgKeysOnRevokeRestore) && organizationUser.UserId.HasValue)
+                if (organizationUser.UserId.HasValue)
                 {
                     await _pushNotificationService.PushSyncOrgKeysAsync(organizationUser.UserId.Value);
                 }
