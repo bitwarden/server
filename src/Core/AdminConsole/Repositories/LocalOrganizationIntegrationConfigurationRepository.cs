@@ -1,14 +1,15 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Integrations;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Repositories;
 
-public class OrganizationIntegrationConfigurationRepository(GlobalSettings globalSettings)
+public class LocalOrganizationIntegrationConfigurationRepository(GlobalSettings globalSettings)
     : IOrganizationIntegrationConfigurationRepository
 {
-    public async Task<List<IntegrationConfiguration<T>>> GetConfigurationsAsync<T>(IntegrationType integrationType,
-        Guid organizationId,
+    public async Task<List<IntegrationConfiguration<T>>> GetConfigurationsAsync<T>(Guid organizationId,
+        IntegrationType integrationType,
         EventType eventType)
     {
         var configurations = new List<IntegrationConfiguration<T>>();
@@ -39,13 +40,13 @@ public class OrganizationIntegrationConfigurationRepository(GlobalSettings globa
         return configurations;
     }
 
-    public async Task<IEnumerable<IntegrationConfiguration<T>>> GetAllConfigurationsAsync<T>(Guid organizationId) => throw new NotImplementedException();
+    public async Task CreateOrganizationIntegrationAsync<T>(
+        Guid organizationId,
+        IntegrationType integrationType,
+        T configuration)
+    {
+        var json = JsonSerializer.Serialize(configuration);
 
-    public async Task AddConfigurationAsync<T>(Guid organizationId, IntegrationType integrationType, EventType eventType,
-        IntegrationConfiguration<T> configuration) =>
-        throw new NotImplementedException();
-
-    public async Task UpdateConfigurationAsync<T>(IntegrationConfiguration<T> configuration) => throw new NotImplementedException();
-
-    public async Task DeleteConfigurationAsync(Guid id) => throw new NotImplementedException();
+        Console.WriteLine($"Organization: {organizationId}, IntegrationType: {integrationType}, Configuration: {json}");
+    }
 }

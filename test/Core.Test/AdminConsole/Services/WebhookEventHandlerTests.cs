@@ -47,11 +47,8 @@ public class WebhookEventHandlerTests
         clientFactory.CreateClient(WebhookEventHandler.HttpClientName).Returns(_httpClient);
 
         var repository = Substitute.For<IOrganizationIntegrationConfigurationRepository>();
-        repository.GetConfigurationsAsync<WebhookConfiguration>(
-            IntegrationType.Webhook,
-            Arg.Any<Guid>(),
-            Arg.Any<EventType>()
-        ).Returns(configurations);
+        repository.GetConfigurationsAsync<WebhookConfiguration>(Arg.Any<Guid>(),
+            IntegrationType.Webhook, Arg.Any<EventType>()).Returns(configurations);
 
         return new SutProvider<WebhookEventHandler>()
             .SetDependency(repository)

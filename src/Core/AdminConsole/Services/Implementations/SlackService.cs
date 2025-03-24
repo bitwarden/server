@@ -24,46 +24,6 @@ public class SlackService(
         return (await GetChannelIdsAsync(token, new List<string> { channelName })).FirstOrDefault();
     }
 
-    public string GetRedirectUrl(string redirectUrl)
-    {
-        return $"https://slack.com/oauth/v2/authorize?client_id={_clientId}&scope={_scopes}&redirect_uri={redirectUrl}";
-    }
-
-    public async Task<string> ObtainTokenViaOAuth(string code, string redirectUrl)
-    {
-        var tokenResponse = await _httpClient.PostAsync("https://slack.com/api/oauth.v2.access",
-            new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("client_id", _clientId),
-                new KeyValuePair<string, string>("client_secret", _clientSecret),
-                new KeyValuePair<string, string>("code", code),
-                new KeyValuePair<string, string>("redirect_uri", redirectUrl)
-            }));
-
-        SlackOAuthResponse result;
-        try
-        {
-            result = await tokenResponse.Content.ReadFromJsonAsync<SlackOAuthResponse>();
-        }
-        catch
-        {
-            result = null;
-        }
-
-        if (result == null)
-        {
-            logger.LogError("Error obtaining token via OAuth: Unknown error");
-            return string.Empty;
-        }
-        if (!result.Ok)
-        {
-            logger.LogError("Error obtaining token via OAuth: " + result.Error);
-            return string.Empty;
-        }
-
-        return result.AccessToken;
-    }
-
     public async Task<List<string>> GetChannelIdsAsync(string token, List<string> channelNames)
     {
         var matchingChannelIds = new List<string>();
@@ -109,6 +69,46 @@ public class SlackService(
     {
         var userId = await GetUserIdByEmailAsync(token, email);
         return await OpenDmChannel(token, userId);
+    }
+
+    public string GetRedirectUrl(string redirectUrl)
+    {
+        return $"https://slack.com/oauth/v2/authorize?client_id={_clientId}&scope={_scopes}&redirect_uri={redirectUrl}";
+    }
+
+    public async Task<string> ObtainTokenViaOAuth(string code, string redirectUrl)
+    {
+        var tokenResponse = await _httpClient.PostAsync("https://slack.com/api/oauth.v2.access",
+            new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("client_id", _clientId),
+                new KeyValuePair<string, string>("client_secret", _clientSecret),
+                new KeyValuePair<string, string>("code", code),
+                new KeyValuePair<string, string>("redirect_uri", redirectUrl)
+            }));
+
+        SlackOAuthResponse result;
+        try
+        {
+            result = await tokenResponse.Content.ReadFromJsonAsync<SlackOAuthResponse>();
+        }
+        catch
+        {
+            result = null;
+        }
+
+        if (result == null)
+        {
+            logger.LogError("Error obtaining token via OAuth: Unknown error");
+            return string.Empty;
+        }
+        if (!result.Ok)
+        {
+            logger.LogError("Error obtaining token via OAuth: " + result.Error);
+            return string.Empty;
+        }
+
+        return result.AccessToken;
     }
 
     public async Task SendSlackMessageByChannelIdAsync(string token, string message, string channelId)

@@ -24,10 +24,8 @@ public class SlackEventHandlerTests
     private SutProvider<SlackEventHandler> GetSutProvider(
         List<IntegrationConfiguration<SlackConfiguration>> integrationConfigurations)
     {
-        _repository.GetConfigurationsAsync<SlackConfiguration>(
-            IntegrationType.Slack,
-            Arg.Any<Guid>(),
-            Arg.Any<EventType>())
+        _repository.GetConfigurationsAsync<SlackConfiguration>(Arg.Any<Guid>(),
+            IntegrationType.Slack, Arg.Any<EventType>())
         .Returns(integrationConfigurations);
 
         return new SutProvider<SlackEventHandler>()

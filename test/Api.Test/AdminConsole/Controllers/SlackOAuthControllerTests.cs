@@ -1,4 +1,9 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
+using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -13,63 +18,112 @@ namespace Bit.Api.Test.AdminConsole.Controllers;
 public class SlackOAuthControllerTests
 {
     [Theory, BitAutoData]
-    public async Task OAuthCallback_ThrowsBadResultWhenCodeIsEmpty(SutProvider<SlackOAuthController> sutProvider)
+    public async Task OAuthCallback_CompletesSuccessfully(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
     {
+        var token = "xoxb-test-token";
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-
-        var requestAction = await sutProvider.Sut.OAuthCallback(string.Empty);
-
-        Assert.IsType<BadRequestObjectResult>(requestAction);
-    }
-
-    [Theory, BitAutoData]
-    public async Task OAuthCallback_ThrowsBadResultWhenSlackServiceReturnsEmpty(SutProvider<SlackOAuthController> sutProvider)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
         sutProvider.GetDependency<ISlackService>()
             .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
-            .Returns(string.Empty);
+            .Returns(token);
 
-        var requestAction = await sutProvider.Sut.OAuthCallback("A_test_code");
+        var requestAction = await sutProvider.Sut.OAuthCallback(organizationId.ToString(), "A_test_code");
 
-        Assert.IsType<BadRequestObjectResult>(requestAction);
-    }
-
-    [Theory, BitAutoData]
-    public async Task OAuthCallback_CompletesSuccessfully(SutProvider<SlackOAuthController> sutProvider)
-    {
-        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
-        sutProvider.GetDependency<ISlackService>()
-            .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
-            .Returns("xoxb-test-token");
-
-        var requestAction = await sutProvider.Sut.OAuthCallback("A_test_code");
-
+        await sutProvider.GetDependency<IOrganizationIntegrationConfigurationRepository>().Received(1)
+            .CreateOrganizationIntegrationAsync(organizationId, IntegrationType.Slack, new SlackIntegration(token));
         Assert.IsType<OkObjectResult>(requestAction);
     }
 
     [Theory, BitAutoData]
-    public void Redirect_ShouldRedirectToSlack(SutProvider<SlackOAuthController> sutProvider)
+    public async Task OAuthCallback_ThrowsBadResultWhenCodeIsEmpty(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
     {
-        var expectedUrl = "https://localhost/";
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.OAuthCallback(organizationId.ToString(), string.Empty));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OAuthCallback_ThrowsBadResultWhenSlackServiceReturnsEmpty(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<ISlackService>()
+            .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(string.Empty);
+
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.OAuthCallback(organizationId.ToString(), "A_test_code"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task OAuthCallback_ThrowsNotFoundIfUserIsNotOrganizationAdmin(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
+    {
+        var token = "xoxb-test-token";
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+        sutProvider.GetDependency<ISlackService>()
+            .ObtainTokenViaOAuth(Arg.Any<string>(), Arg.Any<string>())
+            .Returns(token);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.OAuthCallback(organizationId.ToString(), "A_test_code"));
+    }
+
+    [Theory, BitAutoData]
+    public async Task Redirect_ShouldRedirectToSlack(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
+    {
+        var expectedUrl = $"https://localhost/{organizationId.ToString()}";
 
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>()).Returns(expectedUrl);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .HttpContext.Request.Scheme
+            .Returns("https");
 
-        var requestAction = sutProvider.Sut.RedirectToSlack();
+        var requestAction = await sutProvider.Sut.RedirectToSlack(organizationId.ToString());
 
         var redirectResult = Assert.IsType<RedirectResult>(requestAction);
         Assert.Equal(expectedUrl, redirectResult.Url);
     }
 
     [Theory, BitAutoData]
-    public void Redirect_ThrowsBadResultWhenSlackServiceReturnsEmpty(SutProvider<SlackOAuthController> sutProvider)
+    public async Task Redirect_ThrowsNotFoundWhenSlackServiceReturnsEmpty(SutProvider<SlackOAuthController> sutProvider, Guid organizationId)
     {
         sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
         sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>()).Returns(string.Empty);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>()
+            .HttpContext.Request.Scheme
+            .Returns("https");
 
-        var requestAction = sutProvider.Sut.RedirectToSlack();
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectToSlack(organizationId.ToString()));
+    }
 
-        Assert.IsType<BadRequestObjectResult>(requestAction);
+    [Theory, BitAutoData]
+    public async Task Redirect_ThrowsNotFoundWhenUserIsNotOrganizationAdmin(SutProvider<SlackOAuthController> sutProvider,
+        Guid organizationId)
+    {
+        sutProvider.Sut.Url = Substitute.For<IUrlHelper>();
+        sutProvider.GetDependency<ISlackService>().GetRedirectUrl(Arg.Any<string>()).Returns(string.Empty);
+        sutProvider.GetDependency<ICurrentContext>()
+            .OrganizationOwner(organizationId)
+            .Returns(false);
+        sutProvider.GetDependency<ICurrentContext>()
+            .HttpContext.Request.Scheme
+            .Returns("https");
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.RedirectToSlack(organizationId.ToString()));
     }
 }

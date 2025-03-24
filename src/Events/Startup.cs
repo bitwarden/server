@@ -119,7 +119,7 @@ public class Startup
                     globalSettings,
                     globalSettings.EventLogging.RabbitMq.EventRepositoryQueueName));
 
-            services.AddSingleton<IOrganizationIntegrationConfigurationRepository, OrganizationIntegrationConfigurationRepository>();
+            services.AddSingleton<IOrganizationIntegrationConfigurationRepository, LocalOrganizationIntegrationConfigurationRepository>();
 
             if (CoreHelpers.SettingHasValue(globalSettings.Slack.ClientId) &&
                 CoreHelpers.SettingHasValue(globalSettings.Slack.ClientSecret) &&

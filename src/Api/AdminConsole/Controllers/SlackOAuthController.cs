@@ -1,31 +1,52 @@
-﻿using Bit.Core.Services;
+﻿using Bit.Core.Context;
+using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Integrations;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("slack/oauth")]
-public class SlackOAuthController(ISlackService slackService) : Controller
+[Authorize("Application")]
+public class SlackOAuthController(
+    ICurrentContext currentContext,
+    IOrganizationIntegrationConfigurationRepository integrationConfigurationRepository,
+    ISlackService slackService) : Controller
 {
-    [HttpGet("redirect")]
-    public IActionResult RedirectToSlack()
+    [HttpGet("redirect/{id}")]
+    public async Task<IActionResult> RedirectToSlack(string id)
     {
-        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback));
+        var orgIdGuid = new Guid(id);
+        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
+        string callbackUrl = Url.RouteUrl(nameof(OAuthCallback), new { id = id }, currentContext.HttpContext.Request.Scheme);
         var redirectUrl = slackService.GetRedirectUrl(callbackUrl);
 
         if (string.IsNullOrEmpty(redirectUrl))
         {
-            return BadRequest("Slack not currently supported.");
+            throw new NotFoundException();
         }
 
         return Redirect(redirectUrl);
     }
 
-    [HttpGet("callback")]
-    public async Task<IActionResult> OAuthCallback([FromQuery] string code)
+    [HttpGet("callback/{id}", Name = nameof(OAuthCallback))]
+    public async Task<IActionResult> OAuthCallback(string id, [FromQuery] string code)
     {
+        var orgIdGuid = new Guid(id);
+        if (!await currentContext.OrganizationOwner(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
+
         if (string.IsNullOrEmpty(code))
         {
-            return BadRequest("Missing code from Slack.");
+            throw new BadRequestException("Missing code from Slack.");
         }
 
         string callbackUrl = Url.RouteUrl(nameof(OAuthCallback));
@@ -33,15 +54,13 @@ public class SlackOAuthController(ISlackService slackService) : Controller
 
         if (string.IsNullOrEmpty(token))
         {
-            return BadRequest("Invalid response from Slack.");
+            throw new BadRequestException("Invalid response from Slack.");
         }
 
-        SaveTokenToDatabase(token);
+        await integrationConfigurationRepository.CreateOrganizationIntegrationAsync(
+            orgIdGuid,
+            IntegrationType.Slack,
+            new SlackIntegration(token));
         return Ok("Slack OAuth successful. Your bot is now installed.");
-    }
-
-    private void SaveTokenToDatabase(string botToken)
-    {
-        Console.WriteLine($"Stored bot token for team: {botToken}");
     }
 }

@@ -13,10 +13,7 @@ public class SlackEventHandler(
     public async Task HandleEventAsync(EventMessage eventMessage)
     {
         var organizationId = eventMessage.OrganizationId ?? Guid.NewGuid();
-        var configurations = await configurationRepository.GetConfigurationsAsync<SlackConfiguration>(
-            IntegrationType.Slack,
-            organizationId, eventMessage.Type
-        );
+        var configurations = await configurationRepository.GetConfigurationsAsync<SlackConfiguration>(organizationId, IntegrationType.Slack, eventMessage.Type);
 
         foreach (var configuration in configurations)
         {
