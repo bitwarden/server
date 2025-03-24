@@ -101,7 +101,7 @@ jobs:
           GIT_HASH=$(git describe --long --always --dirty --exclude='*' --abbrev=8)
           echo "GitHash: ${GIT_HASH}"
 
-          sed -i 's/HASH_HERE/$GIT_HASH/' Directory.Build.props
+          sed -i "s/HASH_HERE/$GIT_HASH/" Directory.Build.props
           cat Directory.Build.props
           exit 1
 
