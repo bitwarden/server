@@ -127,9 +127,9 @@ public class CiphersController : Controller
     public async Task<ListResponseModel<CipherDetailsResponseModel>> Get()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        var hasOrgs = _currentContext.Organizations?.Any() ?? false;
+        var hasOrgs = _currentContext.Organizations.Count != 0;
         // TODO: Use hasOrgs proper for cipher listing here?
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: true || hasOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, withOrganizations: true);
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
         if (hasOrgs)
         {
