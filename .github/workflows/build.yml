@@ -103,7 +103,6 @@ jobs:
 
           sed -i "s/HASH_HERE/$GIT_HASH/" Directory.Build.props
           cat Directory.Build.props
-          exit 1
 
       ########## Set up Docker ##########
       - name: Set up QEMU emulators
