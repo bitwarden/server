@@ -51,7 +51,7 @@ public class DatabaseContext : DbContext
     public DbSet<Group> Groups { get; set; }
     public DbSet<GroupUser> GroupUsers { get; set; }
     public DbSet<Installation> Installations { get; set; }
-    public DbSet<Core.Auth.Entities.OpaqueKeyExchangeCredential> OpaqueKeyExchangeCredentials { get; set; }
+    public DbSet<OpaqueKeyExchangeCredential> OpaqueKeyExchangeCredentials { get; set; }
     public DbSet<Organization> Organizations { get; set; }
     public DbSet<OrganizationApiKey> OrganizationApiKeys { get; set; }
     public DbSet<OrganizationSponsorship> OrganizationSponsorships { get; set; }
@@ -107,7 +107,7 @@ public class DatabaseContext : DbContext
         var eSsoConfig = builder.Entity<SsoConfig>();
         var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
-        var eOpaqueCredential = builder.Entity<Core.Auth.Entities.OpaqueKeyExchangeCredential>();
+        var eOpaqueCredential = builder.Entity<OpaqueKeyExchangeCredential>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
