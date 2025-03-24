@@ -158,7 +158,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             // When reverting seats, we have to tell payments service that the seats are going back down by what we attempted to add.
             // However, this might lead to a problem if we don't actually update stripe but throw any ways.
             // stripe could not be updated, and then we would decrement the number of seats in stripe accidentally.
-            var seatsToRemove = -validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd;
+            var seatsToRemove = validatedResult.Value.PasswordManagerSubscriptionUpdate.SeatsRequiredToAdd;
             await paymentService.AdjustSeatsAsync(organization, validatedResult.Value.InviteOrganization.Plan, -seatsToRemove);
 
             organization.Seats = (short?)validatedResult.Value.PasswordManagerSubscriptionUpdate.Seats;
