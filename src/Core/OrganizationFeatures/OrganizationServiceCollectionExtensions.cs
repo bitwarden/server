@@ -174,7 +174,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IHasConfirmedOwnersExceptQuery, HasConfirmedOwnersExceptQuery>();
 
         services.AddScoped<IInviteOrganizationUsersCommand, InviteOrganizationUsersCommand>();
-        services.AddScoped<IInviteUsersValidation, InviteUsersValidation>();
+        services.AddScoped<IInviteUsersValidator, InviteUsersValidator>();
         services.AddScoped<ISendOrganizationInvitesCommand, SendOrganizationInvitesCommand>();
     }
 

@@ -22,7 +22,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class InviteOrganizationUsersCommand(IEventService eventService,
     IOrganizationUserRepository organizationUserRepository,
-    IInviteUsersValidation inviteUsersValidation,
+    IInviteUsersValidator inviteUsersValidator,
     IPaymentService paymentService,
     IOrganizationRepository organizationRepository,
     IReferenceEventService referenceEventService,
@@ -98,7 +98,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return new Failure<IEnumerable<OrganizationUser>>(NoUsersToInvite);
         }
 
-        var validationResult = await inviteUsersValidation.ValidateAsync(new InviteUserOrganizationValidationRequest
+        var validationResult = await inviteUsersValidator.ValidateAsync(new InviteUserOrganizationValidationRequest
         {
             Invites = invitesToSend.ToArray(),
             InviteOrganization = request.InviteOrganization,

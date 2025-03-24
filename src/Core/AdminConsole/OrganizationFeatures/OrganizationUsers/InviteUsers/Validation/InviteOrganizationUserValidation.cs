@@ -15,13 +15,13 @@ using SecretsManagerSubscriptionUpdate = Bit.Core.AdminConsole.OrganizationFeatu
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation;
 
-public interface IInviteUsersValidation : IValidator<InviteUserOrganizationValidationRequest>;
+public interface IInviteUsersValidator : IValidator<InviteUserOrganizationValidationRequest>;
 
-public class InviteUsersValidation(
+public class InviteUsersValidator(
     IGlobalSettings globalSettings,
     IProviderRepository providerRepository,
     IPaymentService paymentService,
-    IOrganizationRepository organizationRepository) : IInviteUsersValidation
+    IOrganizationRepository organizationRepository) : IInviteUsersValidator
 {
     public async Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request)
     {
