@@ -130,7 +130,7 @@ public class StripePaymentService : IPaymentService
 
         if (_featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
         {
-            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, sub.Items.Select(x => x.Price.Id));
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriber, updatedItemOptions.Select(x => x.Price));
             var automaticTaxStrategy = await _automaticTaxFactory.CreateAsync(automaticTaxParameters);
             automaticTaxStrategy.SetUpdateOptions(subUpdateOptions, sub);
         }

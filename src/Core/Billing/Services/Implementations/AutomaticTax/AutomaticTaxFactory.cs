@@ -3,10 +3,13 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 
 namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
 
-public class AutomaticTaxFactory(IPricingClient pricingClient) : IAutomaticTaxFactory
+public class AutomaticTaxFactory(
+    IFeatureService featureService,
+    IPricingClient pricingClient) : IAutomaticTaxFactory
 {
     public const string BusinessUse = "business-use";
     public const string PersonalUse = "personal-use";
@@ -24,15 +27,15 @@ public class AutomaticTaxFactory(IPricingClient pricingClient) : IAutomaticTaxFa
     {
         if (parameters.Subscriber is User)
         {
-            return new PersonalUseAutomaticTaxStrategy();
+            return new PersonalUseAutomaticTaxStrategy(featureService);
         }
 
         if (parameters.PlanType.HasValue)
         {
             var plan = await pricingClient.GetPlanOrThrow(parameters.PlanType.Value);
             return plan.CanBeUsedByBusiness
-                ? new BusinessUseAutomaticTaxStrategy()
-                : new PersonalUseAutomaticTaxStrategy();
+                ? new BusinessUseAutomaticTaxStrategy(featureService)
+                : new PersonalUseAutomaticTaxStrategy(featureService);
         }
 
         var personalUsePlans = await _personalUsePlansTask.Value;
@@ -40,9 +43,9 @@ public class AutomaticTaxFactory(IPricingClient pricingClient) : IAutomaticTaxFa
 
         if (personalUsePlans.Any(x => plans.Any(y => y.PasswordManager.StripePlanId == x)))
         {
-            return new PersonalUseAutomaticTaxStrategy();
+            return new PersonalUseAutomaticTaxStrategy(featureService);
         }
 
-        return new BusinessUseAutomaticTaxStrategy();
+        return new BusinessUseAutomaticTaxStrategy(featureService);
     }
 }

@@ -1,13 +1,19 @@
 ﻿#nullable enable
 using Bit.Core.Billing.Extensions;
+using Bit.Core.Services;
 using Stripe;
 
 namespace Bit.Core.Billing.Services.Implementations.AutomaticTax;
 
-public class BusinessUseAutomaticTaxStrategy : IAutomaticTaxStrategy
+public class BusinessUseAutomaticTaxStrategy(IFeatureService featureService) : IAutomaticTaxStrategy
 {
     public SubscriptionUpdateOptions? GetUpdateOptions(Subscription subscription)
     {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM19422_AllowAutomaticTaxUpdates))
+        {
+            return null;
+        }
+
         var shouldBeEnabled = ShouldBeEnabled(subscription.Customer);
         if (subscription.AutomaticTax.Enabled == shouldBeEnabled)
         {
@@ -36,6 +42,11 @@ public class BusinessUseAutomaticTaxStrategy : IAutomaticTaxStrategy
 
     public void SetUpdateOptions(SubscriptionUpdateOptions options, Subscription subscription)
     {
+        if (!featureService.IsEnabled(FeatureFlagKeys.PM19422_AllowAutomaticTaxUpdates))
+        {
+            return;
+        }
+
         var shouldBeEnabled = ShouldBeEnabled(subscription.Customer);
 
         if (subscription.AutomaticTax.Enabled == shouldBeEnabled)
