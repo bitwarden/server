@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
 
-    <Version>2025.2.4</Version>
+    <Version>2025.3.6</Version>
 
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
