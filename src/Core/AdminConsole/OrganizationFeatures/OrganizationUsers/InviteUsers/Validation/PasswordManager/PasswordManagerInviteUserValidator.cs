@@ -4,7 +4,11 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public static class PasswordManagerInviteUserValidator
 {
-    // NOTE This is only for validating adding users to an organization, not removing
+    /// <summary>
+    /// This is for validating if the organization can add additional users.
+    /// </summary>
+    /// <param name="subscriptionUpdate"></param>
+    /// <returns></returns>
     public static ValidationResult<PasswordManagerSubscriptionUpdate> Validate(PasswordManagerSubscriptionUpdate subscriptionUpdate)
     {
         if (subscriptionUpdate.Seats is null)

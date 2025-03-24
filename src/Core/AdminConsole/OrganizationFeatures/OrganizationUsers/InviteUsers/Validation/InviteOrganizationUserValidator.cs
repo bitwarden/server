@@ -25,11 +25,6 @@ public class InviteUsersValidator(
 {
     public async Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request)
     {
-        if (ValidateEnvironment(globalSettings) is Invalid<IGlobalSettings> invalidEnvironment)
-        {
-            return invalidEnvironment.Map(request);
-        }
-
         var organizationValidationResult = InvitingUserOrganizationValidator.Validate(request.InviteOrganization);
 
         if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
@@ -43,6 +38,11 @@ public class InviteUsersValidator(
         if (passwordManagerValidationResult is Invalid<PasswordManagerSubscriptionUpdate> invalidSubscriptionUpdate)
         {
             return invalidSubscriptionUpdate.Map(request);
+        }
+
+        if (ValidateEnvironment(globalSettings, passwordManagerValidationResult as Valid<PasswordManagerSubscriptionUpdate>) is Invalid<IGlobalSettings> invalidEnvironment)
+        {
+            return invalidEnvironment.Map(request);
         }
 
         var smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(request, subscriptionUpdate);
@@ -81,8 +81,8 @@ public class InviteUsersValidator(
             smSubscriptionUpdate));
     }
 
-    public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings) =>
-        globalSettings.SelfHosted
+    public static ValidationResult<IGlobalSettings> ValidateEnvironment(IGlobalSettings globalSettings, Valid<PasswordManagerSubscriptionUpdate> subscriptionUpdate) =>
+        globalSettings.SelfHosted && subscriptionUpdate?.Value.AdditionalSeats > 0
             ? new Invalid<IGlobalSettings>(new CannotAutoScaleOnSelfHostError(globalSettings))
             : new Valid<IGlobalSettings>(globalSettings);
 }
