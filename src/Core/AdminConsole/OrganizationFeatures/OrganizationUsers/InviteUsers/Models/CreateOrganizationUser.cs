@@ -26,7 +26,7 @@ public class CreateOrganizationUser
                 CreationDate = performedAt.UtcDateTime,
                 RevisionDate = performedAt.UtcDateTime
             },
-            Collections = o.AccessibleCollections,
+            Collections = o.AssignedCollections,
             Groups = o.Groups
         };
 }

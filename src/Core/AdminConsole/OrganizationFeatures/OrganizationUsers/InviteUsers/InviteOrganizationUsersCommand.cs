@@ -43,7 +43,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
     public async Task<CommandResult<ScimInviteOrganizationUsersResponse>> InviteScimOrganizationUserAsync(OrganizationUserSingleEmailInvite request)
     {
-        var hasSecretsManager = await paymentService.HasSecretsManagerStandalone(request.InviteOrganization);
+        var hasSecretsManagerStandalone = await paymentService.HasSecretsManagerStandalone(request.InviteOrganization);
 
         var orgUsers = await organizationUserRepository.GetManyDetailsByOrganizationAsync(request.InviteOrganization.OrganizationId);
 
@@ -55,7 +55,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
                 new UserAlreadyExistsError(new ScimInviteOrganizationUsersResponse(request)));
         }
 
-        var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request, hasSecretsManager));
+        var result = await InviteOrganizationUsersAsync(new InviteOrganizationUsersRequest(request, hasSecretsManagerStandalone));
 
         switch (result)
         {

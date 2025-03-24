@@ -6,7 +6,7 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 public class OrganizationUserInviteDto
 {
     public string Email { get; private init; } = string.Empty;
-    public CollectionAccessSelection[] AccessibleCollections { get; private init; } = [];
+    public CollectionAccessSelection[] AssignedCollections { get; private init; } = [];
     public string ExternalId { get; private init; } = string.Empty;
     public Permissions Permissions { get; private init; } = new();
     public OrganizationUserType Type { get; private init; } = OrganizationUserType.User;
@@ -19,7 +19,7 @@ public class OrganizationUserInviteDto
         return new OrganizationUserInviteDto
         {
             Email = email,
-            AccessibleCollections = invite.AccessibleCollections,
+            AssignedCollections = invite.AssignedCollections,
             ExternalId = invite.ExternalId,
             Type = invite.Type,
             Permissions = invite.Permissions,
