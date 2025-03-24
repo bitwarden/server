@@ -25,7 +25,7 @@ public class InviteUsersValidator(
 {
     public async Task<ValidationResult<InviteUserOrganizationValidationRequest>> ValidateAsync(InviteUserOrganizationValidationRequest request)
     {
-        var organizationValidationResult = InvitingUserOrganizationValidator.Validate(request.InviteOrganization);
+        var organizationValidationResult = InviteUserOrganizationValidator.Validate(request.InviteOrganization);
 
         if (organizationValidationResult is Invalid<InviteOrganization> organizationValidation)
         {

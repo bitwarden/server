@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Shared.Validation;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Validation.Organization;
 
-public static class InvitingUserOrganizationValidator
+public static class InviteUserOrganizationValidator
 {
     public static ValidationResult<InviteOrganization> Validate(InviteOrganization inviteOrganization)
     {
