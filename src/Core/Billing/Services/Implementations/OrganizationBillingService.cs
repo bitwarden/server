@@ -1,9 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Caches;
 using Bit.Core.Billing.Constants;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
 using Bit.Core.Billing.Models.Sales;
 using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services.Contracts;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -23,6 +25,7 @@ namespace Bit.Core.Billing.Services.Implementations;
 
 public class OrganizationBillingService(
     IBraintreeGateway braintreeGateway,
+    IFeatureService featureService,
     IGlobalSettings globalSettings,
     ILogger<OrganizationBillingService> logger,
     IOrganizationRepository organizationRepository,
@@ -30,7 +33,8 @@ public class OrganizationBillingService(
     ISetupIntentCache setupIntentCache,
     IStripeAdapter stripeAdapter,
     ISubscriberService subscriberService,
-    ITaxService taxService) : IOrganizationBillingService
+    ITaxService taxService,
+    IAutomaticTaxFactory automaticTaxFactory) : IOrganizationBillingService
 {
     public async Task Finalize(OrganizationSale sale)
     {
@@ -369,21 +373,8 @@ public class OrganizationBillingService(
             }
         }
 
-        var customerHasTaxInfo = customer is
-        {
-            Address:
-            {
-                Country: not null and not "",
-                PostalCode: not null and not ""
-            }
-        };
-
         var subscriptionCreateOptions = new SubscriptionCreateOptions
         {
-            AutomaticTax = new SubscriptionAutomaticTaxOptions
-            {
-                Enabled = customerHasTaxInfo
-            },
             CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
             Customer = customer.Id,
             Items = subscriptionItemOptionsList,
@@ -394,6 +385,18 @@ public class OrganizationBillingService(
             OffSession = true,
             TrialPeriodDays = subscriptionSetup.SkipTrial ? 0 : plan.TrialPeriodDays
         };
+
+        if (featureService.IsEnabled(FeatureFlagKeys.PM19147_AutomaticTaxImprovements))
+        {
+            var automaticTaxParameters = new AutomaticTaxFactoryParameters(subscriptionSetup.PlanType);
+            var automaticTaxStrategy = await automaticTaxFactory.CreateAsync(automaticTaxParameters);
+            automaticTaxStrategy.SetCreateOptions(subscriptionCreateOptions, customer);
+        }
+        else
+        {
+            subscriptionCreateOptions.AutomaticTax ??= new SubscriptionAutomaticTaxOptions();
+            subscriptionCreateOptions.AutomaticTax.Enabled = customer.HasBillingLocation();
+        }
 
         return await stripeAdapter.SubscriptionCreateAsync(subscriptionCreateOptions);
     }
