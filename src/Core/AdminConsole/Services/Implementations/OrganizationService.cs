@@ -6,6 +6,8 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
@@ -76,6 +78,7 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
     private readonly IPricingClient _pricingClient;
+    private readonly IPolicyRequirementQuery _policyRequirementQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -111,7 +114,8 @@ public class OrganizationService : IOrganizationService
         ITwoFactorIsEnabledQuery twoFactorIsEnabledQuery,
         IOrganizationBillingService organizationBillingService,
         IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
-        IPricingClient pricingClient)
+        IPricingClient pricingClient,
+        IPolicyRequirementQuery policyRequirementQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -147,6 +151,7 @@ public class OrganizationService : IOrganizationService
         _organizationBillingService = organizationBillingService;
         _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
         _pricingClient = pricingClient;
+        _policyRequirementQuery = policyRequirementQuery;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1353,13 +1358,25 @@ public class OrganizationService : IOrganizationService
         }
 
         // Block the user from withdrawal if auto enrollment is enabled
-        if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+        if (_featureService.IsEnabled(FeatureFlagKeys.PolicyRequirements))
         {
-            var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
-
-            if (data?.AutoEnrollEnabled ?? false)
+            var resetPasswordPolicyRequirement = await _policyRequirementQuery.GetAsync<ResetPasswordPolicyRequirement>(userId);
+            if (resetPasswordKey == null && resetPasswordPolicyRequirement.AutoEnrollEnabled(organizationId))
             {
-                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from Password Reset.");
+                throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+            }
+
+        }
+        else
+        {
+            if (resetPasswordKey == null && resetPasswordPolicy.Data != null)
+            {
+                var data = JsonSerializer.Deserialize<ResetPasswordDataModel>(resetPasswordPolicy.Data, JsonHelpers.IgnoreCase);
+
+                if (data?.AutoEnrollEnabled ?? false)
+                {
+                    throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to withdraw from account recovery.");
+                }
             }
         }
 
