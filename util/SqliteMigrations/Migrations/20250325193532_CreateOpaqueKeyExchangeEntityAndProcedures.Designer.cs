@@ -11,45 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250321102612_OpaqueKex")]
-    partial class OpaqueKex
+    [Migration("20250325193532_CreateOpaqueKeyExchangeEntityAndProcedures")]
+    partial class CreateOpaqueKeyExchangeEntityAndProcedures
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
-
-            modelBuilder.Entity("Bit.Core.Auth.Entities.OpaqueKeyExchangeCredential", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CipherConfiguration")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CredentialBlob")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EncryptedPrivateKey")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EncryptedPublicKey")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("EncryptedUserKey")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("OpaqueKeyExchangeCredential", (string)null);
-                });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization", b =>
                 {
@@ -594,6 +563,39 @@ namespace Bit.SqliteMigrations.Migrations
                         .IsUnique();
 
                     b.ToTable("Grant", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.OpaqueKeyExchangeCredential", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CipherConfiguration")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CredentialBlob")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OpaqueKeyExchangeCredential", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig", b =>
@@ -2367,6 +2369,17 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Grantee");
 
                     b.Navigation("Grantor");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.OpaqueKeyExchangeCredential", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig", b =>
