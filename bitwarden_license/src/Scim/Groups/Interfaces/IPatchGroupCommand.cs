@@ -3,7 +3,7 @@ using Bit.Scim.Models;
 
 namespace Bit.Scim.Groups.Interfaces;
 
-public interface IPatchGroupCommandvNext
+public interface IPatchGroupCommand
 {
     Task PatchGroupAsync(Group group, ScimPatchModel model);
 }

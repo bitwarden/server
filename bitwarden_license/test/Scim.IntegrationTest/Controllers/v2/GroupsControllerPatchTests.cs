@@ -10,11 +10,11 @@ using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
 
-public class GroupsControllerPatchTestsvNext : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
+public class GroupsControllerPatchTests : IClassFixture<ScimApplicationFactory>, IAsyncLifetime
 {
     private readonly ScimApplicationFactory _factory;
 
-    public GroupsControllerPatchTestsvNext(ScimApplicationFactory factory)
+    public GroupsControllerPatchTests(ScimApplicationFactory factory)
     {
         _factory = factory;
 

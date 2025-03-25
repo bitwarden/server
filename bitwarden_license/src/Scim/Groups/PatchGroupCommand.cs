@@ -12,19 +12,19 @@ using Bit.Scim.Utilities;
 
 namespace Bit.Scim.Groups;
 
-public class PatchGroupCommandvNext : IPatchGroupCommandvNext
+public class PatchGroupCommand : IPatchGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupService _groupService;
     private readonly IUpdateGroupCommand _updateGroupCommand;
-    private readonly ILogger<PatchGroupCommandvNext> _logger;
+    private readonly ILogger<PatchGroupCommand> _logger;
     private readonly IOrganizationRepository _organizationRepository;
 
-    public PatchGroupCommandvNext(
+    public PatchGroupCommand(
         IGroupRepository groupRepository,
         IGroupService groupService,
         IUpdateGroupCommand updateGroupCommand,
-        ILogger<PatchGroupCommandvNext> logger,
+        ILogger<PatchGroupCommand> logger,
         IOrganizationRepository organizationRepository)
     {
         _groupRepository = groupRepository;

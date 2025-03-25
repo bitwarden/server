@@ -17,11 +17,11 @@ using Xunit;
 namespace Bit.Scim.Test.Groups;
 
 [SutProviderCustomize]
-public class PatchGroupCommandvNextTests
+public class PatchGroupCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider,
+    public async Task PatchGroup_ReplaceListMembers_Success(SutProvider<PatchGroupCommand> sutProvider,
         Organization organization, Group group, IEnumerable<Guid> userIds)
     {
         group.OrganizationId = organization.Id;
@@ -52,7 +52,7 @@ public class PatchGroupCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_ReplaceDisplayNameFromPath_Success(
-        SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, string displayName)
+        SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
     {
         group.OrganizationId = organization.Id;
 
@@ -82,7 +82,7 @@ public class PatchGroupCommandvNextTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_ReplaceDisplayNameFromValueObject_Success(SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, string displayName)
+    public async Task PatchGroup_ReplaceDisplayNameFromValueObject_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
     {
         group.OrganizationId = organization.Id;
 
@@ -111,7 +111,7 @@ public class PatchGroupCommandvNextTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_AddSingleMember_Success(SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, Guid userId)
+    public async Task PatchGroup_AddSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, Guid userId)
     {
         group.OrganizationId = organization.Id;
 
@@ -142,7 +142,7 @@ public class PatchGroupCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_AddSingleMember_ReturnsEarlyIfAlreadyInGroup(
-        SutProvider<PatchGroupCommandvNext> sutProvider,
+        SutProvider<PatchGroupCommand> sutProvider,
         Organization organization,
         Group group,
         ICollection<Guid> existingMembers)
@@ -177,7 +177,7 @@ public class PatchGroupCommandvNextTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_AddListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, ICollection<Guid> userIds)
+    public async Task PatchGroup_AddListMembers_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, ICollection<Guid> existingMembers, ICollection<Guid> userIds)
     {
         group.OrganizationId = organization.Id;
 
@@ -211,7 +211,7 @@ public class PatchGroupCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_AddListMembers_IgnoresDuplicatesInRequest(
-        SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group,
+        SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group,
         ICollection<Guid> existingMembers)
     {
         // Create 3 userIds
@@ -257,7 +257,7 @@ public class PatchGroupCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_AddListMembers_SuccessIfOnlySomeUsersAreInGroup(
-        SutProvider<PatchGroupCommandvNext> sutProvider,
+        SutProvider<PatchGroupCommand> sutProvider,
         Organization organization, Group group,
         ICollection<Guid> existingMembers,
         ICollection<Guid> userIds)
@@ -298,7 +298,7 @@ public class PatchGroupCommandvNextTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveSingleMember_Success(SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group, Guid userId)
+    public async Task PatchGroup_RemoveSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, Guid userId)
     {
         group.OrganizationId = organization.Id;
 
@@ -322,7 +322,7 @@ public class PatchGroupCommandvNextTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommandvNext> sutProvider,
+    public async Task PatchGroup_RemoveListMembers_Success(SutProvider<PatchGroupCommand> sutProvider,
         Organization organization, Group group, ICollection<Guid> existingMembers)
     {
         List<Guid> usersToRemove = [existingMembers.First(), existingMembers.Skip(1).First()];
@@ -361,7 +361,7 @@ public class PatchGroupCommandvNextTests
     [Theory]
     [BitAutoData]
     public async Task PatchGroup_NoAction_Success(
-        SutProvider<PatchGroupCommandvNext> sutProvider, Organization organization, Group group)
+        SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group)
     {
         group.OrganizationId = organization.Id;
 

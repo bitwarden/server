@@ -21,7 +21,7 @@ public class GroupsController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
-    private readonly IPatchGroupCommandvNext _patchGroupCommandvNext;
+    private readonly IPatchGroupCommand _patchGroupCommand;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
 
@@ -30,7 +30,7 @@ public class GroupsController : Controller
         IOrganizationRepository organizationRepository,
         IGetGroupsListQuery getGroupsListQuery,
         IDeleteGroupCommand deleteGroupCommand,
-        IPatchGroupCommandvNext patchGroupCommandvNext,
+        IPatchGroupCommand patchGroupCommand,
         IPostGroupCommand postGroupCommand,
         IPutGroupCommand putGroupCommand
         )
@@ -39,7 +39,7 @@ public class GroupsController : Controller
         _organizationRepository = organizationRepository;
         _getGroupsListQuery = getGroupsListQuery;
         _deleteGroupCommand = deleteGroupCommand;
-        _patchGroupCommandvNext = patchGroupCommandvNext;
+        _patchGroupCommand = patchGroupCommand;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
     }
@@ -101,7 +101,7 @@ public class GroupsController : Controller
             throw new NotFoundException("Group not found.");
         }
 
-        await _patchGroupCommandvNext.PatchGroupAsync(group, model);
+        await _patchGroupCommand.PatchGroupAsync(group, model);
         return new NoContentResult();
     }
 
