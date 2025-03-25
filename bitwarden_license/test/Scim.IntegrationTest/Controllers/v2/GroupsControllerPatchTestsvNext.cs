@@ -1,14 +1,11 @@
 ﻿using System.Text.Json;
 using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Services;
-using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.Helpers;
 using NSubstitute;
-using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
@@ -24,9 +21,6 @@ public class GroupsControllerPatchTestsvNext : IClassFixture<ScimApplicationFact
         // Enable the feature flag for new PatchGroupsCommand and stub out the old command to be safe
         _factory.SubstituteService((IFeatureService featureService)
             => featureService.IsEnabled(FeatureFlagKeys.ShortcutDuplicatePatchRequests).Returns(true));
-        _factory.SubstituteService((IPatchGroupCommand patchGroupCommand)
-            => patchGroupCommand.PatchGroupAsync(Arg.Any<Organization>(), Arg.Any<Guid>(), Arg.Any<ScimPatchModel>())
-                .ThrowsAsync(new Exception("This test suite should be testing the vNext command, but the existing command was called.")));
     }
 
     public Task InitializeAsync()
