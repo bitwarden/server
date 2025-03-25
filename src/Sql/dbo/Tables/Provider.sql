@@ -18,5 +18,6 @@
     [Gateway]               TINYINT          NULL,
     [GatewayCustomerId]     VARCHAR (50)     NULL,
     [GatewaySubscriptionId] VARCHAR (50)     NULL,
+    [DiscountId]            VARCHAR (50)     NULL,
     CONSTRAINT [PK_Provider] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
