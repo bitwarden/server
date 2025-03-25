@@ -7,7 +7,7 @@ public static class ErrorMapper
 {
 
     /// <summary>
-    /// Maps the Error<T> to a Bit.Exception class.
+    /// Maps the ErrorT to a Bit.Exception class.
     /// </summary>
     /// <param name="error"></param>
     /// <typeparam name="T"></typeparam>
@@ -20,18 +20,18 @@ public static class ErrorMapper
         };
 
     /// <summary>
-    /// This maps the Error<T> object to the Bit.Exception class.
+    /// This maps the ErrorT object to the Bit.Exception class.
     ///
     /// This should be replaced by an IActionResult mapper when possible.
     /// </summary>
     /// <param name="errors"></param>
     /// <typeparam name="T"></typeparam>
     /// <returns></returns>
-    public static Exception MapToBitException<T>(IEnumerable<Error<T>> errors) =>
+    public static Exception MapToBitException<T>(ICollection<Error<T>> errors) =>
         errors switch
         {
-            not null when errors.Count() == 1 => MapToBitException(errors.First()),
-            not null when errors.Count() > 1 => new BadRequestException(string.Join(' ', errors.Select(e => e.Message))),
+            not null when errors.Count == 1 => MapToBitException(errors.First()),
+            not null when errors.Count > 1 => new BadRequestException(string.Join(' ', errors.Select(e => e.Message))),
             _ => new BadRequestException()
         };
 }

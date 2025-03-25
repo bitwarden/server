@@ -115,7 +115,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         var validatedRequest = validationResult as Valid<InviteUserOrganizationValidationRequest>;
 
-        var organizationUserCollection = invitesToSend
+        var organizationUserToInviteEntities = invitesToSend
             .Select(MapToDataModel(request.PerformedAt))
             .ToArray();
 
@@ -123,7 +123,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         try
         {
-            await organizationUserRepository.CreateManyAsync(organizationUserCollection);
+            await organizationUserRepository.CreateManyAsync(organizationUserToInviteEntities);
 
             await AdjustPasswordManagerSeatsAsync(validatedRequest, organization);
 
@@ -131,7 +131,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
             await SendAdditionalEmailsAsync(validatedRequest, organization);
 
-            await SendInvitesAsync(organizationUserCollection, organization);
+            await SendInvitesAsync(organizationUserToInviteEntities, organization);
 
             await PublishReferenceEventAsync(validatedRequest, organization);
         }
@@ -139,7 +139,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
         {
             logger.LogError(ex, FailedToInviteUsers);
 
-            await organizationUserRepository.DeleteManyAsync(organizationUserCollection.Select(x => x.OrganizationUser.Id));
+            await organizationUserRepository.DeleteManyAsync(organizationUserToInviteEntities.Select(x => x.OrganizationUser.Id));
 
             await RevertSecretsManagerChangesAsync(validatedRequest, organization);
 
@@ -148,7 +148,7 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
             return new Failure<IEnumerable<OrganizationUser>>(FailedToInviteUsers);
         }
 
-        return new Success<IEnumerable<OrganizationUser>>(organizationUserCollection.Select(x => x.OrganizationUser));
+        return new Success<IEnumerable<OrganizationUser>>(organizationUserToInviteEntities.Select(x => x.OrganizationUser));
     }
 
     private async Task RevertPasswordManagerChangesAsync(Valid<InviteUserOrganizationValidationRequest> validatedResult, Organization organization)
@@ -209,6 +209,8 @@ public class InviteOrganizationUsersCommand(IEventService eventService,
 
         try
         {
+            // TODO include provider org emails
+
             var ownerEmails = (await organizationUserRepository
                     .GetManyByMinimumRoleAsync(validatedResult.Value.InviteOrganization.OrganizationId, OrganizationUserType.Owner))
                 .Select(x => x.Email)
