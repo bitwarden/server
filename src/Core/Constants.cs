@@ -129,6 +129,9 @@ public static class FeatureFlagKeys
     /* Auth Team */
     public const string PM9112DeviceApprovalPersistence = "pm-9112-device-approval-persistence";
 
+    /* Key Management Team */
+    public const string PM17987_BlockType0 = "pm-17987-block-type-0";
+
     public const string ReturnErrorOnExistingKeypair = "return-error-on-existing-keypair";
     public const string UseTreeWalkerApiForPageDetailsCollection = "use-tree-walker-api-for-page-details-collection";
     public const string DuoRedirect = "duo-redirect";
