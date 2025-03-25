@@ -152,7 +152,7 @@ public class OrganizationSponsorshipsController : Controller
 
         var freeFamiliesSponsorshipPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(
             model.SponsoredOrganizationId, PolicyType.FreeFamiliesSponsorshipPolicy);
-        
+
         if (freeFamiliesSponsorshipPolicy?.Enabled == true)
         {
             throw new BadRequestException("Free Bitwarden Families sponsorship has been disabled by your organization administrator.");
