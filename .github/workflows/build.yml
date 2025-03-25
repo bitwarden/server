@@ -37,9 +37,7 @@ jobs:
   build-container:
     name: Build container images
     runs-on: ubuntu-24.04
-    needs:
-      - check-run
-      - lint
+    needs: check-run
     permissions:
       id-token: write
       security-events: write
@@ -399,9 +397,7 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MSSQL migrator utility
     runs-on: ubuntu-24.04
-    needs:
-      - check-run
-      - lint
+    needs: check-run
     defaults:
       run:
         shell: bash
