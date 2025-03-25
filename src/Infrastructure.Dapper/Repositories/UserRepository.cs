@@ -282,6 +282,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
         catch
         {
+            transaction.Rollback();
             UnprotectData(user);
             throw;
         }
