@@ -5,12 +5,14 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
@@ -82,6 +84,34 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task PatchGroup_ReplaceDisplayNameFromPath_MissingOrganization_Throws(
+        SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
+    {
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns((Organization)null);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Path = "displayname",
+                    Value = JsonDocument.Parse($"\"{displayName}\"").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task PatchGroup_ReplaceDisplayNameFromValueObject_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
     {
         group.OrganizationId = organization.Id;
@@ -107,6 +137,33 @@ public class PatchGroupCommandTests
 
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(group, organization, EventSystemUser.SCIM);
         Assert.Equal(displayName, group.Name);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_ReplaceDisplayNameFromValueObject_MissingOrganization_Throws(
+        SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, string displayName)
+    {
+        group.OrganizationId = organization.Id;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns((Organization)null);
+
+        var scimPatchModel = new ScimPatchModel
+        {
+            Operations = new List<ScimPatchModel.OperationModel>
+            {
+                new()
+                {
+                    Op = "replace",
+                    Value = JsonDocument.Parse($"{{\"displayName\":\"{displayName}\"}}").RootElement
+                }
+            },
+            Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
+        };
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PatchGroupAsync(group, scimPatchModel));
     }
 
     [Theory]
@@ -360,7 +417,31 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_NoAction_Success(
+    public async Task PatchGroup_InvalidOperation_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group)
+    {
+        group.OrganizationId = organization.Id;
+
+        var scimPatchModel = new Models.ScimPatchModel
+        {
+            Operations = [new ScimPatchModel.OperationModel { Op = "invalid operation" }],
+            Schemas = [ScimConstants.Scim2SchemaUser]
+        };
+
+        await sutProvider.Sut.PatchGroupAsync(group, scimPatchModel);
+
+        // Assert: no operation performed
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyUserIdsByIdAsync(default);
+        await sutProvider.GetDependency<IUpdateGroupCommand>().DidNotReceiveWithAnyArgs().UpdateGroupAsync(default, default);
+        await sutProvider.GetDependency<IGroupService>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+
+        // Assert: logging
+        sutProvider.GetDependency<ILogger<PatchGroupCommand>>().ReceivedWithAnyArgs().LogWarning(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PatchGroup_NoOperation_Success(
         SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group)
     {
         group.OrganizationId = organization.Id;
