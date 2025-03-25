@@ -38,7 +38,6 @@ COPY src/Notifications/. ./src/Notifications/
 COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
 COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
-COPY .git/. ./.git/
 
 # Build project
 WORKDIR /source/src/Notifications

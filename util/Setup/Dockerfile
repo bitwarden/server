@@ -34,7 +34,6 @@ WORKDIR /source
 COPY src/Core/. ./src/Core/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/Setup/. ./util/Setup/
-COPY .git/. ./.git/
 
 # Build project
 WORKDIR /source/util/Setup

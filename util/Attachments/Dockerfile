@@ -30,7 +30,6 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 # Copy required project files
 WORKDIR /source
 COPY util/Server/. ./util/Server/
-COPY .git/. ./.git/
 
 # Build project
 WORKDIR /source/util/Server
