@@ -1,11 +1,8 @@
 ﻿using System.Text.Json;
-using Bit.Core;
-using Bit.Core.Services;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
 using Bit.Test.Common.Helpers;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Scim.IntegrationTest.Controllers.v2;
@@ -17,10 +14,6 @@ public class GroupsControllerPatchTests : IClassFixture<ScimApplicationFactory>,
     public GroupsControllerPatchTests(ScimApplicationFactory factory)
     {
         _factory = factory;
-
-        // Enable the feature flag for new PatchGroupsCommand and stub out the old command to be safe
-        _factory.SubstituteService((IFeatureService featureService)
-            => featureService.IsEnabled(FeatureFlagKeys.ShortcutDuplicatePatchRequests).Returns(true));
     }
 
     public Task InitializeAsync()
