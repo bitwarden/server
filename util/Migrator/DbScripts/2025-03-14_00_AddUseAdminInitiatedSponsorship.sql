@@ -4,6 +4,9 @@ ALTER TABLE [dbo].[Organization] ADD [UseAdminSponsoredFamilies] bit NOT NULL CO
 ALTER TABLE [dbo].[OrganizationSponsorship] ADD [IsAdminInitiated] BIT CONSTRAINT [DF_OrganizationSponsorship_IsAdminInitiated] DEFAULT (0) NOT NULL
     GO;
 
+ALTER TABLE [dbo].[OrganizationSponsorship] ADD [Notes] NVARCHAR(512) NULL
+    GO;
+
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
