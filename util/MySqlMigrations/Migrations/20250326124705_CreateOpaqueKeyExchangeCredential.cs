@@ -6,18 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Bit.MySqlMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class CreateOpaqueKeyExchangeEntityAndProcedures : Migration
+    public partial class CreateOpaqueKeyExchangeCredential : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "DiscountId",
-                table: "Provider",
-                type: "longtext",
-                nullable: true)
-                .Annotation("MySql:CharSet", "utf8mb4");
-
             migrationBuilder.CreateTable(
                 name: "OpaqueKeyExchangeCredential",
                 columns: table => new
@@ -59,10 +52,6 @@ namespace Bit.MySqlMigrations.Migrations
         {
             migrationBuilder.DropTable(
                 name: "OpaqueKeyExchangeCredential");
-
-            migrationBuilder.DropColumn(
-                name: "DiscountId",
-                table: "Provider");
         }
     }
 }

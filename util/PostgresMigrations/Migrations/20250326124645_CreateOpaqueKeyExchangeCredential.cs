@@ -3,32 +3,26 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
+namespace Bit.PostgresMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class CreateOpaqueKeyExchangeEntityAndProcedures : Migration
+    public partial class CreateOpaqueKeyExchangeCredential : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "DiscountId",
-                table: "Provider",
-                type: "TEXT",
-                nullable: true);
-
             migrationBuilder.CreateTable(
                 name: "OpaqueKeyExchangeCredential",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    CipherConfiguration = table.Column<string>(type: "TEXT", nullable: true),
-                    CredentialBlob = table.Column<string>(type: "TEXT", nullable: true),
-                    EncryptedPublicKey = table.Column<string>(type: "TEXT", nullable: true),
-                    EncryptedPrivateKey = table.Column<string>(type: "TEXT", nullable: true),
-                    EncryptedUserKey = table.Column<string>(type: "TEXT", nullable: true),
-                    CreationDate = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CipherConfiguration = table.Column<string>(type: "text", nullable: true),
+                    CredentialBlob = table.Column<string>(type: "text", nullable: true),
+                    EncryptedPublicKey = table.Column<string>(type: "text", nullable: true),
+                    EncryptedPrivateKey = table.Column<string>(type: "text", nullable: true),
+                    EncryptedUserKey = table.Column<string>(type: "text", nullable: true),
+                    CreationDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -52,10 +46,6 @@ namespace Bit.SqliteMigrations.Migrations
         {
             migrationBuilder.DropTable(
                 name: "OpaqueKeyExchangeCredential");
-
-            migrationBuilder.DropColumn(
-                name: "DiscountId",
-                table: "Provider");
         }
     }
 }

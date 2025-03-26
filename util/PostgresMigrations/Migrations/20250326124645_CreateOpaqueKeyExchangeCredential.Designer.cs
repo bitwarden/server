@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250325193524_CreateOpaqueKeyExchangeEntityAndProcedures")]
-    partial class CreateOpaqueKeyExchangeEntityAndProcedures
+    [Migration("20250326124645_CreateOpaqueKeyExchangeCredential")]
+    partial class CreateOpaqueKeyExchangeCredential
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
